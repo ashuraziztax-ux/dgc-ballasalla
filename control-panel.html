@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v6</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -483,7 +483,7 @@ function toggleMode(){
       <div class="kpi-sub">total cost plan</div>
     </div>
     <div class="kpi-card orange">
-      <div class="kpi-label">Zones Active</div>
+      <div class="kpi-label">Sections Active</div>
       <div class="kpi-value" id="kpi-active-zones">—</div>
       <div class="kpi-sub">running concurrently</div>
     </div>
@@ -570,11 +570,11 @@ function toggleMode(){
 <div id="tab-zones" class="tab-content">
   <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center;">
     <span style="font-size:11px;color:var(--muted);font-weight:600;">SECTION MAP:</span>
-    <span style="font-size:11px;background:#ca8a0415;border:1px solid #ca8a0440;color:#ca8a04;padding:3px 10px;border-radius:12px;">A = Zone 1</span>
-    <span style="font-size:11px;background:#d9770615;border:1px solid #d9770640;color:#d97706;padding:3px 10px;border-radius:12px;">B, C = Zone 2</span>
-    <span style="font-size:11px;background:#2563eb15;border:1px solid #2563eb40;color:#93c5fd;padding:3px 10px;border-radius:12px;">D, E = Zone 3</span>
-    <span style="font-size:11px;background:#9333ea15;border:1px solid #9333ea40;color:#c4b5fd;padding:3px 10px;border-radius:12px;">F, G = Zone 4</span>
-    <span style="font-size:11px;background:#db277715;border:1px solid #db277740;color:#f9a8d4;padding:3px 10px;border-radius:12px;">H, I, J = Zone 5</span>
+    <span style="font-size:11px;background:#ca8a0415;border:1px solid #ca8a0440;color:#ca8a04;padding:3px 10px;border-radius:12px;">A — Top Road</span>
+    <span style="font-size:11px;background:#d9770615;border:1px solid #d9770640;color:#d97706;padding:3px 10px;border-radius:12px;">B, C — Mid Road</span>
+    <span style="font-size:11px;background:#2563eb15;border:1px solid #2563eb40;color:#93c5fd;padding:3px 10px;border-radius:12px;">D, E — Road 3</span>
+    <span style="font-size:11px;background:#9333ea15;border:1px solid #9333ea40;color:#c4b5fd;padding:3px 10px;border-radius:12px;">F, G — Lower Road</span>
+    <span style="font-size:11px;background:#db277715;border:1px solid #db277740;color:#f9a8d4;padding:3px 10px;border-radius:12px;">H, I, J — Drains</span>
     <span style="font-size:11px;color:var(--muted);margin-left:4px;">| Click a zone to see tasks</span>
   </div>
   <div class="zone-grid" id="zone-cards-container"></div>
@@ -628,8 +628,8 @@ function toggleMode(){
     </div>
     <div class="kpi-card blue">
       <div class="kpi-label">Retention Held</div>
-      <div class="kpi-value">£5,014</div>
-      <div class="kpi-sub">3% on £167,134</div>
+      <div class="kpi-value">£3,919</div>
+      <div class="kpi-sub">Ian applied 2.5% (contract 3%)</div>
     </div>
     <div class="kpi-card orange">
       <div class="kpi-label">Net AFP 2 Payment</div>
@@ -697,7 +697,7 @@ function toggleMode(){
           </tr>
         </tbody>
       </table>
-      <div style="margin-top:12px; font-size:11px; color:var(--muted);">3% retention held — half released on completion, balance at 12 months. Payment terms: 28 days from invoice.</div>
+      <div style="margin-top:12px; font-size:11px; color:var(--muted);">2.5% retention applied by Ian Barnes (contract rate is 3%) — half released on completion, balance at 12 months. Payment terms: 28 days from invoice.</div>
     </div>
 
     <div class="card">
@@ -757,11 +757,11 @@ function toggleMode(){
           <label>Zone</label>
           <select id="log-zone">
             <option value="">Select zone...</option>
-            <option>Zone 1 — Section A (Top Road 1)</option>
-            <option>Zone 2 — Sections B & C (Mid Road 1)</option>
-            <option>Zone 3 — Sections D, E1 & E2 (Road 3)</option>
-            <option>Zone 4 — Sections F & G (Lower Road 1)</option>
-            <option>Zone 5 — Sections H, I & J (Drain runs)</option>
+            <option>Section A — Top Road</option>
+            <option>Sections B & C — Mid Road</option>
+            <option>Sections D, E1 & E2 — Road 3</option>
+            <option>Sections F & G — Lower Road</option>
+            <option>Sections H, I & J — Drain Runs</option>
           </select>
         </div>
         <div class="form-group">
@@ -904,11 +904,11 @@ function toggleMode(){
     <!-- Section → Zone key -->
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;font-size:11px;">
       <span style="color:var(--muted);font-weight:600;align-self:center;">SECTIONS:</span>
-      <span style="background:#ca8a0430;border:1px solid #ca8a04;color:#ca8a04;padding:3px 9px;border-radius:12px;font-weight:700;">A = Zone 1</span>
-      <span style="background:#d9770630;border:1px solid #d97706;color:#d97706;padding:3px 9px;border-radius:12px;font-weight:700;">B, C = Zone 2</span>
-      <span style="background:#2563eb30;border:1px solid #2563eb;color:#93c5fd;padding:3px 9px;border-radius:12px;font-weight:700;">D, E = Zone 3</span>
-      <span style="background:#9333ea30;border:1px solid #9333ea;color:#c4b5fd;padding:3px 9px;border-radius:12px;font-weight:700;">F, G = Zone 4</span>
-      <span style="background:#db277730;border:1px solid #db2777;color:#f9a8d4;padding:3px 9px;border-radius:12px;font-weight:700;">H, I, J = Zone 5</span>
+      <span style="background:#ca8a0430;border:1px solid #ca8a04;color:#ca8a04;padding:3px 9px;border-radius:12px;font-weight:700;">A — Top Road</span>
+      <span style="background:#d9770630;border:1px solid #d97706;color:#d97706;padding:3px 9px;border-radius:12px;font-weight:700;">B, C — Mid Road</span>
+      <span style="background:#2563eb30;border:1px solid #2563eb;color:#93c5fd;padding:3px 9px;border-radius:12px;font-weight:700;">D, E — Road 3</span>
+      <span style="background:#9333ea30;border:1px solid #9333ea;color:#c4b5fd;padding:3px 9px;border-radius:12px;font-weight:700;">F, G — Lower Road</span>
+      <span style="background:#db277730;border:1px solid #db2777;color:#f9a8d4;padding:3px 9px;border-radius:12px;font-weight:700;">H, I, J — Drains</span>
     </div>
 
     <div style="position:relative;display:inline-block;max-width:100%;width:100%;">
@@ -925,7 +925,7 @@ function toggleMode(){
           <circle r="34" fill="#ca8a04" stroke="white" stroke-width="2.5" id="sm-ring-A"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">A</text>
           <text text-anchor="middle" dy="7" fill="white" font-size="12" font-weight="700" font-family="system-ui,sans-serif" id="sm-pct-A">—%</text>
-          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Zone 1</text>
+          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Top Road</text>
         </g>
 
         <!-- Section B — Zone 2 -->
@@ -935,7 +935,7 @@ function toggleMode(){
           <circle r="34" fill="#d97706" stroke="white" stroke-width="2.5" id="sm-ring-B"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">B</text>
           <text text-anchor="middle" dy="7" fill="white" font-size="12" font-weight="700" font-family="system-ui,sans-serif" id="sm-pct-B">—%</text>
-          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Zone 2</text>
+          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Mid Road</text>
         </g>
 
         <!-- Section C — Zone 2 -->
@@ -945,7 +945,7 @@ function toggleMode(){
           <circle r="34" fill="#d97706" stroke="white" stroke-width="2.5" id="sm-ring-C"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">C</text>
           <text text-anchor="middle" dy="7" fill="white" font-size="12" font-weight="700" font-family="system-ui,sans-serif" id="sm-pct-C">—%</text>
-          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Zone 2</text>
+          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Mid Road</text>
         </g>
 
         <!-- Section D — Zone 3 -->
@@ -955,7 +955,7 @@ function toggleMode(){
           <circle r="34" fill="#2563eb" stroke="white" stroke-width="2.5" id="sm-ring-D"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">D</text>
           <text text-anchor="middle" dy="7" fill="white" font-size="12" font-weight="700" font-family="system-ui,sans-serif" id="sm-pct-D">—%</text>
-          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Zone 3</text>
+          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Road 3</text>
         </g>
 
         <!-- Section E — Zone 3 -->
@@ -965,7 +965,7 @@ function toggleMode(){
           <circle r="34" fill="#2563eb" stroke="white" stroke-width="2.5" id="sm-ring-E"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">E</text>
           <text text-anchor="middle" dy="7" fill="white" font-size="12" font-weight="700" font-family="system-ui,sans-serif" id="sm-pct-E">—%</text>
-          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Zone 3</text>
+          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Road 3</text>
         </g>
 
         <!-- Section F — Zone 4 -->
@@ -975,7 +975,7 @@ function toggleMode(){
           <circle r="34" fill="#9333ea" stroke="white" stroke-width="2.5" id="sm-ring-F"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">F</text>
           <text text-anchor="middle" dy="7" fill="white" font-size="12" font-weight="700" font-family="system-ui,sans-serif" id="sm-pct-F">—%</text>
-          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Zone 4</text>
+          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Lower Rd</text>
         </g>
 
         <!-- Section G — Zone 4 -->
@@ -985,7 +985,7 @@ function toggleMode(){
           <circle r="34" fill="#9333ea" stroke="white" stroke-width="2.5" id="sm-ring-G"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">G</text>
           <text text-anchor="middle" dy="7" fill="white" font-size="12" font-weight="700" font-family="system-ui,sans-serif" id="sm-pct-G">—%</text>
-          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Zone 4</text>
+          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Lower Rd</text>
         </g>
 
         <!-- Section H — Zone 5 -->
@@ -995,7 +995,7 @@ function toggleMode(){
           <circle r="34" fill="#db2777" stroke="white" stroke-width="2.5" id="sm-ring-H"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">H</text>
           <text text-anchor="middle" dy="7" fill="white" font-size="12" font-weight="700" font-family="system-ui,sans-serif" id="sm-pct-H">—%</text>
-          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Zone 5</text>
+          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Drains</text>
         </g>
 
         <!-- Section I — Zone 5 -->
@@ -1005,7 +1005,7 @@ function toggleMode(){
           <circle r="34" fill="#db2777" stroke="white" stroke-width="2.5" id="sm-ring-I"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">I</text>
           <text text-anchor="middle" dy="7" fill="white" font-size="12" font-weight="700" font-family="system-ui,sans-serif" id="sm-pct-I">—%</text>
-          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Zone 5</text>
+          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Drains</text>
         </g>
 
         <!-- Section J — Zone 5 -->
@@ -1015,7 +1015,7 @@ function toggleMode(){
           <circle r="34" fill="#db2777" stroke="white" stroke-width="2.5" id="sm-ring-J"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">J</text>
           <text text-anchor="middle" dy="7" fill="white" font-size="12" font-weight="700" font-family="system-ui,sans-serif" id="sm-pct-J">—%</text>
-          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Zone 5</text>
+          <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Drains</text>
         </g>
       </svg>
     </div>
@@ -1345,6 +1345,19 @@ window.addEventListener('DOMContentLoaded', () => {
     if(gapPct <= 0) {
       if(barG) barG.style.width = '0%';
       set('kpi-gap-pct', '0%');
+    }
+  } catch(e) {}
+
+  // Severity-colour the "Behind by" box: grey ≤5%, amber ≤15%, red >15%
+  try {
+    const bb = document.querySelector('.prog-behind-box');
+    if(bb) {
+      const bbBg = gapPct <= 5 ? '#64748b18' : gapPct <= 15 ? '#f9730618' : '#ef444418';
+      const bbBd = gapPct <= 5 ? '#64748b33' : gapPct <= 15 ? '#f9730633' : '#ef444433';
+      const bbTx = gapPct <= 5 ? '#94a3b8'   : gapPct <= 15 ? '#f97306'   : '#ef4444';
+      bb.style.background = bbBg;
+      bb.style.borderColor = bbBd;
+      bb.querySelectorAll('div').forEach(d => { d.style.color = bbTx; });
     }
   } catch(e) {}
 
