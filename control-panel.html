@@ -292,17 +292,7 @@ body:not(.admin-mode) .admin-only { display: none !important; }
 
 /* ── Site map circle hover ── */
 #tab-sitemap svg { overflow: visible; }
-[id^="sm-sect-"] {
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.22s ease;
-  cursor: pointer;
-}
-[id^="sm-sect-"]:hover {
-  transform: scale(3);
-  filter: drop-shadow(0 4px 20px rgba(0,0,0,0.7));
-  z-index: 10;
-}
+[id^="sm-sect-"] { cursor: pointer; }
 </style>
 </head>
 <body>
@@ -599,7 +589,7 @@ function toggleMode(){
           <th>Assigned</th>
           <th>Start</th>
           <th>End</th>
-          <th>Budget</th>
+          <th class="admin-only">Budget</th>
           <th>Progress</th>
           <th>Status</th>
         </tr>
@@ -1555,7 +1545,7 @@ function buildZoneCards() {
       '<div class="zone-header"><div class="zone-name">' + z.name + '</div><span class="zone-status ' + status + '">' + status + '</span></div>' +
       '<div class="zone-dates">' + fmtDate(z.start) + ' – ' + fmtDate(z.end) + '</div>' +
       '<div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:8px;letter-spacing:0.3px;">' + (ZONE_SECT_LABELS[z.id]||'') + '</div>' +
-      '<div class="zone-budget"><span>Budget: </span>' + fmt(z.budget) + '</div>' +
+      '<div class="zone-budget admin-only"><span>Budget: </span>' + fmt(z.budget) + '</div>' +
       '<div class="progress-track"><div class="progress-fill ' + status + '" style="width:' + prog + '%"></div></div>' +
       '<div class="progress-label"><span>Progress</span>' +
       '<span style="display:flex;align-items:center;gap:8px;">' +
@@ -1586,7 +1576,7 @@ function buildProgTable() {
   let html = '';
   ZONES.forEach(z => {
     const prog = getZoneProgress(z.id), status = getZoneStatus(z);
-    html += '<tr class="zone-row"><td>' + z.wbs + '</td><td colspan="2">' + z.name + '</td><td>' + fmtShortDate(z.start) + '</td><td>' + fmtShortDate(z.end) + '</td><td>' + fmt(z.budget) + '</td>' +
+    html += '<tr class="zone-row"><td>' + z.wbs + '</td><td colspan="2">' + z.name + '</td><td>' + fmtShortDate(z.start) + '</td><td>' + fmtShortDate(z.end) + '</td><td class="admin-only">' + fmt(z.budget) + '</td>' +
       '<td><div class="mini-bar" style="width:80px;"><div class="mini-fill" style="width:' + prog + '%;background:' + stcol[status] + ';"></div></div></td>' +
       '<td><span class="zone-status ' + status + '" style="display:inline-block;">' + status.toUpperCase() + '</span></td></tr>';
     TASKS.filter(t => t.zone === z.id).forEach(t => {
@@ -1789,6 +1779,23 @@ function buildSiteMap() {
       else if(zSt==='complete'){ ring.setAttribute('fill','#22c55e'); ring.setAttribute('stroke','white'); ring.setAttribute('stroke-width','2.5'); }
       else                   { ring.setAttribute('stroke','white'); ring.setAttribute('stroke-width','2.5'); }
     }
+  });
+
+  /* ── Circle hover: direct property assignment prevents duplicate listeners ── */
+  SECTIONS.forEach(function(s) {
+    var g = document.getElementById('sm-sect-' + s.id);
+    if(!g) return;
+    /* Store base transform once on the element so re-renders don't stack scale() */
+    if(!g.dataset.baseTransform) g.dataset.baseTransform = g.getAttribute('transform') || '';
+    var base = g.dataset.baseTransform;
+    g.onmouseenter = function() {
+      g.setAttribute('transform', base + ' scale(2)');
+      g.style.filter = 'drop-shadow(0 2px 12px rgba(0,0,0,0.7))';
+    };
+    g.onmouseleave = function() {
+      g.setAttribute('transform', base);
+      g.style.filter = '';
+    };
   });
 
   const cards = document.getElementById('sm-section-cards');
