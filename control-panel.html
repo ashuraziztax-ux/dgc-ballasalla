@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v7</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v8</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -304,6 +304,15 @@ body:not(.admin-mode) .admin-only { display: none !important; }
 .alert.warning { border-left: 3px solid var(--orange) !important; }
 .alert.info    { border-left: 3px solid var(--accent2) !important; }
 .alert.success { border-left: 3px solid var(--green) !important; }
+
+/* ─── v8: Voice diary + appearance editor ─── */
+#diary-text { transition: border-color 0.2s; }
+#diary-text:focus { border-color: var(--accent) !important; outline: none; }
+#diary-rec-btn.rec-on { background:#ef444430 !important; border-color:#ef4444 !important; animation: dRecPulse 1.2s ease-in-out infinite; }
+@keyframes dRecPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.75;transform:scale(0.97)} }
+#appear-fab { transition: transform 0.15s, box-shadow 0.15s; }
+#appear-fab:hover { transform: scale(1.1); box-shadow: 0 6px 20px rgba(0,0,0,0.5) !important; }
+.appear-swatch:hover { transform: scale(1.15); }
 </style>
 </head>
 <body>
@@ -360,6 +369,394 @@ function toggleMode(){
 (function(){
   try{ if(sessionStorage.getItem('dgc_mode')==='admin'){ isAdmin=true; document.body.classList.add('admin-mode'); } }catch(e){}
 })();
+// ══════════════════════════════════════════════════════
+// VOICE DIARY — recording, AI cleanup, save/load
+// ══════════════════════════════════════════════════════
+var _dRec = null, _dRecording = false;
+
+function diaryToggleRec() {
+  var btn = document.getElementById('diary-rec-btn');
+  var st  = document.getElementById('diary-status');
+  if(!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    if(st) st.textContent = '⚠ Voice recording requires Google Chrome.';
+    return;
+  }
+  if(_dRecording) {
+    // — Stop —
+    _dRecording = false;
+    try{ if(_dRec) _dRec.stop(); }catch(e){}
+    if(btn){ btn.innerHTML='🎤 Record'; btn.classList.remove('rec-on'); }
+    if(st)  st.textContent = '';
+    return;
+  }
+  // — Start —
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  _dRec = new SR();
+  _dRec.continuous      = true;
+  _dRec.interimResults  = true;
+  _dRec.lang            = 'en-GB';
+  var ta       = document.getElementById('diary-text');
+  var baseText = ta ? (ta.value ? ta.value.trimEnd() + ' ' : '') : '';
+  var finalSoFar = '';
+  _dRec.onresult = function(ev) {
+    var interim = '';
+    for(var i = ev.resultIndex; i < ev.results.length; i++) {
+      if(ev.results[i].isFinal) { finalSoFar += ev.results[i][0].transcript + ' '; }
+      else                      { interim    += ev.results[i][0].transcript; }
+    }
+    if(ta) ta.value = baseText + finalSoFar + (interim ? interim : '');
+  };
+  _dRec.onend = function() {
+    if(_dRecording) { try{ _dRec.start(); }catch(e){} } // keep alive
+  };
+  _dRec.onerror = function(ev) {
+    _dRecording = false;
+    if(btn){ btn.innerHTML='🎤 Record'; btn.classList.remove('rec-on'); }
+    if(st)  st.textContent = '⚠ Recording error: ' + ev.error + '. Try again.';
+  };
+  try { _dRec.start(); } catch(e) {
+    if(st) st.textContent = '⚠ Could not start microphone: ' + e.message;
+    return;
+  }
+  _dRecording = true;
+  if(btn){ btn.innerHTML='🔴 Stop Recording'; btn.classList.add('rec-on'); }
+  if(st)  st.textContent = '🎤 Listening — speak clearly. Tap Stop when done.';
+}
+
+async function diaryAIClean() {
+  var ta = document.getElementById('diary-text');
+  var st = document.getElementById('diary-status');
+  if(!ta || !ta.value.trim()) {
+    if(st) st.textContent = '⚠ Nothing to clean up — record or type first.';
+    return;
+  }
+  var key = '';
+  try{ key = localStorage.getItem('dgc_ant_key') || ''; }catch(e){}
+  if(!key) {
+    var row = document.getElementById('diary-api-row');
+    if(row) row.style.display = 'block';
+    if(st)  st.textContent = '⚙ Enter your API key below, or use Copy for claude.ai';
+    return;
+  }
+  var orig = ta.value;
+  ta.value    = '⏳ Sending to AI for clean-up…';
+  ta.disabled = true;
+  if(st) st.textContent = '⏳ AI is correcting your text…';
+  var prompt = 'You are editing a voice-to-text transcription from a construction site diary.
+
+'
+    + 'Context: The speaker is a site manager or groundworker on a drainage and groundworks project called '
+    + '"Ballasalla Phase 4" on the Isle of Man, sub-contracted to DGC (Drainage & Groundwork Contractors), '
+    + 'built for Dandara (a large residential developer). The work involves drainage, manholes, chambers, '
+    + 'pipe laying, service trenches, road construction, kerbs, tarmac, Type 1 subbase, and external groundworks.
+
+'
+    + 'Task: Correct the spelling, grammar, capitalisation and punctuation only. Keep all names, numbers, '
+    + 'section references (A–J), and technical details exactly as spoken. Use correct construction industry '
+    + 'terminology where appropriate. Do NOT add or remove any information — only clean up what is there.
+
+'
+    + 'Transcription to correct:
+' + orig + '
+
+Return only the corrected diary text, nothing else.';
+  try {
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type'      : 'application/json',
+        'x-api-key'         : key,
+        'anthropic-version' : '2023-06-01'
+      },
+      body: JSON.stringify({
+        model      : 'claude-haiku-4-5',
+        max_tokens : 1024,
+        messages   : [{ role:'user', content:prompt }]
+      })
+    });
+    if(!resp.ok) {
+      var errData = await resp.json();
+      throw new Error((errData.error && errData.error.message) || 'API error ' + resp.status);
+    }
+    var data = await resp.json();
+    ta.value    = data.content[0].text.trim();
+    ta.disabled = false;
+    if(st){ st.textContent = '✅ AI clean-up done'; setTimeout(function(){if(st)st.textContent='';},3000); }
+  } catch(err) {
+    ta.value    = orig;
+    ta.disabled = false;
+    var row = document.getElementById('diary-api-row');
+    if(row) row.style.display = 'block';
+    var msg = err.message || String(err);
+    if(msg.toLowerCase().indexOf('cors') !== -1 || msg.toLowerCase().indexOf('fetch') !== -1) {
+      if(st) st.textContent = '⚠ Browser CORS block — use the Copy for claude.ai button instead';
+    } else {
+      if(st) st.textContent = '⚠ ' + msg;
+    }
+  }
+}
+
+function diaryCopyPrompt() {
+  var ta   = document.getElementById('diary-text');
+  var st   = document.getElementById('diary-status');
+  var text = ta ? ta.value.trim() : '';
+  if(!text){ if(st) st.textContent='⚠ Record or type your diary first.'; return; }
+  var prompt = 'Please correct the spelling, grammar, capitalisation and punctuation of this construction '
+    + 'site diary entry. The writer is a site manager on a drainage and groundworks project on the Isle of Man '
+    + '(Ballasalla Phase 4, built by Dandara). Use correct construction terminology. Keep all names, numbers '
+    + 'and technical details exactly as written — only clean up the text.
+
+'
+    + 'Diary entry:
+
+' + text;
+  try {
+    navigator.clipboard.writeText(prompt).then(function(){
+      if(st){ st.textContent='✅ Prompt copied — paste into claude.ai to clean up!'; setTimeout(function(){if(st)st.textContent='';},5000); }
+    }).catch(function(){ prompt_fallback(prompt); });
+  } catch(e){ prompt_fallback(prompt); }
+}
+function prompt_fallback(txt) {
+  var ta2 = document.createElement('textarea');
+  ta2.value = txt; ta2.style.position='fixed'; ta2.style.opacity='0';
+  document.body.appendChild(ta2); ta2.select();
+  try{ document.execCommand('copy'); }catch(e){}
+  document.body.removeChild(ta2);
+  var st = document.getElementById('diary-status');
+  if(st){ st.textContent='✅ Copied — paste into claude.ai'; setTimeout(function(){if(st)st.textContent='';},4000); }
+}
+
+function diarySaveKey() {
+  var inp = document.getElementById('diary-api-input');
+  var key = inp ? inp.value.trim() : '';
+  var st  = document.getElementById('diary-status');
+  if(!key){ if(st) st.textContent='⚠ Please paste your API key first.'; return; }
+  try{ localStorage.setItem('dgc_ant_key', key); }catch(e){}
+  var row = document.getElementById('diary-api-row');
+  if(row) row.style.display='none';
+  if(st){ st.textContent='✅ Key saved. Click AI Clean-Up again.'; setTimeout(function(){if(st)st.textContent='';},3000); }
+}
+
+function diarySaveEntry() {
+  var ta   = document.getElementById('diary-text');
+  var st   = document.getElementById('diary-status');
+  var text = ta ? ta.value.trim() : '';
+  if(!text){ if(st) st.textContent='⚠ Nothing to save — record or type your diary first.'; return; }
+  var date = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+  try {
+    var entries = lsGet('dgc_diary','[]');
+    entries.push({ date:date, text:text, saved:new Date().toISOString() });
+    lsSet('dgc_diary', entries);
+  } catch(e){}
+  if(ta) ta.value = '';
+  if(st){ st.textContent='✅ Diary saved for ' + date; setTimeout(function(){if(st)st.textContent='';},3000); }
+  loadDiaryEntries();
+}
+
+function diaryClear() {
+  var ta = document.getElementById('diary-text');
+  var st = document.getElementById('diary-status');
+  if(ta) ta.value='';
+  if(st) st.textContent='';
+  if(_dRecording) diaryToggleRec(); // stop any active recording
+}
+
+function loadDiaryEntries() {
+  var container = document.getElementById('log-entries-list');
+  if(!container) return;
+  var diaryE = []; var logE = [];
+  try{ diaryE = lsGet('dgc_diary','[]'); }catch(e){}
+  try{ logE   = lsGet('dgc_log','[]');   }catch(e){}
+  var all = diaryE.map(function(e){ return {date:e.date,type:'diary',text:e.text||''}; })
+    .concat(logE.map(function(e){ return {date:e.date,type:'log',
+      text:(e.task?'Task: '+e.task+' ':'')+(e.qty?'Qty: '+e.qty+' ':'')+(e.delay?'Issues: '+e.delay:'')}; }))
+    .sort(function(a,b){ return b.date.localeCompare(a.date); })
+    .slice(0,30);
+  if(!all.length){
+    container.innerHTML='<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px 0;">No entries yet.</div>';
+    return;
+  }
+  container.innerHTML = all.map(function(e){
+    var icon  = e.type==='diary' ? '📖' : '📋';
+    var short = (e.text||'').length>130 ? (e.text||'').slice(0,130)+'…' : (e.text||'');
+    short = short.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return '<div style="border-bottom:1px solid var(--border);padding:8px 2px;">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:3px;">'
+      +'<span style="font-size:12px;font-weight:700;color:var(--accent);">'+icon+' '+e.date+'</span>'
+      +'<span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">'+e.type+'</span></div>'
+      +'<div style="font-size:12px;color:var(--text);line-height:1.5;">'+short+'</div></div>';
+  }).join('');
+}
+
+// Fix for the structured log form (button calls saveEntry / clearForm)
+function saveEntry() {
+  var date  = document.getElementById('log-date');
+  var gang  = document.getElementById('log-gang');
+  var zone  = document.getElementById('log-zone');
+  var task  = document.getElementById('log-task');
+  var qty   = document.getElementById('log-qty');
+  var hours = document.getElementById('log-hours');
+  var issues= document.getElementById('log-issues');
+  var mats  = document.getElementById('log-materials');
+  var notes = document.getElementById('log-notes');
+  var st    = document.getElementById('diary-status');
+  if(!date||!date.value){ if(st) st.textContent='⚠ Please select a date.'; return; }
+  var desc = [
+    task  && task.value   ? 'Task: '     + task.value   : '',
+    qty   && qty.value    ? 'Qty: '      + qty.value    : '',
+    hours && hours.value  ? 'Hours: '    + hours.value  : '',
+    issues&& issues.value ? 'Issues: '   + issues.value : '',
+    notes && notes.value  ? notes.value                 : ''
+  ].filter(Boolean).join(' | ');
+  if(!desc.trim()){ if(st) st.textContent='⚠ Enter at least a task or quantity.'; return; }
+  try{
+    var entries = lsGet('dgc_log','[]');
+    entries.push({ date:date.value, gang:gang?gang.value:'', zone:zone?zone.value:'',
+      task:task?task.value:'', qty:qty?qty.value:'', hours:hours?hours.value:'',
+      delay:issues?issues.value:'', materials:mats?mats.value:'', notes:notes?notes.value:'',
+      desc:desc, saved:new Date().toISOString() });
+    lsSet('dgc_log', entries);
+  }catch(e){}
+  ['log-task','log-qty','log-hours','log-issues','log-materials','log-notes'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  if(st){ st.textContent='✅ Site log entry saved for '+date.value; setTimeout(function(){if(st)st.textContent='';},3000); }
+  loadDiaryEntries();
+}
+function clearForm() {
+  ['log-date','log-task','log-qty','log-hours','log-issues','log-materials','log-notes'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  var g=document.getElementById('log-gang'); if(g) g.selectedIndex=0;
+  var z=document.getElementById('log-zone'); if(z) z.selectedIndex=0;
+}
+
+// ══════════════════════════════════════════════════════
+// APPEARANCE EDITOR — floating panel, accent + font size
+// ══════════════════════════════════════════════════════
+var _appearOpen = false;
+
+function initAppearance() {
+  // Apply saved preferences
+  try {
+    var savedAccent = localStorage.getItem('dgc_accent');
+    var savedFs     = localStorage.getItem('dgc_fontsize');
+    if(savedAccent) document.documentElement.style.setProperty('--accent', savedAccent);
+    if(savedFs)     document.documentElement.style.fontSize = savedFs + 'px';
+  } catch(e){}
+
+  // Build floating FAB button
+  var fab = document.createElement('button');
+  fab.id        = 'appear-fab';
+  fab.innerHTML = '🎨';
+  fab.title     = 'Appearance — change colours & text size';
+  fab.onclick   = toggleAppearPanel;
+  fab.style.cssText = [
+    'position:fixed','bottom:20px','right:20px',
+    'width:46px','height:46px','border-radius:50%',
+    'background:var(--surface2)','border:1px solid var(--border)',
+    'color:white','font-size:22px','cursor:pointer',
+    'z-index:9990','display:flex','align-items:center','justify-content:center',
+    'box-shadow:0 4px 16px rgba(0,0,0,0.45)','padding:0'
+  ].join(';');
+  document.body.appendChild(fab);
+
+  // Build appearance panel
+  var ACCENTS = [
+    ['#f59e0b','Amber (default)'],['#38bdf8','Sky Blue'],['#22c55e','Green'],
+    ['#a78bfa','Purple'],['#f97316','Orange'],['#fb7185','Pink'],
+    ['#2dd4bf','Teal'],['#facc15','Yellow'],['#e2e8f0','White']
+  ];
+  var SIZES = [['13','Small'],['15','Medium'],['17','Large'],['19','X-Large']];
+  var FONTS = [
+    ['system-ui,sans-serif','System (default)'],
+    ['"Courier New",monospace','Monospace'],
+    ['Georgia,serif','Serif']
+  ];
+
+  var panel = document.createElement('div');
+  panel.id = 'appear-panel';
+  panel.style.cssText = [
+    'position:fixed','bottom:76px','right:16px',
+    'background:var(--surface)','border:1px solid var(--border)',
+    'border-radius:14px','padding:18px','z-index:9991',
+    'width:270px','box-shadow:0 8px 32px rgba(0,0,0,0.55)',
+    'display:none'
+  ].join(';');
+
+  var swatches = ACCENTS.map(function(c){
+    return '<div onclick="setAppearAccent(''+c[0]+'')" title="'+c[1]+'" style="'
+      +'width:28px;height:28px;border-radius:50%;background:'+c[0]+';cursor:pointer;'
+      +'border:2px solid transparent;box-sizing:border-box;transition:transform 0.12s,border-color 0.12s;'
+      +'class:appear-swatch" '
+      +'onmouseover="this.style.borderColor='white';this.style.transform='scale(1.15)'" '
+      +'onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'"></div>';
+  }).join('');
+
+  var sizeBtns = SIZES.map(function(f){
+    return '<button onclick="setAppearFont(''+f[0]+'')" style="'
+      +'flex:1;padding:6px 0;background:var(--surface2);border:1px solid var(--border);'
+      +'border-radius:6px;color:var(--text);font-size:'+f[0]+'px;cursor:pointer;">'+f[1]+'</button>';
+  }).join('');
+
+  var fontBtns = FONTS.map(function(f){
+    return '<button onclick="setAppearFontFamily(''+f[0]+'')" style="'
+      +'flex:1;padding:5px 4px;background:var(--surface2);border:1px solid var(--border);'
+      +'border-radius:6px;color:var(--text);font-size:11px;cursor:pointer;font-family:'+f[0]+';">'+f[1]+'</button>';
+  }).join('');
+
+  panel.innerHTML =
+    '<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.07em;display:flex;justify-content:space-between;align-items:center;">'
+      +'<span>🎨 Appearance</span>'
+      +'<button onclick="toggleAppearPanel()" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;padding:0;line-height:1;">&times;</button></div>'
+    +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:8px;font-weight:700;">Accent Colour</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">'+swatches+'</div>'
+    +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:8px;font-weight:700;">Text Size</div>'
+    +'<div style="display:flex;gap:6px;margin-bottom:16px;">'+sizeBtns+'</div>'
+    +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:8px;font-weight:700;">Font</div>'
+    +'<div style="display:flex;gap:6px;margin-bottom:16px;">'+fontBtns+'</div>'
+    +'<button onclick="resetAppearance()" style="width:100%;padding:7px;background:#ef444415;border:1px solid #ef444435;color:#ef4444;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;">↺ Reset to defaults</button>';
+
+  document.body.appendChild(panel);
+}
+
+function toggleAppearPanel() {
+  _appearOpen = !_appearOpen;
+  var p = document.getElementById('appear-panel');
+  if(p) p.style.display = _appearOpen ? 'block' : 'none';
+}
+
+function setAppearAccent(col) {
+  document.documentElement.style.setProperty('--accent', col);
+  try{ localStorage.setItem('dgc_accent', col); }catch(e){}
+}
+
+function setAppearFont(px) {
+  document.documentElement.style.fontSize = px + 'px';
+  try{ localStorage.setItem('dgc_fontsize', px); }catch(e){}
+}
+
+function setAppearFontFamily(fam) {
+  document.body.style.fontFamily = fam;
+  try{ localStorage.setItem('dgc_fontfamily', fam); }catch(e){}
+  // Also apply to textareas/inputs
+  document.querySelectorAll('textarea,input').forEach(function(el){
+    el.style.fontFamily = fam;
+  });
+}
+
+function resetAppearance() {
+  document.documentElement.style.setProperty('--accent', '#f59e0b');
+  document.documentElement.style.fontSize = '';
+  document.body.style.fontFamily = '';
+  document.querySelectorAll('textarea,input').forEach(function(el){ el.style.fontFamily=''; });
+  try{
+    localStorage.removeItem('dgc_accent');
+    localStorage.removeItem('dgc_fontsize');
+    localStorage.removeItem('dgc_fontfamily');
+  }catch(e){}
+}
+
 </script>
 
 <div class="header">
@@ -809,10 +1206,38 @@ function toggleMode(){
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-title">Site Diary — Recent Entries</div>
-      <div class="log-entries" id="log-entries-list">
-        <div style="color:var(--muted); font-size:12px; text-align:center; padding:30px 0;">No entries yet. Save your first daily log above.</div>
+    <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+      <div class="card-title">📖 Site Diary</div>
+      <div id="diary-status" style="font-size:11px;color:var(--accent);min-height:14px;font-weight:600;"></div>
+      <textarea id="diary-text" spellcheck="true"
+        placeholder="Tap 🎤 Record and speak — or type here.&#10;Describe what happened on site today: who was there, what tasks were done, any problems or delays, weather, visitors, deliveries..."
+        style="min-height:260px;width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;line-height:1.65;padding:12px;resize:vertical;font-family:inherit;box-sizing:border-box;"></textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <button id="diary-rec-btn" onclick="diaryToggleRec()"
+          style="background:#ef444420;border:1px solid #ef444455;color:#ef4444;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;">🎤 Record</button>
+        <button onclick="diaryAIClean()"
+          style="background:#7c3aed20;border:1px solid #7c3aed55;color:#a78bfa;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;">✨ AI Clean-Up</button>
+        <button onclick="diarySaveEntry()"
+          style="background:#22c55e20;border:1px solid #22c55e55;color:#22c55e;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;">💾 Save Diary</button>
+        <button onclick="diaryClear()"
+          style="background:#64748b18;border:1px solid #64748b40;color:#94a3b8;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;">Clear</button>
+      </div>
+      <div id="diary-api-row" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Enter your Anthropic API key to enable AI clean-up (stored on this device only). Or use the <strong style="color:#93c5fd;">Copy for claude.ai</strong> button to clean up manually.</div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <input id="diary-api-input" type="password" placeholder="sk-ant-api03-..."
+            style="flex:1;min-width:140px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;padding:6px 8px;">
+          <button onclick="diarySaveKey()"
+            style="background:#22c55e20;border:1px solid #22c55e55;color:#22c55e;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;white-space:nowrap;">Save Key</button>
+          <button onclick="diaryCopyPrompt()"
+            style="background:#3b82f620;border:1px solid #3b82f655;color:#93c5fd;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;white-space:nowrap;">📋 Copy for claude.ai</button>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:10px;">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Recent Entries</div>
+        <div class="log-entries" id="log-entries-list" style="max-height:220px;overflow-y:auto;">
+          <div style="color:var(--muted);font-size:12px;text-align:center;padding:20px 0;">No entries yet.</div>
+        </div>
       </div>
     </div>
   </div>
@@ -1421,7 +1846,8 @@ window.addEventListener('DOMContentLoaded', () => {
   try { buildProgTable(); }      catch(e) {}
   try { buildBudgetZoneTable(); } catch(e) {}
   try { buildTodayPlan(); }      catch(e) {}
-  try { loadLogEntries(); }      catch(e) {}
+  try { loadDiaryEntries(); }    catch(e) {}
+  try { initAppearance(); }      catch(e) {}
   try { buildReportMeta(); }     catch(e) {}
   try { buildTimeline(); }        catch(e) { console.warn('Timeline skipped:', e); }
   try { buildDashboardCharts(); } catch(e) { console.warn('Charts skipped:', e); }
