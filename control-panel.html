@@ -637,85 +637,116 @@ function clearForm() {
 var _appearOpen = false;
 
 function initAppearance() {
-  // Apply saved preferences
+  // Restore saved settings
   try {
-    var savedAccent = localStorage.getItem('dgc_accent');
-    var savedFs     = localStorage.getItem('dgc_fontsize');
-    if(savedAccent) document.documentElement.style.setProperty('--accent', savedAccent);
-    if(savedFs)     document.documentElement.style.fontSize = savedFs + 'px';
+    var sa = localStorage.getItem('dgc_accent');
+    var sf = localStorage.getItem('dgc_fontsize');
+    var sff= localStorage.getItem('dgc_fontfamily');
+    if(sa)  document.documentElement.style.setProperty('--accent', sa);
+    if(sf)  document.documentElement.style.fontSize = sf + 'px';
+    if(sff) {
+      document.body.style.fontFamily = sff;
+      document.querySelectorAll('textarea,input').forEach(function(el){ el.style.fontFamily=sff; });
+    }
   } catch(e){}
 
-  // Build floating FAB button
+  // ── Floating palette button (FAB) ──
   var fab = document.createElement('button');
   fab.id        = 'appear-fab';
   fab.innerHTML = '🎨';
-  fab.title     = 'Appearance — change colours & text size';
+  fab.title     = 'Appearance — colours & text size';
   fab.onclick   = toggleAppearPanel;
-  fab.style.cssText = [
-    'position:fixed','bottom:20px','right:20px',
-    'width:46px','height:46px','border-radius:50%',
-    'background:var(--surface2)','border:1px solid var(--border)',
-    'color:white','font-size:22px','cursor:pointer',
-    'z-index:9990','display:flex','align-items:center','justify-content:center',
-    'box-shadow:0 4px 16px rgba(0,0,0,0.45)','padding:0'
-  ].join(';');
+  fab.style.cssText = 'position:fixed;bottom:20px;right:20px;width:46px;height:46px;'
+    + 'border-radius:50%;background:var(--surface2);border:1px solid var(--border);'
+    + 'color:white;font-size:22px;cursor:pointer;z-index:9990;display:flex;'
+    + 'align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.45);padding:0;';
   document.body.appendChild(fab);
 
-  // Build appearance panel
-  var ACCENTS = [
-    ['#f59e0b','Amber (default)'],['#38bdf8','Sky Blue'],['#22c55e','Green'],
-    ['#a78bfa','Purple'],['#f97316','Orange'],['#fb7185','Pink'],
-    ['#2dd4bf','Teal'],['#facc15','Yellow'],['#e2e8f0','White']
-  ];
-  var SIZES = [['13','Small'],['15','Medium'],['17','Large'],['19','X-Large']];
-  var FONTS = [
-    ['system-ui,sans-serif','System (default)'],
-    ['"Courier New",monospace','Monospace'],
-    ['Georgia,serif','Serif']
-  ];
-
+  // ── Panel built with DOM methods (avoids all quote-escaping issues) ──
   var panel = document.createElement('div');
   panel.id = 'appear-panel';
-  panel.style.cssText = [
-    'position:fixed','bottom:76px','right:16px',
-    'background:var(--surface)','border:1px solid var(--border)',
-    'border-radius:14px','padding:18px','z-index:9991',
-    'width:270px','box-shadow:0 8px 32px rgba(0,0,0,0.55)',
-    'display:none'
-  ].join(';');
+  panel.style.cssText = 'position:fixed;bottom:76px;right:16px;background:var(--surface);'
+    + 'border:1px solid var(--border);border-radius:14px;padding:18px;z-index:9991;'
+    + 'width:270px;box-shadow:0 8px 32px rgba(0,0,0,0.55);display:none;';
 
-  var swatches = ACCENTS.map(function(c){
-    return '<div onclick="setAppearAccent(''+c[0]+'')" title="'+c[1]+'" style="'
-      +'width:28px;height:28px;border-radius:50%;background:'+c[0]+';cursor:pointer;'
-      +'border:2px solid transparent;box-sizing:border-box;transition:transform 0.12s,border-color 0.12s;'
-      +'class:appear-swatch" '
-      +'onmouseover="this.style.borderColor='white';this.style.transform='scale(1.15)'" '
-      +'onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'"></div>';
-  }).join('');
+  // Title + close button
+  var titleRow = document.createElement('div');
+  titleRow.style.cssText = 'font-size:12px;font-weight:800;color:var(--text);margin-bottom:14px;'
+    + 'text-transform:uppercase;letter-spacing:0.07em;display:flex;justify-content:space-between;align-items:center;';
+  titleRow.innerHTML = '<span>🎨 Appearance</span>';
+  var xBtn = document.createElement('button');
+  xBtn.innerHTML = '&times;';
+  xBtn.onclick = toggleAppearPanel;
+  xBtn.style.cssText = 'background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;padding:0;line-height:1;';
+  titleRow.appendChild(xBtn);
+  panel.appendChild(titleRow);
 
-  var sizeBtns = SIZES.map(function(f){
-    return '<button onclick="setAppearFont(''+f[0]+'')" style="'
-      +'flex:1;padding:6px 0;background:var(--surface2);border:1px solid var(--border);'
-      +'border-radius:6px;color:var(--text);font-size:'+f[0]+'px;cursor:pointer;">'+f[1]+'</button>';
-  }).join('');
+  // Helper: section label
+  function mkLabel(txt) {
+    var d = document.createElement('div');
+    d.style.cssText = 'font-size:10px;text-transform:uppercase;letter-spacing:0.06em;'
+      + 'color:var(--muted);margin-bottom:8px;margin-top:12px;font-weight:700;';
+    d.textContent = txt;
+    panel.appendChild(d);
+  }
+  // Helper: flex row
+  function mkRow(gap) {
+    var d = document.createElement('div');
+    d.style.cssText = 'display:flex;gap:' + (gap||'8px') + ';flex-wrap:wrap;margin-bottom:4px;';
+    panel.appendChild(d);
+    return d;
+  }
 
-  var fontBtns = FONTS.map(function(f){
-    return '<button onclick="setAppearFontFamily(''+f[0]+'')" style="'
-      +'flex:1;padding:5px 4px;background:var(--surface2);border:1px solid var(--border);'
-      +'border-radius:6px;color:var(--text);font-size:11px;cursor:pointer;font-family:'+f[0]+';">'+f[1]+'</button>';
-  }).join('');
+  // ── Accent colour swatches ──
+  mkLabel('Accent Colour');
+  var cRow = mkRow('8px');
+  [['#f59e0b','Amber (default)'],['#38bdf8','Sky Blue'],['#22c55e','Green'],
+   ['#a78bfa','Purple'],['#f97316','Orange'],['#fb7185','Pink'],
+   ['#2dd4bf','Teal'],['#facc15','Yellow'],['#e2e8f0','White']
+  ].forEach(function(c) {
+    var sw = document.createElement('div');
+    sw.title = c[1];
+    sw.style.cssText = 'width:28px;height:28px;border-radius:50%;background:' + c[0]
+      + ';cursor:pointer;border:2px solid transparent;box-sizing:border-box;transition:transform 0.12s,border-color 0.12s;';
+    (function(col) {
+      sw.addEventListener('click',     function(){ setAppearAccent(col); });
+      sw.addEventListener('mouseover', function(){ sw.style.borderColor='white'; sw.style.transform='scale(1.15)'; });
+      sw.addEventListener('mouseout',  function(){ sw.style.borderColor='transparent'; sw.style.transform='scale(1)'; });
+    })(c[0]);
+    cRow.appendChild(sw);
+  });
 
-  panel.innerHTML =
-    '<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.07em;display:flex;justify-content:space-between;align-items:center;">'
-      +'<span>🎨 Appearance</span>'
-      +'<button onclick="toggleAppearPanel()" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;padding:0;line-height:1;">&times;</button></div>'
-    +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:8px;font-weight:700;">Accent Colour</div>'
-    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">'+swatches+'</div>'
-    +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:8px;font-weight:700;">Text Size</div>'
-    +'<div style="display:flex;gap:6px;margin-bottom:16px;">'+sizeBtns+'</div>'
-    +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:8px;font-weight:700;">Font</div>'
-    +'<div style="display:flex;gap:6px;margin-bottom:16px;">'+fontBtns+'</div>'
-    +'<button onclick="resetAppearance()" style="width:100%;padding:7px;background:#ef444415;border:1px solid #ef444435;color:#ef4444;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;">↺ Reset to defaults</button>';
+  // ── Text size buttons ──
+  mkLabel('Text Size');
+  var sRow = mkRow('6px');
+  [['13','Small'],['15','Medium'],['17','Large'],['19','X-Large']].forEach(function(f) {
+    var btn = document.createElement('button');
+    btn.textContent = f[1];
+    btn.style.cssText = 'flex:1;padding:6px 0;background:var(--surface2);border:1px solid var(--border);'
+      + 'border-radius:6px;color:var(--text);font-size:' + f[0] + 'px;cursor:pointer;';
+    (function(px){ btn.addEventListener('click', function(){ setAppearFont(px); }); })(f[0]);
+    sRow.appendChild(btn);
+  });
+
+  // ── Font family buttons ──
+  mkLabel('Font');
+  var fRow = mkRow('6px');
+  [['system-ui,sans-serif','System'],['Courier New,monospace','Mono'],['Georgia,serif','Serif']].forEach(function(f) {
+    var btn = document.createElement('button');
+    btn.textContent = f[1];
+    btn.style.cssText = 'flex:1;padding:5px 4px;background:var(--surface2);border:1px solid var(--border);'
+      + 'border-radius:6px;color:var(--text);font-size:11px;cursor:pointer;font-family:' + f[0] + ';';
+    (function(fam){ btn.addEventListener('click', function(){ setAppearFontFamily(fam); }); })(f[0]);
+    fRow.appendChild(btn);
+  });
+
+  // ── Reset button ──
+  var resetBtn = document.createElement('button');
+  resetBtn.textContent = '↺ Reset to defaults';
+  resetBtn.onclick = resetAppearance;
+  resetBtn.style.cssText = 'width:100%;padding:7px;background:#ef444415;border:1px solid #ef444435;'
+    + 'color:#ef4444;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;margin-top:14px;';
+  panel.appendChild(resetBtn);
 
   document.body.appendChild(panel);
 }
