@@ -442,25 +442,16 @@ async function diaryAIClean() {
   ta.value    = '⏳ Sending to AI for clean-up…';
   ta.disabled = true;
   if(st) st.textContent = '⏳ AI is correcting your text…';
-  var prompt = 'You are editing a voice-to-text transcription from a construction site diary.
-
-'
-    + 'Context: The speaker is a site manager or groundworker on a drainage and groundworks project called '
-    + '"Ballasalla Phase 4" on the Isle of Man, sub-contracted to DGC (Drainage & Groundwork Contractors), '
-    + 'built for Dandara (a large residential developer). The work involves drainage, manholes, chambers, '
-    + 'pipe laying, service trenches, road construction, kerbs, tarmac, Type 1 subbase, and external groundworks.
-
-'
-    + 'Task: Correct the spelling, grammar, capitalisation and punctuation only. Keep all names, numbers, '
-    + 'section references (A–J), and technical details exactly as spoken. Use correct construction industry '
-    + 'terminology where appropriate. Do NOT add or remove any information — only clean up what is there.
-
-'
-    + 'Transcription to correct:
-' + orig + '
-
-Return only the corrected diary text, nothing else.';
-  try {
+  var prompt = 'You are editing a voice-to-text transcription from a construction site diary.'
+    + ' Context: The speaker is a site manager or groundworker on Ballasalla Phase 4, Isle of Man,'
+    + ' sub-contracted to DGC (Drainage & Groundwork Contractors), built for Dandara.'
+    + ' The work involves drainage, manholes, chambers, pipe laying, service trenches,'
+    + ' road construction, kerbs, tarmac, Type 1 subbase, and external groundworks.'
+    + ' Task: Correct spelling, grammar, capitalisation and punctuation only.'
+    + ' Keep all names, numbers, section refs (A-J), and technical details exactly as spoken.'
+    + ' Use correct construction terminology. Do NOT add or remove any information.'
+    + ' Transcription:\n' + orig + '\n\nReturn only the corrected diary text, nothing else.';
+    try {
     var resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -501,16 +492,13 @@ function diaryCopyPrompt() {
   var st   = document.getElementById('diary-status');
   var text = ta ? ta.value.trim() : '';
   if(!text){ if(st) st.textContent='⚠ Record or type your diary first.'; return; }
-  var prompt = 'Please correct the spelling, grammar, capitalisation and punctuation of this construction '
-    + 'site diary entry. The writer is a site manager on a drainage and groundworks project on the Isle of Man '
-    + '(Ballasalla Phase 4, built by Dandara). Use correct construction terminology. Keep all names, numbers '
-    + 'and technical details exactly as written — only clean up the text.
-
-'
-    + 'Diary entry:
-
-' + text;
-  try {
+  var prompt = 'Please correct the spelling, grammar, capitalisation and punctuation'
+    + ' of this construction site diary entry. The writer is a site manager on a'
+    + ' drainage and groundworks project on the Isle of Man (Ballasalla Phase 4,'
+    + ' built by Dandara). Use correct construction terminology. Keep all names,'
+    + ' numbers and technical details exactly as written.'
+    + ' Transcription:\n\n' + text;
+    try {
     navigator.clipboard.writeText(prompt).then(function(){
       if(st){ st.textContent='✅ Prompt copied — paste into claude.ai to clean up!'; setTimeout(function(){if(st)st.textContent='';},5000); }
     }).catch(function(){ prompt_fallback(prompt); });
