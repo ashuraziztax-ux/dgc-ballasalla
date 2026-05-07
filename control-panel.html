@@ -226,6 +226,51 @@ body:not(.admin-mode) .mode-thumb { background: var(--accent2); }
 /* ADMIN-ONLY elements — hidden in user mode */
 .admin-only { transition: opacity 0.2s; }
 body:not(.admin-mode) .admin-only { display: none !important; }
+
+/* ═══════════ MOBILE ═══════════ */
+@media (max-width: 768px) {
+  .header { padding: 10px 12px; flex-wrap: wrap; gap: 8px; }
+  .header-left { gap: 8px; }
+  .header-left img { height: 24px; }
+  .project-title { font-size: 12px; }
+  .project-title strong { font-size: 13px; }
+  .mode-track { padding: 3px 8px; }
+  .mode-label-left, .mode-label-right { font-size: 9px; }
+  .mode-thumb { width: 18px; height: 18px; }
+  .today-badge { display: none; }
+  .nav { gap: 0; }
+  .nav button { padding: 10px 12px; font-size: 12px; }
+  .main { padding: 12px 10px; }
+  .kpi-grid { grid-template-columns: 1fr 1fr !important; gap: 8px; }
+  .kpi-card { padding: 12px; }
+  .kpi-value { font-size: 22px; }
+
+  /* Progress hero — stack on mobile */
+  .prog-hero-grid { grid-template-columns: 1fr !important; gap: 8px !important; }
+  .prog-behind-box { order: -1; padding: 8px 12px !important; }
+  .prog-hero-num { font-size: 38px !important; }
+
+  /* Secondary metrics — 2 col */
+  .prog-secondary { grid-template-columns: 1fr 1fr !important; }
+
+  /* Progress tile spans full width */
+  .kpi-card[style*="span 3"] { grid-column: span 2 !important; }
+
+  /* Admin-only cards that span — collapse gracefully */
+  .admin-only.kpi-card { grid-column: span 1 !important; }
+
+  /* Charts */
+  .grid-2 { grid-template-columns: 1fr !important; }
+  .chart-wrap-lg { height: 200px !important; }
+  .chart-wrap { height: 160px !important; }
+
+  /* Alerts */
+  .alert { flex-wrap: wrap; font-size: 12px; }
+}
+@media (max-width: 480px) {
+  .kpi-grid { grid-template-columns: 1fr !important; }
+  .kpi-card[style*="span 3"] { grid-column: span 1 !important; }
+}
 </style>
 </head>
 <body>
@@ -297,8 +342,6 @@ function toggleMode(){
     </div>
   </div>
   <div class="header-status">
-    <span class="status-pill active">Active</span>
-    <span class="status-pill warning" id="prog-status-pill">On Programme</span>
     <span class="today-badge" id="today-label"></span>
   </div>
 </div>
@@ -322,50 +365,83 @@ function toggleMode(){
 
   <div class="kpi-grid">
     <div class="kpi-card accent" style="grid-column:span 3;">
-      <div class="kpi-label" style="margin-bottom:8px;">Programme Progress — 6 Measures</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+
+      <!-- ── HERO: Certified vs Revised ── -->
+      <div class="prog-hero-grid" style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-bottom:14px;">
+
+        <!-- Certified Work Completed -->
         <div style="text-align:center;">
-          <div style="font-size:10px;color:var(--muted);letter-spacing:.06em;margin-bottom:3px;">TIME ELAPSED</div>
-          <div style="font-size:26px;font-weight:700;color:#60a5fa;" id="kpi-time-pct">—%</div>
-          <div style="font-size:9px;color:var(--muted);">23 Mar → 29 Jun</div>
-          <div style="height:4px;background:#1e293b;border-radius:2px;margin-top:5px;"><div id="bar-time" style="height:4px;background:#60a5fa;border-radius:2px;width:0%;"></div></div>
+          <div style="font-size:10px;font-weight:700;color:#34d399;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">Certified Work Completed</div>
+          <div style="font-size:52px;font-weight:800;color:#34d399;line-height:1;" id="kpi-certified-pct">—%</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;">AFP work excl. materials</div>
+        </div>
+
+        <!-- Behind indicator (centre) -->
+        <div class="prog-behind-box" style="text-align:center;padding:10px 16px;background:#ef444418;border:1px solid #ef444433;border-radius:10px;min-width:90px;">
+          <div style="font-size:9px;color:#ef4444;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">Behind by</div>
+          <div style="font-size:30px;font-weight:800;color:#ef4444;line-height:1;" id="kpi-gap-pct">—%</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:2px;">vs revised plan</div>
+        </div>
+
+        <!-- Current Revised Plan -->
+        <div style="text-align:center;">
+          <div style="font-size:10px;font-weight:700;color:#f59e0b;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">Current Revised Plan</div>
+          <div style="font-size:52px;font-weight:800;color:#f59e0b;line-height:1;" id="kpi-revised-pct">—%</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;">EOT &amp; delays applied — minimum target</div>
+        </div>
+      </div>
+
+      <!-- ── Comparison bar ── -->
+      <div style="position:relative;height:14px;background:#1e293b;border-radius:7px;margin-bottom:6px;overflow:visible;">
+        <!-- Green fill = certified work -->
+        <div id="bar-certified" style="position:absolute;left:0;top:0;height:100%;background:#34d399;border-radius:7px 0 0 7px;width:0%;transition:width 0.6s ease;"></div>
+        <!-- Red gap zone = certified → revised -->
+        <div id="bar-gap" style="position:absolute;top:0;height:100%;background:rgba(239,68,68,0.35);width:0%;transition:all 0.6s ease;"></div>
+        <!-- Amber marker = revised plan target -->
+        <div id="bar-revised-marker" style="position:absolute;top:-4px;height:22px;width:3px;background:#f59e0b;border-radius:2px;box-shadow:0 0 6px #f59e0b88;transition:left 0.6s ease;left:0%;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-bottom:14px;">
+        <span><span style="color:#34d399;">█</span> Certified work completed</span>
+        <span><span style="color:rgba(239,68,68,0.7);">█</span> Behind</span>
+        <span><span style="color:#f59e0b;">│</span> Revised plan target</span>
+      </div>
+
+      <!-- ── Secondary row ── -->
+      <div class="prog-secondary" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;border-top:1px solid #2e3347;padding-top:12px;">
+        <div style="text-align:center;">
+          <div style="font-size:9px;color:var(--muted);letter-spacing:.06em;margin-bottom:3px;text-transform:uppercase;">Time Elapsed</div>
+          <div style="font-size:20px;font-weight:700;color:#60a5fa;" id="kpi-time-pct">—%</div>
+          <div style="font-size:8px;color:var(--muted);margin-bottom:4px;">23 Mar → 29 Jun</div>
+          <div style="height:3px;background:#1e293b;border-radius:2px;"><div id="bar-time" style="height:3px;background:#60a5fa;border-radius:2px;width:0%;"></div></div>
         </div>
         <div style="text-align:center;">
-          <div style="font-size:10px;color:var(--muted);letter-spacing:.06em;margin-bottom:3px;">ORIGINAL PLAN</div>
-          <div style="font-size:26px;font-weight:700;color:#a78bfa;" id="kpi-planned-pct">—%</div>
-          <div style="font-size:9px;color:var(--muted);">no delays applied</div>
-          <div style="height:4px;background:#1e293b;border-radius:2px;margin-top:5px;"><div id="bar-planned" style="height:4px;background:#a78bfa;border-radius:2px;width:0%;"></div></div>
+          <div style="font-size:9px;color:var(--muted);letter-spacing:.06em;margin-bottom:3px;text-transform:uppercase;">Original Plan</div>
+          <div style="font-size:20px;font-weight:700;color:#a78bfa;" id="kpi-planned-pct">—%</div>
+          <div style="font-size:8px;color:var(--muted);margin-bottom:4px;">no delays applied</div>
+          <div style="height:3px;background:#1e293b;border-radius:2px;"><div id="bar-planned" style="height:3px;background:#a78bfa;border-radius:2px;width:0%;"></div></div>
         </div>
         <div style="text-align:center;">
-          <div style="font-size:10px;color:var(--muted);letter-spacing:.06em;margin-bottom:3px;">REVISED PLAN</div>
-          <div style="font-size:26px;font-weight:700;color:#f59e0b;" id="kpi-revised-pct">—%</div>
-          <div style="font-size:9px;color:var(--muted);">EOT &amp; delays applied</div>
-          <div style="height:4px;background:#1e293b;border-radius:2px;margin-top:5px;"><div id="bar-revised" style="height:4px;background:#f59e0b;border-radius:2px;width:0%;"></div></div>
+          <div style="font-size:9px;color:var(--muted);letter-spacing:.06em;margin-bottom:3px;text-transform:uppercase;">Actual Done</div>
+          <div style="font-size:20px;font-weight:700;color:var(--accent);" id="kpi-progress">—%</div>
+          <div style="font-size:8px;color:var(--muted);margin-bottom:4px;">GanttPro budget-wtd</div>
+          <div style="height:3px;background:#1e293b;border-radius:2px;"><div id="bar-actual" style="height:3px;background:var(--accent);border-radius:2px;width:0%;"></div></div>
         </div>
-        <div style="text-align:center;margin-top:10px;">
-          <div style="font-size:10px;color:var(--muted);letter-spacing:.06em;margin-bottom:3px;">ACTUAL DONE</div>
-          <div style="font-size:26px;font-weight:700;color:var(--accent);" id="kpi-progress">—%</div>
-          <div style="font-size:9px;color:var(--muted);">GanttPro budget-wtd</div>
-          <div style="height:4px;background:#1e293b;border-radius:2px;margin-top:5px;"><div id="bar-actual" style="height:4px;background:var(--accent);border-radius:2px;width:0%;"></div></div>
-        </div>
-        <div style="text-align:center;margin-top:10px;">
-          <div style="font-size:10px;color:var(--muted);letter-spacing:.06em;margin-bottom:3px;">CERTIFIED WORK</div>
-          <div style="font-size:26px;font-weight:700;color:#34d399;" id="kpi-certified-pct">—%</div>
-          <div style="font-size:9px;color:var(--muted);">AFP work excl. materials</div>
-          <div style="height:4px;background:#1e293b;border-radius:2px;margin-top:5px;"><div id="bar-certified" style="height:4px;background:#34d399;border-radius:2px;width:0%;"></div></div>
-        </div>
-        <div style="text-align:center;margin-top:10px;">
-          <div style="font-size:10px;color:var(--muted);letter-spacing:.06em;margin-bottom:3px;">BUDGET SPENT</div>
-          <div style="font-size:26px;font-weight:700;color:#2dd4bf;" id="kpi-spend-pct">—%</div>
-          <div style="font-size:9px;color:var(--muted);">cost incurred</div>
-          <div style="height:4px;background:#1e293b;border-radius:2px;margin-top:5px;"><div id="bar-spend" style="height:4px;background:#2dd4bf;border-radius:2px;width:0%;"></div></div>
+        <div style="text-align:center;">
+          <div style="font-size:9px;color:var(--muted);letter-spacing:.06em;margin-bottom:3px;text-transform:uppercase;">Budget Spent</div>
+          <div style="font-size:20px;font-weight:700;color:#2dd4bf;" id="kpi-spend-pct">—%</div>
+          <div style="font-size:8px;color:var(--muted);margin-bottom:4px;">cost incurred</div>
+          <div style="height:3px;background:#1e293b;border-radius:2px;"><div id="bar-spend" style="height:3px;background:#2dd4bf;border-radius:2px;width:0%;"></div></div>
         </div>
       </div>
     </div>
     <div class="kpi-card blue">
-      <div class="kpi-label">Days Remaining</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div class="kpi-label" style="margin-bottom:0;">Days Remaining</div>
+        <span id="job-status-pill" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;padding:2px 8px;border-radius:10px;background:#22c55e20;color:#22c55e;border:1px solid #22c55e40;">Active</span>
+      </div>
       <div class="kpi-value" id="kpi-days">—</div>
       <div class="kpi-sub" id="kpi-days-sub">to agreed completion 29 Jun</div>
+      <div id="prog-status-badge" style="margin-top:8px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;background:#f9731620;color:#f97316;border:1px solid #f9731640;display:inline-block;">Behind Programme</div>
     </div>
     <div class="kpi-card green admin-only">
       <div class="kpi-label">Contract Value</div>
@@ -1110,9 +1186,24 @@ window.addEventListener('DOMContentLoaded', () => {
   setW('bar-actual',    progress);
   setW('bar-time',      timePct);
   setW('bar-planned',   plannedPct);
-  setW('bar-revised',   revisedPct);
-  setW('bar-certified', certifiedPct);
   setW('bar-spend',     spendPct);
+
+  // Hero bar: certified (green fill), gap (red zone), revised marker
+  const gapPct = Math.max(0, revisedPct - certifiedPct);
+  set('kpi-gap-pct', gapPct + '%');
+  try {
+    const barC = document.getElementById('bar-certified');
+    const barG = document.getElementById('bar-gap');
+    const barM = document.getElementById('bar-revised-marker');
+    if(barC) barC.style.width = Math.min(certifiedPct, 100) + '%';
+    if(barG) { barG.style.left = Math.min(certifiedPct, 100) + '%'; barG.style.width = Math.min(gapPct, 100 - certifiedPct) + '%'; }
+    if(barM) barM.style.left = 'calc(' + Math.min(revisedPct, 100) + '% - 1px)';
+    // If on target or ahead, hide gap and use green marker
+    if(gapPct <= 0) {
+      if(barG) barG.style.width = '0%';
+      set('kpi-gap-pct', '0%');
+    }
+  } catch(e) {}
 
   try {
     const completion = parseDate('2026-06-29');
@@ -1157,17 +1248,61 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ═══════════════════════ ALERTS ═══════════════════════
+// ── Alert state helpers ──
+function alertGet(id) { try { return localStorage.getItem('alert_' + id); } catch(e) { return null; } }
+function alertSet(id, val) { try { localStorage.setItem('alert_' + id, val); } catch(e) {} }
+function alertClear(id) { try { localStorage.removeItem('alert_' + id); } catch(e) {} }
+
+function answerAlert(id, answer) {
+  alertSet(id, answer);
+  buildAlerts();
+}
+function dismissAlert(id) {
+  alertSet(id, 'dismissed');
+  buildAlerts();
+}
+function resetAlert(id) {
+  alertClear(id);
+  buildAlerts();
+}
+
 function buildAlerts() {
-  const area = document.getElementById('alerts-area');
-  const alerts = [];
-  alerts.push({ type:'info',    icon:'💳', msg:'AFP 1 (£22,985) payment was due <strong>5 May 2026</strong> — confirm receipt from Dandara. AFP 2 (£156,739.46 net — Ian Barnes certified) due <strong>28 May 2026</strong>.', adminOnly:true });
-  alerts.push({ type:'warning', icon:'⚠️', msg:'<strong>Programme position:</strong> Kerbs (0%), Tarmac (0%), Type 1 subbase (0%) not started across any zone per AFP 2. Behind programme — partly late start (not slippage), partly slower progress in places. Agreed revised completion with Dandara: <strong>29 Jun 2026</strong>. Formal EOT to be raised when closer. 7 extension variations (A–G) already raised for prelim weeks.' });
-  alerts.push({ type:'info',    icon:'📋', msg:'AFP 2 (£156,739.46 net — Ian Barnes certified) payment due <strong>28 May 2026</strong>. Gross certified cumulative £167,134. Confirm payment from Dandara.', adminOnly:true });
-  const adminMode = document.body.classList.contains('admin-mode');
-  area.innerHTML = alerts
-    .filter(a => !a.adminOnly || adminMode)
-    .map(a => '<div class="alert ' + a.type + '"><span class="alert-icon">' + a.icon + '</span><span>' + a.msg + '</span></div>')
-    .join('');
+  var area = document.getElementById('alerts-area');
+  if(!area) return;
+  var adminMode = document.body.classList.contains('admin-mode');
+
+  var ALERTS = [
+    { id:'afp1-received',   type:'info',    icon:'&#x1F4B3;', question:'AFP 1 (&pound;22,985) received from Dandara?',          hint:'Payment was due 5 May 2026',              adminOnly:true,  isQuestion:true  },
+    { id:'programme-warn',  type:'warning', icon:'&#x26A0;&#xFE0F;',  msg:'<strong>Programme position:</strong> Kerbs (0%), Tarmac (0%), Type 1 subbase (0%) not started across any zone per AFP 2. Behind programme &mdash; partly late start (not slippage), partly slower progress in places. Agreed revised completion with Dandara: <strong>29 Jun 2026</strong>. Formal EOT to be raised when closer.', adminOnly:false, isQuestion:false },
+    { id:'afp2-received',   type:'info',    icon:'&#x1F4CB;', question:'AFP 2 (&pound;156,739.46) payment received from Dandara?', hint:'Ian Barnes certified &middot; Due 28 May 2026', adminOnly:true,  isQuestion:true  }
+  ];
+
+  var aColour = { yes:'#22c55e', no:'#ef4444', complicated:'#f97316' };
+  var aLabel  = { yes:'&#10003; Yes &mdash; received', no:'&#10007; No &mdash; not yet received', complicated:'&#9888; It\'s complicated' };
+
+  var parts = [];
+  for(var i=0;i<ALERTS.length;i++){
+    var a = ALERTS[i];
+    if(a.adminOnly && !adminMode) continue;
+    var state = alertGet(a.id);
+    if(state === 'dismissed') continue;
+
+    var xBtn = '<button onclick="dismissAlert(\''+a.id+'\')" title="Dismiss" style="position:absolute;top:8px;right:10px;background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;line-height:1;padding:0 4px;border-radius:4px;">&times;</button>';
+
+    if(!a.isQuestion){
+      parts.push('<div class="alert '+a.type+'" style="position:relative;padding-right:36px;">'+xBtn+'<span class="alert-icon">'+a.icon+'</span><span>'+a.msg+'</span></div>');
+    } else if(state && state !== 'dismissed'){
+      var col = aColour[state]||'#94a3b8';
+      var lbl = aLabel[state]||state;
+      parts.push('<div class="alert '+a.type+'" style="position:relative;border-left:3px solid '+col+';display:flex;align-items:center;gap:12px;">'+xBtn+'<span style="font-size:16px;">'+a.icon+'</span><span style="flex:1;"><strong style="color:'+col+';">'+lbl+'</strong> &mdash; '+a.question+'</span><button onclick="resetAlert(\''+a.id+'\')" style="background:none;border:1px solid #2e3347;color:#94a3b8;font-size:10px;padding:3px 8px;border-radius:4px;cursor:pointer;margin-right:28px;white-space:nowrap;">Change</button></div>');
+    } else {
+      var yBtn = '<button onclick="answerAlert(\''+a.id+'\',\'yes\')" style="background:#22c55e20;border:1px solid #22c55e55;color:#22c55e;padding:5px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">Yes</button>';
+      var nBtn = '<button onclick="answerAlert(\''+a.id+'\',\'no\')" style="background:#ef444420;border:1px solid #ef444455;color:#ef4444;padding:5px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">No</button>';
+      var cBtn = '<button onclick="answerAlert(\''+a.id+'\',\'complicated\')" style="background:#f9731620;border:1px solid #f9731655;color:#f97316;padding:5px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">Complicated</button>';
+      parts.push('<div class="alert '+a.type+'" style="position:relative;">'+xBtn+'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><span style="font-size:16px;">'+a.icon+'</span><span style="flex:1;"><strong>'+a.question+'</strong> <span style="color:#94a3b8;font-size:11px;">&mdash; '+a.hint+'</span></span><div style="display:flex;gap:6px;margin-right:28px;flex-shrink:0;">'+yBtn+nBtn+cBtn+'</div></div></div>');
+    }
+  }
+  area.innerHTML = parts.join('');
 }
 
 // ═══════════════════════ DASHBOARD CHARTS ═══════════════════════
