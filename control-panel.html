@@ -444,7 +444,7 @@ function toggleMode(){
           <div style="font-size:8px;color:var(--muted);margin-bottom:4px;">GanttPro budget-wtd</div>
           <div style="height:3px;background:#1e293b;border-radius:2px;"><div id="bar-actual" style="height:3px;background:var(--accent);border-radius:2px;width:0%;"></div></div>
         </div>
-        <div style="text-align:center;">
+        <div class="admin-only" style="text-align:center;">
           <div style="font-size:9px;color:var(--muted);letter-spacing:.06em;margin-bottom:3px;text-transform:uppercase;">Budget Spent</div>
           <div style="font-size:20px;font-weight:700;color:#2dd4bf;" id="kpi-spend-pct">—%</div>
           <div style="font-size:8px;color:var(--muted);margin-bottom:4px;">cost incurred</div>
@@ -488,6 +488,51 @@ function toggleMode(){
     </div>
   </div>
 
+
+  <!-- ═══ PROGRAMME TIMELINE ═══ -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">Programme Timeline</div>
+    <div id="prog-timeline-wrap" style="padding:8px 0 4px;">
+
+      <!-- Date labels row -->
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:6px;flex-wrap:wrap;gap:4px;">
+        <span><strong style="color:#22c55e;">Start</strong> 23 Mar 2026</span>
+        <span id="tl-today-label" style="color:var(--accent2);font-weight:600;"></span>
+        <span><strong style="color:#f59e0b;">Agreed end</strong> 29 Jun 2026</span>
+        <span id="tl-projected-label" class="admin-only" style="color:#f97316;font-weight:600;"></span>
+      </div>
+
+      <!-- Timeline bar -->
+      <div style="position:relative;height:28px;background:#1e293b;border-radius:8px;overflow:visible;margin-bottom:10px;">
+        <!-- Actual done (green) -->
+        <div id="tl-done-bar" style="position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:8px 0 0 8px;min-width:4px;transition:width 0.6s;"></div>
+        <!-- Gap to revised plan (amber/translucent) -->
+        <div id="tl-gap-bar" style="position:absolute;top:0;height:100%;background:rgba(245,158,11,0.25);transition:all 0.6s;"></div>
+        <!-- Today marker -->
+        <div id="tl-today-marker" style="position:absolute;top:-5px;height:38px;width:2px;background:#3b82f6;border-radius:2px;box-shadow:0 0 6px #3b82f688;transition:left 0.6s;">
+          <div style="position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:9px;color:#3b82f6;white-space:nowrap;font-weight:700;">TODAY</div>
+        </div>
+        <!-- Agreed end marker (amber) — always at far right of bar -->
+        <div style="position:absolute;top:-5px;right:0;height:38px;width:2px;background:#f59e0b;border-radius:2px;opacity:0.7;"></div>
+        <!-- Projected end marker (orange) — may extend past bar -->
+        <div id="tl-projected-marker" class="admin-only" style="position:absolute;top:-5px;height:38px;width:2px;background:#f97316;border-radius:2px;box-shadow:0 0 6px #f9731688;transition:left 0.6s;display:none;">
+          <div id="tl-proj-label" style="position:absolute;top:-16px;left:4px;font-size:9px;color:#f97316;white-space:nowrap;font-weight:700;"></div>
+        </div>
+      </div>
+
+      <!-- Legend + summary row -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;gap:12px;font-size:10px;color:var(--muted);flex-wrap:wrap;">
+          <span><span style="color:#22c55e;">█</span> Actual done</span>
+          <span><span style="color:rgba(245,158,11,0.6);">█</span> Time elapsed vs target</span>
+          <span><span style="color:#3b82f6;">│</span> Today</span>
+          <span><span style="color:#f59e0b;">│</span> Agreed end</span>
+        </div>
+        <div id="tl-summary" style="font-size:11px;color:var(--muted);text-align:right;"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="grid-2">
     <div class="card">
       <div class="card-title">Programme — Zones vs Today</div>
@@ -495,7 +540,7 @@ function toggleMode(){
         <canvas id="chart-progress"></canvas>
       </div>
     </div>
-    <div class="card">
+    <div class="card admin-only">
       <div class="card-title">Cashflow — AFP Schedule</div>
       <div class="chart-wrap-lg">
         <canvas id="chart-cashflow"></canvas>
@@ -1261,6 +1306,7 @@ window.addEventListener('DOMContentLoaded', () => {
   try { buildTodayPlan(); }      catch(e) {}
   try { loadLogEntries(); }      catch(e) {}
   try { buildReportMeta(); }     catch(e) {}
+  try { buildTimeline(); }        catch(e) { console.warn('Timeline skipped:', e); }
   try { buildDashboardCharts(); } catch(e) { console.warn('Charts skipped:', e); }
   try { buildFinancialChart(); }  catch(e) { console.warn('Fin chart skipped:', e); }
 });
@@ -1321,6 +1367,92 @@ function buildAlerts() {
     }
   }
   area.innerHTML = parts.join('');
+}
+
+// ═══════════════════════ PROGRAMME TIMELINE ═══════════════════════
+function buildTimeline() {
+  var IOM_BH = ['2026-04-03','2026-04-06','2026-05-04','2026-05-25','2026-06-12'];
+  var START   = parseDate('2026-03-23');
+  var AGREED  = parseDate('2026-06-29');
+
+  // Count working days between two dates
+  function wdBetween(a, b) {
+    var count = 0, d = new Date(a.getTime());
+    while(d < b) {
+      d.setDate(d.getDate() + 1);
+      var dow = d.getDay(), ds = d.toISOString().slice(0,10);
+      if(dow > 0 && dow < 6 && !IOM_BH.includes(ds)) count++;
+    }
+    return count;
+  }
+  // Add N working days to a date
+  function addWD(date, n) {
+    var d = new Date(date.getTime()), count = 0;
+    while(count < n) {
+      d.setDate(d.getDate() + 1);
+      var dow = d.getDay(), ds = d.toISOString().slice(0,10);
+      if(dow > 0 && dow < 6 && !IOM_BH.includes(ds)) count++;
+    }
+    return d;
+  }
+  function fmtDate(d) {
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+  }
+
+  var totalWD   = wdBetween(START, AGREED);          // total working days in programme
+  var elapsedWD = wdBetween(START, TODAY);            // working days elapsed so far
+  var progress  = (function(){ try{ return getOverallProgress(); }catch(e){ return 21; } })();
+
+  // Timeline bar: agreed end = 100% of bar width
+  var elapsedPct  = Math.min(elapsedWD / totalWD * 100, 100);
+  var donePct     = Math.min(progress, 100);
+
+  // Projected end: at current rate of actual progress per working day
+  var ratePerWD   = elapsedWD > 0 ? progress / elapsedWD : 0;
+  var wdToFinish  = ratePerWD > 0 ? Math.ceil((100 - progress) / ratePerWD) : 999;
+  var projEnd     = addWD(TODAY, wdToFinish);
+  var projPct     = wdBetween(START, projEnd) / totalWD * 100; // may exceed 100
+
+  // Overrun days past agreed end
+  var overrunWD   = Math.max(0, wdBetween(AGREED, projEnd));
+
+  // Update DOM
+  var dnBar  = document.getElementById('tl-done-bar');
+  var gapBar = document.getElementById('tl-gap-bar');
+  var todayM = document.getElementById('tl-today-marker');
+  var projM  = document.getElementById('tl-projected-marker');
+  var projL  = document.getElementById('tl-proj-label');
+  var sumEl  = document.getElementById('tl-summary');
+  var todayL = document.getElementById('tl-today-label');
+  var projLbl= document.getElementById('tl-projected-label');
+
+  if(dnBar)  dnBar.style.width  = donePct + '%';
+  if(gapBar) { gapBar.style.left = donePct + '%'; gapBar.style.width = Math.max(0, elapsedPct - donePct) + '%'; }
+  if(todayM) todayM.style.left  = Math.min(elapsedPct, 99) + '%';
+  if(todayL) todayL.textContent = 'Today — ' + fmtDate(TODAY);
+
+  // Projected marker — clamp to bar width, note if it overruns
+  if(projM) {
+    projM.style.display = 'block';
+    var projBarPct = Math.min(projPct, 100);
+    projM.style.left = projBarPct + '%';
+    if(projL) projL.textContent = overrunWD > 0 ? '+' + overrunWD + 'wd overrun' : 'On track';
+  }
+  if(projLbl) {
+    if(overrunWD > 0) {
+      projLbl.textContent = 'Projected end: ' + fmtDate(projEnd) + ' (+' + overrunWD + ' working days late)';
+      projLbl.style.color = '#f97316';
+    } else {
+      projLbl.textContent = 'Projected end: ' + fmtDate(projEnd);
+      projLbl.style.color = '#22c55e';
+    }
+  }
+  if(sumEl) {
+    var behindDays = Math.round(elapsedWD - (progress / 100 * totalWD));
+    sumEl.innerHTML = progress + '% done &middot; ' + elapsedWD + ' working days elapsed &middot; '
+      + (behindDays > 0 ? '<span style="color:#f97316;">' + behindDays + ' days behind pace</span>' : '<span style="color:#22c55e;">on pace</span>');
+  }
 }
 
 // ═══════════════════════ DASHBOARD CHARTS ═══════════════════════
