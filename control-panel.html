@@ -229,47 +229,65 @@ body:not(.admin-mode) .admin-only { display: none !important; }
 
 /* ═══════════ MOBILE ═══════════ */
 @media (max-width: 768px) {
-  .header { padding: 10px 12px; flex-wrap: wrap; gap: 8px; }
-  .header-left { gap: 8px; }
-  .header-left img { height: 24px; }
+
+  /* ── Header: 2 rows ── */
+  .header { padding: 8px 12px; flex-direction: column; align-items: stretch; gap: 0; }
+  .header-left { gap: 10px; align-items: center; }
+  .header-left img { height: 28px; max-width: 140px; }
+  .project-title strong { font-size: 14px; }
   .project-title { font-size: 12px; }
-  .project-title strong { font-size: 13px; }
-  .mode-track { padding: 3px 8px; }
-  .mode-label-left, .mode-label-right { font-size: 9px; }
-  .mode-thumb { width: 18px; height: 18px; }
-  .today-badge { display: none; }
-  .nav { gap: 0; }
-  .nav button { padding: 10px 12px; font-size: 12px; }
-  .main { padding: 12px 10px; }
+  .mode-toggle { margin-left: auto; }
+  .mode-track { padding: 4px 10px; }
+  .mode-label-left, .mode-label-right { font-size: 10px; }
+  .mode-thumb { width: 20px; height: 20px; }
+  .header-status { display: none; }
+
+  /* ── Nav: horizontal scroll ── */
+  .nav { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav button { padding: 10px 14px; font-size: 12px; white-space: nowrap; flex-shrink: 0; }
+
+  /* ── Main padding ── */
+  .main { padding: 10px 8px; }
+
+  /* ── KPI grid: full width progress tile + 2 col for rest ── */
   .kpi-grid { grid-template-columns: 1fr 1fr !important; gap: 8px; }
-  .kpi-card { padding: 12px; }
-  .kpi-value { font-size: 22px; }
+  .kpi-card[style*="span 3"] { grid-column: 1 / -1 !important; }
+  .kpi-card { padding: 12px 10px; }
+  .kpi-label { font-size: 10px; }
+  .kpi-value { font-size: 20px; }
+  .kpi-sub { font-size: 10px; }
 
-  /* Progress hero — stack on mobile */
-  .prog-hero-grid { grid-template-columns: 1fr !important; gap: 8px !important; }
-  .prog-behind-box { order: -1; padding: 8px 12px !important; }
-  .prog-hero-num { font-size: 38px !important; }
+  /* ── Progress hero: stack vertically ── */
+  .prog-hero-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  .prog-behind-box { grid-column: 1 / -1 !important; order: -1; padding: 8px !important; }
+  .prog-hero-grid > div:not(.prog-behind-box) div[style*="font-size:52px"] { font-size: 36px !important; }
+  .prog-secondary { grid-template-columns: 1fr 1fr !important; gap: 6px; }
 
-  /* Secondary metrics — 2 col */
-  .prog-secondary { grid-template-columns: 1fr 1fr !important; }
+  /* ── Charts: single column ── */
+  .grid-2 { grid-template-columns: 1fr !important; gap: 10px; }
+  .chart-wrap-lg { height: 220px !important; }
+  .chart-wrap { height: 180px !important; }
 
-  /* Progress tile spans full width */
-  .kpi-card[style*="span 3"] { grid-column: span 2 !important; }
+  /* ── Alerts: compact ── */
+  .alert { flex-wrap: wrap; font-size: 12px; gap: 6px; }
+  .alert > div { flex-wrap: wrap; }
 
-  /* Admin-only cards that span — collapse gracefully */
-  .admin-only.kpi-card { grid-column: span 1 !important; }
+  /* ── Tables: allow scroll ── */
+  .prog-table { font-size: 11px; }
+  table { font-size: 11px; }
 
-  /* Charts */
-  .grid-2 { grid-template-columns: 1fr !important; }
-  .chart-wrap-lg { height: 200px !important; }
-  .chart-wrap { height: 160px !important; }
-
-  /* Alerts */
-  .alert { flex-wrap: wrap; font-size: 12px; }
+  /* ── Report/misc ── */
+  .report-grid { grid-template-columns: 1fr !important; }
+  .form-grid { grid-template-columns: 1fr !important; }
 }
+
 @media (max-width: 480px) {
-  .kpi-grid { grid-template-columns: 1fr !important; }
-  .kpi-card[style*="span 3"] { grid-column: span 1 !important; }
+  .header-left img { max-width: 110px; height: 22px; }
+  .project-title strong { font-size: 13px; }
+  .kpi-grid { grid-template-columns: 1fr 1fr !important; }
+  .kpi-value { font-size: 18px; }
+  .prog-hero-grid > div:not(.prog-behind-box) div[style*="font-size:52px"] { font-size: 30px !important; }
 }
 </style>
 </head>
