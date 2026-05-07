@@ -289,6 +289,20 @@ body:not(.admin-mode) .admin-only { display: none !important; }
   .kpi-value { font-size: 18px; }
   .prog-hero-grid > div:not(.prog-behind-box) div[style*="font-size:52px"] { font-size: 30px !important; }
 }
+
+/* ── Site map circle hover ── */
+#tab-sitemap svg { overflow: visible; }
+[id^="sm-sect-"] {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.22s ease;
+  cursor: pointer;
+}
+[id^="sm-sect-"]:hover {
+  transform: scale(3);
+  filter: drop-shadow(0 4px 20px rgba(0,0,0,0.7));
+  z-index: 10;
+}
 </style>
 </head>
 <body>
@@ -367,12 +381,12 @@ function toggleMode(){
 <div class="nav">
   <button class="active" onclick="showTab('dashboard',this)">Dashboard</button>
   <button onclick="showTab('zones',this)">Zone Progress</button>
+  <button onclick="showTab('sitemap',this)">Site Map</button>
   <button onclick="showTab('programme',this)">Programme</button>
   <button onclick="showTab('gantt',this)">Gantt Chart</button>
   <button class="admin-only" onclick="showTab('financial',this)">Financials</button>
   <button onclick="showTab('daily',this)">Daily Log</button>
   <button onclick="showTab('report',this)">Weekly Report</button>
-  <button onclick="showTab('sitemap',this)">Site Map</button>
 </div>
 
 <div class="main">
