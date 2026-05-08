@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v8</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v9</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -576,47 +576,59 @@ function loadDiaryEntries() {
   }).join('');
 }
 
-// Fix for the structured log form (button calls saveEntry / clearForm)
+// DGC-01/02 daily log save & clear
 function saveEntry() {
-  var date  = document.getElementById('log-date');
-  var gang  = document.getElementById('log-gang');
-  var zone  = document.getElementById('log-zone');
-  var task  = document.getElementById('log-task');
-  var qty   = document.getElementById('log-qty');
-  var hours = document.getElementById('log-hours');
-  var issues= document.getElementById('log-issues');
-  var mats  = document.getElementById('log-materials');
-  var notes = document.getElementById('log-notes');
-  var st    = document.getElementById('diary-status');
-  if(!date||!date.value){ if(st) st.textContent='⚠ Please select a date.'; return; }
-  var desc = [
-    task  && task.value   ? 'Task: '     + task.value   : '',
-    qty   && qty.value    ? 'Qty: '      + qty.value    : '',
-    hours && hours.value  ? 'Hours: '    + hours.value  : '',
-    issues&& issues.value ? 'Issues: '   + issues.value : '',
-    notes && notes.value  ? notes.value                 : ''
-  ].filter(Boolean).join(' | ');
-  if(!desc.trim()){ if(st) st.textContent='⚠ Enter at least a task or quantity.'; return; }
-  try{
-    var entries = lsGet('dgc_log','[]');
-    entries.push({ date:date.value, gang:gang?gang.value:'', zone:zone?zone.value:'',
-      task:task?task.value:'', qty:qty?qty.value:'', hours:hours?hours.value:'',
-      delay:issues?issues.value:'', materials:mats?mats.value:'', notes:notes?notes.value:'',
-      desc:desc, saved:new Date().toISOString() });
-    lsSet('dgc_log', entries);
-  }catch(e){}
-  ['log-task','log-qty','log-hours','log-issues','log-materials','log-notes'].forEach(function(id){
-    var el=document.getElementById(id); if(el) el.value='';
-  });
-  if(st){ st.textContent='✅ Site log entry saved for '+date.value; setTimeout(function(){if(st)st.textContent='';},3000); }
+  var date = document.getElementById('log-date');
+  var st   = document.getElementById('diary-status');
+  if(!date||!date.value){ if(st) st.textContent='Please select a date.'; return; }
+  var g = function(id){ var e=document.getElementById(id); return e?e.value:''; };
+  var p1work = g('log-p1-work'), p2work = g('log-p2-work'), p3work = g('log-p3-work');
+  if(!p1work && !p2work && !p3work){
+    if(st) st.textContent='Add progress in at least one time marker.'; return;
+  }
+  var entry = {
+    date: date.value,
+    sm: g('log-sm'), weather: g('log-weather'), temp: g('log-temp'),
+    teamA: g('log-team-a'), teamB: g('log-team-b'), teamC: g('log-team-c'),
+    briefTime: g('log-brief-time'), briefTopics: g('log-brief-topics'),
+    visitors: g('log-visitors'), risks: g('log-risks'),
+    p1:{ work:p1work, issues:g('log-p1-issues'), pct:g('log-p1-pct'), init:g('log-p1-init') },
+    p2:{ work:p2work, issues:g('log-p2-issues'), pct:g('log-p2-pct'), init:g('log-p2-init') },
+    p3:{ work:p3work, issues:g('log-p3-issues'), pct:g('log-p3-pct'), init:g('log-p3-init') },
+    noise:[
+      { time:g('log-n1-time'), loc:g('log-n1-loc'), act:g('log-n1-act'), db:g('log-n1-db'), init:g('log-n1-init') },
+      { time:g('log-n2-time'), loc:g('log-n2-loc'), act:g('log-n2-act'), db:g('log-n2-db'), init:g('log-n2-init') },
+      { time:g('log-n3-time'), loc:g('log-n3-loc'), act:g('log-n3-act'), db:g('log-n3-db'), init:g('log-n3-init') }
+    ],
+    items:[
+      { qty:g('log-i1-qty'), item:g('log-i1-item'), src:g('log-i1-src'), time:g('log-i1-time'), by:g('log-i1-by') },
+      { qty:g('log-i2-qty'), item:g('log-i2-item'), src:g('log-i2-src'), time:g('log-i2-time'), by:g('log-i2-by') },
+      { qty:g('log-i3-qty'), item:g('log-i3-item'), src:g('log-i3-src'), time:g('log-i3-time'), by:g('log-i3-by') }
+    ],
+    observations: g('log-observations'),
+    eodName: g('log-eod-name'), eodTime: g('log-eod-time'),
+    desc: [p1work,p2work,p3work].filter(Boolean).join(' / '),
+    saved: new Date().toISOString()
+  };
+  try{ var entries=lsGet('dgc_log','[]'); entries.push(entry); lsSet('dgc_log',entries); }catch(e){}
+  if(st){ st.textContent='Daily log saved for '+date.value; setTimeout(function(){if(st)st.textContent='';},3000); }
   loadDiaryEntries();
 }
 function clearForm() {
-  ['log-date','log-task','log-qty','log-hours','log-issues','log-materials','log-notes'].forEach(function(id){
-    var el=document.getElementById(id); if(el) el.value='';
-  });
-  var g=document.getElementById('log-gang'); if(g) g.selectedIndex=0;
-  var z=document.getElementById('log-zone'); if(z) z.selectedIndex=0;
+  var ids = ['log-date','log-sm','log-temp','log-team-a','log-team-b','log-team-c',
+    'log-brief-topics','log-visitors','log-risks',
+    'log-p1-work','log-p1-issues','log-p1-pct','log-p1-init',
+    'log-p2-work','log-p2-issues','log-p2-pct','log-p2-init',
+    'log-p3-work','log-p3-issues','log-p3-pct','log-p3-init',
+    'log-n1-time','log-n1-loc','log-n1-act','log-n1-db','log-n1-init',
+    'log-n2-time','log-n2-loc','log-n2-act','log-n2-db','log-n2-init',
+    'log-n3-time','log-n3-loc','log-n3-act','log-n3-db','log-n3-init',
+    'log-i1-qty','log-i1-item','log-i1-src','log-i1-time','log-i1-by',
+    'log-i2-qty','log-i2-item','log-i2-src','log-i2-time','log-i2-by',
+    'log-i3-qty','log-i3-item','log-i3-src','log-i3-time','log-i3-by',
+    'log-observations','log-eod-name','log-eod-time','log-brief-time'];
+  ids.forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  var w=document.getElementById('log-weather'); if(w) w.selectedIndex=0;
 }
 
 // ══════════════════════════════════════════════════════
@@ -1165,62 +1177,239 @@ function resetAppearance() {
 <!-- ═══════════════════════════════ DAILY LOG ═══════════════════════════════ -->
 <div id="tab-daily" class="tab-content">
   <div class="grid-2">
-    <div class="card">
-      <div class="card-title">Daily Site Entry</div>
-      <div class="form-grid">
+        <div class="card" style="overflow-y:auto;max-height:calc(100vh - 160px);">
+      <div class="card-title">&#128203; DGC Daily Log &#8212; DGC-01/02</div>
+
+      <!-- HEADER -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
         <div class="form-group">
           <label>Date</label>
           <input type="date" id="log-date">
         </div>
         <div class="form-group">
-          <label>Gang</label>
-          <select id="log-gang">
-            <option value="">Select gang...</option>
-            <option>Gang A</option>
-            <option>Gang B</option>
-            <option>Gang C</option>
-            <option>HPM Subcontractor</option>
-            <option>TCQ Subcontractor</option>
+          <label>Site Manager</label>
+          <input type="text" id="log-sm" placeholder="e.g. James Cosgrove">
+        </div>
+        <div class="form-group">
+          <label>Weather</label>
+          <select id="log-weather">
+            <option value="">Select...</option>
+            <option>Dry &amp; Fine</option>
+            <option>Partly Cloudy</option>
+            <option>Wet / Rain</option>
+            <option>Windy</option>
+            <option>Cold / Frost</option>
           </select>
         </div>
         <div class="form-group">
-          <label>Zone</label>
-          <select id="log-zone">
-            <option value="">Select zone...</option>
-            <option>Section A — Top Road</option>
-            <option>Sections B & C — Mid Road</option>
-            <option>Sections D, E1 & E2 — Road 3</option>
-            <option>Sections F & G — Lower Road</option>
-            <option>Sections H, I & J — Drain Runs</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Task / Activity</label>
-          <input type="text" id="log-task" placeholder="e.g. Chamber F4.1-F4.2 pipe run">
-        </div>
-        <div class="form-group">
-          <label>Quantity / Progress</label>
-          <input type="text" id="log-qty" placeholder="e.g. 45m pipe laid, 1 MH complete">
-        </div>
-        <div class="form-group">
-          <label>Hours Worked</label>
-          <input type="number" id="log-hours" placeholder="9" min="0" max="24">
-        </div>
-        <div class="form-group" style="grid-column:1/-1;">
-          <label>Materials Used</label>
-          <input type="text" id="log-materials" placeholder="e.g. 50m 225mm pipe, 8 bags concrete, 2t type 1">
-        </div>
-        <div class="form-group" style="grid-column:1/-1;">
-          <label>Delays / Issues</label>
-          <textarea id="log-issues" placeholder="Any delays, problems or blockers today?"></textarea>
-        </div>
-        <div class="form-group" style="grid-column:1/-1;">
-          <label>Notes</label>
-          <textarea id="log-notes" placeholder="Any other relevant information..."></textarea>
+          <label>Temperature (&#176;C)</label>
+          <input type="number" id="log-temp" placeholder="e.g. 14">
         </div>
       </div>
+
+      <!-- TEAMS & ALLOCATION -->
+      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em;padding:5px 0 7px;border-top:1px solid var(--border);margin-bottom:8px;">Teams &amp; Allocation</div>
+      <div style="display:grid;gap:6px;margin-bottom:12px;">
+        <div class="form-group">
+          <label>Team A &#8212; Lead + Operatives</label>
+          <input type="text" id="log-team-a" placeholder="e.g. Dean (Lead), Lee">
+        </div>
+        <div class="form-group">
+          <label>Team B &#8212; Lead + Operatives</label>
+          <input type="text" id="log-team-b" placeholder="e.g. Craig (Lead), Liam">
+        </div>
+        <div class="form-group">
+          <label>Team C &#8212; Lead + Operatives</label>
+          <input type="text" id="log-team-c" placeholder="e.g. Rob (Lead), Disco">
+        </div>
+      </div>
+
+      <!-- MORNING BRIEFING -->
+      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em;padding:5px 0 7px;border-top:1px solid var(--border);margin-bottom:8px;">Morning Briefing</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+        <div class="form-group">
+          <label>Time Held</label>
+          <input type="time" id="log-brief-time" value="07:30">
+        </div>
+        <div class="form-group">
+          <label>Visitors / Inductions</label>
+          <input type="text" id="log-visitors" placeholder="None / name + company">
+        </div>
+        <div class="form-group" style="grid-column:1/-1;">
+          <label>Topics Covered</label>
+          <input type="text" id="log-brief-topics" placeholder="e.g. MH sequencing, TM, lifting plan">
+        </div>
+        <div class="form-group" style="grid-column:1/-1;">
+          <label>Key Risks Identified</label>
+          <input type="text" id="log-risks" placeholder="e.g. Excavation &gt;1.2m, traffic, live services">
+        </div>
+      </div>
+
+      <!-- PROGRESS MARKERS -->
+      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em;padding:5px 0 7px;border-top:1px solid var(--border);margin-bottom:8px;">Progress Markers (DGC-01)</div>
+      <div style="background:var(--surface2);border-radius:8px;padding:10px;margin-bottom:8px;border-left:3px solid var(--accent);">
+        <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:7px;">10:00 &#8212; Morning</div>
+        <div class="form-group" style="margin-bottom:5px;">
+          <label>Work Done / Progress</label>
+          <textarea id="log-p1-work" placeholder="What has been achieved?" style="min-height:48px;"></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:5px;">
+          <div class="form-group">
+            <label>Issues / Blockers</label>
+            <input type="text" id="log-p1-issues" placeholder="Any problems?">
+          </div>
+          <div class="form-group">
+            <label>% Done</label>
+            <input type="number" id="log-p1-pct" placeholder="30" min="0" max="100">
+          </div>
+          <div class="form-group">
+            <label>Initials</label>
+            <input type="text" id="log-p1-init" placeholder="JC" maxlength="4" style="text-transform:uppercase;">
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:10px;margin-bottom:8px;border-left:3px solid var(--orange);">
+        <div style="font-size:11px;font-weight:700;color:var(--orange);margin-bottom:7px;">13:00 &#8212; Midday</div>
+        <div class="form-group" style="margin-bottom:5px;">
+          <label>Work Done / Progress</label>
+          <textarea id="log-p2-work" placeholder="Progress update since morning?" style="min-height:48px;"></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:5px;">
+          <div class="form-group">
+            <label>Issues / Blockers</label>
+            <input type="text" id="log-p2-issues" placeholder="Any problems?">
+          </div>
+          <div class="form-group">
+            <label>% Done</label>
+            <input type="number" id="log-p2-pct" placeholder="60" min="0" max="100">
+          </div>
+          <div class="form-group">
+            <label>Initials</label>
+            <input type="text" id="log-p2-init" placeholder="JC" maxlength="4" style="text-transform:uppercase;">
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:10px;margin-bottom:12px;border-left:3px solid var(--green);">
+        <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:7px;">17:00 &#8212; End of Day</div>
+        <div class="form-group" style="margin-bottom:5px;">
+          <label>Work Done / Progress</label>
+          <textarea id="log-p3-work" placeholder="What was completed today?" style="min-height:48px;"></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:5px;">
+          <div class="form-group">
+            <label>Issues / Blockers</label>
+            <input type="text" id="log-p3-issues" placeholder="Outstanding problems?">
+          </div>
+          <div class="form-group">
+            <label>% Done</label>
+            <input type="number" id="log-p3-pct" placeholder="90" min="0" max="100">
+          </div>
+          <div class="form-group">
+            <label>Initials</label>
+            <input type="text" id="log-p3-init" placeholder="JC" maxlength="4" style="text-transform:uppercase;">
+          </div>
+        </div>
+      </div>
+
+      <!-- NOISE READINGS -->
+      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em;padding:5px 0 7px;border-top:1px solid var(--border);margin-bottom:8px;">Noise Readings</div>
+      <div style="overflow-x:auto;margin-bottom:12px;">
+        <table style="width:100%;border-collapse:collapse;font-size:10px;min-width:380px;">
+          <thead>
+            <tr style="color:var(--muted);text-align:left;">
+              <th style="padding:3px 4px 6px;font-weight:600;">Time</th>
+              <th style="padding:3px 4px 6px;font-weight:600;">Location</th>
+              <th style="padding:3px 4px 6px;font-weight:600;">Activity/Plant</th>
+              <th style="padding:3px 4px 6px;font-weight:600;">dB(A)</th>
+              <th style="padding:3px 4px 6px;font-weight:600;">Init.</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding:2px 3px;"><input type="time" id="log-n1-time" style="width:70px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="text" id="log-n1-loc" placeholder="Location" style="width:88px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="text" id="log-n1-act" placeholder="Activity" style="width:88px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="number" id="log-n1-db" placeholder="&#8212;" style="width:46px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="text" id="log-n1-init" placeholder="&#8212;" maxlength="4" style="width:34px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;text-transform:uppercase;"></td>
+            </tr>
+            <tr>
+              <td style="padding:2px 3px;"><input type="time" id="log-n2-time" style="width:70px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="text" id="log-n2-loc" placeholder="Location" style="width:88px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="text" id="log-n2-act" placeholder="Activity" style="width:88px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="number" id="log-n2-db" placeholder="&#8212;" style="width:46px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="text" id="log-n2-init" placeholder="&#8212;" maxlength="4" style="width:34px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;text-transform:uppercase;"></td>
+            </tr>
+            <tr>
+              <td style="padding:2px 3px;"><input type="time" id="log-n3-time" style="width:70px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="text" id="log-n3-loc" placeholder="Location" style="width:88px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="text" id="log-n3-act" placeholder="Activity" style="width:88px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="number" id="log-n3-db" placeholder="&#8212;" style="width:46px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="text" id="log-n3-init" placeholder="&#8212;" maxlength="4" style="width:34px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;text-transform:uppercase;"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ITEMS FOR TOMORROW -->
+      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em;padding:5px 0 7px;border-top:1px solid var(--border);margin-bottom:8px;">Items Required for Tomorrow</div>
+      <div style="overflow-x:auto;margin-bottom:12px;">
+        <table style="width:100%;border-collapse:collapse;font-size:10px;min-width:360px;">
+          <thead>
+            <tr style="color:var(--muted);text-align:left;">
+              <th style="padding:3px 4px 6px;font-weight:600;">Qty</th>
+              <th style="padding:3px 4px 6px;font-weight:600;">Item / Description</th>
+              <th style="padding:3px 4px 6px;font-weight:600;">Source</th>
+              <th style="padding:3px 4px 6px;font-weight:600;">Time</th>
+              <th style="padding:3px 4px 6px;font-weight:600;">By</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding:2px 3px;"><input type="text" id="log-i1-qty" placeholder="&#8212;" style="width:42px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="text" id="log-i1-item" placeholder="Description" style="width:108px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="text" id="log-i1-src" placeholder="Supplier" style="width:74px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="time" id="log-i1-time" style="width:68px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="text" id="log-i1-by" placeholder="&#8212;" style="width:38px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+            </tr>
+            <tr>
+              <td style="padding:2px 3px;"><input type="text" id="log-i2-qty" placeholder="&#8212;" style="width:42px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="text" id="log-i2-item" placeholder="Description" style="width:108px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="text" id="log-i2-src" placeholder="Supplier" style="width:74px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="time" id="log-i2-time" style="width:68px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="text" id="log-i2-by" placeholder="&#8212;" style="width:38px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+            </tr>
+            <tr>
+              <td style="padding:2px 3px;"><input type="text" id="log-i3-qty" placeholder="&#8212;" style="width:42px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="text" id="log-i3-item" placeholder="Description" style="width:108px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="text" id="log-i3-src" placeholder="Supplier" style="width:74px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="time" id="log-i3-time" style="width:68px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+              <td style="padding:2px 3px;"><input type="text" id="log-i3-by" placeholder="&#8212;" style="width:38px;font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 4px;box-sizing:border-box;"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- OBSERVATIONS -->
+      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em;padding:5px 0 7px;border-top:1px solid var(--border);margin-bottom:8px;">Observations / Dangers / Problems</div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <textarea id="log-observations" placeholder="Any observations, dangers, near misses, or outstanding issues?" style="min-height:64px;width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;line-height:1.5;padding:10px;resize:vertical;font-family:inherit;box-sizing:border-box;"></textarea>
+      </div>
+
+      <!-- EOD DECLARATION -->
+      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em;padding:5px 0 7px;border-top:1px solid var(--border);margin-bottom:8px;">SM End of Day Declaration</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+        <div class="form-group">
+          <label>SM Name</label>
+          <input type="text" id="log-eod-name" placeholder="Site Manager name">
+        </div>
+        <div class="form-group">
+          <label>Sign-off Time</label>
+          <input type="time" id="log-eod-time">
+        </div>
+      </div>
+
       <div class="form-row">
-        <button class="btn btn-primary" onclick="saveEntry()">Save Entry</button>
+        <button class="btn btn-primary" onclick="saveEntry()">Save Daily Log</button>
         <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
       </div>
     </div>
@@ -1293,7 +1482,7 @@ function resetAppearance() {
       <div class="report-grid">
         <div class="report-kpi"><div class="val" id="rpt-progress">—</div><div class="lbl">Overall Progress</div></div>
         <div class="report-kpi"><div class="val" id="rpt-days">—</div><div class="lbl">Days to Completion</div></div>
-        <div class="report-kpi"><div class="val" id="rpt-contract">£450,142</div><div class="lbl">Contract Value</div></div>
+        <div class="report-kpi"><div class="val admin-only" id="rpt-contract">£450,142</div><div class="lbl">Contract Value</div></div>
       </div>
     </div>
 
@@ -1332,7 +1521,7 @@ function resetAppearance() {
       </table>
     </div>
 
-    <div class="report-section" id="rpt-financial-section">
+    <div class="report-section admin-only" id="rpt-financial-section">
       <div class="report-section-title">Financial Summary</div>
       <div class="report-grid">
         <div class="report-kpi"><div class="val">£167,134</div><div class="lbl">Gross Certified (AFP 2)</div></div>
@@ -2114,7 +2303,7 @@ function buildZoneCards() {
       '<span class="prog-pct">' + prog + '%</span></span></div>' +
       '<div class="zone-tasks-toggle">▼ ' + tasks.length + ' tasks</div>' +
       '<div class="zone-tasks" id="zone-tasks-' + z.id + '">' +
-      tasks.map(t => '<div class="task-row"><span class="task-name">' + t.wbs + ' – ' + t.name + '</span><span class="task-dates">' + fmtShortDate(t.start) + '–' + fmtShortDate(t.end) + '</span><span class="task-budget">' + fmt(t.budget) + '</span></div>').join('') +
+      tasks.map(t => '<div class="task-row"><span class="task-name">' + t.wbs + ' – ' + t.name + '</span><span class="task-dates">' + fmtShortDate(t.start) + '–' + fmtShortDate(t.end) + '</span><span class="task-budget admin-only">' + fmt(t.budget) + '</span></div>').join('') +
       '</div></div>';
   }).join('');
 }
@@ -2142,7 +2331,7 @@ function buildProgTable() {
       const ts = getTaskStatus(t);
       html += '<tr><td style="color:var(--muted);">' + t.wbs + '</td><td class="task-indent">' + t.name + '</td><td style="color:var(--muted);font-size:11px;">' + t.assigned + '</td>' +
         '<td style="font-size:11px;">' + fmtShortDate(t.start) + '</td><td style="font-size:11px;">' + fmtShortDate(t.end) + '</td>' +
-        '<td style="font-size:11px;color:var(--accent);">' + fmt(t.budget) + '</td>' +
+        '<td class="admin-only" style="font-size:11px;color:var(--accent);">' + fmt(t.budget) + '</td>' +
         '<td><div class="mini-bar" style="width:80px;"><div class="mini-fill" style="width:' + (t.progress||0) + '%;background:' + stcol[ts] + ';"></div></div></td>' +
         '<td><span class="status-dot" style="background:' + stcol[ts] + ';"></span><span style="font-size:10px;color:' + stcol[ts] + ';">' + (t.progress||0) + '%</span></td></tr>';
     });
