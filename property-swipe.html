@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Property Swipe v1.0 — 2026-05-10 -->
+<!-- Property Swipe v1.1 — 2026-05-10 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -111,11 +111,14 @@ input, select { font-family: var(--font); outline: none; border: none; }
 }
 .photo-dot { width: 6px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.5); transition: all 0.2s; }
 .photo-dot.active { background: #fff; width: 16px; }
-.photo-tap-l, .photo-tap-r {
-  position: absolute; top: 0; bottom: 0; width: 50%; z-index: 5;
+.photo-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 34px; height: 34px; background: rgba(0,0,0,0.35); color: #fff;
+  border-radius: 50%; font-size: 20px; display: flex; align-items: center; justify-content: center;
+  z-index: 5; border: none; cursor: pointer; line-height: 1;
 }
-.photo-tap-l { left: 0; }
-.photo-tap-r { right: 0; }
+.photo-arrow-l { left: 10px; }
+.photo-arrow-r { right: 10px; }
 
 /* ── STAMP OVERLAYS ── */
 .stamp {
@@ -152,17 +155,17 @@ input, select { font-family: var(--font); outline: none; border: none; }
 
 /* ── ACTION BUTTONS ── */
 .action-btns {
-  display: flex; gap: 16px; justify-content: center; align-items: center;
-  padding: 14px 0 12px;
+  display: flex; gap: 10px; justify-content: center; align-items: center;
+  padding: 10px 16px 12px;
 }
 .action-btn {
-  width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-size: 22px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); transition: transform 0.1s;
+  flex: 1; height: 54px; border-radius: 16px; display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 700; box-shadow: 0 4px 14px rgba(0,0,0,0.12); transition: transform 0.1s; gap: 6px;
 }
-.action-btn:active { transform: scale(0.9); }
-.btn-nope { background: #fff; color: var(--nope); border: 2px solid #FECACA; }
-.btn-info { background: #fff; color: var(--primary); border: 2px solid var(--primary-light); width: 44px; height: 44px; font-size: 18px; }
-.btn-like { background: #fff; color: var(--like); border: 2px solid #A7F3D0; }
+.action-btn:active { transform: scale(0.95); }
+.btn-nope { background: #FEF2F2; color: var(--nope); border: 2px solid #FECACA; }
+.btn-info { background: #fff; color: var(--primary); border: 2px solid var(--primary-light); flex: 0 0 54px; width: 54px; border-radius: 50%; font-size: 18px; }
+.btn-like { background: #ECFDF5; color: var(--like); border: 2px solid #A7F3D0; }
 
 /* ── ALGO TOGGLE ── */
 .algo-pill {
@@ -276,6 +279,38 @@ input[type="range"] {
 }
 .filter-header-actions { display: flex; gap: 10px; align-items: center; }
 .reset-btn { font-size: 13px; font-weight: 600; color: var(--muted); background: none; padding: 4px 0; }
+
+/* ── LOCATION PICKER ── */
+.loc-search-wrap { position: relative; }
+.loc-search-input {
+  width: 100%; padding: 10px 14px; border-radius: 12px;
+  background: var(--bg); font-size: 14px; color: var(--text);
+  border: 1.5px solid var(--border);
+}
+.loc-search-input:focus { border-color: var(--primary); }
+.loc-suggestions {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: var(--card); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 50; display: none; max-height: 200px; overflow-y: auto;
+}
+.loc-suggestions.open { display: block; }
+.loc-suggestion {
+  padding: 11px 14px; font-size: 14px; color: var(--text); cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+.loc-suggestion:last-child { border-bottom: none; }
+.loc-suggestion:hover, .loc-suggestion:active { background: var(--primary-light); color: var(--primary); }
+.loc-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
+.loc-tag {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--primary); color: #fff;
+  padding: 5px 8px 5px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;
+}
+.loc-tag-remove {
+  background: rgba(255,255,255,0.3); border: none; color: #fff;
+  border-radius: 50%; width: 18px; height: 18px; font-size: 11px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
 
 /* ── PROPERTY MODAL ── */
 .modal-overlay {
@@ -392,9 +427,9 @@ input[type="range"] {
       </div>
     </div>
     <div class="action-btns">
-      <button class="action-btn btn-nope" onclick="swipeAction('left')" title="Skip">✕</button>
-      <button class="action-btn btn-info" onclick="openCurrentModal()" title="Details">ℹ</button>
-      <button class="action-btn btn-like" onclick="swipeAction('right')" title="Like">♥</button>
+      <button class="action-btn btn-nope" onclick="swipeAction('left')">✕ NO</button>
+      <button class="action-btn btn-info" onclick="openCurrentModal()">ℹ</button>
+      <button class="action-btn btn-like" onclick="swipeAction('right')">YES ♥</button>
     </div>
   </div>
 
@@ -450,6 +485,14 @@ input[type="range"] {
           <button class="toggle-btn" id="lt-buy" onclick="setLT('buy')">Buy</button>
           <button class="toggle-btn" id="lt-rent" onclick="setLT('rent')">Rent</button>
         </div>
+      </div>
+      <div class="filter-section">
+        <div class="filter-label">Locations <span style="font-size:11px;font-weight:400;text-transform:none;letter-spacing:0">— add specific areas, cities or countries</span></div>
+        <div class="loc-search-wrap">
+          <input type="text" id="loc-input" class="loc-search-input" placeholder="e.g. Tuscany, Italy or Provence…" oninput="locSearchInput()" onkeydown="locInputKeydown(event)" autocomplete="off">
+          <div class="loc-suggestions" id="loc-suggestions"></div>
+        </div>
+        <div class="loc-tags" id="loc-tags"></div>
       </div>
       <div class="filter-section">
         <div class="filter-label">Countries</div>
@@ -589,7 +632,7 @@ let state = {
   liked: JSON.parse(localStorage.getItem('ps_liked') || '[]'),
   disliked: new Set(JSON.parse(localStorage.getItem('ps_disliked') || '[]')),
   filters: JSON.parse(localStorage.getItem('ps_filters') || 'null') || {
-    lt: 'both', countries: [], maxPrice: 1500000, minBeds: 0, types: [], features: []
+    lt: 'both', countries: [], maxPrice: 1500000, minBeds: 0, types: [], features: [], locations: []
   },
   algoOn: false,
   mapShapes: [],
@@ -657,7 +700,12 @@ function getFilteredQueue() {
   let props = ALL_PROPERTIES.filter(p => {
     if (state.seen.has(p.id)) return false;
     if (f.lt !== 'both' && p.listing !== f.lt) return false;
-    if (f.countries.length && !f.countries.includes(p.country)) return false;
+    const locs = f.locations || [];
+    if (locs.length) {
+      if (!locs.some(tag => locMatchesProp(tag, p))) return false;
+    } else if (f.countries.length && !f.countries.includes(p.country)) {
+      return false;
+    }
     if (p.price > f.maxPrice) return false;
     if (p.beds < f.minBeds) return false;
     if (f.types.length && !f.types.includes(p.type)) return false;
@@ -712,8 +760,7 @@ function buildCard(prop, isTop) {
       <div class="photo-dots" id="pd-${prop.id}">
         ${prop.photos.map((_, i) => `<div class="photo-dot${i===0?' active':''}"></div>`).join('')}
       </div>
-      <div class="photo-tap-l" onclick="cyclePhoto(${prop.id}, -1, event)"></div>
-      <div class="photo-tap-r" onclick="cyclePhoto(${prop.id}, 1, event)"></div>
+      ${prop.photos.length > 1 ? `<button class="photo-arrow photo-arrow-l" onclick="cyclePhoto(${prop.id},-1,event)">‹</button><button class="photo-arrow photo-arrow-r" onclick="cyclePhoto(${prop.id},1,event)">›</button>` : ''}
       <div class="listing-badge ${prop.listing === 'rent' ? 'rent' : ''}">${prop.listing === 'rent' ? '🔑 Rent' : '🏠 Buy'}</div>
       <div class="stamp stamp-like">LIKE</div>
       <div class="stamp stamp-nope">NOPE</div>
@@ -792,11 +839,11 @@ function initDrag(card) {
     card.style.transform = `translate(${dir * window.innerWidth * 1.5}px, ${curY * 0.5 - 80}px) rotate(${dir * 30}deg)`;
   }
 
-  card.addEventListener('touchstart', e => { if (!e.target.closest('.photo-tap-l') && !e.target.closest('.photo-tap-r')) start(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
-  card.addEventListener('touchmove', e => move(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+  card.addEventListener('touchstart', e => { if (!e.target.closest('.photo-arrow')) start(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+  card.addEventListener('touchmove', e => { if (active) move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
   card.addEventListener('touchend', end);
 
-  card.addEventListener('mousedown', e => { if (!e.target.closest('.photo-tap-l') && !e.target.closest('.photo-tap-r') && !e.target.closest('.card-info')) { start(e.clientX, e.clientY); e.preventDefault(); } });
+  card.addEventListener('mousedown', e => { if (!e.target.closest('.photo-arrow') && !e.target.closest('.card-info')) { start(e.clientX, e.clientY); e.preventDefault(); } });
   window.addEventListener('mousemove', e => move(e.clientX, e.clientY));
   window.addEventListener('mouseup', end);
 }
@@ -1053,6 +1100,68 @@ function removeLiked(id) {
 }
 
 // ═══════════════════════════════════════════════
+//  LOCATION PICKER
+// ═══════════════════════════════════════════════
+const ALL_LOCATIONS = [
+  ...COUNTRIES,
+  ...[...new Set(ALL_PROPERTIES.map(p => p.area + ', ' + p.country))].sort(),
+  ...[...new Set(ALL_PROPERTIES.map(p => p.city + ', ' + p.country))].sort(),
+];
+
+function locMatchesProp(tag, p) {
+  const parts = tag.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+  const haystack = [p.area, p.city, p.country].map(s => s.toLowerCase());
+  return parts.every(part => haystack.some(h => h.includes(part)));
+}
+
+function locSearchInput() {
+  const q = document.getElementById('loc-input').value.trim().toLowerCase();
+  const sug = document.getElementById('loc-suggestions');
+  if (!q || q.length < 2) { sug.classList.remove('open'); return; }
+  const existing = state.filters.locations || [];
+  const matches = ALL_LOCATIONS.filter(l => l.toLowerCase().includes(q) && !existing.includes(l)).slice(0, 8);
+  if (!matches.length) { sug.classList.remove('open'); return; }
+  sug.innerHTML = matches.map(m => `<div class="loc-suggestion" onclick="addLocation('${m.replace(/'/g, "\\'")}')">📍 ${m}</div>`).join('');
+  sug.classList.add('open');
+}
+
+function locInputKeydown(e) {
+  if (e.key === 'Enter') {
+    const v = document.getElementById('loc-input').value.trim();
+    if (v) addLocation(v);
+    e.preventDefault();
+  }
+  if (e.key === 'Escape') document.getElementById('loc-suggestions').classList.remove('open');
+}
+
+function addLocation(loc) {
+  if (!state.filters.locations) state.filters.locations = [];
+  if (!state.filters.locations.includes(loc)) {
+    state.filters.locations.push(loc);
+    renderLocTags();
+  }
+  document.getElementById('loc-input').value = '';
+  document.getElementById('loc-suggestions').classList.remove('open');
+}
+
+function removeLocation(loc) {
+  state.filters.locations = (state.filters.locations || []).filter(l => l !== loc);
+  renderLocTags();
+}
+
+function renderLocTags() {
+  const container = document.getElementById('loc-tags');
+  if (!container) return;
+  const locs = state.filters.locations || [];
+  container.innerHTML = locs.map(l => `
+    <div class="loc-tag">
+      <span>${l}</span>
+      <button class="loc-tag-remove" onclick="removeLocation('${l.replace(/'/g, "\\'")}')">✕</button>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════
 //  FILTERS UI
 // ═══════════════════════════════════════════════
 function initFiltersUI() {
@@ -1074,6 +1183,7 @@ function syncFiltersUI() {
   document.getElementById('price-slider').value = f.maxPrice;
   updatePriceLabel();
   document.querySelectorAll('#beds-row .beds-btn').forEach(b => b.classList.toggle('on', parseInt(b.dataset.v) === f.minBeds));
+  renderLocTags();
 }
 
 function setLT(v) { state.filters.lt = v; syncFiltersUI(); }
@@ -1101,7 +1211,7 @@ function applyFilters() {
   showToast('✓  Filters applied');
 }
 function resetFilters() {
-  state.filters = { lt: 'both', countries: [], maxPrice: 1500000, minBeds: 0, types: [], features: [] };
+  state.filters = { lt: 'both', countries: [], maxPrice: 1500000, minBeds: 0, types: [], features: [], locations: [] };
   saveState();
   syncFiltersUI();
   showToast('Filters reset');
