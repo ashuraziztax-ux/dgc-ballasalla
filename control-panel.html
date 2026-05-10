@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v14</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v15</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -1538,6 +1538,14 @@ function resetAppearance() {
 <!-- ═══════════════════════════════ DELAYS ═══════════════════════════════ -->
 <div id="tab-delays" class="tab-content">
 
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;">
+    <span style="font-size:11px;color:var(--muted);font-weight:600;">EXPORT:</span>
+    <button class="btn btn-secondary" style="font-size:11px;" onclick="exportDelayCSV()">&#8659; Delays CSV</button>
+    <button class="btn btn-secondary admin-only" style="font-size:11px;" onclick="exportAFPCSV()">&#8659; AFP CSV</button>
+    <button class="btn btn-secondary admin-only" style="font-size:11px;" onclick="exportFullJSON()">&#8659; Full Backup (JSON)</button>
+    <label class="btn btn-secondary admin-only" style="font-size:11px;cursor:pointer;" title="Restore from a previously saved JSON backup">&#8657; Restore JSON<input type="file" accept=".json" style="display:none;" onchange="importFullJSON(this)"></label>
+  </div>
+
   <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:16px;" id="delay-summary-kpis"></div>
 
   <div id="delay-breakdown-panel" class="card" style="margin-bottom:16px;"></div>
@@ -2833,6 +2841,80 @@ function buildVelocityTrend() {
       }
     }
   });
+}
+
+function csvEscape(v) {
+  var s = (v === null || v === undefined) ? '' : String(v);
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) return '"' + s.replace(/"/g,'""') + '"';
+  return s;
+}
+
+function downloadFile(filename, content, type) {
+  type = type || 'text/plain;charset=utf-8;';
+  var blob = new Blob([content], {type:type});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 500);
+}
+
+function exportDelayCSV() {
+  var log = loadDelayLog();
+  log.sort(function(a,b){ return a.date.localeCompare(b.date); });
+  var rows = [['Date','Reference','Category','Description','Days','Status','Cost (GBP)']];
+  log.forEach(function(e) {
+    rows.push([e.date||'', e.ref||'', e.category||'', e.description||'',
+               (e.days||0).toFixed(2), e.status||'', e.cost||'']);
+  });
+  var csv = rows.map(function(r){ return r.map(csvEscape).join(','); }).join('\r\n');
+  downloadFile('dgc-delay-log-'+TODAY.toISOString().slice(0,10)+'.csv', csv, 'text/csv;charset=utf-8;');
+}
+
+function exportAFPCSV() {
+  var rows = [['AFP No.','Issued','Invoice Date','Payment Due','Gross Value (GBP)','Net (GBP)','Status','Notes']];
+  AFPS.forEach(function(a) {
+    rows.push([a.num, a.issued||'', a.invoice||'', a.payment||'',
+               (a.value||0).toFixed(2), (a.net||0).toFixed(2), a.status||'', a.note||'']);
+  });
+  var csv = rows.map(function(r){ return r.map(csvEscape).join(','); }).join('\r\n');
+  downloadFile('dgc-afp-schedule-'+TODAY.toISOString().slice(0,10)+'.csv', csv, 'text/csv;charset=utf-8;');
+}
+
+function exportFullJSON() {
+  var keys = ['dgc_log','dgc_delays','dgc_quicklog','dgc_snapshots',
+               'dgc_zone_progress','dgc_prog_live','dgc_var_register'];
+  var backup = {exportedAt: new Date().toISOString(), version:'v15', data:{}};
+  keys.forEach(function(k) {
+    try { backup.data[k] = lsGet(k, 'null'); } catch(e) {}
+  });
+  var json = JSON.stringify(backup, null, 2);
+  downloadFile('dgc-ballasalla-backup-'+TODAY.toISOString().slice(0,10)+'.json', json, 'application/json');
+}
+
+function importFullJSON(input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var backup = JSON.parse(e.target.result);
+      if (!backup || !backup.data) { alert('Invalid backup file — missing data section.'); return; }
+      var keys = Object.keys(backup.data);
+      if (!confirm('Restore ' + keys.length + ' data stores from backup dated ' + (backup.exportedAt||'unknown') + '?\n\nThis will overwrite current data.')) return;
+      keys.forEach(function(k) {
+        if (backup.data[k] !== null && backup.data[k] !== undefined) {
+          try { lsSet(k, backup.data[k]); } catch(ex) {}
+        }
+      });
+      alert('Restore complete. Reloading page to apply...');
+      location.reload();
+    } catch(err) {
+      alert('Could not parse backup file: ' + err.message);
+    }
+  };
+  reader.readAsText(input.files[0]);
+  input.value = '';
 }
 
 const AFPS = [
