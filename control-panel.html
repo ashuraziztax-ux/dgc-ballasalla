@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v10</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v11</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -1488,6 +1488,8 @@ function resetAppearance() {
 
   <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:16px;" id="delay-summary-kpis"></div>
 
+  <div id="delay-breakdown-panel" class="card" style="margin-bottom:16px;"></div>
+
   <div class="card" style="margin-bottom:16px;">
     <div class="card-title">Delay Log</div>
     <div class="delay-table-wrap">
@@ -1976,12 +1978,12 @@ function buildVelocityPanel() {
 
   // Header with view toggle
   var hdr = document.createElement('div');
-  hdr.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;';
-  var title = document.createElement('div');
-  title.className = 'card-title';
-  title.style.marginBottom = '0';
-  title.textContent = 'Speed & Forecast';
-  hdr.appendChild(title);
+  hdr.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;';
+  var ttlEl = document.createElement('div');
+  ttlEl.className = 'card-title';
+  ttlEl.style.marginBottom = '0';
+  ttlEl.textContent = 'Velocity & Forecast';
+  hdr.appendChild(ttlEl);
   var tgl = document.createElement('div');
   tgl.style.cssText = 'display:flex;gap:4px;margin-left:auto;';
   [{v:'original',lbl:'Original'},{v:'live',lbl:'Live'}].forEach(function(item) {
@@ -1997,40 +1999,123 @@ function buildVelocityPanel() {
   hdr.appendChild(tgl);
   el.appendChild(hdr);
 
-  // Calculations
+  // ── Calculations ──────────────────────────────────────────────────────────
   var totalBudget = ZONES.reduce(function(s,z){ return s + (z.budget||0); }, 0);
   var completedValue = 0;
   ZONES.forEach(function(z) {
     completedValue += (z.budget||0) * (getZoneProgress(z.id)/100);
   });
   var overallPct = totalBudget > 0 ? completedValue / totalBudget * 100 : 0;
-  var projStart = new Date('2026-03-23T00:00:00');
-  var today = new Date();
+  var projStart  = new Date('2026-03-23T00:00:00');
+  var today      = new Date();
   var daysElapsed = Math.max(1, Math.round((today - projStart) / 86400000));
-  var targetEnd = new Date('2026-06-29T00:00:00');
-  var totalDays = Math.round((targetEnd - projStart) / 86400000);
-  var plannedPct = Math.min(100, daysElapsed / totalDays * 100);
-  var variance = overallPct - plannedPct;
+  var targetEnd  = new Date('2026-06-29T00:00:00');
+  var totalCalDays = Math.round((targetEnd - projStart) / 86400000);
+  var plannedPct = Math.min(100, daysElapsed / totalCalDays * 100);
+  var variance   = overallPct - plannedPct;
   var ratePerDay = overallPct / daysElapsed;
   var ratePerWeek = ratePerDay * 7;
-  var remaining = 100 - overallPct;
+  var remaining  = 100 - overallPct;
   var daysNeeded = ratePerDay > 0 ? Math.round(remaining / ratePerDay) : 9999;
-  var fcDate = new Date(today);
+  var fcDate     = new Date(today.getTime());
   fcDate.setDate(fcDate.getDate() + daysNeeded);
-  var fcStr = fcDate.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
-  var fcLate = fcDate > targetEnd;
+  var fcStr      = fcDate.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
+  var fcLate     = fcDate > targetEnd;
+  var daysOff    = Math.round(Math.abs(fcDate - targetEnd) / 86400000);
+  var daysToTarget = Math.max(0, Math.round((targetEnd - today) / 86400000));
+  var weeksToTarget = (daysToTarget / 7).toFixed(1);
 
+  // ── NO-INTERVENTION FORECAST BANNER ──────────────────────────────────────
+  var bannerColor = fcLate ? '#ef4444' : '#22c55e';
+  var bannerBg    = fcLate ? '#ef444412' : '#22c55e12';
+  var bannerBdr   = fcLate ? '#ef444440' : '#22c55e40';
+  var banner = document.createElement('div');
+  banner.style.cssText = 'background:' + bannerBg + ';border:2px solid ' + bannerBdr + ';border-radius:12px;padding:18px 22px;margin-bottom:18px;';
+
+  var bannerLabel = document.createElement('div');
+  bannerLabel.style.cssText = 'font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:8px;';
+  bannerLabel.textContent = 'At current rate — no intervention';
+  banner.appendChild(bannerLabel);
+
+  var bannerMain = document.createElement('div');
+  bannerMain.style.cssText = 'display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:10px;';
+
+  var dateDisplay = document.createElement('div');
+  dateDisplay.style.cssText = 'font-size:32px;font-weight:900;color:' + bannerColor + ';line-height:1;letter-spacing:-0.5px;';
+  dateDisplay.textContent = fcStr;
+  bannerMain.appendChild(dateDisplay);
+
+  var daysOffEl = document.createElement('div');
+  daysOffEl.style.cssText = 'font-size:15px;font-weight:700;color:' + bannerColor + ';';
+  daysOffEl.textContent = fcLate
+    ? '▲ ' + daysOff + ' days past agreed deadline'
+    : '▼ ' + daysOff + ' days ahead of deadline';
+  bannerMain.appendChild(daysOffEl);
+  banner.appendChild(bannerMain);
+
+  var bannerSub = document.createElement('div');
+  bannerSub.style.cssText = 'font-size:11px;color:var(--muted);border-top:1px solid ' + bannerBdr + ';padding-top:8px;display:flex;gap:18px;flex-wrap:wrap;';
+  var sub1 = document.createElement('span');
+  sub1.innerHTML = '<b style="color:var(--text);">Agreed deadline:</b> 29 Jun 2026 (confirmed with Dandara, includes EOT)';
+  var sub2 = document.createElement('span');
+  sub2.innerHTML = '<b style="color:var(--text);">Time remaining:</b> ' + weeksToTarget + ' weeks (' + daysToTarget + ' calendar days)';
+  bannerSub.appendChild(sub1);
+  bannerSub.appendChild(sub2);
+  banner.appendChild(bannerSub);
+  el.appendChild(banner);
+
+  // ── PROGRESS VS PLAN BARS ─────────────────────────────────────────────────
+  var pbWrap = document.createElement('div');
+  pbWrap.style.cssText = 'margin-bottom:16px;';
+
+  var pbTitle = document.createElement('div');
+  pbTitle.style.cssText = 'font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:10px;';
+  pbTitle.textContent = 'Progress vs Plan';
+  pbWrap.appendChild(pbTitle);
+
+  [
+    {lbl:'Actual (by value)', pct:overallPct, col:'var(--accent)'},
+    {lbl:'Planned at today',  pct:plannedPct, col:'var(--muted)'}
+  ].forEach(function(bar) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;';
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;width:120px;flex-shrink:0;';
+    lbl.textContent = bar.lbl;
+    var track = document.createElement('div');
+    track.style.cssText = 'flex:1;height:12px;background:var(--surface2);border-radius:6px;overflow:hidden;';
+    var fill = document.createElement('div');
+    fill.style.cssText = 'height:100%;border-radius:6px;background:' + bar.col + ';width:' + Math.min(100,bar.pct).toFixed(1) + '%;';
+    track.appendChild(fill);
+    row.appendChild(lbl);
+    row.appendChild(track);
+    var pctLbl = document.createElement('div');
+    pctLbl.style.cssText = 'font-size:12px;font-weight:800;color:' + bar.col + ';width:44px;text-align:right;flex-shrink:0;';
+    pctLbl.textContent = bar.pct.toFixed(1) + '%';
+    row.appendChild(pctLbl);
+    pbWrap.appendChild(row);
+  });
+
+  // Variance row
+  var varRow = document.createElement('div');
+  varRow.style.cssText = 'display:flex;justify-content:flex-end;padding-right:4px;margin-top:-2px;';
+  var varEl = document.createElement('div');
+  varEl.style.cssText = 'font-size:11px;font-weight:700;color:' + (variance >= 0 ? 'var(--green)' : 'var(--red)') + ';';
+  varEl.textContent = 'Variance: ' + (variance >= 0 ? '+' : '') + variance.toFixed(1) + '%';
+  varRow.appendChild(varEl);
+  pbWrap.appendChild(varRow);
+  el.appendChild(pbWrap);
+
+  // ── KPI TILES ─────────────────────────────────────────────────────────────
   var kpis = [
-    {lbl:'Completed (by value)', val: overallPct.toFixed(1)+'%', col:'var(--text)'},
-    {lbl:'Planned at today', val: plannedPct.toFixed(1)+'%', col:'var(--muted)'},
-    {lbl:'Variance', val: (variance>=0?'+':'')+variance.toFixed(1)+'%', col: variance>=0?'var(--green)':'var(--red)'},
-    {lbl:'Speed (% per week)', val: ratePerWeek.toFixed(2)+'%', col:'var(--accent)'},
-    {lbl:'Forecast finish', val: fcStr, col: fcLate?'var(--red)':'var(--green)'},
-    {lbl:'Target (agreed)', val:'29 Jun 2026', col:'var(--muted)'}
+    {lbl:'Actual complete',   val: overallPct.toFixed(1)+'%',         col:'var(--text)'},
+    {lbl:'Speed (% / week)',  val: ratePerWeek.toFixed(2)+'%',        col:'var(--accent)'},
+    {lbl:'Weeks to deadline', val: weeksToTarget + ' wks',            col: daysToTarget < 21 ? 'var(--red)' : 'var(--muted)'},
+    {lbl:'Days behind plan',  val: Math.abs(variance).toFixed(1)+'%', col: variance < 0 ? 'var(--red)' : 'var(--green)'},
   ];
 
   var grid = document.createElement('div');
-  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:10px;';
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:12px;';
   kpis.forEach(function(k) {
     var c = document.createElement('div');
     c.className = 'vel-kpi';
@@ -2049,7 +2134,7 @@ function buildVelocityPanel() {
 
   var note = document.createElement('div');
   note.style.cssText = 'font-size:10px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px;';
-  note.textContent = 'Progress calculated by value (budget-weighted). Speed = % completed per 7 calendar days since project start 23 Mar 2026. Target: 29 Jun 2026 (agreed with Dandara). Record weekly snapshots via Delays tab to track speed trend over time.';
+  note.textContent = 'Progress weighted by contract value (zone budgets). Speed = % per 7 calendar days since site start 23 Mar 2026. Forecast assumes no change in working rate. Use Programme Editor to model what-if scenarios.';
   el.appendChild(note);
 }
 
@@ -2347,6 +2432,111 @@ function buildDelayLog() {
     tr.appendChild(costTd);
     tbody.appendChild(tr);
   });
+  buildDelayBreakdown();
+}
+
+function buildDelayBreakdown() {
+  var el = document.getElementById('delay-breakdown-panel');
+  if (!el) return;
+  el.innerHTML = '';
+  var log = loadDelayLog();
+
+  var cats = [
+    {key:'client',      lbl:'Client-instructed (agreed)',  col:'#ef4444'},
+    {key:'eot_claimed', lbl:'EOT claimed (not yet agreed)', col:'#60a5fa'},
+    {key:'absorbed',    lbl:'Absorbed (internal)',          col:'#f97316'},
+    {key:'variance',    lbl:'Productivity variance',        col:'#a855f7'},
+    {key:'weather',     lbl:'Weather',                     col:'#38bdf8'},
+    {key:'design',      lbl:'Design change',               col:'#34d399'},
+  ];
+
+  var totals = {};
+  var grandTotal = 0;
+  cats.forEach(function(c) {
+    var d = log.filter(function(e){ return e.category === c.key; })
+               .reduce(function(s,e){ return s + (e.days||0); }, 0);
+    totals[c.key] = d;
+    grandTotal += d;
+  });
+
+  if (grandTotal === 0) return;
+
+  // Section title
+  var ttl = document.createElement('div');
+  ttl.className = 'card-title';
+  ttl.style.marginBottom = '14px';
+  ttl.textContent = 'Delay Causes Breakdown';
+  el.appendChild(ttl);
+
+  // Sub-label: total days
+  var sub = document.createElement('div');
+  sub.style.cssText = 'font-size:11px;color:var(--muted);margin-bottom:12px;';
+  sub.textContent = 'Total days affected: ' + grandTotal.toFixed(1) + ' working days across all categories';
+  el.appendChild(sub);
+
+  // Stacked bar across full width
+  var stackBar = document.createElement('div');
+  stackBar.style.cssText = 'display:flex;height:20px;border-radius:10px;overflow:hidden;margin-bottom:18px;gap:1px;';
+  cats.forEach(function(c) {
+    var d = totals[c.key];
+    if (!d) return;
+    var seg = document.createElement('div');
+    var w = (d / grandTotal * 100).toFixed(2);
+    seg.style.cssText = 'width:' + w + '%;background:' + c.col + ';';
+    seg.title = c.lbl + ': ' + d.toFixed(1) + 'd';
+    stackBar.appendChild(seg);
+  });
+  el.appendChild(stackBar);
+
+  // Row per category
+  cats.forEach(function(c) {
+    var d = totals[c.key];
+    if (!d) return;
+    var pct = d / grandTotal * 100;
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:9px;';
+
+    var dot = document.createElement('div');
+    dot.style.cssText = 'width:10px;height:10px;border-radius:50%;background:' + c.col + ';flex-shrink:0;';
+    row.appendChild(dot);
+
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-size:11px;font-weight:600;color:var(--text);flex:1;';
+    lbl.textContent = c.lbl;
+    row.appendChild(lbl);
+
+    var track = document.createElement('div');
+    track.style.cssText = 'width:160px;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;flex-shrink:0;';
+    var fill = document.createElement('div');
+    fill.style.cssText = 'height:100%;border-radius:4px;background:' + c.col + ';width:' + pct.toFixed(1) + '%;';
+    track.appendChild(fill);
+    row.appendChild(track);
+
+    var dayLbl = document.createElement('div');
+    dayLbl.style.cssText = 'font-size:12px;font-weight:800;color:' + c.col + ';width:34px;text-align:right;flex-shrink:0;';
+    dayLbl.textContent = d.toFixed(1) + 'd';
+    row.appendChild(dayLbl);
+
+    var pctLbl = document.createElement('div');
+    pctLbl.style.cssText = 'font-size:10px;color:var(--muted);width:38px;text-align:right;flex-shrink:0;';
+    pctLbl.textContent = pct.toFixed(0) + '%';
+    row.appendChild(pctLbl);
+
+    el.appendChild(row);
+  });
+
+  // Total footer
+  var foot = document.createElement('div');
+  foot.style.cssText = 'display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:10px;margin-top:4px;';
+  var fl = document.createElement('span');
+  fl.style.cssText = 'font-size:11px;font-weight:700;color:var(--text);';
+  fl.textContent = 'Total days affected';
+  var fv = document.createElement('span');
+  fv.style.cssText = 'font-size:12px;font-weight:900;color:var(--text);';
+  fv.textContent = grandTotal.toFixed(1) + ' working days';
+  foot.appendChild(fl);
+  foot.appendChild(fv);
+  el.appendChild(foot);
 }
 
 
