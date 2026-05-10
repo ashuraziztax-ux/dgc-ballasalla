@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v16</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v17</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -1154,6 +1154,11 @@ function resetAppearance() {
       <div class="kpi-value">£156,739</div>
       <div class="kpi-sub">Ian Barnes certified — due 28 May</div>
     </div>
+    <div class="kpi-card" id="afp-overdue-card" style="display:none;">
+      <div class="kpi-label" style="color:#ef4444;">&#9888; Payment Overdue</div>
+      <div class="kpi-value" id="afp-overdue-val" style="color:#ef4444;font-size:18px;">—</div>
+      <div class="kpi-sub" id="afp-overdue-sub">—</div>
+    </div>
   </div>
 
   <div class="grid-2">
@@ -1618,6 +1623,7 @@ function resetAppearance() {
     <div class="form-row">
       <button class="btn btn-primary" onclick="addDelayEntry()">Add to Log</button>
       <button class="btn btn-secondary" onclick="clearDelayForm()">Clear</button>
+      <span id="delay-add-status" style="font-size:11px;font-weight:600;margin-left:4px;"></span>
     </div>
   </div>
 </div>
@@ -2259,7 +2265,14 @@ function buildVelocityPanel() {
 
   var note = document.createElement('div');
   note.style.cssText = 'font-size:10px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px;';
-  note.textContent = 'Progress weighted by contract value (zone budgets). Speed = % per 7 calendar days since site start 23 Mar 2026. Forecast assumes no change in working rate. Use Programme Editor to model what-if scenarios.';
+  var snaps = lsGet('dgc_snapshots','[]')||[];
+  var weeksData = Math.round(Math.max(1,Math.round((TODAY-new Date('2026-03-23T00:00:00'))/86400000))/7);
+  var confLabel = snaps.length >= 4 ? 'Good confidence (' + snaps.length + ' snapshots)'
+                : snaps.length >= 2 ? 'Improving (' + snaps.length + ' snapshots — save weekly for better accuracy)'
+                : 'Low confidence — based on average rate since day 1 (save weekly snapshots to improve)';
+  note.innerHTML = '<strong>Data confidence:</strong> ' + confLabel
+    + ' &nbsp;&middot;&nbsp; ' + weeksData + ' weeks elapsed since site start (23 Mar 2026)'
+    + ' &nbsp;&middot;&nbsp; Forecast assumes no change in working rate. Use Programme Editor to model scenarios.';
   el.appendChild(note);
 }
 
@@ -2461,10 +2474,13 @@ function addDelayEntry() {
   var days = document.getElementById('new-delay-days');
   var cost = document.getElementById('new-delay-cost');
   var stat = document.getElementById('new-delay-status');
-  if (!date||!date.value||!desc||!desc.value) {
-    alert('Please fill in at least the Date and Description.');
-    return;
-  }
+  var addSt = document.getElementById('delay-add-status');
+  function addErr(msg){ if(addSt){addSt.style.color='var(--red)';addSt.textContent=msg;} else alert(msg); }
+  if (!date||!date.value){ addErr('Please select a date.'); return; }
+  if (!desc||!desc.value.trim()){ addErr('Please enter a description of the delay event.'); return; }
+  var daysVal = days ? parseFloat(days.value)||0 : 0;
+  if (daysVal <= 0){ addErr('Days lost must be greater than 0.'); return; }
+  if(addSt) addSt.textContent='';
   var log = loadDelayLog();
   var entry = {
     id: 'D' + (Date.now()),
@@ -2472,7 +2488,7 @@ function addDelayEntry() {
     ref: ref ? ref.value : '',
     category: cat ? cat.value : 'absorbed',
     description: desc.value,
-    days: days ? parseFloat(days.value)||0 : 0,
+    days: daysVal,
     status: stat ? stat.value : 'open',
     cost: cost ? parseFloat(cost.value)||0 : 0
   };
@@ -3118,6 +3134,47 @@ function exportVarCSV() {
   downloadFile('dgc-variation-register-'+TODAY.toISOString().slice(0,10)+'.csv', csv, 'text/csv;charset=utf-8;');
 }
 
+function buildAFPOverdueCheck() {
+  var card = document.getElementById('afp-overdue-card');
+  var valEl = document.getElementById('afp-overdue-val');
+  var subEl = document.getElementById('afp-overdue-sub');
+  if (!card) return;
+  var overdueItems = [];
+  AFPS.forEach(function(a) {
+    if (a.status === 'paid' || a.status === 'pending') return;
+    if (!a.payment) return;
+    var dueDate = parseDate(a.payment);
+    var daysPast = Math.round((TODAY - dueDate) / 86400000);
+    if (daysPast > 0) {
+      overdueItems.push({ num:a.num, days:daysPast, net:a.net||a.value||0, due:a.payment });
+    }
+  });
+  if (!overdueItems.length) {
+    // Check for upcoming (within 7 days)
+    var upcoming = [];
+    AFPS.forEach(function(a) {
+      if (a.status === 'paid' || a.status === 'pending') return;
+      if (!a.payment) return;
+      var dueDate = parseDate(a.payment);
+      var daysTo = Math.round((dueDate - TODAY) / 86400000);
+      if (daysTo >= 0 && daysTo <= 7) upcoming.push({num:a.num, days:daysTo, net:a.net||a.value||0});
+    });
+    if (upcoming.length) {
+      card.style.display = 'block';
+      card.style.borderColor = '#f97316';
+      card.querySelector('.kpi-label').style.color = '#f97316';
+      valEl.style.color = '#f97316';
+      valEl.textContent = 'Due in ' + upcoming[0].days + 'd';
+      subEl.textContent = 'AFP ' + upcoming[0].num + ' — £' + upcoming[0].net.toLocaleString('en-GB',{minimumFractionDigits:0}) + ' — chase Dandara';
+    }
+    return;
+  }
+  card.style.display = 'block';
+  var ov = overdueItems[0];
+  valEl.textContent = 'AFP ' + ov.num + ' — ' + ov.days + ' days overdue';
+  subEl.textContent = '£' + ov.net.toLocaleString('en-GB',{minimumFractionDigits:0}) + ' — payment due ' + ov.due + ' — chase immediately';
+}
+
 const AFPS = [
   { num:1, issued:'2026-04-01', invoice:'2026-04-07', payment:'2026-05-05', value:22984.59, net:22299, status:'paid', note:'Gross £22,985' },
   { num:2, issued:'2026-04-30', invoice:'2026-04-30', payment:'2026-05-28', value:156739.46, net:156739.46, status:'due', note:'Ian Barnes certified £156,739.46 net (after AFP1 deducted + 2.5% retention). Materials on site £47,815 accepted as goodwill - needs backup for AFP3.' },
@@ -3551,6 +3608,7 @@ window.addEventListener('DOMContentLoaded', () => {
   try { buildVelocityTrend(); }   catch(e) {}
   try { buildProgEditor(); }      catch(e) {}
   try { buildDelayLog(); }        catch(e) {}
+  try { buildAFPOverdueCheck(); }  catch(e) {}
   try { buildVariationRegister(); } catch(e) {}
   try { buildMilestones(); }      catch(e) {}
   try { buildAttentionList(); }   catch(e) {}
