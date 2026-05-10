@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<!-- Property Swipe v1.0 — 2026-05-10 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Property Swipe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+<style>
+:root {
+  --primary: #7C3AED;
+  --primary-light: #EDE9FE;
+  --like: #10B981;
+  --nope: #EF4444;
+  --bg: #F1F5F9;
+  --card: #FFFFFF;
+  --text: #0F172A;
+  --muted: #64748B;
+  --border: #E2E8F0;
+  --nav-h: 68px;
+  --header-h: 60px;
+  --font: 'Inter', system-ui, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; background: var(--bg); font-family: var(--font); color: var(--text); }
+button { font-family: var(--font); cursor: pointer; border: none; outline: none; }
+input, select { font-family: var(--font); outline: none; border: none; }
+
+/* ── APP SHELL ── */
+#app { height: 100vh; display: flex; flex-direction: column; position: relative; max-width: 480px; margin: 0 auto; }
+
+/* ── SCREENS ── */
+.screen { position: absolute; top: 0; left: 0; right: 0; bottom: var(--nav-h); overflow-y: auto; display: none; flex-direction: column; background: var(--bg); }
+.screen.active { display: flex; }
+
+/* ── HEADER ── */
+.screen-header {
+  background: var(--card);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 10;
+  min-height: var(--header-h);
+}
+.header-logo { font-size: 22px; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; }
+.header-logo span { color: var(--text); }
+.screen-title { font-size: 17px; font-weight: 700; }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px;
+  height: var(--nav-h);
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: stretch;
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.nav-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: none; color: var(--muted); gap: 3px; padding: 8px 0; position: relative; transition: color 0.2s;
+}
+.nav-btn.active { color: var(--primary); }
+.nav-icon { font-size: 22px; line-height: 1; }
+.nav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
+.nav-badge {
+  position: absolute; top: 7px; right: calc(50% - 18px);
+  background: var(--nope); color: #fff; font-size: 9px; font-weight: 700;
+  border-radius: 10px; min-width: 16px; height: 16px;
+  display: none; align-items: center; justify-content: center; padding: 0 4px;
+}
+.nav-badge.visible { display: flex; }
+
+/* ── CARD STACK ── */
+.card-area {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: flex-start; padding: 12px 16px 0;
+  position: relative; overflow: hidden;
+}
+.card-stack {
+  position: relative; width: 100%; max-width: 380px;
+  height: 500px; margin: 0 auto;
+}
+.prop-card {
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 500px; background: var(--card); border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  overflow: hidden; cursor: grab; user-select: none;
+  will-change: transform;
+  transform-origin: 50% 100%;
+}
+.prop-card:nth-child(2) { transform: scale(0.95) translateY(8px); z-index: 1; }
+.prop-card:nth-child(3) { transform: scale(0.90) translateY(16px); z-index: 0; }
+.prop-card:first-child { z-index: 3; }
+
+/* ── CARD PHOTO ── */
+.card-photo {
+  width: 100%; height: 320px; position: relative; overflow: hidden; background: #ddd;
+}
+.card-photo img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.photo-dots {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 5px; z-index: 2;
+}
+.photo-dot { width: 6px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.5); transition: all 0.2s; }
+.photo-dot.active { background: #fff; width: 16px; }
+.photo-tap-l, .photo-tap-r {
+  position: absolute; top: 0; bottom: 0; width: 50%; z-index: 5;
+}
+.photo-tap-l { left: 0; }
+.photo-tap-r { right: 0; }
+
+/* ── STAMP OVERLAYS ── */
+.stamp {
+  position: absolute; top: 30px; padding: 8px 16px; border-radius: 8px;
+  font-size: 28px; font-weight: 900; letter-spacing: 2px; opacity: 0;
+  pointer-events: none; z-index: 10; transition: opacity 0.05s; border-width: 3px; border-style: solid;
+}
+.stamp-like { left: 20px; color: var(--like); border-color: var(--like); transform: rotate(-15deg); }
+.stamp-nope { right: 20px; color: var(--nope); border-color: var(--nope); transform: rotate(15deg); }
+.listing-badge {
+  position: absolute; bottom: 12px; left: 12px;
+  background: rgba(0,0,0,0.6); color: #fff; font-size: 11px; font-weight: 600;
+  padding: 3px 9px; border-radius: 20px; backdrop-filter: blur(4px); z-index: 2;
+}
+.listing-badge.rent { background: rgba(124,58,237,0.8); }
+
+/* ── CARD INFO ── */
+.card-info {
+  padding: 14px 16px; cursor: pointer;
+}
+.card-price { font-size: 22px; font-weight: 800; color: var(--text); }
+.card-price span { font-size: 13px; font-weight: 500; color: var(--muted); }
+.card-title { font-size: 14px; font-weight: 600; color: var(--text); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-location { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.card-stats { display: flex; gap: 12px; margin-top: 8px; }
+.card-stat { font-size: 13px; color: var(--text); font-weight: 500; }
+.card-stat span { color: var(--muted); font-weight: 400; }
+.card-features { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.feature-tag {
+  font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 10px;
+  background: var(--primary-light); color: var(--primary);
+}
+.algo-match { background: #D1FAE5; color: #065F46; }
+
+/* ── ACTION BUTTONS ── */
+.action-btns {
+  display: flex; gap: 16px; justify-content: center; align-items: center;
+  padding: 14px 0 12px;
+}
+.action-btn {
+  width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 22px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); transition: transform 0.1s;
+}
+.action-btn:active { transform: scale(0.9); }
+.btn-nope { background: #fff; color: var(--nope); border: 2px solid #FECACA; }
+.btn-info { background: #fff; color: var(--primary); border: 2px solid var(--primary-light); width: 44px; height: 44px; font-size: 18px; }
+.btn-like { background: #fff; color: var(--like); border: 2px solid #A7F3D0; }
+
+/* ── ALGO TOGGLE ── */
+.algo-pill {
+  font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 20px;
+  background: var(--primary-light); color: var(--primary); border: none;
+  display: none; transition: all 0.2s;
+}
+.algo-pill.on { background: var(--primary); color: #fff; }
+.algo-pill.visible { display: block; }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; text-align: center; padding: 40px 24px; flex: 1;
+}
+.empty-state.show { display: flex; }
+.empty-icon { font-size: 60px; }
+.empty-state h3 { font-size: 20px; font-weight: 700; }
+.empty-state p { font-size: 14px; color: var(--muted); }
+.empty-state button {
+  margin-top: 8px; padding: 12px 28px; background: var(--primary); color: #fff;
+  border-radius: 25px; font-size: 15px; font-weight: 600;
+}
+
+/* ── MAP SCREEN ── */
+#screen-map .map-hint {
+  background: var(--primary-light); color: var(--primary);
+  font-size: 12px; font-weight: 500; padding: 8px 18px; text-align: center;
+}
+#map { flex: 1; }
+.map-footer {
+  background: var(--card); padding: 12px 18px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; bottom: 0;
+}
+.map-count { font-size: 13px; color: var(--muted); font-weight: 500; }
+.search-area-btn {
+  padding: 10px 20px; background: var(--primary); color: #fff;
+  border-radius: 20px; font-size: 13px; font-weight: 700;
+}
+.map-clear-btn {
+  font-size: 13px; font-weight: 600; color: var(--nope); background: none;
+}
+
+/* ── LIKED SCREEN ── */
+.liked-toolbar {
+  padding: 12px 16px; display: flex; gap: 10px; background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+.liked-toolbar input {
+  flex: 1; background: var(--bg); border-radius: 10px; padding: 9px 12px;
+  font-size: 14px; color: var(--text);
+}
+.liked-toolbar select {
+  background: var(--bg); border-radius: 10px; padding: 9px 10px;
+  font-size: 13px; color: var(--text); cursor: pointer;
+}
+.liked-grid {
+  padding: 12px 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.liked-card {
+  background: var(--card); border-radius: 14px; overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer; position: relative;
+}
+.liked-card img { width: 100%; height: 130px; object-fit: cover; display: block; }
+.liked-card-info { padding: 10px; }
+.liked-card-price { font-size: 14px; font-weight: 700; }
+.liked-card-loc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.liked-card-stats { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.liked-remove {
+  position: absolute; top: 7px; right: 7px; width: 26px; height: 26px;
+  background: rgba(0,0,0,0.5); color: #fff; border-radius: 50%;
+  font-size: 13px; display: flex; align-items: center; justify-content: center;
+}
+.liked-empty { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 60px 24px; text-align: center; flex: 1; }
+.liked-empty.show { display: flex; }
+.liked-empty-icon { font-size: 50px; }
+.liked-empty h3 { font-size: 18px; font-weight: 700; }
+.liked-empty p { font-size: 14px; color: var(--muted); }
+
+/* ── FILTERS SCREEN ── */
+.filters-body { padding: 16px; display: flex; flex-direction: column; gap: 20px; padding-bottom: 40px; }
+.filter-section { display: flex; flex-direction: column; gap: 10px; }
+.filter-label { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.toggle-row { display: flex; gap: 8px; }
+.toggle-btn {
+  padding: 9px 18px; border-radius: 20px; font-size: 14px; font-weight: 600;
+  background: var(--bg); color: var(--muted); transition: all 0.2s;
+}
+.toggle-btn.on { background: var(--primary); color: #fff; }
+.chips-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+  background: var(--bg); color: var(--muted); transition: all 0.2s; cursor: pointer;
+}
+.chip.on { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+.range-row { display: flex; flex-direction: column; gap: 6px; }
+.range-label { font-size: 15px; font-weight: 700; color: var(--text); }
+input[type="range"] {
+  width: 100%; accent-color: var(--primary); height: 6px;
+}
+.beds-row { display: flex; gap: 8px; }
+.beds-btn {
+  flex: 1; padding: 10px 6px; border-radius: 12px; font-size: 14px; font-weight: 600;
+  background: var(--bg); color: var(--muted); transition: all 0.2s; text-align: center;
+}
+.beds-btn.on { background: var(--primary); color: #fff; }
+.apply-btn {
+  padding: 16px; background: var(--primary); color: #fff; border-radius: 14px;
+  font-size: 16px; font-weight: 700; text-align: center; margin-top: 8px;
+}
+.filter-header-actions { display: flex; gap: 10px; align-items: center; }
+.reset-btn { font-size: 13px; font-weight: 600; color: var(--muted); background: none; padding: 4px 0; }
+
+/* ── PROPERTY MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: none; align-items: flex-end; justify-content: center; z-index: 200;
+  backdrop-filter: blur(4px);
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--card); border-radius: 24px 24px 0 0; width: 100%; max-width: 480px;
+  max-height: 92vh; overflow-y: auto; position: relative;
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-close {
+  position: absolute; top: 14px; right: 14px; z-index: 10;
+  width: 34px; height: 34px; background: rgba(0,0,0,0.4); color: #fff;
+  border-radius: 50%; font-size: 16px; display: flex; align-items: center; justify-content: center;
+}
+.modal-photos { position: relative; }
+.modal-photos img { width: 100%; height: 280px; object-fit: cover; display: block; }
+.modal-photo-nav {
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 5px;
+}
+.modal-photo-dot { width: 6px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.5); transition: all 0.2s; cursor: pointer; }
+.modal-photo-dot.active { background: #fff; width: 16px; }
+.modal-prev, .modal-next {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 36px; height: 36px; background: rgba(0,0,0,0.4); color: #fff;
+  border-radius: 50%; font-size: 16px; display: flex; align-items: center; justify-content: center;
+}
+.modal-prev { left: 10px; }
+.modal-next { right: 10px; }
+.modal-body { padding: 20px; }
+.modal-price { font-size: 26px; font-weight: 800; }
+.modal-price-sub { font-size: 13px; color: var(--muted); font-weight: 400; }
+.modal-title { font-size: 17px; font-weight: 700; margin-top: 4px; }
+.modal-location { font-size: 14px; color: var(--muted); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+.modal-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+.modal-stat {
+  background: var(--bg); border-radius: 12px; padding: 12px 8px; text-align: center;
+}
+.modal-stat-val { font-size: 18px; font-weight: 800; color: var(--primary); }
+.modal-stat-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; font-weight: 500; }
+.modal-section-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 20px; margin-bottom: 8px; }
+.modal-description { font-size: 14px; color: var(--text); line-height: 1.6; }
+.modal-features { display: flex; flex-wrap: wrap; gap: 6px; }
+.modal-feature { font-size: 12px; font-weight: 500; padding: 5px 10px; border-radius: 10px; background: var(--primary-light); color: var(--primary); }
+.modal-source { font-size: 12px; color: var(--muted); margin-top: 16px; text-align: center; }
+.modal-actions { display: flex; gap: 12px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+.modal-nope-btn {
+  flex: 1; padding: 14px; border-radius: 14px; font-size: 15px; font-weight: 700;
+  background: #FEF2F2; color: var(--nope);
+}
+.modal-like-btn {
+  flex: 1; padding: 14px; border-radius: 14px; font-size: 15px; font-weight: 700;
+  background: #ECFDF5; color: var(--like);
+}
+.modal-liked-badge {
+  position: absolute; top: 14px; left: 14px; background: var(--like); color: #fff;
+  font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 12px;
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: calc(var(--nav-h) + 16px); left: 50%; transform: translateX(-50%) translateY(20px);
+  background: #1E293B; color: #fff; padding: 10px 20px; border-radius: 20px;
+  font-size: 14px; font-weight: 600; opacity: 0; transition: all 0.3s; z-index: 300;
+  pointer-events: none; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── ALGO BANNER ── */
+.algo-banner {
+  background: linear-gradient(135deg, #7C3AED, #A855F7);
+  color: #fff; padding: 10px 16px; font-size: 13px; font-weight: 600;
+  display: none; align-items: center; gap: 8px;
+}
+.algo-banner.show { display: flex; }
+
+/* ── RESPONSIVE TWEAKS ── */
+@media (min-height: 700px) {
+  .card-stack { height: 520px; }
+  .prop-card { height: 520px; }
+  .card-photo { height: 340px; }
+}
+@media (min-height: 800px) {
+  .card-stack { height: 560px; }
+  .prop-card { height: 560px; }
+  .card-photo { height: 370px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── DISCOVER SCREEN ── -->
+  <div id="screen-discover" class="screen active">
+    <div class="screen-header">
+      <div class="header-logo">Property<span>Swipe</span></div>
+      <button class="algo-pill" id="algo-pill" onclick="toggleAlgo()">✨ Smart Sort</button>
+    </div>
+    <div class="algo-banner" id="algo-banner">
+      ✨ Smart Sort ON — showing properties based on your taste
+    </div>
+    <div class="card-area">
+      <div class="card-stack" id="card-stack"></div>
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">🏡</div>
+        <h3>You've seen them all!</h3>
+        <p>Adjust your filters or start over</p>
+        <button onclick="resetSeen()">Start Over</button>
+      </div>
+    </div>
+    <div class="action-btns">
+      <button class="action-btn btn-nope" onclick="swipeAction('left')" title="Skip">✕</button>
+      <button class="action-btn btn-info" onclick="openCurrentModal()" title="Details">ℹ</button>
+      <button class="action-btn btn-like" onclick="swipeAction('right')" title="Like">♥</button>
+    </div>
+  </div>
+
+  <!-- ── MAP SCREEN ── -->
+  <div id="screen-map" class="screen">
+    <div class="screen-header">
+      <div class="screen-title">🗺 Search on Map</div>
+      <button class="map-clear-btn" onclick="clearShapes()">Clear all</button>
+    </div>
+    <div class="map-hint">Draw circles or polygons — properties inside appear in your feed</div>
+    <div id="map"></div>
+    <div class="map-footer">
+      <div class="map-count" id="map-count">Draw an area to search</div>
+      <button class="search-area-btn" onclick="searchDrawnAreas()">Search These Areas ›</button>
+    </div>
+  </div>
+
+  <!-- ── LIKED SCREEN ── -->
+  <div id="screen-liked" class="screen">
+    <div class="screen-header">
+      <div class="screen-title">❤ Liked <span id="liked-hdr" style="color:var(--muted);font-weight:400;font-size:14px"></span></div>
+    </div>
+    <div class="liked-toolbar">
+      <input type="search" id="liked-search" placeholder="🔍  Search liked properties..." oninput="renderLiked()">
+      <select id="liked-sort" onchange="renderLiked()">
+        <option value="recent">Recent</option>
+        <option value="price-asc">Price ↑</option>
+        <option value="price-desc">Price ↓</option>
+        <option value="beds">Most beds</option>
+      </select>
+    </div>
+    <div class="liked-grid" id="liked-grid"></div>
+    <div class="liked-empty" id="liked-empty">
+      <div class="liked-empty-icon">💜</div>
+      <h3>No liked properties yet</h3>
+      <p>Swipe right on the Discover tab to save properties here</p>
+    </div>
+  </div>
+
+  <!-- ── FILTERS SCREEN ── -->
+  <div id="screen-filters" class="screen">
+    <div class="screen-header">
+      <div class="screen-title">⚙ Filters</div>
+      <div class="filter-header-actions">
+        <button class="reset-btn" onclick="resetFilters()">Reset</button>
+      </div>
+    </div>
+    <div class="filters-body">
+      <div class="filter-section">
+        <div class="filter-label">Listing Type</div>
+        <div class="toggle-row">
+          <button class="toggle-btn on" id="lt-both" onclick="setLT('both')">Both</button>
+          <button class="toggle-btn" id="lt-buy" onclick="setLT('buy')">Buy</button>
+          <button class="toggle-btn" id="lt-rent" onclick="setLT('rent')">Rent</button>
+        </div>
+      </div>
+      <div class="filter-section">
+        <div class="filter-label">Countries</div>
+        <div class="chips-wrap" id="country-chips"></div>
+      </div>
+      <div class="filter-section">
+        <div class="filter-label">Max Price</div>
+        <div class="range-row">
+          <div class="range-label" id="price-lbl">Any price</div>
+          <input type="range" id="price-slider" min="50000" max="1500000" step="25000" value="1500000" oninput="updatePriceLabel()">
+        </div>
+      </div>
+      <div class="filter-section">
+        <div class="filter-label">Min Bedrooms</div>
+        <div class="beds-row" id="beds-row">
+          <button class="beds-btn on" data-v="0" onclick="setBeds(0)">Any</button>
+          <button class="beds-btn" data-v="1" onclick="setBeds(1)">1+</button>
+          <button class="beds-btn" data-v="2" onclick="setBeds(2)">2+</button>
+          <button class="beds-btn" data-v="3" onclick="setBeds(3)">3+</button>
+          <button class="beds-btn" data-v="4" onclick="setBeds(4)">4+</button>
+        </div>
+      </div>
+      <div class="filter-section">
+        <div class="filter-label">Property Type</div>
+        <div class="chips-wrap" id="type-chips"></div>
+      </div>
+      <div class="filter-section">
+        <div class="filter-label">Must Have</div>
+        <div class="chips-wrap" id="feature-chips"></div>
+      </div>
+      <button class="apply-btn" onclick="applyFilters()">Apply Filters</button>
+    </div>
+  </div>
+
+  <!-- ── BOTTOM NAV ── -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-discover" onclick="showScreen('discover')">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Discover</span>
+    </button>
+    <button class="nav-btn" id="nav-map" onclick="showScreen('map')">
+      <span class="nav-icon">🗺</span>
+      <span class="nav-label">Map</span>
+    </button>
+    <button class="nav-btn" id="nav-liked" onclick="showScreen('liked')">
+      <span class="nav-icon">❤</span>
+      <span class="nav-label">Liked</span>
+      <span class="nav-badge" id="liked-badge">0</span>
+    </button>
+    <button class="nav-btn" id="nav-filters" onclick="showScreen('filters')">
+      <span class="nav-icon">⚙</span>
+      <span class="nav-label">Filters</span>
+    </button>
+  </nav>
+
+  <!-- ── PROPERTY MODAL ── -->
+  <div class="modal-overlay" id="modal-overlay" onclick="handleModalOverlayClick(event)">
+    <div class="modal" id="prop-modal"></div>
+  </div>
+
+  <!-- ── TOAST ── -->
+  <div class="toast" id="toast"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script>
+// ═══════════════════════════════════════════════
+//  DEMO DATA
+// ═══════════════════════════════════════════════
+const PHOTOS = [
+  'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1522771739844-6a9f6a0ad0d7?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1556909290-f7c27fce2b34?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1449844908441-b4af3d74899a?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1540518614846-7eded433c457?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1416331329927-4bb50bdb60bb?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800&h=600&fit=crop',
+];
+function ph(...indices) { return indices.map(i => PHOTOS[i]); }
+
+const ALL_PROPERTIES = [
+  { id:1, title:'Eixample Penthouse', type:'apartment', listing:'buy', price:485000, cur:'€', country:'Spain', city:'Barcelona', area:'Eixample', lat:41.395, lng:2.162, beds:3, baths:2, sqm:145, features:['pool','terrace','parking','gym','city views'], desc:'Breathtaking rooftop penthouse with panoramic city views over Barcelona. Floor-to-ceiling windows, private terrace, and access to the rooftop pool. Recently renovated to the highest standard.', photos:ph(0,10,8,9), source:'Idealista', days:12 },
+  { id:2, title:'Alfama Old Town Apartment', type:'apartment', listing:'buy', price:320000, cur:'€', country:'Portugal', city:'Lisbon', area:'Alfama', lat:38.711, lng:-9.133, beds:2, baths:1, sqm:88, features:['terrace','renovated','river views'], desc:'Charming two-bedroom apartment in the historic Alfama district. Fully renovated with original azulejo tiles and modern fixtures. Stunning terrace with views over the Tagus River.', photos:ph(2,10,8), source:'Imovirtual', days:8 },
+  { id:3, title:'Le Marais Haussmann', type:'apartment', listing:'rent', price:3200, cur:'€', country:'France', city:'Paris', area:'Le Marais', lat:48.858, lng:2.352, beds:3, baths:2, sqm:110, features:['balcony','parquet floors','period features'], desc:'Stunning Haussmann-era apartment on a quiet street in Le Marais. Original parquet floors, period mouldings, and a beautiful iron balcony. Walking distance to galleries and restaurants.', photos:ph(1,12,8,14), source:'SeLoger', days:5 },
+  { id:4, title:'Val d\'Orcia Country Villa', type:'villa', listing:'buy', price:750000, cur:'€', country:'Italy', city:'Siena', area:'Tuscany', lat:43.067, lng:11.617, beds:5, baths:4, sqm:320, features:['pool','garden','vineyard','olive grove','countryside views'], desc:'Magnificent stone farmhouse in the Val d\'Orcia UNESCO landscape. Five bedrooms, a private pool, working vineyard, and olive grove. Completely restored preserving original features.', photos:ph(5,3,10,8,9), source:'Immobiliare.it', days:21 },
+  { id:5, title:'Canal Ring Townhouse', type:'house', listing:'buy', price:620000, cur:'€', country:'Netherlands', city:'Amsterdam', area:'Jordaan', lat:52.376, lng:4.883, beds:3, baths:2, sqm:132, features:['canal views','historic','storage boat'], desc:'Classic 17th century canal house in the prestigious Jordaan district. Three floors, steep Dutch staircase, and a private boat storage. Authentic beams and character throughout.', photos:ph(13,0,8), source:'Funda', days:14 },
+  { id:6, title:'Notting Hill Garden Flat', type:'apartment', listing:'rent', price:2800, cur:'£', country:'United Kingdom', city:'London', area:'Notting Hill', lat:51.511, lng:-0.196, beds:2, baths:1, sqm:78, features:['garden','period features','quiet street'], desc:'Beautiful ground floor flat with a private south-facing garden in the heart of Notting Hill. Original Victorian features, modern kitchen, and excellent transport links.', photos:ph(1,8,9,13), source:'Rightmove', days:3 },
+  { id:7, title:'Malasaña Design Apartment', type:'apartment', listing:'buy', price:225000, cur:'€', country:'Spain', city:'Madrid', area:'Malasaña', lat:40.426, lng:-3.704, beds:2, baths:1, sqm:72, features:['renovated','central location','exposed brick'], desc:'Hip open-plan apartment in the heart of Madrid\'s coolest neighbourhood. Exposed brick walls, polished concrete floors, and a beautiful north-light kitchen.', photos:ph(2,12), source:'Fotocasa', days:18 },
+  { id:8, title:'Quinta do Lago Villa', type:'villa', listing:'buy', price:890000, cur:'€', country:'Portugal', city:'Faro', area:'Algarve', lat:37.074, lng:-8.039, beds:4, baths:3, sqm:280, features:['pool','sea views','garden','BBQ','parking'], desc:'Luxury villa in the prestigious Quinta do Lago resort. Private heated pool, landscaped gardens, and panoramic sea views. Minutes from championship golf courses and the beach.', photos:ph(6,10,5,9), source:'ERA Portugal', days:30 },
+  { id:9, title:'Prati District Apartment', type:'apartment', listing:'buy', price:395000, cur:'€', country:'Italy', city:'Rome', area:'Prati', lat:41.906, lng:12.463, beds:3, baths:2, sqm:115, features:['renovated','near Vatican','high ceilings'], desc:'Elegant three-bedroom apartment in the residential Prati district, steps from the Vatican. Completely renovated with high-end finishes, original marble floors, and 3.5m ceilings.', photos:ph(0,12,8), source:'Casa.it', days:9 },
+  { id:10, title:'Oia Caldera Cave House', type:'house', listing:'buy', price:450000, cur:'€', country:'Greece', city:'Santorini', area:'Oia', lat:36.462, lng:25.375, beds:2, baths:2, sqm:95, features:['sea views','infinity terrace','cave architecture','sunset views'], desc:'Iconic whitewashed cave house in Oia with world-famous caldera and sunset views. Traditional cycladic architecture, private terrace, and a plunge pool carved into the cliff.', photos:ph(10,11,1,9), source:'Spitogatos', days:45 },
+  { id:11, title:'Mitte Modern Apartment', type:'apartment', listing:'rent', price:1350, cur:'€', country:'Germany', city:'Berlin', area:'Mitte', lat:52.520, lng:13.405, beds:1, baths:1, sqm:55, features:['central','modern','balcony'], desc:'Sleek modern apartment in the heart of Berlin\'s Mitte district. Open-plan living, high-end kitchen, and a small balcony overlooking a quiet courtyard. Excellent transport.', photos:ph(2,12), source:'ImmoScout24', days:6 },
+  { id:12, title:'Cap Ferrat Sea Villa', type:'villa', listing:'buy', price:1250000, cur:'€', country:'France', city:'Nice', area:'Côte d\'Azur', lat:43.693, lng:7.333, beds:5, baths:4, sqm:380, features:['pool','sea views','terrace','garden','boat mooring'], desc:'Exceptional Belle Époque villa on the Cap Ferrat peninsula with sweeping Mediterranean sea views. Private pool, terraced gardens, and a private path to the sea.', photos:ph(7,11,5,10,9), source:'SeLoger', days:60 },
+  { id:13, title:'Ribeira Riverside House', type:'house', listing:'buy', price:280000, cur:'€', country:'Portugal', city:'Porto', area:'Ribeira', lat:41.140, lng:-8.612, beds:3, baths:2, sqm:130, features:['river views','renovated','terrace','historic district'], desc:'Beautiful townhouse in Porto\'s UNESCO-listed Ribeira waterfront. Recently renovated while retaining original features. Large terrace with Douro River views, steps from the wine cellars.', photos:ph(4,10,0), source:'Imovirtual', days:15 },
+  { id:14, title:'New Town Georgian Flat', type:'apartment', listing:'buy', price:265000, cur:'£', country:'United Kingdom', city:'Edinburgh', area:'New Town', lat:55.956, lng:-3.195, beds:2, baths:1, sqm:80, features:['Georgian','period features','central'], desc:'First-floor apartment in a magnificent Georgian townhouse in Edinburgh\'s World Heritage New Town. Period cornicing, shuttered sash windows, and a private garden communal.', photos:ph(1,15,8), source:'Zoopla', days:11 },
+  { id:15, title:'Ruzafa Penthouse', type:'apartment', listing:'buy', price:195000, cur:'€', country:'Spain', city:'Valencia', area:'Ruzafa', lat:39.464, lng:-0.377, beds:3, baths:2, sqm:120, features:['rooftop terrace','city views','modern','parking'], desc:'Spacious penthouse apartment in Valencia\'s trendy Ruzafa neighbourhood. Enormous private rooftop terrace, modern interiors, and underground parking. Perfect as a home or holiday let.', photos:ph(0,10,8,14), source:'Idealista', days:7 },
+  { id:16, title:'Schwabing Quiet Apartment', type:'apartment', listing:'rent', price:1750, cur:'€', country:'Germany', city:'Munich', area:'Schwabing', lat:48.164, lng:11.582, beds:2, baths:1, sqm:68, features:['quiet','garden view','modern kitchen'], desc:'Lovely two-bedroom apartment on a tree-lined street in the sought-after Schwabing district. Modern kitchen, parquet floors, and a view over shared garden. Close to the English Garden.', photos:ph(15,12,14), source:'Immowelt', days:4 },
+  { id:17, title:'Dubrovnik Stone Villa', type:'villa', listing:'buy', price:520000, cur:'€', country:'Croatia', city:'Dubrovnik', area:'Old Town', lat:42.652, lng:18.093, beds:3, baths:2, sqm:160, features:['sea views','stone house','terrace','historic'], desc:'Authentic stone villa just outside Dubrovnik\'s medieval walls. Spectacular Adriatic sea views, a large terrace for outdoor dining, and a traditional interior with modern comforts.', photos:ph(7,10,0,8), source:'Njuškalo', days:28 },
+  { id:18, title:'Oltrarno Townhouse', type:'house', listing:'buy', price:410000, cur:'€', country:'Italy', city:'Florence', area:'Oltrarno', lat:43.764, lng:11.245, beds:3, baths:2, sqm:175, features:['courtyard','historic','near Pitti Palace','frescoes'], desc:'Exceptional historic townhouse in the Oltrarno artisan quarter. Frescoed ceilings, private courtyard garden, and beautifully preserved 16th century features throughout.', photos:ph(13,0,16,8), source:'Immobiliare.it', days:35 },
+  { id:19, title:'Kolonaki City Apartment', type:'apartment', listing:'buy', price:145000, cur:'€', country:'Greece', city:'Athens', area:'Kolonaki', lat:37.978, lng:23.741, beds:2, baths:1, sqm:75, features:['central','renovated','acropolis views'], desc:'Renovated apartment in Athens\' most prestigious neighbourhood. Clean contemporary interiors, and views towards the Acropolis from the top floor. Walking distance to everything.', photos:ph(2,15), source:'Spitogatos', days:20 },
+  { id:20, title:'Marbella Golf Villa', type:'villa', listing:'buy', price:650000, cur:'€', country:'Spain', city:'Marbella', area:'Costa del Sol', lat:36.511, lng:-4.886, beds:4, baths:3, sqm:260, features:['pool','garden','golf views','BBQ','sea views'], desc:'Stunning contemporary villa on a premier golf course with sea views to Africa. Private heated pool, landscaped gardens, covered terrace, and a large garage. Ready to move in.', photos:ph(6,7,11,5,8), source:'Fotocasa', days:17 },
+  { id:21, title:'Chelsea Mews House', type:'house', listing:'buy', price:925000, cur:'£', country:'United Kingdom', city:'London', area:'Chelsea', lat:51.487, lng:-0.172, beds:3, baths:2, sqm:148, features:['private courtyard','garage','quiet mews','period'], desc:'Immaculate Victorian mews house on one of Chelsea\'s most sought-after private roads. Three bedrooms, a private cobbled courtyard, integral garage, and beautifully finished throughout.', photos:ph(4,0,8,14), source:'Rightmove', days:2 },
+  { id:22, title:'Carré d\'Or Sea Studio', type:'apartment', listing:'rent', price:950, cur:'€', country:'France', city:'Nice', area:'Carré d\'Or', lat:43.697, lng:7.270, beds:0, baths:1, sqm:35, features:['sea views','central','terrace'], desc:'Perfectly designed studio with sea views in Nice\'s golden square. Elegant Provençal décor, a beautiful terrace, and walking distance to the Promenade des Anglais and Old Town.', photos:ph(10,11,2), source:'LeBonCoin', days:1 },
+  { id:23, title:'Brera Design Penthouse', type:'apartment', listing:'buy', price:580000, cur:'€', country:'Italy', city:'Milan', area:'Brera', lat:45.474, lng:9.187, beds:3, baths:2, sqm:160, features:['terrace','design district','city views','concierge'], desc:'Spectacular penthouse in Milan\'s Brera design district. Three bedrooms, a huge wraparound terrace, architect interiors, and a concierge service. Steps from the finest galleries.', photos:ph(0,10,12,8), source:'Casa.it', days:22 },
+  { id:24, title:'Cala Conta Sunset Villa', type:'villa', listing:'buy', price:1100000, cur:'€', country:'Spain', city:'Ibiza', area:'San Josep', lat:38.945, lng:1.228, beds:4, baths:3, sqm:320, features:['pool','sunset terrace','sea views','garden','outdoor kitchen'], desc:'Magical finca with world-famous Cala Conta sunset views. Infinity pool cascading toward the Mediterranean, outdoor kitchen and dining, four ensuite bedrooms, and lush tropical gardens.', photos:ph(7,6,11,5,18), source:'Idealista', days:40 },
+  { id:25, title:'Chiado River Penthouse', type:'apartment', listing:'rent', price:2800, cur:'€', country:'Portugal', city:'Lisbon', area:'Chiado', lat:38.710, lng:-9.141, beds:3, baths:2, sqm:125, features:['river views','terrace','renovated','concierge'], desc:'Luxury penthouse in the heart of Chiado with sweeping views over the Tagus River. Three bedrooms, a private terrace, fully renovated with premium finishes.', photos:ph(10,0,8,9), source:'ERA Portugal', days:13 },
+  { id:26, title:'Gothic Quarter Flat', type:'apartment', listing:'buy', price:340000, cur:'€', country:'Spain', city:'Barcelona', area:'Gothic Quarter', lat:41.383, lng:2.176, beds:2, baths:1, sqm:90, features:['historic','terrace','renovated','medieval streets'], desc:'Charming apartment in the medieval heart of Barcelona. Stone walls, exposed timber beams, and a small terrace overlooking the narrow Gothic lanes. Completely renovated interior.', photos:ph(2,15,9), source:'Habitaclia', days:9 },
+  { id:27, title:'Schöneberg Period Apartment', type:'apartment', listing:'buy', price:385000, cur:'€', country:'Germany', city:'Berlin', area:'Schöneberg', lat:52.489, lng:13.353, beds:3, baths:1, sqm:105, features:['Altbau','high ceilings','parquet','balcony'], desc:'Classic Berlin Altbau apartment with the original Wilhelminian features intact — stucco ceilings, herringbone parquet, shutters, and a generous balcony. Three spacious rooms.', photos:ph(15,16,0,14), source:'ImmoScout24', days:16 },
+  { id:28, title:'Waterfront Design Apartment', type:'apartment', listing:'buy', price:285000, cur:'€', country:'Netherlands', city:'Rotterdam', area:'Kop van Zuid', lat:51.904, lng:4.488, beds:2, baths:1, sqm:85, features:['river views','modern','design building','balcony'], desc:'Striking apartment in Rotterdam\'s iconic waterfront quarter. Floor-to-ceiling windows with Maas River panoramas, a large balcony, and high-end interiors in an award-winning tower.', photos:ph(0,10,12), source:'Funda', days:11 },
+  { id:29, title:'Frederiksberg Villa Apartment', type:'apartment', listing:'buy', price:375000, cur:'€', country:'Denmark', city:'Copenhagen', area:'Frederiksberg', lat:55.680, lng:12.517, beds:3, baths:2, sqm:115, features:['parquet','period','quiet garden street','bike storage'], desc:'Beautiful third floor apartment in a classic 1920s villa building on a tree-lined Frederiksberg street. Period details, original parquet, and a shared garden.', photos:ph(1,14,15,8), source:'Boliga', days:24 },
+  { id:30, title:'First District Imperial Flat', type:'apartment', listing:'buy', price:320000, cur:'€', country:'Austria', city:'Vienna', area:'1st District', lat:48.208, lng:16.371, beds:2, baths:1, sqm:80, features:['stucco ceilings','central','historic building','concierge'], desc:'Elegant apartment in a magnificent Ringstrasse-era building in Vienna\'s prestigious first district. Stucco ceilings, period details, and steps from the Opera House.', photos:ph(1,16,8), source:'willhaben', days:19 },
+];
+
+const COUNTRIES = [...new Set(ALL_PROPERTIES.map(p => p.country))].sort();
+const TYPES = [...new Set(ALL_PROPERTIES.map(p => p.type))].sort();
+const ALL_FEATURES = [...new Set(ALL_PROPERTIES.flatMap(p => p.features))].sort();
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let state = {
+  seen: new Set(JSON.parse(localStorage.getItem('ps_seen') || '[]')),
+  liked: JSON.parse(localStorage.getItem('ps_liked') || '[]'),
+  disliked: new Set(JSON.parse(localStorage.getItem('ps_disliked') || '[]')),
+  filters: JSON.parse(localStorage.getItem('ps_filters') || 'null') || {
+    lt: 'both', countries: [], maxPrice: 1500000, minBeds: 0, types: [], features: []
+  },
+  algoOn: false,
+  mapShapes: [],
+  mapFilter: null, // array of IDs when map search active
+  queue: [],
+  currentPhotoIdx: 0,
+  modalPhotoIdx: 0,
+  currentPropId: null,
+};
+
+function saveState() {
+  localStorage.setItem('ps_seen', JSON.stringify([...state.seen]));
+  localStorage.setItem('ps_liked', JSON.stringify(state.liked));
+  localStorage.setItem('ps_disliked', JSON.stringify([...state.disliked]));
+  localStorage.setItem('ps_filters', JSON.stringify(state.filters));
+}
+
+// ═══════════════════════════════════════════════
+//  ALGORITHM
+// ═══════════════════════════════════════════════
+function getPreferences() {
+  const liked = state.liked;
+  if (liked.length < 3) return null;
+  const prefs = { n: liked.length, avgPrice: 0, minPrice: Infinity, maxPrice: 0, avgBeds: 0, countries: {}, types: {}, features: {} };
+  liked.forEach(p => {
+    prefs.avgPrice += p.price;
+    prefs.minPrice = Math.min(prefs.minPrice, p.price);
+    prefs.maxPrice = Math.max(prefs.maxPrice, p.price);
+    prefs.avgBeds += p.beds;
+    prefs.countries[p.country] = (prefs.countries[p.country] || 0) + 1;
+    prefs.types[p.type] = (prefs.types[p.type] || 0) + 1;
+    p.features.forEach(f => { prefs.features[f] = (prefs.features[f] || 0) + 1; });
+  });
+  prefs.avgPrice /= liked.length;
+  prefs.avgBeds /= liked.length;
+  return prefs;
+}
+
+function scoreProperty(p) {
+  const prefs = getPreferences();
+  if (!prefs) return Math.random();
+  let score = 0;
+  const priceRange = prefs.maxPrice - prefs.minPrice || prefs.avgPrice * 0.4;
+  score += Math.max(0, 30 * (1 - Math.abs(p.price - prefs.avgPrice) / (priceRange * 1.5)));
+  score += Math.max(0, 20 - Math.abs(p.beds - prefs.avgBeds) * 6);
+  score += ((prefs.countries[p.country] || 0) / prefs.n) * 20;
+  let fScore = 0; p.features.forEach(f => { fScore += prefs.features[f] || 0; });
+  score += Math.min(20, fScore * 2);
+  score += ((prefs.types[p.type] || 0) / prefs.n) * 10;
+  score += Math.random() * 4;
+  return score;
+}
+
+function isAlgoMatch(p) {
+  const prefs = getPreferences();
+  if (!prefs || !state.algoOn) return false;
+  return scoreProperty(p) > 35;
+}
+
+// ═══════════════════════════════════════════════
+//  FILTER ENGINE
+// ═══════════════════════════════════════════════
+function getFilteredQueue() {
+  const f = state.filters;
+  let props = ALL_PROPERTIES.filter(p => {
+    if (state.seen.has(p.id)) return false;
+    if (f.lt !== 'both' && p.listing !== f.lt) return false;
+    if (f.countries.length && !f.countries.includes(p.country)) return false;
+    if (p.price > f.maxPrice) return false;
+    if (p.beds < f.minBeds) return false;
+    if (f.types.length && !f.types.includes(p.type)) return false;
+    if (f.features.length && !f.features.every(ft => p.features.includes(ft))) return false;
+    if (state.mapFilter && !state.mapFilter.includes(p.id)) return false;
+    return true;
+  });
+  if (state.algoOn) props.sort((a, b) => scoreProperty(b) - scoreProperty(a));
+  else props.sort(() => Math.random() - 0.5);
+  return props;
+}
+
+// ═══════════════════════════════════════════════
+//  CARD RENDERING
+// ═══════════════════════════════════════════════
+function renderQueue() {
+  state.queue = getFilteredQueue();
+  const stack = document.getElementById('card-stack');
+  const empty = document.getElementById('empty-state');
+  stack.innerHTML = '';
+
+  if (!state.queue.length) {
+    empty.classList.add('show');
+    document.querySelector('.action-btns').style.display = 'none';
+    return;
+  }
+  empty.classList.remove('show');
+  document.querySelector('.action-btns').style.display = 'flex';
+
+  const toRender = state.queue.slice(0, 3);
+  toRender.reverse().forEach((prop, i) => {
+    const card = buildCard(prop, i === toRender.length - 1);
+    stack.appendChild(card);
+  });
+
+  const topCard = stack.lastChild;
+  if (topCard) {
+    state.currentPropId = parseInt(topCard.dataset.id);
+    state.currentPhotoIdx = 0;
+    initDrag(topCard);
+  }
+}
+
+function buildCard(prop, isTop) {
+  const card = document.createElement('div');
+  card.className = 'prop-card';
+  card.dataset.id = prop.id;
+  const match = isAlgoMatch(prop);
+  card.innerHTML = `
+    <div class="card-photo" id="cp-${prop.id}">
+      <img src="${prop.photos[0]}" alt="${prop.title}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22800%22 height=%22600%22><rect fill=%22%237C3AED22%22 width=%22800%22 height=%22600%22/><text x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 font-size=%2240%22 fill=%22%237C3AED%22>🏠</text></svg>'">
+      <div class="photo-dots" id="pd-${prop.id}">
+        ${prop.photos.map((_, i) => `<div class="photo-dot${i===0?' active':''}"></div>`).join('')}
+      </div>
+      <div class="photo-tap-l" onclick="cyclePhoto(${prop.id}, -1, event)"></div>
+      <div class="photo-tap-r" onclick="cyclePhoto(${prop.id}, 1, event)"></div>
+      <div class="listing-badge ${prop.listing === 'rent' ? 'rent' : ''}">${prop.listing === 'rent' ? '🔑 Rent' : '🏠 Buy'}</div>
+      <div class="stamp stamp-like">LIKE</div>
+      <div class="stamp stamp-nope">NOPE</div>
+    </div>
+    <div class="card-info" onclick="openModal(${prop.id})">
+      <div class="card-price">${prop.cur}${prop.price >= 1000000 ? (prop.price/1000000).toFixed(1)+'M' : prop.price >= 1000 ? Math.round(prop.price/1000)+'k' : prop.price}${prop.listing==='rent'?'<span>/mo</span>':''}</div>
+      <div class="card-title">${prop.title}</div>
+      <div class="card-location">📍 ${prop.area}, ${prop.city}, ${prop.country}</div>
+      <div class="card-stats">
+        <div class="card-stat">${prop.beds === 0 ? 'Studio' : prop.beds + ' <span>bed</span>'}</div>
+        <div class="card-stat">${prop.baths} <span>bath</span></div>
+        <div class="card-stat">${prop.sqm} <span>m²</span></div>
+      </div>
+      <div class="card-features">
+        ${prop.features.slice(0, 3).map(f => `<span class="feature-tag${match?' algo-match':''}">${f}</span>`).join('')}
+        ${match ? '<span class="feature-tag algo-match">✨ For You</span>' : ''}
+      </div>
+    </div>
+  `;
+  return card;
+}
+
+let photoIndex = {}; // prop.id -> current photo index
+function cyclePhoto(propId, dir, e) {
+  e.stopPropagation();
+  const prop = ALL_PROPERTIES.find(p => p.id === propId);
+  if (!prop) return;
+  photoIndex[propId] = ((photoIndex[propId] || 0) + dir + prop.photos.length) % prop.photos.length;
+  const img = document.querySelector(`#cp-${propId} img`);
+  if (img) { img.src = prop.photos[photoIndex[propId]]; img.style.opacity = 0; setTimeout(() => img.style.opacity = 1, 50); }
+  const dots = document.querySelectorAll(`#pd-${propId} .photo-dot`);
+  dots.forEach((d, i) => d.classList.toggle('active', i === photoIndex[propId]));
+}
+
+// ═══════════════════════════════════════════════
+//  DRAG / SWIPE
+// ═══════════════════════════════════════════════
+function initDrag(card) {
+  let startX = 0, startY = 0, curX = 0, curY = 0, active = false, hasMoved = false;
+  const THRESHOLD = 90;
+
+  function start(x, y) {
+    startX = x; startY = y; active = true; hasMoved = false; curX = 0; curY = 0;
+    card.style.transition = 'none';
+  }
+  function move(x, y) {
+    if (!active) return;
+    curX = x - startX; curY = y - startY;
+    if (Math.abs(curX) > 8) hasMoved = true;
+    if (!hasMoved) return;
+    const rot = curX * 0.07;
+    card.style.transform = `translate(${curX}px, ${curY * 0.35}px) rotate(${rot}deg)`;
+    const pct = Math.min(Math.abs(curX) / 60, 1);
+    card.querySelector('.stamp-like').style.opacity = curX > 0 ? pct : 0;
+    card.querySelector('.stamp-nope').style.opacity = curX < 0 ? pct : 0;
+    const next = card.previousSibling;
+    if (next && next.classList.contains('prop-card')) {
+      const s = 0.90 + 0.05 * Math.min(Math.abs(curX) / THRESHOLD, 1);
+      next.style.transform = `scale(${s}) translateY(${16 - 8 * Math.min(Math.abs(curX)/THRESHOLD,1)}px)`;
+    }
+  }
+  function end() {
+    if (!active) return;
+    active = false;
+    if (!hasMoved) return;
+    card.style.transition = 'transform 0.35s cubic-bezier(.175,.885,.32,1.275)';
+    if (curX > THRESHOLD) { fly(card, 1); setTimeout(() => finalize(card, 'right'), 350); }
+    else if (curX < -THRESHOLD) { fly(card, -1); setTimeout(() => finalize(card, 'left'), 350); }
+    else {
+      card.style.transform = 'translate(0,0) rotate(0deg)';
+      card.querySelector('.stamp-like').style.opacity = 0;
+      card.querySelector('.stamp-nope').style.opacity = 0;
+    }
+  }
+  function fly(card, dir) {
+    card.style.transform = `translate(${dir * window.innerWidth * 1.5}px, ${curY * 0.5 - 80}px) rotate(${dir * 30}deg)`;
+  }
+
+  card.addEventListener('touchstart', e => { if (!e.target.closest('.photo-tap-l') && !e.target.closest('.photo-tap-r')) start(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+  card.addEventListener('touchmove', e => move(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+  card.addEventListener('touchend', end);
+
+  card.addEventListener('mousedown', e => { if (!e.target.closest('.photo-tap-l') && !e.target.closest('.photo-tap-r') && !e.target.closest('.card-info')) { start(e.clientX, e.clientY); e.preventDefault(); } });
+  window.addEventListener('mousemove', e => move(e.clientX, e.clientY));
+  window.addEventListener('mouseup', end);
+}
+
+function fly(card, dir) {
+  card.style.transition = 'transform 0.35s ease';
+  card.style.transform = `translate(${dir * window.innerWidth * 1.5}px, -80px) rotate(${dir * 25}deg)`;
+}
+
+function finalize(card, direction) {
+  const propId = parseInt(card.dataset.id);
+  const prop = ALL_PROPERTIES.find(p => p.id === propId);
+  if (!prop) return;
+  state.seen.add(propId);
+  if (direction === 'right') {
+    if (!state.liked.find(p => p.id === propId)) { state.liked.unshift(prop); }
+    showToast(`❤️  Liked — ${prop.title}`);
+    updateLikedBadge();
+  } else {
+    state.disliked.add(propId);
+  }
+  saveState();
+  card.remove();
+  updateAlgoPill();
+  const next = document.querySelector('#card-stack .prop-card:last-child');
+  if (next) {
+    state.currentPropId = parseInt(next.dataset.id);
+    next.style.transition = 'transform 0.2s ease';
+    next.style.transform = 'translate(0,0) scale(1)';
+    initDrag(next);
+  } else {
+    state.queue = getFilteredQueue();
+    if (state.queue.length) renderQueue(); else {
+      document.getElementById('empty-state').classList.add('show');
+      document.querySelector('.action-btns').style.display = 'none';
+    }
+  }
+}
+
+function swipeAction(dir) {
+  const card = document.querySelector('#card-stack .prop-card:last-child');
+  if (!card) return;
+  fly(card, dir === 'right' ? 1 : -1);
+  setTimeout(() => finalize(card, dir), 350);
+}
+
+// ═══════════════════════════════════════════════
+//  MODAL
+// ═══════════════════════════════════════════════
+let modalPhotoIdx = 0;
+let modalPropId = null;
+
+function openModal(propId) {
+  const prop = ALL_PROPERTIES.find(p => p.id === propId);
+  if (!prop) return;
+  modalPropId = propId;
+  modalPhotoIdx = 0;
+  const isLiked = state.liked.find(p => p.id === propId);
+  const m = document.getElementById('prop-modal');
+  m.innerHTML = `
+    ${isLiked ? '<div class="modal-liked-badge">❤ Liked</div>' : ''}
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-photos" id="modal-photos">
+      <img id="modal-img" src="${prop.photos[0]}" alt="${prop.title}" style="width:100%;height:280px;object-fit:cover;display:block">
+      ${prop.photos.length > 1 ? `<button class="modal-prev" onclick="modalCyclePhoto(-1)">‹</button><button class="modal-next" onclick="modalCyclePhoto(1)">›</button>` : ''}
+      <div class="modal-photo-nav">
+        ${prop.photos.map((_, i) => `<div class="modal-photo-dot${i===0?' active':''}" onclick="modalSetPhoto(${i})"></div>`).join('')}
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-price">${prop.cur}${prop.price >= 1000000 ? (prop.price/1000000).toFixed(2)+'M' : prop.price.toLocaleString()}${prop.listing==='rent'?' <span class="modal-price-sub">/ month</span>':''}</div>
+      <div class="modal-title">${prop.title}</div>
+      <div class="modal-location">📍 ${prop.area}, ${prop.city}, ${prop.country}</div>
+      <div class="modal-stats">
+        <div class="modal-stat"><div class="modal-stat-val">${prop.beds === 0 ? '—' : prop.beds}</div><div class="modal-stat-lbl">${prop.beds === 0 ? 'Studio' : 'Beds'}</div></div>
+        <div class="modal-stat"><div class="modal-stat-val">${prop.baths}</div><div class="modal-stat-lbl">Baths</div></div>
+        <div class="modal-stat"><div class="modal-stat-val">${prop.sqm}</div><div class="modal-stat-lbl">m²</div></div>
+        <div class="modal-stat"><div class="modal-stat-val">${prop.days}</div><div class="modal-stat-lbl">days listed</div></div>
+      </div>
+      <div class="modal-section-title">About</div>
+      <div class="modal-description">${prop.desc}</div>
+      <div class="modal-section-title">Features</div>
+      <div class="modal-features">${prop.features.map(f => `<span class="modal-feature">${f}</span>`).join('')}</div>
+      <div class="modal-source">Listed on <strong>${prop.source}</strong> · ${prop.listing === 'rent' ? '🔑 For Rent' : '🏠 For Sale'}</div>
+      <div class="modal-actions">
+        <button class="modal-nope-btn" onclick="modalSwipe('left')">✕ Skip</button>
+        <button class="modal-like-btn" onclick="modalSwipe('right')">${isLiked ? '❤ Liked' : '♥ Like'}</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function openCurrentModal() {
+  if (state.currentPropId) openModal(state.currentPropId);
+}
+
+function modalCyclePhoto(dir) {
+  const prop = ALL_PROPERTIES.find(p => p.id === modalPropId);
+  if (!prop) return;
+  modalPhotoIdx = (modalPhotoIdx + dir + prop.photos.length) % prop.photos.length;
+  document.getElementById('modal-img').src = prop.photos[modalPhotoIdx];
+  document.querySelectorAll('.modal-photo-dot').forEach((d, i) => d.classList.toggle('active', i === modalPhotoIdx));
+}
+function modalSetPhoto(i) {
+  const prop = ALL_PROPERTIES.find(p => p.id === modalPropId);
+  if (!prop) return;
+  modalPhotoIdx = i;
+  document.getElementById('modal-img').src = prop.photos[i];
+  document.querySelectorAll('.modal-photo-dot').forEach((d, j) => d.classList.toggle('active', j === i));
+}
+
+function modalSwipe(dir) {
+  closeModal();
+  if (dir === 'right') {
+    const prop = ALL_PROPERTIES.find(p => p.id === modalPropId);
+    if (prop && !state.liked.find(p => p.id === prop.id)) {
+      state.liked.unshift(prop);
+      state.seen.add(prop.id);
+      saveState();
+      updateLikedBadge();
+      showToast(`❤️  Liked — ${prop.title}`);
+    }
+  } else {
+    state.seen.add(modalPropId);
+    state.disliked.add(modalPropId);
+    saveState();
+  }
+  renderQueue();
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+function handleModalOverlayClick(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+// ═══════════════════════════════════════════════
+//  MAP
+// ═══════════════════════════════════════════════
+let map, drawnItems;
+function initMap() {
+  if (map) return;
+  map = L.map('map', { center: [48.5, 10], zoom: 4 });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap © CARTO', maxZoom: 18 }).addTo(map);
+
+  drawnItems = new L.FeatureGroup().addTo(map);
+  const drawControl = new L.Control.Draw({
+    draw: { polyline: false, rectangle: true, polygon: true, circle: true, marker: false, circlemarker: false },
+    edit: { featureGroup: drawnItems }
+  });
+  map.addControl(drawControl);
+  map.on(L.Draw.Event.CREATED, e => {
+    drawnItems.addLayer(e.layer);
+    state.mapShapes.push(e.layer);
+    updateMapCount();
+  });
+  map.on(L.Draw.Event.DELETED, () => { state.mapShapes = Object.values(drawnItems._layers); updateMapCount(); });
+
+  ALL_PROPERTIES.forEach(p => {
+    L.circleMarker([p.lat, p.lng], { radius: 6, color: p.listing === 'rent' ? '#7C3AED' : '#10B981', fillOpacity: 0.7, weight: 1 })
+      .bindPopup(`<b>${p.title}</b><br>${p.cur}${p.price >= 1000000 ? (p.price/1000000).toFixed(1)+'M' : Math.round(p.price/1000)+'k'}${p.listing==='rent'?'/mo':''} · ${p.beds}bd`)
+      .addTo(map);
+  });
+  setTimeout(() => map.invalidateSize(), 100);
+}
+
+function pointInLayer(lat, lng, layer) {
+  if (layer instanceof L.Circle) {
+    return layer.getLatLng().distanceTo(L.latLng(lat, lng)) <= layer.getRadius();
+  }
+  if (layer instanceof L.Polygon || layer instanceof L.Rectangle) {
+    const verts = layer.getLatLngs()[0];
+    let inside = false;
+    for (let i = 0, j = verts.length - 1; i < verts.length; j = i++) {
+      const xi = verts[i].lat, yi = verts[i].lng, xj = verts[j].lat, yj = verts[j].lng;
+      if (((yi > lng) !== (yj > lng)) && (lat < (xj - xi) * (lng - yi) / (yj - yi) + xi)) inside = !inside;
+    }
+    return inside;
+  }
+  return false;
+}
+
+function getPropsInShapes() {
+  if (!state.mapShapes.length) return ALL_PROPERTIES.map(p => p.id);
+  return ALL_PROPERTIES.filter(p => state.mapShapes.some(layer => pointInLayer(p.lat, p.lng, layer))).map(p => p.id);
+}
+
+function updateMapCount() {
+  const ids = getPropsInShapes();
+  const real = state.mapShapes.length ? ids.length : ALL_PROPERTIES.length;
+  document.getElementById('map-count').textContent = state.mapShapes.length ? `${ids.length} properties in drawn areas` : 'Draw an area to filter';
+}
+
+function clearShapes() {
+  if (drawnItems) drawnItems.clearLayers();
+  state.mapShapes = [];
+  state.mapFilter = null;
+  updateMapCount();
+  saveState();
+  showToast('🗺  Map filter cleared');
+}
+
+function searchDrawnAreas() {
+  const ids = getPropsInShapes();
+  state.mapFilter = state.mapShapes.length ? ids : null;
+  saveState();
+  state.seen = new Set();
+  renderQueue();
+  showScreen('discover');
+  showToast(`🗺  Showing ${ids.length} properties from map`);
+}
+
+// ═══════════════════════════════════════════════
+//  LIKED DASHBOARD
+// ═══════════════════════════════════════════════
+function renderLiked() {
+  const search = document.getElementById('liked-search').value.toLowerCase();
+  const sort = document.getElementById('liked-sort').value;
+  let props = state.liked.filter(p =>
+    !search || p.title.toLowerCase().includes(search) || p.city.toLowerCase().includes(search) || p.country.toLowerCase().includes(search)
+  );
+  if (sort === 'price-asc') props.sort((a,b) => a.price - b.price);
+  else if (sort === 'price-desc') props.sort((a,b) => b.price - a.price);
+  else if (sort === 'beds') props.sort((a,b) => b.beds - a.beds);
+  const grid = document.getElementById('liked-grid');
+  const empty = document.getElementById('liked-empty');
+  document.getElementById('liked-hdr').textContent = `(${state.liked.length})`;
+  if (!props.length) {
+    grid.innerHTML = '';
+    empty.classList.add('show');
+    return;
+  }
+  empty.classList.remove('show');
+  grid.innerHTML = props.map(p => `
+    <div class="liked-card" onclick="openModal(${p.id})">
+      <img src="${p.photos[0]}" alt="${p.title}" onerror="this.style.background='#EDE9FE';this.src=''">
+      <button class="liked-remove" onclick="event.stopPropagation();removeLiked(${p.id})">✕</button>
+      <div class="liked-card-info">
+        <div class="liked-card-price">${p.cur}${p.price >= 1000000 ? (p.price/1000000).toFixed(1)+'M' : Math.round(p.price/1000)+'k'}${p.listing==='rent'?'/mo':''}</div>
+        <div class="liked-card-loc">${p.city}, ${p.country}</div>
+        <div class="liked-card-stats">${p.beds === 0 ? 'Studio' : p.beds+'bd'} · ${p.baths}ba · ${p.sqm}m²</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function removeLiked(id) {
+  state.liked = state.liked.filter(p => p.id !== id);
+  saveState();
+  updateLikedBadge();
+  renderLiked();
+}
+
+// ═══════════════════════════════════════════════
+//  FILTERS UI
+// ═══════════════════════════════════════════════
+function initFiltersUI() {
+  const cc = document.getElementById('country-chips');
+  cc.innerHTML = COUNTRIES.map(c => `<div class="chip" data-v="${c}" onclick="toggleChip(this,'countries')">${c}</div>`).join('');
+  const tc = document.getElementById('type-chips');
+  tc.innerHTML = TYPES.map(t => `<div class="chip" data-v="${t}" onclick="toggleChip(this,'types')">${t.charAt(0).toUpperCase()+t.slice(1)}</div>`).join('');
+  const fc = document.getElementById('feature-chips');
+  fc.innerHTML = ALL_FEATURES.map(f => `<div class="chip" data-v="${f}" onclick="toggleChip(this,'features')">${f}</div>`).join('');
+  syncFiltersUI();
+}
+
+function syncFiltersUI() {
+  const f = state.filters;
+  ['both','buy','rent'].forEach(v => document.getElementById('lt-'+v).classList.toggle('on', f.lt === v));
+  document.querySelectorAll('#country-chips .chip').forEach(c => c.classList.toggle('on', f.countries.includes(c.dataset.v)));
+  document.querySelectorAll('#type-chips .chip').forEach(c => c.classList.toggle('on', f.types.includes(c.dataset.v)));
+  document.querySelectorAll('#feature-chips .chip').forEach(c => c.classList.toggle('on', f.features.includes(c.dataset.v)));
+  document.getElementById('price-slider').value = f.maxPrice;
+  updatePriceLabel();
+  document.querySelectorAll('#beds-row .beds-btn').forEach(b => b.classList.toggle('on', parseInt(b.dataset.v) === f.minBeds));
+}
+
+function setLT(v) { state.filters.lt = v; syncFiltersUI(); }
+function toggleChip(el, key) {
+  const v = el.dataset.v;
+  const arr = state.filters[key];
+  const i = arr.indexOf(v);
+  if (i >= 0) arr.splice(i, 1); else arr.push(v);
+  el.classList.toggle('on', i < 0);
+}
+function updatePriceLabel() {
+  const v = parseInt(document.getElementById('price-slider').value);
+  state.filters.maxPrice = v;
+  document.getElementById('price-lbl').textContent = v >= 1500000 ? 'Any price' : `Up to €${v >= 1000000 ? (v/1000000).toFixed(1)+'M' : (v/1000)+'k'}`;
+}
+function setBeds(v) {
+  state.filters.minBeds = v;
+  document.querySelectorAll('#beds-row .beds-btn').forEach(b => b.classList.toggle('on', parseInt(b.dataset.v) === v));
+}
+function applyFilters() {
+  saveState();
+  state.seen = new Set();
+  renderQueue();
+  showScreen('discover');
+  showToast('✓  Filters applied');
+}
+function resetFilters() {
+  state.filters = { lt: 'both', countries: [], maxPrice: 1500000, minBeds: 0, types: [], features: [] };
+  saveState();
+  syncFiltersUI();
+  showToast('Filters reset');
+}
+
+// ═══════════════════════════════════════════════
+//  ALGORITHM TOGGLE
+// ═══════════════════════════════════════════════
+function updateAlgoPill() {
+  const pill = document.getElementById('algo-pill');
+  const banner = document.getElementById('algo-banner');
+  if (state.liked.length >= 3) pill.classList.add('visible');
+  pill.classList.toggle('on', state.algoOn);
+  banner.classList.toggle('show', state.algoOn);
+}
+function toggleAlgo() {
+  if (state.liked.length < 3) { showToast('Like 3+ properties to unlock Smart Sort'); return; }
+  state.algoOn = !state.algoOn;
+  updateAlgoPill();
+  state.seen = new Set();
+  renderQueue();
+  showToast(state.algoOn ? '✨ Smart Sort ON' : 'Smart Sort off');
+}
+
+// ═══════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+  if (name === 'map') { initMap(); setTimeout(() => map && map.invalidateSize(), 200); }
+  if (name === 'liked') renderLiked();
+  if (name === 'filters') syncFiltersUI();
+}
+
+function updateLikedBadge() {
+  const badge = document.getElementById('liked-badge');
+  const n = state.liked.length;
+  badge.textContent = n;
+  badge.classList.toggle('visible', n > 0);
+  document.getElementById('liked-hdr').textContent = n ? `(${n})` : '';
+}
+
+// ═══════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ═══════════════════════════════════════════════
+//  RESET
+// ═══════════════════════════════════════════════
+function resetSeen() {
+  state.seen = new Set();
+  state.mapFilter = null;
+  saveState();
+  renderQueue();
+}
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+function init() {
+  initFiltersUI();
+  renderQueue();
+  updateLikedBadge();
+  updateAlgoPill();
+}
+init();
+</script>
+</body>
+</html>
