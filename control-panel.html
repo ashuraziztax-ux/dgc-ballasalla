@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v9</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v10</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -313,6 +313,25 @@ body:not(.admin-mode) .admin-only { display: none !important; }
 #appear-fab { transition: transform 0.15s, box-shadow 0.15s; }
 #appear-fab:hover { transform: scale(1.1); box-shadow: 0 6px 20px rgba(0,0,0,0.5) !important; }
 .appear-swatch:hover { transform: scale(1.15); }
+
+/* ── PROGRAMME EDITOR v10 ── */
+.prog-editor-table th { padding:7px 8px; text-align:left; color:var(--muted); font-size:10px; font-weight:700; text-transform:uppercase; border-bottom:1px solid var(--border); white-space:nowrap; }
+.prog-editor-table td { padding:5px 8px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.prog-editor-table tr:last-child td { border-bottom:none; }
+.vel-kpi { background:var(--surface2); border-radius:8px; padding:10px 12px; }
+.vel-kpi .lbl { font-size:10px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; }
+.vel-kpi .val { font-size:20px; font-weight:800; }
+.delay-cat-chip { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; }
+.delay-cat-client   { background:#ef444420; color:#ef4444; }
+.delay-cat-absorbed { background:#f9731620; color:#f97316; }
+.delay-cat-eot      { background:#3b82f620; color:#60a5fa; }
+.delay-cat-variance { background:#a855f720; color:#c084fc; }
+.delay-table-wrap { overflow-x:auto; }
+.delay-tbl { width:100%; border-collapse:collapse; font-size:12px; min-width:700px; }
+.delay-tbl th { padding:7px 8px; text-align:left; color:var(--muted); font-size:10px; font-weight:700; text-transform:uppercase; border-bottom:1px solid var(--border); }
+.delay-tbl td { padding:7px 8px; border-bottom:1px solid var(--border); vertical-align:top; }
+.delay-tbl tr:last-child td { border-bottom:none; }
+.sandbox-banner { background:#f9731620; border:1px solid #f9731655; border-radius:8px; padding:8px 14px; margin-bottom:12px; font-size:12px; font-weight:700; color:#f97316; display:none; }
 </style>
 </head>
 <body>
@@ -357,7 +376,7 @@ function toggleMode(){
     document.body.classList.remove('admin-mode');
     // If currently on Financials tab, switch to Dashboard
     var activeTab = document.querySelector('.nav button.active');
-    if(activeTab && activeTab.textContent.trim() === 'Financials'){
+    if(activeTab && (activeTab.textContent.trim() === 'Financials')){
       var dashBtn = document.querySelector('.nav button');
       if(dashBtn) { showTab('dashboard', dashBtn); }
     }
@@ -817,6 +836,7 @@ function resetAppearance() {
   <button onclick="showTab('gantt',this)">Gantt Chart</button>
   <button class="admin-only" onclick="showTab('financial',this)">Financials</button>
   <button onclick="showTab('daily',this)">Daily Log</button>
+  <button onclick="showTab('delays',this)">Delays</button>
   <button onclick="showTab('report',this)">Weekly Report</button>
 </div>
 
@@ -1021,7 +1041,10 @@ function resetAppearance() {
 
 <!-- ═══════════════════════════════ PROGRAMME ═══════════════════════════════ -->
 <div id="tab-programme" class="tab-content">
-  <div class="card" style="overflow:auto; max-height:calc(100vh - 180px);">
+  <div class="card" style="margin-bottom:12px;" id="velocity-card">
+    <div id="velocity-panel"></div>
+  </div>
+  <div class="card" style="overflow:auto; max-height:calc(100vh - 320px);">
     <table class="prog-table" id="prog-table">
       <thead>
         <tr>
@@ -1037,6 +1060,9 @@ function resetAppearance() {
       </thead>
       <tbody id="prog-tbody"></tbody>
     </table>
+  </div>
+  <div class="card admin-only" style="margin-top:12px;" id="prog-editor-card">
+    <div id="prog-editor-panel"></div>
   </div>
 </div>
 
@@ -1457,6 +1483,81 @@ function resetAppearance() {
   </div>
 </div>
 
+<!-- ═══════════════════════════════ DELAYS ═══════════════════════════════ -->
+<div id="tab-delays" class="tab-content">
+
+  <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:16px;" id="delay-summary-kpis"></div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">Delay Log</div>
+    <div class="delay-table-wrap">
+      <table class="delay-tbl">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Reference</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th>Days</th>
+            <th>Status</th>
+            <th class="admin-only">Cost (£)</th>
+          </tr>
+        </thead>
+        <tbody id="delay-log-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card admin-only">
+    <div class="card-title">Log New Delay / Event</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="new-delay-date">
+      </div>
+      <div class="form-group">
+        <label>Reference (RT / CCE / VAR)</label>
+        <input type="text" id="new-delay-ref" placeholder="e.g. RT 101315">
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="new-delay-cat">
+          <option value="client">Client Instruction (AFP)</option>
+          <option value="absorbed">Absorbed Internal</option>
+          <option value="eot_claimed">EOT Claimed (not yet agreed)</option>
+          <option value="variance">Productivity Variance</option>
+          <option value="weather">Weather</option>
+          <option value="design">Design Change</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Days Lost</label>
+        <input type="number" id="new-delay-days" placeholder="e.g. 1.5" min="0" step="0.25">
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Description</label>
+        <input type="text" id="new-delay-desc" placeholder="What happened and what impact did it have?">
+      </div>
+      <div class="form-group admin-only">
+        <label>Cost Impact (£)</label>
+        <input type="number" id="new-delay-cost" placeholder="0" min="0">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="new-delay-status">
+          <option value="agreed">Agreed with client</option>
+          <option value="claimed">Claimed — awaiting agreement</option>
+          <option value="absorbed">Absorbed — not claimed</option>
+          <option value="open">Open / investigating</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <button class="btn btn-primary" onclick="addDelayEntry()">Add to Log</button>
+      <button class="btn btn-secondary" onclick="clearDelayForm()">Clear</button>
+    </div>
+  </div>
+</div>
 <!-- ═══════════════════════════════ WEEKLY REPORT ═══════════════════════════════ -->
 <div id="tab-report" class="tab-content">
   <div style="margin-bottom:14px; display:flex; gap:10px;">
@@ -1693,6 +1794,561 @@ const ZONES = [
 ];
 
 const TASKS = [{wbs:"1.1",name:"Site Mobilisation",assigned:"Gang A",start:"2026-03-23",end:"2026-03-23",progress:100,duration:9.0,budget:423.0,actual:423.0,zone:1,isGroup:true},{wbs:"1.2",name:"Setting Out (Main Site)",assigned:"Paul Carey\'s Site Engineer",start:"2026-03-24",end:"2026-03-25",progress:100,duration:9.0,budget:495.0,actual:495.0,zone:1,isGroup:true},{wbs:"1.3",name:"Prelims - Site Management",assigned:"Site Manager - David",start:"2026-03-23",end:"2026-06-12",progress:38,duration:469.0,budget:18760.0,actual:7128.8,zone:1,isGroup:true},{wbs:"1.4",name:"Prelims - QS - AFP & Commercial admin",assigned:"Quantity Surveyor",start:"2026-03-23",end:"2026-06-12",progress:25,duration:473.0,budget:879.78,actual:219.95,zone:1,isGroup:true},{wbs:"1.5",name:"Prelims - Road Sweeper / cleaning",assigned:"Road Sweeper / cleaning",start:"2026-03-23",end:"2026-06-12",progress:25,duration:473.0,budget:3249.51,actual:812.38,zone:1,isGroup:true},{wbs:"1.6",name:"Variation 1",assigned:"",start:"2026-03-24",end:"2026-03-26",progress:100,duration:27.0,budget:0.0,actual:0.0,zone:1,isGroup:true},{wbs:"1.7",name:"Variation 2",assigned:"",start:"2026-03-25",end:"2026-03-30",progress:100,duration:36.0,budget:0.0,actual:0.0,zone:1,isGroup:true},{wbs:"1.8",name:"Variation 3",assigned:"",start:"2026-03-31",end:"2026-04-08",progress:100,duration:45.0,budget:0.0,actual:0.0,zone:1,isGroup:true},{wbs:"1.9",name:"Variation 5",assigned:"",start:"2026-04-08",end:"2026-04-21",progress:100,duration:90.0,budget:0.0,actual:0.0,zone:1,isGroup:true},{wbs:"2.1",name:"1A - Reduce Dig & deposit on temp spoil heaps",assigned:"Gang A, 14 Ton Machine 1, White Diesel",start:"2026-03-25",end:"2026-03-26",progress:100,duration:9.0,budget:543.96,actual:543.96,zone:2,isGroup:true},{wbs:"2.2",name:"2A - Setting Out for drainage",assigned:"Paul Carey\'s Site Engineer",start:"2026-03-25",end:"2026-03-25",progress:0,duration:4.5,budget:247.5,actual:0.0,zone:2,isGroup:true},{wbs:"2.3",name:"3A - Drainage Excavation (for gully - 150mm pipe)",assigned:"Gang B, 9 ton Dumper 1, 9 Ton Machine , Trenchbox, White Diesel",start:"2026-03-25",end:"2026-03-26",progress:0,duration:9.0,budget:754.47,actual:0.0,zone:2,isGroup:true},{wbs:"2.4",name:"6A - Gullies, Pipe, Bed & Surroung (150mm)",assigned:"Gang B, 9 ton Dumper 1, Trenchbox, Diesel Trench Roller, White Diesel, Zone 1A - Gully & pipe, bed & surround",start:"2026-03-26",end:"2026-03-27",progress:0,duration:9.0,budget:2197.35,actual:0.0,zone:2,isGroup:true},{wbs:"2.5",name:"10A - Air & Pressure Testing",assigned:"Gang B",start:"2026-03-27",end:"2026-03-30",progress:0,duration:4.5,budget:222.75,actual:0.0,zone:2,isGroup:true},{wbs:"2.6",name:"11A - Services, ducts & street lighting",assigned:"Gang B, 9 ton Dumper 1, 9 Ton Machine , Diesel Trench Roller, White Diesel, Zone 1A - Services, ducts & street lighting",start:"2026-03-27",end:"2026-03-30",progress:0,duration:9.0,budget:1918.08,actual:0.0,zone:2,isGroup:true},{wbs:"2.7",name:"12A - Backfill trenches with Type 1 & compact",assigned:"Gang B, 9 ton Dumper 1, Fox CC1200 Roller, White Diesel",start:"2026-03-30",end:"2026-03-30",progress:0,duration:4.5,budget:281.21,actual:0.0,zone:2,isGroup:true},{wbs:"2.8",name:"15A - CBR Testing",assigned:"Gang B, CBR testing kit",start:"2026-03-30",end:"2026-03-31",progress:0,duration:4.5,budget:897.75,actual:0.0,zone:2,isGroup:true},{wbs:"2.9",name:"16A - Terram (Geotextile)",assigned:"Gang B, Zone 1A - Terram",start:"2026-03-31",end:"2026-04-01",progress:0,duration:9.0,budget:761.04,actual:0.0,zone:2,isGroup:true},{wbs:"2.10",name:"18A - Subbase (Type 1)",assigned:"Gang B, 9 ton Dumper 1, White Diesel, Zone 1A Subbase Type 1",start:"2026-04-01",end:"2026-04-02",progress:0,duration:13.5,budget:13442.49,actual:0.0,zone:2,isGroup:true},{wbs:"2.11",name:"19A - Subbase Compaction",assigned:"Gang B, Fox CC1200 Roller, White Diesel",start:"2026-04-02",end:"2026-04-07",progress:0,duration:9.0,budget:506.43,actual:0.0,zone:2,isGroup:true},{wbs:"2.12",name:"20A - Kerbs",assigned:"Gang B, 9 Ton Machine , Zone 1A Kerbs",start:"2026-04-07",end:"2026-04-09",progress:0,duration:18.0,budget:4507.92,actual:0.0,zone:2,isGroup:true},{wbs:"2.13",name:"21A - Tarmac Roadbase",assigned:"HPM Subcontractor",start:"2026-04-09",end:"2026-04-10",progress:0,duration:9.0,budget:19446.75,actual:0.0,zone:2,isGroup:true},{wbs:"2.14",name:"22A - Tarmac Pavement",assigned:"TCQ Subcontractor",start:"2026-04-10",end:"2026-04-13",progress:0,duration:9.0,budget:4320.54,actual:0.0,zone:2,isGroup:true},{wbs:"2.15",name:"25A - Dispose of excavated material to Dandara\'s tip",assigned:"Gang B, Zone 1A - Disposal to Dandara tip",start:"2026-04-13",end:"2026-04-14",progress:0,duration:9.0,budget:2155.5,actual:0.0,zone:2,isGroup:true},{wbs:"2.16",name:"Tidy, Inspect & Handover of Top Road Section",assigned:"Harry Harrison, Gang B",start:"2026-04-14",end:"2026-04-15",progress:0,duration:9.0,budget:445.5,actual:0.0,zone:2,isGroup:true},{wbs:"3.1",name:"1B & 1C - Reduce Dig & deposit on temp spoil heaps",assigned:"Gang A, 14 Ton Machine 1, White Diesel",start:"2026-03-26",end:"2026-03-27",progress:100,duration:13.5,budget:815.94,actual:815.94,zone:3,isGroup:true},{wbs:"3.2",name:"2B & 2C - Setting Out for Drainage",assigned:"Paul Carey\'s Site Engineer",start:"2026-03-27",end:"2026-03-30",progress:100,duration:4.5,budget:247.5,actual:247.5,zone:3,isGroup:true},{wbs:"3.3",name:"Z2 Section B - Manhole S4.1 & F4.1 to Midway to S4.2 & F4.2",assigned:"",start:"2026-04-01",end:"2026-04-13",progress:69,duration:58.5,budget:21871.71,actual:14336.73,zone:3,isGroup:true},{wbs:"3.3.1",name:"3B - Drainage Excavation (All trenches - for 110/150/225mm pipe)",assigned:"Gang C, 14 Ton Machine 2, 9 Ton Dumper 2, Trenchbox, Diesel Trench Roller",start:"2026-04-01",end:"2026-04-02",progress:75,duration:9.0,budget:802.44,actual:601.83,zone:3,isGroup:false},{wbs:"3.3.2",name:"4B - SW Manholes - S4.1",assigned:"Gang C, 9 Ton Dumper 2, Manhole Box, White Diesel, Zone 2B - MH S4.1",start:"2026-04-02",end:"2026-04-08",progress:100,duration:18.0,budget:3841.92,actual:3841.92,zone:3,isGroup:false},{wbs:"3.3.3",name:"5B - SW pipe, bed & surround (225mm)",assigned:"Gang C, 9 Ton Dumper 2, Trenchbox, White Diesel, Zone 2B - SW pipe, bed & surround",start:"2026-04-08",end:"2026-04-09",progress:100,duration:9.0,budget:2173.77,actual:2173.77,zone:3,isGroup:false},{wbs:"3.3.4",name:"6B - Gullies. pipe, bed & surround (150mm)",assigned:"Gang C, 9 Ton Dumper 2, Zone 2B - 150mm gully pipe, bed & surround & Gully",start:"2026-04-09",end:"2026-04-10",progress:50,duration:9.0,budget:1834.74,actual:917.37,zone:3,isGroup:false},{wbs:"3.3.5",name:"7B - FW Manholes - F4.1",assigned:"Gang A, Manhole Box, Zone 2B - Manhole F4.1",start:"2026-04-02",end:"2026-04-08",progress:100,duration:18.0,budget:3735.72,actual:3735.72,zone:3,isGroup:false},{wbs:"3.3.6",name:"8B - FW pipe, bed & surround (150mm)",assigned:"Gang A, Trenchbox, Zone 2B - FW pipe, bed & surround",start:"2026-04-08",end:"2026-04-09",progress:75,duration:9.0,budget:1068.57,actual:801.43,zone:3,isGroup:false},{wbs:"3.3.7",name:"9B - Tails - pipe, bed & surround (110mm)",assigned:"Gang A, 9 ton Dumper 1, White Diesel, Zone 2B - 110mm pipe, bed & surround",start:"2026-04-09",end:"2026-04-10",progress:25,duration:9.0,budget:2103.21,actual:525.8,zone:3,isGroup:false},{wbs:"3.3.8",name:"10B - Air & Pressure Testing",assigned:"Gang A",start:"2026-04-10",end:"2026-04-10",progress:50,duration:4.5,budget:211.5,actual:105.75,zone:3,isGroup:false},{wbs:"3.3.9",name:"11B - Services, ducts & street lighting",assigned:"Gang A, 9 ton Dumper 1, 9 Ton Machine , Diesel Trench Roller, White Diesel, Zone 2B - Services/ducts",start:"2026-04-10",end:"2026-04-13",progress:0,duration:9.0,budget:2016.99,actual:0.0,zone:3,isGroup:false},{wbs:"3.3.10",name:"12B - Backfill trenches with Type 1 & compact",assigned:"Gang A, 9 Ton Dumper 2, Fox CC1200 Roller, White Diesel, Zone 2B - Drainage exc & type 1 backfill",start:"2026-04-10",end:"2026-04-13",progress:40,duration:9.0,budget:4082.85,actual:1633.14,zone:3,isGroup:false},{wbs:"3.4",name:"Z2 Section C - From Midway to S4.2 & F4.2",assigned:"",start:"2026-04-10",end:"2026-04-24",progress:26,duration:90.0,budget:21835.53,actual:5557.05,zone:3,isGroup:true},{wbs:"3.4.1",name:"3C - Drainage Excavation (All trenches - for 110/150/225mm pipe)",assigned:"Gang C, 14 Ton Machine 1, 9 ton Dumper 1, Trenchbox, Diesel Trench Roller",start:"2026-04-10",end:"2026-04-13",progress:50,duration:9.0,budget:802.44,actual:401.22,zone:3,isGroup:false},{wbs:"3.4.2",name:"4C - SW Manholes - S4.2",assigned:"Gang C, 14 Ton Machine 2, 9 Ton Dumper 2, Diesel Trench Roller, White Diesel, Z2C - MH S4.2",start:"2026-04-15",end:"2026-04-17",progress:0,duration:18.0,budget:4561.56,actual:0.0,zone:3,isGroup:false},{wbs:"3.4.3",name:"5C - SW pipe, bed & surround (225mm)",assigned:"Gang C, 9 Ton Machine , White Diesel, Z2C - SW pipe 225mm bed & surround",start:"2026-04-13",end:"2026-04-14",progress:0,duration:9.0,budget:2598.75,actual:0.0,zone:3,isGroup:false},{wbs:"3.4.4",name:"6C - Gullies, pipe, bed & surround (150mm)",assigned:"Gang C, 9 ton Dumper 1, White Diesel, Z2C - 150mm gully, pipe, bed & surround",start:"2026-04-14",end:"2026-04-15",progress:0,duration:9.0,budget:962.82,actual:0.0,zone:3,isGroup:false},{wbs:"3.4.5",name:"7C - FW Manholes - F4.2",assigned:"Gang B, 14 Ton Machine 1, 9 Ton Dumper 2, Manhole Box, Diesel Trench Roller, White Diesel, Z2C - MH F4.2",start:"2026-04-17",end:"2026-04-21",progress:100,duration:18.0,budget:4143.78,actual:4143.78,zone:3,isGroup:false},{wbs:"3.4.6",name:"8C - FW pipe, bed & surround (150mm)",assigned:"Gang B, 9 Ton Machine , White Diesel, Z2C - FW 150mm pipe, bed & surround",start:"2026-04-15",end:"2026-04-16",progress:50,duration:9.0,budget:2024.1,actual:1012.05,zone:3,isGroup:false},{wbs:"3.4.7",name:"9C - Tails - pipe, bed & surround (110mm)",assigned:"Gang B, 9 Ton Machine , White Diesel, Z2C - 110mm pipe, bed & surround",start:"2026-04-16",end:"2026-04-17",progress:0,duration:9.0,budget:1359.27,actual:0.0,zone:3,isGroup:false},{wbs:"3.4.8",name:"10C - Air & Pressure Testing",assigned:"Gang B",start:"2026-04-21",end:"2026-04-22",progress:0,duration:4.5,budget:222.75,actual:0.0,zone:3,isGroup:false},{wbs:"3.4.9",name:"11C - Services, ducts & street lighting",assigned:"Gang B, 9 ton Dumper 1, 9 Ton Machine , Diesel Trench Roller, White Diesel, Z2C - Services/ducts",start:"2026-04-22",end:"2026-04-23",progress:0,duration:9.0,budget:2039.49,actual:0.0,zone:3,isGroup:false},{wbs:"3.4.10",name:"12C - Backfill trenches with Type 1 & compact",assigned:"Gang B, 9 Ton Dumper 2, Fox CC1200 Roller, White Diesel, Z2C - backfill trenches with type 1",start:"2026-04-23",end:"2026-04-24",progress:0,duration:9.0,budget:3120.57,actual:0.0,zone:3,isGroup:false},{wbs:"3.5",name:"15B & 15C - CBR Testing",assigned:"Gang B, CBR testing kit",start:"2026-04-24",end:"2026-04-24",progress:100,duration:4.5,budget:897.75,actual:897.75,zone:3,isGroup:true},{wbs:"3.6",name:"16B & 16C - Terram (Geotextile)",assigned:"Gang B, Z2B & Z2C - Terram",start:"2026-04-24",end:"2026-04-27",progress:0,duration:9.0,budget:1104.48,actual:0.0,zone:3,isGroup:true},{wbs:"3.7",name:"18B & 18C - Subbase (Type 1)",assigned:"Gang B, 9 Ton Dumper 2, White Diesel, Z2B&C Type 1 subbase",start:"2026-04-27",end:"2026-04-28",progress:0,duration:9.0,budget:6862.95,actual:0.0,zone:3,isGroup:true},{wbs:"3.8",name:"19B & 19C - Subbase Compaction",assigned:"Gang B, Fox CC1200 Roller, White Diesel",start:"2026-04-28",end:"2026-04-29",progress:0,duration:9.0,budget:506.43,actual:0.0,zone:3,isGroup:true},{wbs:"3.9",name:"20B & 20C - Kerbs (Gang 2 only)",assigned:"Gang B, 9 Ton Machine , Z2B & Z2C - Kerbs",start:"2026-04-29",end:"2026-05-04",progress:0,duration:27.0,budget:6186.51,actual:0.0,zone:3,isGroup:true},{wbs:"3.10",name:"21B & 21C - Tarmac Roadbase",assigned:"HPM Subcontractor",start:"2026-05-04",end:"2026-05-05",progress:0,duration:9.0,budget:19446.75,actual:0.0,zone:3,isGroup:true},{wbs:"3.11",name:"22B & 22C - Tarmac Pavement",assigned:"TCQ Subcontractor",start:"2026-05-05",end:"2026-05-06",progress:0,duration:9.0,budget:4320.54,actual:0.0,zone:3,isGroup:true},{wbs:"4.1",name:"1D & 1E1 & 1E2 - Reduce Dig & deposit on temp spoil heaps",assigned:"Gang A, 14 Ton Machine 1, White Diesel",start:"2026-03-27",end:"2026-03-31",progress:100,duration:13.5,budget:815.94,actual:815.94,zone:4,isGroup:true},{wbs:"4.2",name:"2D & 2E1 & 2E2 - Setting Out for Drainage",assigned:"Paul Carey\'s Site Engineer",start:"2026-03-31",end:"2026-03-31",progress:50,duration:1.0,budget:55.0,actual:27.5,zone:4,isGroup:true},{wbs:"4.3",name:"Z3 Section D - Manhole S4.3 & F4.3 to Midway (to S4.4 & F4.4)",assigned:"",start:"2026-04-13",end:"2026-04-28",progress:23,duration:94.5,budget:20502.05,actual:4953.43,zone:4,isGroup:true},{wbs:"4.3.1",name:"3D - Drainage Excavation (All trenches - for 110/150/225mm pipe)",assigned:"Gang C, 9 ton Dumper 1, 9 Ton Machine , Trenchbox, White Diesel",start:"2026-04-17",end:"2026-04-20",progress:50,duration:9.0,budget:754.47,actual:377.24,zone:4,isGroup:false},{wbs:"4.3.2",name:"4D - SW Manholes - S4.3",assigned:"Gang C, 9 ton Dumper 1, White Diesel, Z3D - MH S4.3",start:"2026-04-20",end:"2026-04-22",progress:0,duration:18.0,budget:3871.08,actual:0.0,zone:4,isGroup:false},{wbs:"4.3.3",name:"5D - SW pipe, bed & surround (225mm)",assigned:"Gang C, 9 Ton Machine , Trenchbox, White Diesel, Z3D - SW 225mm pipe, bed & surround",start:"2026-04-22",end:"2026-04-23",progress:0,duration:9.0,budget:2289.51,actual:0.0,zone:4,isGroup:false},{wbs:"4.3.4",name:"6D - Gullies, pipe, bed & surround (150mm)",assigned:"Gang C, 9 Ton Dumper 2, ZD3 - Gully 150mm & pipe & surround",start:"2026-04-23",end:"2026-04-24",progress:0,duration:9.0,budget:928.26,actual:0.0,zone:4,isGroup:false},{wbs:"4.3.5",name:"7D - FW Manholes - F4.3",assigned:"Gang A, 14 Ton Machine 1, 9 ton Dumper 1, Manhole Box, Diesel Trench Roller, White Diesel, Z3D - MH F4.3",start:"2026-04-13",end:"2026-04-15",progress:100,duration:18.0,budget:3969.18,actual:3969.18,zone:4,isGroup:false},{wbs:"4.3.6",name:"8D - FW pipe, bed & surround (150mm)",assigned:"Gang A, 9 Ton Machine , Trenchbox, White Diesel, ZD3 - FW 150mm pipe, bed & surround",start:"2026-04-15",end:"2026-04-16",progress:50,duration:9.0,budget:1214.01,actual:607.01,zone:4,isGroup:false},{wbs:"4.3.7",name:"9D - Tails - pipe, bed & surround (110mm)",assigned:"Gang A, 9 Ton Machine , White Diesel, ZD3 - 110mm pipe, bed & surround",start:"2026-04-16",end:"2026-04-20",progress:0,duration:13.5,budget:1925.91,actual:0.0,zone:4,isGroup:false},{wbs:"4.3.8",name:"10D - Air & Pressure Testing",assigned:"Gang C",start:"2026-04-24",end:"2026-04-24",progress:0,duration:4.5,budget:222.75,actual:0.0,zone:4,isGroup:false},{wbs:"4.3.9",name:"11D - Services, ducts & street lighting",assigned:"Gang C, 9 Ton Dumper 2, 9 Ton Machine , Diesel Trench Roller, White Diesel, Z3D - Services, ducts & street lighting",start:"2026-04-22",end:"2026-04-23",progress:0,duration:9.0,budget:1561.95,actual:0.0,zone:4,isGroup:false},{wbs:"4.3.10",name:"13D - Capping Layer above SW pipe MH S4.3 to midway",assigned:"Gang C, 9 Ton Machine , Z3D - Capping SW",start:"2026-04-24",end:"2026-04-27",progress:0,duration:4.5,budget:797.72,actual:0.0,zone:4,isGroup:false},{wbs:"4.3.11",name:"13D-1 - Capping Layer over Gully",assigned:"Gang C, 9 Ton Machine , Z3D-1 Capping Gully",start:"2026-04-27",end:"2026-04-27",progress:0,duration:4.5,budget:342.72,actual:0.0,zone:4,isGroup:false},{wbs:"4.3.12",name:"14D - Backfill trench with Type 1 above FW run & SW Capping layer & compact",assigned:"Gang C, 9 Ton Dumper 2, Fox CC1200 Roller, White Diesel, ZD3 - Backfill with Type 1",start:"2026-04-27",end:"2026-04-28",progress:0,duration:9.0,budget:2624.49,actual:0.0,zone:4,isGroup:false},{wbs:"4.4",name:"Z3 Section E1 - Midway to Manholes S4.4 & F4.4",assigned:"",start:"2026-04-20",end:"2026-05-08",progress:0,duration:130.5,budget:21268.94,actual:0.0,zone:4,isGroup:true},{wbs:"4.4.1",name:"3E1 - Drainage Excavation (All trenches - for 110/150/225mm pipe)",assigned:"Gang A, 9 ton Dumper 1, 9 Ton Machine , Trenchbox, Diesel Trench Roller, White Diesel",start:"2026-04-20",end:"2026-04-21",progress:0,duration:9.0,budget:782.91,actual:0.0,zone:4,isGroup:false},{wbs:"4.4.2",name:"4E1 - SW Manholes - S4.4",assigned:"Gang A, 14 Ton Machine 2, 9 Ton Dumper 2, Diesel Trench Roller, White Diesel, Z3E1 - MH S4.4",start:"2026-04-27",end:"2026-04-29",progress:0,duration:18.0,budget:4127.94,actual:0.0,zone:4,isGroup:false},{wbs:"4.4.3",name:"5E1 - SW pipe, bed & surround (225mm)",assigned:"Gang A, 9 Ton Machine , White Diesel, Z3E1 - SW 225mm pipe",start:"2026-04-21",end:"2026-04-22",progress:0,duration:9.0,budget:2053.98,actual:0.0,zone:4,isGroup:false},{wbs:"4.4.4",name:"6E1 - Gullies, pipe, bed & surround (150mm)",assigned:"Gang A, 9 Ton Dumper 2, Z3E1 - Gully 150mm",start:"2026-04-22",end:"2026-04-23",progress:0,duration:9.0,budget:905.76,actual:0.0,zone:4,isGroup:false},{wbs:"4.4.5",name:"7E1 - FW Manholes - F4.4",assigned:"Gang A, 14 Ton Machine 2, 9 Ton Dumper 2, Manhole Box, Diesel Trench Roller, White Diesel, Z3E1 - MH F4.4",start:"2026-05-04",end:"2026-05-06",progress:0,duration:18.0,budget:4191.48,actual:0.0,zone:4,isGroup:false},{wbs:"4.4.6",name:"8E1 - FW pipe, bed & surround (150mm)",assigned:"Gang A, 9 Ton Machine , Z3E1 - FW 150mm pipe, bed & surround",start:"2026-04-29",end:"2026-04-30",progress:0,duration:9.0,budget:1162.98,actual:0.0,zone:4,isGroup:false},{wbs:"4.4.7",name:"9E1 - Tails - pipe, bed & surround (110mm)",assigned:"Gang A, 9 Ton Machine , Z3E1 - 110mm pipe, bed & surround",start:"2026-04-30",end:"2026-05-01",progress:0,duration:9.0,budget:1783.08,actual:0.0,zone:4,isGroup:false},{wbs:"4.4.8",name:"10E1 - Air & Pressure Testing",assigned:"Gang A",start:"2026-05-06",end:"2026-05-07",progress:0,duration:4.5,budget:211.5,actual:0.0,zone:4,isGroup:false},{wbs:"4.4.9",name:"11E1 - Services, ducts & street lighting",assigned:"Gang A, 9 Ton Dumper 2, 9 Ton Machine , Diesel Trench Roller, White Diesel, Z3E1 - Services, ducts & street lighting",start:"2026-05-07",end:"2026-05-08",progress:0,duration:9.0,budget:1539.45,actual:0.0,zone:4,isGroup:false},{wbs:"4.4.10",name:"13E1 - Capping Layer above SW pipe Midway to MH S4.4",assigned:"Gang A, 9 Ton Machine , Z3E1 - Capping SW",start:"2026-05-07",end:"2026-05-07",progress:0,duration:4.5,budget:910.49,actual:0.0,zone:4,isGroup:false},{wbs:"4.4.11",name:"13E1-1 - Capping Layer above Gully",assigned:"Gang A, 9 Ton Machine , Z3E1-1 Capping Gully",start:"2026-05-07",end:"2026-05-08",progress:0,duration:4.5,budget:331.47,actual:0.0,zone:4,isGroup:false},{wbs:"4.4.12",name:"14E1 - Backfill trench with Type 1 above FW run & SW Capping layer & compact",assigned:"Gang A, 9 Ton Dumper 2, Fox CC1200 Roller, White Diesel, Z3E1 - Backfill with Type 1",start:"2026-05-07",end:"2026-05-08",progress:0,duration:9.0,budget:3267.9,actual:0.0,zone:4,isGroup:false},{wbs:"4.5",name:"Z3 Section E2 - Pipe only between Manholes S4.4 to S4.2 and F4.4 to F4.2",assigned:"",start:"2026-04-28",end:"2026-05-12",progress:7,duration:90.0,budget:10515.87,actual:402.71,zone:4,isGroup:true},{wbs:"4.5.1",name:"3E2 - Drainage Excavation (All trenches - for 110/150/225mm pipe)",assigned:"Gang C, 9 Ton Dumper 2, 9 Ton Machine , Trenchbox, Diesel Trench Roller, White Diesel",start:"2026-04-28",end:"2026-04-29",progress:50,duration:9.0,budget:805.41,actual:402.71,zone:4,isGroup:false},{wbs:"4.5.2",name:"5E2 - SW pipe, bed & surround (225mm)",assigned:"Gang C, 9 Ton Machine , White Diesel, Z3E2 - SW 225mm pipe, bed & surround",start:"2026-04-29",end:"2026-04-30",progress:0,duration:9.0,budget:2217.42,actual:0.0,zone:4,isGroup:false},{wbs:"4.5.3",name:"6E2 - Gullies, pipe, bed & surround (150mm)",assigned:"Gang C, 9 Ton Dumper 2, Z3E2 - Gully 150mm",start:"2026-04-30",end:"2026-05-01",progress:0,duration:9.0,budget:1026.27,actual:0.0,zone:4,isGroup:false},{wbs:"4.5.4",name:"8E2 - FW pipe, bed & surround (150mm)",assigned:"Gang B, 9 Ton Machine , White Diesel, Z3E2 - FW 150mm pipe, bed & surround",start:"2026-05-04",end:"2026-05-05",progress:0,duration:9.0,budget:1086.48,actual:0.0,zone:4,isGroup:false},{wbs:"4.5.5",name:"9E2 - Tails - pipe, bed & surround (110mm)",assigned:"Gang B, 9 Ton Machine , White Diesel, Z3E2 - 110mm pipe, bed & surround",start:"2026-05-05",end:"2026-05-06",progress:0,duration:9.0,budget:963.45,actual:0.0,zone:4,isGroup:false},{wbs:"4.5.6",name:"10E2 - Air & Pressure Testing",assigned:"Gang B",start:"2026-05-06",end:"2026-05-07",progress:0,duration:4.5,budget:445.5,actual:0.0,zone:4,isGroup:false},{wbs:"4.5.7",name:"11E2 - Services, ducts & street lighting",assigned:"Gang B, 9 Ton Dumper 2, 9 Ton Machine , Diesel Trench Roller, White Diesel, Z3E2 - Services, ducts & street lighting",start:"2026-05-08",end:"2026-05-11",progress:0,duration:9.0,budget:1561.95,actual:0.0,zone:4,isGroup:false},{wbs:"4.5.8",name:"12E2 - Backfill trenches with Type 1 and compact",assigned:"Gang B, 9 ton Dumper 1, Fox CC1200 Roller, White Diesel, Z3E2 - Backfill with Type1",start:"2026-05-11",end:"2026-05-12",progress:0,duration:9.0,budget:2409.39,actual:0.0,zone:4,isGroup:false},{wbs:"4.6",name:"15D & 15E1 & 15E2 - CBR Testing",assigned:"Gang B, CBR testing kit",start:"2026-05-12",end:"2026-05-13",progress:0,duration:9.0,budget:1795.5,actual:0.0,zone:4,isGroup:true},{wbs:"4.7",name:"16D & 16E1 & 16E2 - Terram (Geotextile)",assigned:"Gang B, Z3D,E1&E2 - Terram",start:"2026-05-13",end:"2026-05-14",progress:0,duration:9.0,budget:1104.48,actual:0.0,zone:4,isGroup:true},{wbs:"4.8",name:"18D & 18E1 & 18E2 - Subbase (Type 1)",assigned:"Gang B, 9 Ton Dumper 2, White Diesel, Z3D/Z3E1/Z3E2 - Subbase Type 1",start:"2026-05-14",end:"2026-05-18",progress:0,duration:18.0,budget:7278.48,actual:0.0,zone:4,isGroup:true},{wbs:"4.9",name:"19D & 19E1 & 19E2 - Subbase Compaction",assigned:"Gang B, Fox CC1200 Roller, White Diesel",start:"2026-05-18",end:"2026-05-19",progress:0,duration:9.0,budget:506.43,actual:0.0,zone:4,isGroup:true},{wbs:"4.10",name:"20D & 20E1 & 20E2 - Kerbs",assigned:"Gang B, 9 Ton Machine , Z3D/Z3E1/Z3E2 - Kerbs",start:"2026-05-19",end:"2026-05-22",progress:0,duration:27.0,budget:5528.79,actual:0.0,zone:4,isGroup:true},{wbs:"4.11",name:"21D & 21E1 & 21E2 - Tarmac Roadbase",assigned:"HPM Subcontractor",start:"2026-05-22",end:"2026-05-25",progress:0,duration:9.0,budget:19446.75,actual:0.0,zone:4,isGroup:true},{wbs:"4.12",name:"22D & 22E1 & 22E2 - Tarmac Pavement",assigned:"TCQ Subcontractor",start:"2026-05-25",end:"2026-05-26",progress:0,duration:9.0,budget:4320.54,actual:0.0,zone:4,isGroup:true},{wbs:"5.1",name:"1F & 1G Reduce dig & deposit on temp spoil heaps",assigned:"Gang A, 14 Ton Machine 1, White Diesel",start:"2026-03-31",end:"2026-04-01",progress:0,duration:9.0,budget:543.96,actual:0.0,zone:5,isGroup:true},{wbs:"5.2",name:"2F & 2G - Setting Out for Drainage",assigned:"Paul Carey\'s Site Engineer",start:"2026-04-01",end:"2026-04-02",progress:0,duration:11.0,budget:605.0,actual:0.0,zone:5,isGroup:true},{wbs:"5.3",name:"Z4 Section F - Pipe only from Manhole S4.4 & F4.4 to Midway (to S4.5 & F4.5)",assigned:"",start:"2026-05-01",end:"2026-05-15",progress:0,duration:90.0,budget:18428.46,actual:0.0,zone:5,isGroup:true},{wbs:"5.3.1",name:"3F - Drainage Excavation (All trenches -  for 110/150/225mm pipe)",assigned:"Gang C, 9 Ton Dumper 2, 9 Ton Machine , Diesel Trench Roller, White Diesel",start:"2026-05-01",end:"2026-05-04",progress:0,duration:9.0,budget:655.38,actual:0.0,zone:5,isGroup:false},{wbs:"5.3.2",name:"5F - SW pipe, bed & surround (225mm)",assigned:"Gang C, 9 Ton Machine , White Diesel, Z4F - SW 225mm pipe",start:"2026-05-04",end:"2026-05-05",progress:0,duration:13.5,budget:2866.73,actual:0.0,zone:5,isGroup:false},{wbs:"5.3.3",name:"6F - Gullies, pipe, bed & surround (150mm)",assigned:"Gang C, 9 Ton Dumper 2, White Diesel, Z4F - Gully 150mm",start:"2026-05-05",end:"2026-05-06",progress:0,duration:9.0,budget:1288.26,actual:0.0,zone:5,isGroup:false},{wbs:"5.3.4",name:"8F - FW pipe, bed & surround (150mm)",assigned:"Gang C, 9 Ton Machine , Trenchbox, White Diesel, Z4F - FW 150mm pipe",start:"2026-05-06",end:"2026-05-08",progress:0,duration:13.5,budget:1975.73,actual:0.0,zone:5,isGroup:false},{wbs:"5.3.5",name:"9F - Tails - pipe, bed & surround (110mm)",assigned:"Gang C, 9 Ton Machine , White Diesel, Z4F - 110mm pipe",start:"2026-05-08",end:"2026-05-11",progress:0,duration:9.0,budget:1299.42,actual:0.0,zone:5,isGroup:false},{wbs:"5.3.6",name:"10F - Air & Pressure Testing",assigned:"Gang C",start:"2026-05-11",end:"2026-05-11",progress:0,duration:4.5,budget:222.75,actual:0.0,zone:5,isGroup:false},{wbs:"5.3.7",name:"11F - Services, ducts & street lighting",assigned:"Gang C, 9 Ton Dumper 2, 9 Ton Machine , Diesel Trench Roller, White Diesel, Z4F - Services, ducts & street lighting",start:"2026-05-11",end:"2026-05-13",progress:0,duration:13.5,budget:2622.24,actual:0.0,zone:5,isGroup:false},{wbs:"5.3.8",name:"13F - Capping Layer above SW pipe",assigned:"Gang C, 9 Ton Machine , White Diesel, Z4F - Capping SW",start:"2026-05-13",end:"2026-05-13",progress:0,duration:4.5,budget:1301.22,actual:0.0,zone:5,isGroup:false},{wbs:"5.3.9",name:"13F-1 - Capping Layer above Gully",assigned:"Gang C, 9 Ton Machine , White Diesel, Z4F-1 - Capping Gully",start:"2026-05-13",end:"2026-05-14",progress:0,duration:4.5,budget:628.25,actual:0.0,zone:5,isGroup:false},{wbs:"5.3.10",name:"14F - Backfill trenches with Type 1 above FW run & SW capping layer & compact",assigned:"Gang C, 9 ton Dumper 1, Fox CC1200 Roller, White Diesel, Z4F/Z4G - Subbase Type 1",start:"2026-05-14",end:"2026-05-15",progress:0,duration:9.0,budget:5568.48,actual:0.0,zone:5,isGroup:false},{wbs:"5.4",name:"Z4 Section G - Midway to Manholes S4.5 & F4.5",assigned:"",start:"2026-05-08",end:"2026-05-26",progress:0,duration:103.5,budget:23407.66,actual:0.0,zone:5,isGroup:true},{wbs:"5.4.1",name:"3G - Drainage Excavation (All trenches - for 110/150/225mm pipe)",assigned:"Gang A, 9 ton Dumper 1, 9 Ton Machine , Diesel Trench Roller, White Diesel",start:"2026-05-08",end:"2026-05-11",progress:0,duration:9.0,budget:632.88,actual:0.0,zone:5,isGroup:false},{wbs:"5.4.2",name:"4G - SW Manholes - MH S4.5",assigned:"Gang A, 14 Ton Machine 1, 9 Ton Machine , Diesel Trench Roller, White Diesel, Z4G - MH S4.5",start:"2026-05-13",end:"2026-05-15",progress:0,duration:13.5,budget:3502.71,actual:0.0,zone:5,isGroup:false},{wbs:"5.4.3",name:"5G - SW pipe, bed & surround (225mm)",assigned:"Gang A, 9 Ton Machine , White Diesel, Z4G - SW 225mm pipe",start:"2026-05-11",end:"2026-05-12",progress:0,duration:9.0,budget:2895.93,actual:0.0,zone:5,isGroup:false},{wbs:"5.4.4",name:"6G - Gullies, pipe, bed & surround (150mm)",assigned:"Gang A, 9 ton Dumper 1, White Diesel, Z4G - Gully 150mm",start:"2026-05-12",end:"2026-05-13",progress:0,duration:9.0,budget:1024.74,actual:0.0,zone:5,isGroup:false},{wbs:"5.4.5",name:"7G - FW Manholes - MH F4.5",assigned:"Gang A, 14 Ton Machine 2, 9 Ton Machine , Diesel Trench Roller, White Diesel, Z4G - MH F4.5",start:"2026-05-19",end:"2026-05-20",progress:0,duration:13.5,budget:3342.74,actual:0.0,zone:5,isGroup:false},{wbs:"5.4.6",name:"8G - FW pipe, bed & surround (150mm)",assigned:"Gang A, 9 Ton Machine , White Diesel, Z4G - FW 150mm pipe",start:"2026-05-15",end:"2026-05-18",progress:0,duration:9.0,budget:1064.61,actual:0.0,zone:5,isGroup:false},{wbs:"5.4.7",name:"9G - Tails - pipe, bed & surround (110mm)",assigned:"Gang A, 9 Ton Machine , White Diesel, Z4G - 110mm pipe",start:"2026-05-18",end:"2026-05-19",progress:0,duration:9.0,budget:1873.98,actual:0.0,zone:5,isGroup:false},{wbs:"5.4.8",name:"10G - Air & Pressure Testing",assigned:"Gang A",start:"2026-05-20",end:"2026-05-21",progress:0,duration:4.5,budget:211.5,actual:0.0,zone:5,isGroup:false},{wbs:"5.4.9",name:"11G - Services, ducts & street lighting",assigned:"Gang A, 9 ton Dumper 1, 9 Ton Machine , Diesel Trench Roller, White Diesel, Z4G - Services, ducts & street lighting",start:"2026-05-21",end:"2026-05-22",progress:0,duration:9.0,budget:1725.66,actual:0.0,zone:5,isGroup:false},{wbs:"5.4.10",name:"13G - Capping Layer above SW pipe",assigned:"Gang A, 9 Ton Machine , White Diesel, Z4G - Capping SW",start:"2026-05-22",end:"2026-05-22",progress:0,duration:4.5,budget:1166.94,actual:0.0,zone:5,isGroup:false},{wbs:"5.4.11",name:"13G-1 - Capping Layer above Gully",assigned:"Gang A, 9 Ton Machine , White Diesel, Z4G-1 - Capping Gully",start:"2026-05-22",end:"2026-05-25",progress:0,duration:4.5,budget:419.99,actual:0.0,zone:5,isGroup:false},{wbs:"5.4.12",name:"14G - Backfill trenches with Type 1 above capping",assigned:"Gang A, 9 Ton Dumper 2, Fox CC1200 Roller, White Diesel, Z4F/Z4G - Subbase Type 1",start:"2026-05-25",end:"2026-05-26",progress:0,duration:9.0,budget:5545.98,actual:0.0,zone:5,isGroup:false},{wbs:"5.5",name:"15F & 15G - CBR Testing",assigned:"Gang A, CBR testing kit",start:"2026-05-26",end:"2026-05-27",progress:0,duration:9.0,budget:1773.0,actual:0.0,zone:5,isGroup:true},{wbs:"5.6",name:"16F & 16G - Terram (Geotextile)",assigned:"Gang A, Z4F/G - Terram",start:"2026-05-27",end:"2026-05-28",progress:0,duration:9.0,budget:953.01,actual:0.0,zone:5,isGroup:true},{wbs:"5.7",name:"18F & 18G - Subbase (Type 1)",assigned:"Gang A, 9 Ton Dumper 2, White Diesel, Z4F/Z4G - Subbase Type 1",start:"2026-05-28",end:"2026-05-29",progress:0,duration:9.0,budget:5506.02,actual:0.0,zone:5,isGroup:true},{wbs:"5.8",name:"19F & 19G - Subbase Compaction",assigned:"Gang A, Fox CC1200 Roller, White Diesel",start:"2026-05-29",end:"2026-06-08",progress:0,duration:9.0,budget:483.93,actual:0.0,zone:5,isGroup:true},{wbs:"5.9",name:"20F & 20G - Kerbs",assigned:"Gang A, 9 Ton Machine , Z4F/Z4G - Kerbs",start:"2026-06-08",end:"2026-06-10",progress:0,duration:22.5,budget:5701.95,actual:0.0,zone:5,isGroup:true},{wbs:"5.10",name:"21F & 21G - Tarmac Roadbase",assigned:"HPM Subcontractor",start:"2026-06-10",end:"2026-06-11",progress:0,duration:9.0,budget:19446.75,actual:0.0,zone:5,isGroup:true},{wbs:"5.11",name:"22F & 22G - Tarmac Pavement",assigned:"TCQ Subcontractor",start:"2026-06-11",end:"2026-06-12",progress:0,duration:9.0,budget:4320.54,actual:0.0,zone:5,isGroup:true},{wbs:"6.1",name:"2H & 2I & 2J - Reduce dig into spoil heaps",assigned:"Gang A, 14 Ton Machine 1, White Diesel",start:"2026-04-01",end:"2026-04-02",progress:0,duration:9.0,budget:543.96,actual:0.0,zone:6,isGroup:true},{wbs:"6.2",name:"2H & 2I & 2J - Drainage Setting Out",assigned:"Paul Carey\'s Site Engineer",start:"2026-04-02",end:"2026-04-07",progress:0,duration:10.0,budget:495.0,actual:0.0,zone:6,isGroup:true},{wbs:"6.3",name:"Z5 Section H - Manhole S4.5 to S4.6 & F4.5 to F4.6",assigned:"",start:"2026-05-15",end:"2026-05-28",progress:0,duration:85.5,budget:14525.51,actual:0.0,zone:6,isGroup:true},{wbs:"6.3.1",name:"3H - Drainage Excavation (All trenches - for 110/150/225mm pipe)",assigned:"Gang C, 9 Ton Dumper 2, 9 Ton Machine , Diesel Trench Roller, White Diesel",start:"2026-05-15",end:"2026-05-18",progress:0,duration:9.0,budget:655.38,actual:0.0,zone:6,isGroup:false},{wbs:"6.3.2",name:"4H - SW Manholes - MH S4.6",assigned:"Gang C, 14 Ton Machine 1, 9 Ton Dumper 2, Diesel Trench Roller, White Diesel, Z5H - MHS4.6",start:"2026-05-18",end:"2026-05-20",progress:0,duration:18.0,budget:3834.18,actual:0.0,zone:6,isGroup:false},{wbs:"6.3.3",name:"5H - SW pipe, bed & surround (225mm)",assigned:"Gang C, 9 Ton Machine , White Diesel, Z5H - SW 225mm pipe",start:"2026-05-20",end:"2026-05-21",progress:0,duration:9.0,budget:2115.45,actual:0.0,zone:6,isGroup:false},{wbs:"6.3.4",name:"6H Gullies, pipe, bed & surround (150mm)",assigned:"Gang C, 9 Ton Dumper 2, White Diesel, Z5H - Gully 150mm",start:"2026-05-21",end:"2026-05-22",progress:0,duration:9.0,budget:1047.24,actual:0.0,zone:6,isGroup:false},{wbs:"6.3.5",name:"7H - FW Manholes - MH F4.6",assigned:"Gang C, 14 Ton Machine 1, 9 Ton Dumper 2, Diesel Trench Roller, White Diesel, Z5H - MH F4.6",start:"2026-05-22",end:"2026-05-26",progress:0,duration:18.0,budget:3674.16,actual:0.0,zone:6,isGroup:false},{wbs:"6.3.6",name:"8H - FW pipe, bed & surround (150mm)",assigned:"Gang C, 9 Ton Machine , Trenchbox, White Diesel, Z5H - FW 150mm pipe",start:"2026-05-26",end:"2026-05-27",progress:0,duration:9.0,budget:1476.45,actual:0.0,zone:6,isGroup:false},{wbs:"6.3.7",name:"10H - Air & Pressure Testing",assigned:"Gang C",start:"2026-05-27",end:"2026-05-27",progress:0,duration:4.5,budget:222.75,actual:0.0,zone:6,isGroup:false},{wbs:"6.3.8",name:"11H - Services & ducts",assigned:"Gang C, 9 Ton Dumper 2, 9 Ton Machine , Diesel Trench Roller, White Diesel, Z5H - Services, ducts & street lighting",start:"2026-05-27",end:"2026-05-28",progress:0,duration:4.5,budget:586.71,actual:0.0,zone:6,isGroup:false},{wbs:"6.3.9",name:"12H - Backfill trenches with Type 1 & compact",assigned:"Gang C, 9 Ton Dumper 2, Fox CC1200 Roller, White Diesel, Z5H - Backfill with Type 1",start:"2026-05-28",end:"2026-05-28",progress:0,duration:4.5,budget:913.19,actual:0.0,zone:6,isGroup:false},{wbs:"6.4",name:"Z5 Section I - Manhole S4.6 & F4.6 to Midway (to Ex MH S1.21 & Ex F1.21)",assigned:"",start:"2026-05-22",end:"2026-05-29",progress:0,duration:45.0,budget:7087.23,actual:0.0,zone:6,isGroup:true},{wbs:"6.4.1",name:"3I - Drainage Excavation (All trenches - for 150/225mm pipe)",assigned:"Gang B, 9 Ton Dumper 2, 9 Ton Machine , Diesel Trench Roller, White Diesel",start:"2026-05-22",end:"2026-05-25",progress:0,duration:9.0,budget:655.38,actual:0.0,zone:6,isGroup:false},{wbs:"6.4.2",name:"5I - SW pipe, bed & surround (225mm)",assigned:"Gang B, 9 Ton Machine , White Diesel, Z5I - SW 225mm pipe",start:"2026-05-25",end:"2026-05-26",progress:0,duration:9.0,budget:1906.47,actual:0.0,zone:6,isGroup:false},{wbs:"6.4.3",name:"8I - FW pipe, bed & surround (150mm)",assigned:"Gang B, 9 Ton Machine , White Diesel, Z5I - FW 150mm pipe",start:"2026-05-26",end:"2026-05-27",progress:0,duration:9.0,budget:1417.5,actual:0.0,zone:6,isGroup:false},{wbs:"6.4.4",name:"10I - Air & Pressure Testing",assigned:"Gang B",start:"2026-05-27",end:"2026-05-27",progress:0,duration:4.5,budget:222.75,actual:0.0,zone:6,isGroup:false},{wbs:"6.4.5",name:"11I - Services & ducts",assigned:"Gang B, 9 Ton Dumper 2, 9 Ton Machine , Diesel Trench Roller, White Diesel, Z5I - Services, ducts & street lighting",start:"2026-05-27",end:"2026-05-28",progress:0,duration:4.5,budget:586.71,actual:0.0,zone:6,isGroup:false},{wbs:"6.4.6",name:"12I - Backfill trenches with Type 1 & compact",assigned:"Gang B, 9 Ton Dumper 2, Fox CC1200 Roller, White Diesel, Z5I - Backfill with Type 1",start:"2026-05-28",end:"2026-05-29",progress:0,duration:9.0,budget:2298.42,actual:0.0,zone:6,isGroup:false},{wbs:"6.5",name:"Z5 Section J - Midway to Ex MH S1.21 & Ex MH F1.21",assigned:"",start:"2026-05-28",end:"2026-06-10",progress:0,duration:36.0,budget:7436.46,actual:0.0,zone:6,isGroup:true},{wbs:"6.5.1",name:"3J - Drainage Excavation (All trenches - for 150/225mm pipe)",assigned:"Gang C, 9 Ton Dumper 2, 9 Ton Machine , Diesel Trench Roller, White Diesel",start:"2026-05-28",end:"2026-05-29",progress:0,duration:9.0,budget:655.38,actual:0.0,zone:6,isGroup:false},{wbs:"6.5.2",name:"5J - SW pipe, bed & surround (225mm)",assigned:"Gang C, 9 Ton Machine , White Diesel, Z5J - SW 225mm pipe",start:"2026-05-29",end:"2026-06-08",progress:0,duration:9.0,budget:1759.5,actual:0.0,zone:6,isGroup:false},{wbs:"6.5.3",name:"8J - FW pipe, bed & surround (150mm)",assigned:"Gang B, 9 Ton Machine , White Diesel, Z5J - FW 150mm pipe",start:"2026-05-29",end:"2026-06-08",progress:0,duration:9.0,budget:1266.48,actual:0.0,zone:6,isGroup:false},{wbs:"6.5.4",name:"23J - Backdrop / connect into existing manhole",assigned:"Gang B, 9 Ton Machine , White Diesel, Z5J - Backdrop",start:"2026-06-08",end:"2026-06-09",progress:0,duration:9.0,budget:848.43,actual:0.0,zone:6,isGroup:false},{wbs:"6.5.5",name:"10J - Air & Pressure Testing",assigned:"Gang B",start:"2026-06-09",end:"2026-06-09",progress:0,duration:4.5,budget:222.75,actual:0.0,zone:6,isGroup:false},{wbs:"6.5.6",name:"11J - Services & ducts",assigned:"Gang C, 9 Ton Dumper 2, 9 Ton Machine , Diesel Trench Roller, White Diesel, Z5J - Services, ducts & street lighting",start:"2026-06-09",end:"2026-06-10",progress:0,duration:4.5,budget:543.54,actual:0.0,zone:6,isGroup:false},{wbs:"6.5.7",name:"12J - Backfill trenches with Type 1 & compact",assigned:"Gang B, 9 Ton Dumper 2, Fox CC1200 Roller, White Diesel, Z5J - Backfill with Type 1",start:"2026-06-09",end:"2026-06-10",progress:0,duration:9.0,budget:2140.38,actual:0.0,zone:6,isGroup:false},{wbs:"6.6",name:"24H & 24I & 24J - Backfill with excavated material and compact",assigned:"Gang C, 9 Ton Dumper 2, White Diesel",start:"2026-06-10",end:"2026-06-11",progress:0,duration:9.0,budget:522.45,actual:0.0,zone:6,isGroup:true},{wbs:"7.1",name:"Jet Washing & CCTV survey",assigned:"Gang B",start:"2026-06-09",end:"2026-06-10",progress:0,duration:9.0,budget:445.5,actual:0.0,zone:7,isGroup:true},{wbs:"7.2",name:"Tidy Site, Demobilisation & Handover",assigned:"Harry Harrison, Gang B, Gang C",start:"2026-06-11",end:"2026-06-12",progress:0,duration:10.0,budget:990.0,actual:0.0,zone:7,isGroup:true}];
+// ════════════════════════════════════════════════════════════
+// PROGRAMME MANAGEMENT v10
+// ════════════════════════════════════════════════════════════
+var ZONES_BASELINE = [];
+var TASKS_BASELINE = [];
+var PROG_VIEW = 'live';
+
+function progDateAdd(dateStr, days) {
+  var d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + Math.round(days));
+  return d.toISOString().slice(0, 10);
+}
+function progDaysBetween(a, b) {
+  return Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
+}
+
+function initProgBaseline() {
+  ZONES_BASELINE = JSON.parse(JSON.stringify(ZONES));
+  TASKS_BASELINE = JSON.parse(JSON.stringify(TASKS));
+}
+
+function applyProgOverrides() {
+  // Reset ZONES and TASKS to baseline
+  ZONES.splice(0);
+  ZONES_BASELINE.forEach(function(z) { ZONES.push(JSON.parse(JSON.stringify(z))); });
+  TASKS.splice(0);
+  TASKS_BASELINE.forEach(function(t) { TASKS.push(JSON.parse(JSON.stringify(t))); });
+  // Apply saved overrides
+  var ov = lsGet('dgc_prog_live', null);
+  if (!ov) return;
+  if (ov.zones) {
+    ov.zones.forEach(function(zo) {
+      var z = ZONES.find(function(z) { return z.id === zo.id; });
+      if (!z) return;
+      var delta = progDaysBetween(z.start, zo.start);
+      z.start = zo.start;
+      z.end = zo.end;
+      if (delta !== 0) {
+        TASKS.forEach(function(t) {
+          if (t.zone === zo.id) {
+            t.start = progDateAdd(t.start, delta);
+            t.end = progDateAdd(t.end, delta);
+          }
+        });
+      }
+    });
+  }
+  if (ov.order && ov.order.length === ZONES.length) {
+    var ordered = [];
+    ov.order.forEach(function(id) {
+      var z = ZONES.find(function(z) { return z.id === id; });
+      if (z) ordered.push(z);
+    });
+    ZONES.splice(0);
+    ordered.forEach(function(z) { ZONES.push(z); });
+  }
+}
+
+function setProgView(view) {
+  PROG_VIEW = view;
+  if (view === 'original') {
+    ZONES.splice(0);
+    ZONES_BASELINE.forEach(function(z) { ZONES.push(JSON.parse(JSON.stringify(z))); });
+    TASKS.splice(0);
+    TASKS_BASELINE.forEach(function(t) { TASKS.push(JSON.parse(JSON.stringify(t))); });
+  } else {
+    applyProgOverrides();
+  }
+  ['original','live'].forEach(function(v) {
+    var btn = document.getElementById('pv-' + v);
+    if (!btn) return;
+    btn.style.background = v === view ? 'var(--accent)' : 'transparent';
+    btn.style.color = v === view ? '#000' : 'var(--muted)';
+  });
+  try { buildProgTable(); } catch(e) {}
+  try { buildZoneCards(); } catch(e) {}
+  try { buildVelocityPanel(); } catch(e) {}
+  try { buildProgEditor(); } catch(e) {}
+}
+
+function progSaveToLive() {
+  var ov = {
+    zones: ZONES.map(function(z) { return {id: z.id, start: z.start, end: z.end}; }),
+    order: ZONES.map(function(z) { return z.id; }),
+    savedAt: new Date().toISOString()
+  };
+  lsSet('dgc_prog_live', ov);
+  PROG_VIEW = 'live';
+  var st = document.getElementById('prog-save-status');
+  if (st) {
+    st.textContent = 'Saved.';
+    setTimeout(function() { if (st) st.textContent = ''; }, 2500);
+  }
+  ['original','live'].forEach(function(v) {
+    var btn = document.getElementById('pv-' + v);
+    if (!btn) return;
+    btn.style.background = v === 'live' ? 'var(--accent)' : 'transparent';
+    btn.style.color = v === 'live' ? '#000' : 'var(--muted)';
+  });
+}
+
+function progResetBaseline() {
+  if (!confirm('Reset to original planned dates? All date changes will be lost.')) return;
+  try { localStorage.removeItem('dgc_prog_live'); } catch(e) {}
+  applyProgOverrides();
+  setProgView('live');
+}
+
+function progBulkShift(days) {
+  ZONES.forEach(function(z) {
+    z.start = progDateAdd(z.start, days);
+    z.end = progDateAdd(z.end, days);
+  });
+  TASKS.forEach(function(t) {
+    t.start = progDateAdd(t.start, days);
+    t.end = progDateAdd(t.end, days);
+  });
+  buildProgEditor();
+  buildProgTable();
+}
+
+function progSetZoneStart(zoneId, value) {
+  var z = ZONES.find(function(z) { return z.id === zoneId; });
+  if (!z) return;
+  var delta = progDaysBetween(z.start, value);
+  if (delta === 0) return;
+  var origDuration = progDaysBetween(z.start, z.end);
+  z.start = value;
+  z.end = progDateAdd(value, origDuration);
+  TASKS.forEach(function(t) {
+    if (t.zone === zoneId) {
+      t.start = progDateAdd(t.start, delta);
+      t.end = progDateAdd(t.end, delta);
+    }
+  });
+  var endInput = document.getElementById('ze-end-' + zoneId);
+  if (endInput) endInput.value = z.end;
+  buildProgTable();
+  updateEditorVsOriginal(zoneId);
+}
+
+function progSetZoneEnd(zoneId, value) {
+  var z = ZONES.find(function(z) { return z.id === zoneId; });
+  if (!z) return;
+  z.end = value;
+  buildProgTable();
+  updateEditorVsOriginal(zoneId);
+}
+
+function updateEditorVsOriginal(zoneId) {
+  var z = ZONES.find(function(z) { return z.id === zoneId; });
+  var bz = ZONES_BASELINE.find(function(b) { return b.id === zoneId; });
+  if (!z || !bz) return;
+  var delta = progDaysBetween(bz.start, z.start);
+  var el = document.getElementById('ze-delta-' + zoneId);
+  if (!el) return;
+  if (delta === 0) {
+    el.textContent = 'Original';
+    el.style.color = 'var(--muted)';
+  } else {
+    el.textContent = (delta > 0 ? '+' : '') + delta + 'd';
+    el.style.color = delta > 0 ? 'var(--red)' : 'var(--green)';
+  }
+}
+
+function progMoveZone(zoneId, dir) {
+  var idx = ZONES.findIndex(function(z) { return z.id === zoneId; });
+  if (idx === -1) return;
+  var swapIdx = dir === 'up' ? idx - 1 : idx + 1;
+  if (swapIdx < 0 || swapIdx >= ZONES.length) return;
+  var tmp = ZONES[idx]; ZONES[idx] = ZONES[swapIdx]; ZONES[swapIdx] = tmp;
+  buildProgEditor();
+  buildProgTable();
+}
+
+function buildVelocityPanel() {
+  var el = document.getElementById('velocity-panel');
+  if (!el) return;
+  el.innerHTML = '';
+
+  // Header with view toggle
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;';
+  var title = document.createElement('div');
+  title.className = 'card-title';
+  title.style.marginBottom = '0';
+  title.textContent = 'Speed & Forecast';
+  hdr.appendChild(title);
+  var tgl = document.createElement('div');
+  tgl.style.cssText = 'display:flex;gap:4px;margin-left:auto;';
+  [{v:'original',lbl:'Original'},{v:'live',lbl:'Live'}].forEach(function(item) {
+    var btn = document.createElement('button');
+    btn.id = 'pv-' + item.v;
+    btn.textContent = item.lbl;
+    btn.style.cssText = 'padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--accent);transition:all 0.15s;';
+    btn.style.background = PROG_VIEW === item.v ? 'var(--accent)' : 'transparent';
+    btn.style.color = PROG_VIEW === item.v ? '#000' : 'var(--muted)';
+    btn.addEventListener('click', (function(v){ return function(){ setProgView(v); }; })(item.v));
+    tgl.appendChild(btn);
+  });
+  hdr.appendChild(tgl);
+  el.appendChild(hdr);
+
+  // Calculations
+  var totalBudget = ZONES.reduce(function(s,z){ return s + (z.budget||0); }, 0);
+  var completedValue = 0;
+  ZONES.forEach(function(z) {
+    completedValue += (z.budget||0) * (getZoneProgress(z.id)/100);
+  });
+  var overallPct = totalBudget > 0 ? completedValue / totalBudget * 100 : 0;
+  var projStart = new Date('2026-03-23T00:00:00');
+  var today = new Date();
+  var daysElapsed = Math.max(1, Math.round((today - projStart) / 86400000));
+  var targetEnd = new Date('2026-06-29T00:00:00');
+  var totalDays = Math.round((targetEnd - projStart) / 86400000);
+  var plannedPct = Math.min(100, daysElapsed / totalDays * 100);
+  var variance = overallPct - plannedPct;
+  var ratePerDay = overallPct / daysElapsed;
+  var ratePerWeek = ratePerDay * 7;
+  var remaining = 100 - overallPct;
+  var daysNeeded = ratePerDay > 0 ? Math.round(remaining / ratePerDay) : 9999;
+  var fcDate = new Date(today);
+  fcDate.setDate(fcDate.getDate() + daysNeeded);
+  var fcStr = fcDate.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
+  var fcLate = fcDate > targetEnd;
+
+  var kpis = [
+    {lbl:'Completed (by value)', val: overallPct.toFixed(1)+'%', col:'var(--text)'},
+    {lbl:'Planned at today', val: plannedPct.toFixed(1)+'%', col:'var(--muted)'},
+    {lbl:'Variance', val: (variance>=0?'+':'')+variance.toFixed(1)+'%', col: variance>=0?'var(--green)':'var(--red)'},
+    {lbl:'Speed (% per week)', val: ratePerWeek.toFixed(2)+'%', col:'var(--accent)'},
+    {lbl:'Forecast finish', val: fcStr, col: fcLate?'var(--red)':'var(--green)'},
+    {lbl:'Target (agreed)', val:'29 Jun 2026', col:'var(--muted)'}
+  ];
+
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:10px;';
+  kpis.forEach(function(k) {
+    var c = document.createElement('div');
+    c.className = 'vel-kpi';
+    var l = document.createElement('div');
+    l.className = 'lbl';
+    l.textContent = k.lbl;
+    var v = document.createElement('div');
+    v.className = 'val';
+    v.style.color = k.col;
+    v.textContent = k.val;
+    c.appendChild(l);
+    c.appendChild(v);
+    grid.appendChild(c);
+  });
+  el.appendChild(grid);
+
+  var note = document.createElement('div');
+  note.style.cssText = 'font-size:10px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px;';
+  note.textContent = 'Progress calculated by value (budget-weighted). Speed = % completed per 7 calendar days since project start 23 Mar 2026. Target: 29 Jun 2026 (agreed with Dandara). Record weekly snapshots via Delays tab to track speed trend over time.';
+  el.appendChild(note);
+}
+
+function buildProgEditor() {
+  var el = document.getElementById('prog-editor-panel');
+  if (!el) return;
+  el.innerHTML = '';
+
+  // Header
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;';
+  var title = document.createElement('div');
+  title.className = 'card-title';
+  title.style.marginBottom = '0';
+  title.textContent = 'Programme Editor (Admin)';
+  hdr.appendChild(title);
+  var st = document.createElement('span');
+  st.id = 'prog-save-status';
+  st.style.cssText = 'font-size:11px;color:var(--green);font-weight:600;';
+  hdr.appendChild(st);
+  var btns = document.createElement('div');
+  btns.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;';
+  var saveBtn = document.createElement('button');
+  saveBtn.className = 'btn btn-primary';
+  saveBtn.style.fontSize = '11px';
+  saveBtn.textContent = 'Save to Live';
+  saveBtn.addEventListener('click', function(){ progSaveToLive(); });
+  var rstBtn = document.createElement('button');
+  rstBtn.className = 'btn btn-secondary';
+  rstBtn.style.fontSize = '11px';
+  rstBtn.textContent = 'Reset to Original';
+  rstBtn.addEventListener('click', function(){ progResetBaseline(); });
+  btns.appendChild(saveBtn);
+  btns.appendChild(rstBtn);
+  hdr.appendChild(btns);
+  el.appendChild(hdr);
+
+  // Bulk shift
+  var shiftRow = document.createElement('div');
+  shiftRow.style.cssText = 'background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;';
+  var slbl = document.createElement('span');
+  slbl.style.cssText = 'font-size:12px;font-weight:600;color:var(--text);margin-right:4px;white-space:nowrap;';
+  slbl.textContent = 'Shift entire programme:';
+  shiftRow.appendChild(slbl);
+  [[-7,'-1 wk'],[-1,'-1 day'],[1,'+1 day'],[7,'+1 wk']].forEach(function(pair){
+    var b = document.createElement('button');
+    b.className = 'btn btn-secondary';
+    b.style.cssText = 'font-size:11px;padding:4px 10px;';
+    b.textContent = pair[1];
+    b.addEventListener('click', (function(d){ return function(){ progBulkShift(d); }; })(pair[0]));
+    shiftRow.appendChild(b);
+  });
+  var cInp = document.createElement('input');
+  cInp.type = 'number';
+  cInp.id = 'prog-custom-days';
+  cInp.placeholder = 'Custom days';
+  cInp.style.cssText = 'width:90px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;padding:4px 8px;';
+  var cBtn = document.createElement('button');
+  cBtn.className = 'btn btn-secondary';
+  cBtn.style.cssText = 'font-size:11px;padding:4px 10px;';
+  cBtn.textContent = 'Apply';
+  cBtn.addEventListener('click', function(){
+    var v = parseInt(document.getElementById('prog-custom-days').value||'0');
+    if (!isNaN(v) && v !== 0) progBulkShift(v);
+  });
+  shiftRow.appendChild(cInp);
+  shiftRow.appendChild(cBtn);
+  el.appendChild(shiftRow);
+
+  // Zone table
+  var tbl = document.createElement('table');
+  tbl.className = 'prog-editor-table';
+  tbl.style.width = '100%';
+  var thead = document.createElement('thead');
+  var hr = document.createElement('tr');
+  ['Zone','Start','End','Duration','vs Original','Order'].forEach(function(h){
+    var th = document.createElement('th');
+    th.textContent = h;
+    hr.appendChild(th);
+  });
+  thead.appendChild(hr);
+  tbl.appendChild(thead);
+
+  var tbody = document.createElement('tbody');
+  ZONES.forEach(function(z, idx){
+    var bz = ZONES_BASELINE.find(function(b){ return b.id === z.id; });
+    var delta = bz ? progDaysBetween(bz.start, z.start) : 0;
+    var dur = progDaysBetween(z.start, z.end);
+    var tr = document.createElement('tr');
+
+    // Name
+    var nameTd = document.createElement('td');
+    nameTd.style.fontWeight = '600';
+    var dot = document.createElement('span');
+    dot.style.cssText = 'display:inline-block;width:8px;height:8px;border-radius:50%;background:' + (z.color||'#94a3b8') + ';margin-right:7px;vertical-align:middle;';
+    nameTd.appendChild(dot);
+    nameTd.appendChild(document.createTextNode(z.shortName || z.name));
+    tr.appendChild(nameTd);
+
+    // Start input
+    var startTd = document.createElement('td');
+    var si = document.createElement('input');
+    si.type = 'date';
+    si.id = 'ze-start-' + z.id;
+    si.value = z.start;
+    si.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;padding:4px 6px;';
+    si.addEventListener('change', (function(zid){ return function(e){ progSetZoneStart(zid, e.target.value); }; })(z.id));
+    startTd.appendChild(si);
+    tr.appendChild(startTd);
+
+    // End input
+    var endTd = document.createElement('td');
+    var ei = document.createElement('input');
+    ei.type = 'date';
+    ei.id = 'ze-end-' + z.id;
+    ei.value = z.end;
+    ei.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;padding:4px 6px;';
+    ei.addEventListener('change', (function(zid){ return function(e){ progSetZoneEnd(zid, e.target.value); }; })(z.id));
+    endTd.appendChild(ei);
+    tr.appendChild(endTd);
+
+    // Duration
+    var durTd = document.createElement('td');
+    durTd.style.cssText = 'color:var(--muted);font-size:11px;';
+    durTd.textContent = dur + 'd';
+    tr.appendChild(durTd);
+
+    // vs Original
+    var deltaTd = document.createElement('td');
+    var deltaSpan = document.createElement('span');
+    deltaSpan.id = 'ze-delta-' + z.id;
+    deltaSpan.style.cssText = 'font-size:11px;font-weight:700;';
+    deltaSpan.textContent = delta === 0 ? 'Original' : ((delta>0?'+':'')+delta+'d');
+    deltaSpan.style.color = delta === 0 ? 'var(--muted)' : (delta > 0 ? 'var(--red)' : 'var(--green)');
+    deltaTd.appendChild(deltaSpan);
+    tr.appendChild(deltaTd);
+
+    // Order arrows
+    var orderTd = document.createElement('td');
+    if (idx > 0) {
+      var upB = document.createElement('button');
+      upB.textContent = '↑';
+      upB.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;padding:2px 7px;cursor:pointer;margin-right:3px;';
+      upB.addEventListener('click', (function(zid){ return function(){ progMoveZone(zid,'up'); }; })(z.id));
+      orderTd.appendChild(upB);
+    }
+    if (idx < ZONES.length - 1) {
+      var dnB = document.createElement('button');
+      dnB.textContent = '↓';
+      dnB.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;padding:2px 7px;cursor:pointer;';
+      dnB.addEventListener('click', (function(zid){ return function(){ progMoveZone(zid,'down'); }; })(z.id));
+      orderTd.appendChild(dnB);
+    }
+    tr.appendChild(orderTd);
+
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+  el.appendChild(tbl);
+
+  var note = document.createElement('div');
+  note.style.cssText = 'margin-top:10px;font-size:10px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px;';
+  note.textContent = 'Changes are in memory only. Click Save to Live to persist. Original baseline is always preserved — use the Original/Live toggle above to compare.';
+  el.appendChild(note);
+}
+
+// ════════════════════════════════════════════════════════════
+// DELAY LOG v10
+// ════════════════════════════════════════════════════════════
+var DELAY_DEFAULTS = [
+  {id:'D001',date:'2026-03-24',ref:'CCE 101221 / VAR 1',category:'client',description:'Hand dig around services — unmarked services required hand excavation throughout site',days:1.0,status:'agreed',cost:1405.50},
+  {id:'D002',date:'2026-03-25',ref:'CCE 101223 / VAR 2',category:'client',description:'Site compound and welfare setup — extended beyond planned mobilisation period',days:3.0,status:'agreed',cost:7004.05},
+  {id:'D003',date:'2026-04-01',ref:'RT 101004 / CCE 101224 / VAR 3',category:'client',description:'MU scanning — all work stopped until site scanned and marked by utility locating vehicle',days:2.0,status:'agreed',cost:1552.00},
+  {id:'D004',date:'2026-04-08',ref:'RT 101008 / CCE 101228 / VAR 5',category:'client',description:'Service scanning required every 300mm throughout excavation — ongoing programme slow-down',days:1.5,status:'agreed',cost:963.10},
+  {id:'D005',date:'2026-04-13',ref:'RT 101012 / CCE 101229',category:'client',description:'Concrete delay caused by land drain at MH S4.1 and F4.1 — 1 day lost',days:1.0,status:'agreed',cost:340.00},
+  {id:'D006',date:'2026-04-14',ref:'RT 101014 / CCE 101230 / VAR 7',category:'client',description:'Cold tar found in trench F4.1 to F4.2 — required specialist disposal',days:0.5,status:'agreed',cost:1331.13},
+  {id:'D007',date:'2026-04-23',ref:'RT 101308 / CCE 101233 / VAR 10',category:'client',description:'Concrete found at Plot 10 and running from MH F4.2 — concrete breaker required',days:0.5,status:'agreed',cost:1513.86},
+  {id:'D008',date:'2026-04-24',ref:'RT 101310 / CCE 101234 / VAR 11',category:'client',description:'Asbestos found on site — double-bagged and disposed at DC skips',days:0.5,status:'agreed',cost:341.88},
+  {id:'D009',date:'2026-04-16',ref:'RT 101302',category:'absorbed',description:'Ring delivery delayed by supplier — 1 day wait on site',days:1.0,status:'absorbed',cost:0},
+  {id:'D010',date:'2026-04-16',ref:'RT 101303',category:'absorbed',description:'Water in fill at MH F4.2 — had to pump out before continuing',days:0.25,status:'absorbed',cost:0},
+  {id:'D011',date:'2026-04-23',ref:'RT 101307',category:'absorbed',description:'100mm Type 1 substituted for 6F2 on granular bedding — slower to install',days:0.5,status:'absorbed',cost:0},
+  {id:'D012',date:'2026-03-24',ref:'EOT-A',category:'eot_claimed',description:'Extended prelims week 1 — site setup and compound beyond original programme (revised completion to 19 Jun)',days:5.0,status:'claimed',cost:4506.05},
+  {id:'D013',date:'2026-03-31',ref:'EOT-B',category:'eot_claimed',description:'Extended prelims 4.5 days — MU scanning, mobilisation delays (revised to 26 Jun)',days:4.5,status:'claimed',cost:5576.90},
+  {id:'D014',date:'2026-04-08',ref:'EOT-C/D/E/F/G',category:'eot_claimed',description:'Scanning, concrete, asbestos and design delays — cumulative 5 days (revised to 29 Jun agreed, 3 Jul claimed)',days:5.0,status:'claimed',cost:10764.09}
+];
+
+function loadDelayLog() {
+  var stored = lsGet('dgc_delays', null);
+  if (stored && stored.length) return stored;
+  lsSet('dgc_delays', DELAY_DEFAULTS);
+  return JSON.parse(JSON.stringify(DELAY_DEFAULTS));
+}
+
+function addDelayEntry() {
+  var date = document.getElementById('new-delay-date');
+  var ref  = document.getElementById('new-delay-ref');
+  var cat  = document.getElementById('new-delay-cat');
+  var desc = document.getElementById('new-delay-desc');
+  var days = document.getElementById('new-delay-days');
+  var cost = document.getElementById('new-delay-cost');
+  var stat = document.getElementById('new-delay-status');
+  if (!date||!date.value||!desc||!desc.value) {
+    alert('Please fill in at least the Date and Description.');
+    return;
+  }
+  var log = loadDelayLog();
+  var entry = {
+    id: 'D' + (Date.now()),
+    date: date.value,
+    ref: ref ? ref.value : '',
+    category: cat ? cat.value : 'absorbed',
+    description: desc.value,
+    days: days ? parseFloat(days.value)||0 : 0,
+    status: stat ? stat.value : 'open',
+    cost: cost ? parseFloat(cost.value)||0 : 0
+  };
+  log.push(entry);
+  lsSet('dgc_delays', log);
+  clearDelayForm();
+  buildDelayLog();
+}
+
+function clearDelayForm() {
+  ['new-delay-date','new-delay-ref','new-delay-desc','new-delay-days','new-delay-cost'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+}
+
+function buildDelayLog() {
+  var log = loadDelayLog();
+  // Sort by date descending
+  log.sort(function(a,b){ return b.date.localeCompare(a.date); });
+
+  // Summary KPIs
+  var kpiEl = document.getElementById('delay-summary-kpis');
+  if (kpiEl) {
+    var cats = [
+      {key:'client',    lbl:'Client-Instructed Days', cls:'var(--red)'},
+      {key:'absorbed',  lbl:'Absorbed Internal Days', cls:'var(--orange)'},
+      {key:'eot_claimed',lbl:'EOT Claimed (uncertified)', cls:'var(--accent2)'},
+      {key:'variance',  lbl:'Productivity Variance', cls:'#a855f7'}
+    ];
+    kpiEl.innerHTML = '';
+    cats.forEach(function(cat){
+      var days = log.filter(function(d){ return d.category === cat.key; })
+                    .reduce(function(s,d){ return s + (d.days||0); }, 0);
+      var card = document.createElement('div');
+      card.className = 'kpi-card';
+      card.innerHTML = '<div class="kpi-label">' + cat.lbl + '</div><div class="kpi-value" style="color:' + cat.cls + ';">' + days.toFixed(1) + 'd</div>';
+      kpiEl.appendChild(card);
+    });
+  }
+
+  // Log table
+  var tbody = document.getElementById('delay-log-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  var catLabels = {
+    client:     '<span class="delay-cat-chip delay-cat-client">Client</span>',
+    absorbed:   '<span class="delay-cat-chip delay-cat-absorbed">Absorbed</span>',
+    eot_claimed:'<span class="delay-cat-chip delay-cat-eot">EOT Claimed</span>',
+    variance:   '<span class="delay-cat-chip delay-cat-variance">Productivity</span>',
+    weather:    '<span class="delay-cat-chip" style="background:#0ea5e920;color:#38bdf8;">Weather</span>',
+    design:     '<span class="delay-cat-chip" style="background:#10b98120;color:#34d399;">Design</span>'
+  };
+  var statusColors = {agreed:'var(--green)', claimed:'var(--accent)', absorbed:'var(--orange)', open:'var(--red)'};
+
+  log.forEach(function(entry){
+    var tr = document.createElement('tr');
+    var fmtDate = function(ds){
+      try { return new Date(ds+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'}); }
+      catch(e){ return ds; }
+    };
+    var cols = [
+      fmtDate(entry.date),
+      entry.ref || '—',
+      catLabels[entry.category] || entry.category,
+      entry.description,
+      (entry.days||0).toFixed(1) + 'd',
+      '<span style="font-size:11px;font-weight:700;color:' + (statusColors[entry.status]||'var(--muted)') + ';">' + (entry.status||'—') + '</span>'
+    ];
+    cols.forEach(function(col, i){
+      var td = document.createElement('td');
+      if (i === 2 || i === 5) { td.innerHTML = col; }
+      else { td.textContent = col; }
+      if (i === 3) td.style.maxWidth = '320px';
+      tr.appendChild(td);
+    });
+    // Cost column (admin-only)
+    var costTd = document.createElement('td');
+    costTd.className = 'admin-only';
+    costTd.textContent = entry.cost ? '£' + entry.cost.toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+    tr.appendChild(costTd);
+    tbody.appendChild(tr);
+  });
+}
+
 
 const AFPS = [
   { num:1, issued:'2026-04-01', invoice:'2026-04-07', payment:'2026-05-05', value:22984.59, net:22299, status:'paid', note:'Gross £22,985' },
@@ -2060,6 +2716,10 @@ window.addEventListener('DOMContentLoaded', () => {
   try { buildTimeline(); }        catch(e) { console.warn('Timeline skipped:', e); }
   try { buildDashboardCharts(); } catch(e) { console.warn('Charts skipped:', e); }
   try { buildFinancialChart(); }  catch(e) { console.warn('Fin chart skipped:', e); }
+  try { initProgBaseline(); applyProgOverrides(); } catch(e) {}
+  try { buildVelocityPanel(); }   catch(e) {}
+  try { buildProgEditor(); }      catch(e) {}
+  try { buildDelayLog(); }        catch(e) {}
 });
 
 // ═══════════════════════ ALERTS ═══════════════════════
