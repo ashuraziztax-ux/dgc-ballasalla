@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v18</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v19</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -248,7 +248,7 @@ body:not(.admin-mode) .admin-only { display: none !important; }
   .nav button { padding: 10px 14px; font-size: 12px; white-space: nowrap; flex-shrink: 0; }
 
   /* ── Main padding ── */
-  .main { padding: 10px 8px; }
+  .main { padding: 10px 8px; padding-bottom: 80px; }
 
   /* ── KPI grid: full width progress tile + 2 col for rest ── */
   .kpi-grid { grid-template-columns: 1fr 1fr !important; gap: 8px; }
@@ -288,6 +288,65 @@ body:not(.admin-mode) .admin-only { display: none !important; }
   .kpi-grid { grid-template-columns: 1fr 1fr !important; }
   .kpi-value { font-size: 18px; }
   .prog-hero-grid > div:not(.prog-behind-box) div[style*="font-size:52px"] { font-size: 30px !important; }
+}
+
+/* ─── v19: Mobile UX improvements ─── */
+@media (max-width: 768px) {
+  /* Full-screen modal on mobile */
+  .quicklog-modal {
+    max-width: 100% !important;
+    max-height: 100vh !important;
+    border-radius: 14px 14px 0 0 !important;
+    margin-top: auto;
+    padding: 20px 16px 32px !important;
+  }
+  .quicklog-overlay { align-items: flex-end !important; }
+
+  /* FAB: lower on screen, above iOS home indicator */
+  .fab-quicklog {
+    bottom: env(safe-area-inset-bottom, 16px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+    right: 16px;
+    padding: 14px 20px;
+    font-size: 14px;
+  }
+
+  /* Bigger tap targets on nav buttons */
+  .nav button { min-height: 44px; padding: 0 14px; }
+
+  /* Zone progress sliders — bigger on touch */
+  input[type="range"] { height: 24px !important; }
+
+  /* Attention + milestone cards fill width */
+  .attn-row { padding: 10px 0; }
+  .attn-dot { width: 10px; height: 10px; margin-top: 4px; }
+
+  /* Forecast banner: stack date and days-off */
+  #velocity-panel > div[style*="border:2px"] > div:nth-child(2) {
+    flex-direction: column !important; gap: 4px !important;
+  }
+
+  /* Delay table: minimum column widths for readability */
+  .delay-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Variation table scroll */
+  #var-table { min-width: 600px; }
+
+  /* Remove span-3 forced width in KPI hero on small phones */
+  .kpi-card[style*="grid-column:span 3"] { grid-column: 1 / -1 !important; }
+}
+
+@media (max-width: 480px) {
+  /* Stack velocity KPIs to 2-column on very small screens */
+  #velocity-panel .vel-kpi { min-width: 0; }
+  /* Quick log form: single column */
+  .quicklog-modal > div[style*="grid-template-columns:1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* Needs attention items: larger text */
+  .attn-row { font-size: 13px; }
+  /* Today forecast: bigger date */
+  #kpi-forecast-date { font-size: 22px !important; }
 }
 
 /* ── Site map circle hover ── */
@@ -3686,6 +3745,19 @@ window.addEventListener('DOMContentLoaded', () => {
   } catch(e) {}
 
   try { buildAlerts(); }         catch(e) {}
+
+  // Mobile: add 'scroll to attention' hint on narrow screens
+  try {
+    if (window.innerWidth <= 768) {
+      var attnCard = document.getElementById('attention-list');
+      var scrollHint = document.createElement('div');
+      scrollHint.style.cssText = 'position:fixed;bottom:76px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:11px;color:var(--muted);z-index:800;white-space:nowrap;pointer-events:none;';
+      scrollHint.id = 'mobile-hint';
+      scrollHint.textContent = 'Swipe nav to see all tabs';
+      document.body.appendChild(scrollHint);
+      setTimeout(function(){ var h=document.getElementById('mobile-hint'); if(h) h.remove(); }, 4000);
+    }
+  } catch(e) {}
 
   // Populate no-intervention forecast on dashboard
   try {
