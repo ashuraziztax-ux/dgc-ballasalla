@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v11</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v12</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -925,6 +925,11 @@ function resetAppearance() {
       <div class="kpi-value" id="kpi-days">—</div>
       <div class="kpi-sub" id="kpi-days-sub">to agreed completion 29 Jun</div>
       <div id="prog-status-badge" style="margin-top:8px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;background:#f9731620;color:#f97316;border:1px solid #f9731640;display:inline-block;">Behind Programme</div>
+      <div id="kpi-forecast-row" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:3px;">No-intervention finish</div>
+        <div id="kpi-forecast-date" style="font-size:18px;font-weight:800;color:#ef4444;">—</div>
+        <div id="kpi-forecast-off" style="font-size:10px;color:#ef4444;font-weight:600;margin-top:1px;">—</div>
+      </div>
     </div>
     <div class="kpi-card green admin-only">
       <div class="kpi-label">Contract Value</div>
@@ -2587,6 +2592,50 @@ function updateSectionProgress(id, val, lbl) {
 
 const ZONE_DEFAULTS = {1:95,2:25,3:35,4:10,5:0,6:0,7:0};
 
+function calcForecast() {
+  try {
+    var totalBudget = ZONES.reduce(function(s,z){ return s+(z.budget||0); }, 0);
+    var completedVal = 0;
+    ZONES.forEach(function(z){ completedVal += (z.budget||0)*(getZoneProgress(z.id)/100); });
+    var pct = totalBudget > 0 ? completedVal/totalBudget*100 : 0;
+    var start = new Date('2026-03-23T00:00:00');
+    var elapsed = Math.max(1, Math.round((TODAY-start)/86400000));
+    var rate = pct/elapsed;
+    var remaining = 100-pct;
+    var daysNeeded = rate > 0 ? Math.round(remaining/rate) : 9999;
+    var fc = new Date(TODAY.getTime());
+    fc.setDate(fc.getDate()+daysNeeded);
+    var target = new Date('2026-06-29T00:00:00');
+    return { date:fc, pct:pct, rate:rate, late: fc>target,
+             daysOff: Math.round(Math.abs(fc-target)/86400000),
+             str: fc.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) };
+  } catch(e) { return null; }
+}
+
+function getZonePlannedPct(zoneId) {
+  var z = ZONES.find(function(z){ return z.id===zoneId; });
+  if (!z) return 0;
+  var s = parseDate(z.start), e = parseDate(z.end);
+  if (TODAY < s) return 0;
+  if (TODAY > e) return 100;
+  var total = Math.max(1, Math.round((e-s)/86400000));
+  var elapsed = Math.round((TODAY-s)/86400000);
+  return Math.round(elapsed/total*100);
+}
+
+function getZoneRAG(zoneId) {
+  var actual  = getZoneProgress(zoneId);
+  var planned = getZonePlannedPct(zoneId);
+  var z = ZONES.find(function(z){ return z.id===zoneId; });
+  var st = z ? getZoneStatus(z) : 'upcoming';
+  if (actual >= 100) return {col:'#22c55e', lbl:'Complete', gap:0, cls:'rag-complete'};
+  if (st === 'upcoming') return {col:'#64748b', lbl:'Not started', gap:0, cls:'rag-upcoming'};
+  var gap = planned - actual;
+  if (gap <= 5)  return {col:'#22c55e', lbl:'On track',              gap:gap, cls:'rag-green'};
+  if (gap <= 20) return {col:'#f59e0b', lbl:gap+'% behind plan',     gap:gap, cls:'rag-amber'};
+                 return {col:'#ef4444', lbl:gap+'% behind — at risk', gap:gap, cls:'rag-red'};
+}
+
 function getZoneProgress(zoneId) {
   const s = lsGet('dgc_zone_progress', '{}');
   return s[zoneId] !== undefined ? s[zoneId] : (ZONE_DEFAULTS[zoneId] || 0);
@@ -2894,6 +2943,24 @@ window.addEventListener('DOMContentLoaded', () => {
   } catch(e) {}
 
   try { buildAlerts(); }         catch(e) {}
+
+  // Populate no-intervention forecast on dashboard
+  try {
+    var fc = calcForecast();
+    if (fc) {
+      var fdEl  = document.getElementById('kpi-forecast-date');
+      var foEl  = document.getElementById('kpi-forecast-off');
+      var fcard = document.getElementById('kpi-forecast-row');
+      var fcol  = fc.late ? '#ef4444' : '#22c55e';
+      if (fdEl) { fdEl.textContent = fc.str; fdEl.style.color = fcol; }
+      if (foEl) {
+        foEl.textContent = fc.late
+          ? '▲ ' + fc.daysOff + ' days past deadline'
+          : '▼ ' + fc.daysOff + ' days ahead';
+        foEl.style.color = fcol;
+      }
+    }
+  } catch(e) {}
   try { buildZoneSummaryList(); } catch(e) {}
   try { buildUpcomingList(); }   catch(e) {}
   try { buildZoneCards(); }      catch(e) {}
@@ -3096,15 +3163,27 @@ function buildDashboardCharts() {
 
 // ═══════════════════════ ZONE SUMMARY LIST ═══════════════════════
 function buildZoneSummaryList() {
-  const el  = document.getElementById('zone-summary-list');
-  const col = { complete:'#22c55e', active:'#f59e0b', late:'#ef4444', upcoming:'#64748b' };
+  const el = document.getElementById('zone-summary-list');
+  if (!el) return;
   el.innerHTML = ZONES.map(z => {
-    const p = getZoneProgress(z.id), st = getZoneStatus(z);
-    return '<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;font-size:12px;">' +
-      '<span class="status-dot" style="background:' + col[st] + ';"></span>' +
-      '<span style="flex:1;">' + z.shortName + '</span>' +
-      '<div class="mini-bar" style="width:80px;"><div class="mini-fill" style="width:' + p + '%;background:' + col[st] + ';"></div></div>' +
-      '<span style="color:' + col[st] + ';font-weight:700;min-width:32px;text-align:right;">' + p + '%</span>' +
+    const actual  = getZoneProgress(z.id);
+    const planned = getZonePlannedPct(z.id);
+    const rag     = getZoneRAG(z.id);
+    const gap     = Math.max(0, planned - actual);
+    return '<div style="padding:9px 0;border-bottom:1px solid var(--border);">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">' +
+      '<span style="width:10px;height:10px;border-radius:50%;background:' + rag.col + ';flex-shrink:0;display:inline-block;"></span>' +
+      '<span style="flex:1;font-size:12px;font-weight:600;color:var(--text);">' + z.shortName + '</span>' +
+      '<span style="font-size:10px;font-weight:700;color:' + rag.col + ';">' + rag.lbl + '</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;align-items:center;">' +
+      '<div style="flex:1;position:relative;height:8px;background:var(--surface2);border-radius:4px;overflow:visible;">' +
+      '<div style="position:absolute;left:0;top:0;height:100%;border-radius:4px;background:' + rag.col + ';width:' + Math.min(100,actual) + '%;"></div>' +
+      (planned > 0 && planned < 100 ? '<div style="position:absolute;top:-3px;height:14px;width:2px;background:#64748b;border-radius:1px;left:' + Math.min(100,planned) + '%;"></div>' : '') +
+      '</div>' +
+      '<span style="font-size:11px;color:var(--text);font-weight:700;min-width:28px;text-align:right;">' + actual + '%</span>' +
+      '<span style="font-size:10px;color:var(--muted);min-width:44px;text-align:right;">plan ' + planned + '%</span>' +
+      '</div>' +
       '</div>';
   }).join('');
 }
@@ -3145,7 +3224,11 @@ function buildZoneCards() {
       '<div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:8px;letter-spacing:0.3px;">' + (ZONE_SECT_LABELS[z.id]||'') + '</div>' +
       '<div class="zone-budget admin-only"><span>Budget: </span>' + fmt(z.budget) + '</div>' +
       '<div class="progress-track"><div class="progress-fill ' + status + '" style="width:' + prog + '%"></div></div>' +
-      '<div class="progress-label"><span>Progress</span>' +
+      '<div style="margin:4px 0 6px;display:flex;justify-content:space-between;font-size:10px;">' +
+      '<span style="color:var(--muted);">Plan <b style="color:#64748b;">' + getZonePlannedPct(z.id) + '%</b></span>' +
+      '<span style="color:' + getZoneRAG(z.id).col + ';font-weight:700;">' + getZoneRAG(z.id).lbl + '</span>' +
+      '</div>' +
+      '<div class="progress-label"><span>Actual</span>' +
       '<span style="display:flex;align-items:center;gap:8px;">' +
       '<input type="range" min="0" max="100" value="' + prog + '" style="width:80px;accent-color:var(--accent);" ' +
       'onclick="event.stopPropagation();" ' +
