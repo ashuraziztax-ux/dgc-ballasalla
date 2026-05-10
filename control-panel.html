@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v13</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v14</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -1083,6 +1083,18 @@ function resetAppearance() {
 <div id="tab-programme" class="tab-content">
   <div class="card" style="margin-bottom:12px;" id="velocity-card">
     <div id="velocity-panel"></div>
+    <div id="velocity-trend-wrap" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);">Progress Trend Over Time</div>
+        <button class="btn btn-secondary admin-only" style="font-size:11px;" onclick="recordSnapshot()">&#128190; Save snapshot</button>
+      </div>
+      <div class="chart-wrap-lg"><canvas id="chart-velocity-trend"></canvas></div>
+      <div style="font-size:9px;color:var(--muted);margin-top:6px;">Green line = actual progress. Grey dashed = planned. Each dot = a saved snapshot. Click &ldquo;Save snapshot&rdquo; weekly to build the trend.</div>
+    </div>
+    <div id="velocity-trend-empty" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <span>Save weekly snapshots to track velocity trend over time.</span>
+      <button class="btn btn-secondary admin-only" style="font-size:11px;" onclick="recordSnapshot()">&#128190; Save this week's snapshot</button>
+    </div>
   </div>
   <div class="card" style="overflow:auto; max-height:calc(100vh - 320px);">
     <table class="prog-table" id="prog-table">
@@ -2733,6 +2745,96 @@ function buildAttentionList() {
   });
 }
 
+function recordSnapshot() {
+  var fc = calcForecast();
+  if (!fc) return;
+  var snapshots = lsGet('dgc_snapshots', '[]') || [];
+  var today = TODAY.toISOString().slice(0,10);
+  // Avoid duplicate same-day snapshot
+  snapshots = snapshots.filter(function(s){ return s.date !== today; });
+  var target = new Date('2026-06-29T00:00:00');
+  var totalDays = Math.round((target - new Date('2026-03-23T00:00:00')) / 86400000);
+  var elapsed = Math.max(1, Math.round((TODAY - new Date('2026-03-23T00:00:00')) / 86400000));
+  var planned = Math.min(100, Math.round(elapsed / totalDays * 100));
+  snapshots.push({
+    date: today,
+    pct:  Math.round(fc.pct * 10) / 10,
+    planned: planned,
+    ratePerWeek: Math.round(fc.rate * 7 * 100) / 100
+  });
+  lsSet('dgc_snapshots', snapshots);
+  buildVelocityTrend();
+  // Flash feedback
+  var st = document.getElementById('prog-save-status');
+  if (st) { st.textContent = 'Snapshot saved ' + today; setTimeout(function(){ st.textContent=''; },3000); }
+  alert('Snapshot saved for ' + today + ' — ' + fc.pct.toFixed(1) + '% complete at ' + (fc.rate*7).toFixed(2) + '% per week.');
+}
+
+function buildVelocityTrend() {
+  var snapshots = lsGet('dgc_snapshots', '[]') || [];
+  var wrap  = document.getElementById('velocity-trend-wrap');
+  var empty = document.getElementById('velocity-trend-empty');
+  if (!wrap || !empty) return;
+
+  if (snapshots.length < 2) {
+    wrap.style.display  = 'none';
+    empty.style.display = 'flex';
+    return;
+  }
+  wrap.style.display  = 'block';
+  empty.style.display = 'none';
+
+  snapshots.sort(function(a,b){ return a.date.localeCompare(b.date); });
+
+  var labels  = snapshots.map(function(s){
+    try { return new Date(s.date+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}); }
+    catch(e){ return s.date; }
+  });
+  var actuals  = snapshots.map(function(s){ return s.pct; });
+  var planned  = snapshots.map(function(s){ return s.planned; });
+
+  // Forecast line: last snapshot → forecast date
+  var fc = calcForecast();
+  var forecastLabels = labels.slice(), forecastData = actuals.map(function(){ return null; });
+  if (fc) {
+    forecastLabels.push(fc.date.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'}));
+    forecastData.push(100);
+    // Connect from last snapshot
+    forecastData[forecastData.length-2] = actuals[actuals.length-1];
+  }
+
+  var canvas = document.getElementById('chart-velocity-trend');
+  if (!canvas) return;
+  if (canvas._chart) { canvas._chart.destroy(); }
+
+  canvas._chart = new Chart(canvas.getContext('2d'), {
+    type:'line',
+    data:{
+      labels: forecastLabels,
+      datasets:[
+        { label:'Actual %', data: actuals.concat(fc?[null]:[]), borderColor:'#22c55e', backgroundColor:'#22c55e20',
+          fill:true, tension:0.3, pointRadius:5, pointBackgroundColor:'#22c55e', borderWidth:2 },
+        { label:'Planned %', data: planned.concat(fc?[null]:[]), borderColor:'#64748b', borderDash:[5,5],
+          fill:false, tension:0.3, pointRadius:3, borderWidth:1.5 },
+        { label:'Forecast', data: forecastData, borderColor:'#f97316', borderDash:[3,4],
+          fill:false, tension:0, pointRadius:function(ctx){ return ctx.dataIndex===forecastData.length-1?6:0; },
+          pointBackgroundColor:'#f97316', borderWidth:1.5 }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{ color:'#94a3b8', font:{size:10} } },
+                tooltip:{ callbacks:{ label:function(ctx){ return ctx.dataset.label+': '+ctx.parsed.y+'%'; } } }
+              },
+      scales:{
+        x:{ ticks:{ color:'#64748b', font:{size:10} }, grid:{ color:'#1e293b' } },
+        y:{ min:0, max:100, ticks:{ color:'#64748b', font:{size:10}, callback:function(v){ return v+'%'; } },
+            grid:{ color:'#1e293b' } }
+      }
+    }
+  });
+}
+
 const AFPS = [
   { num:1, issued:'2026-04-01', invoice:'2026-04-07', payment:'2026-05-05', value:22984.59, net:22299, status:'paid', note:'Gross £22,985' },
   { num:2, issued:'2026-04-30', invoice:'2026-04-30', payment:'2026-05-28', value:156739.46, net:156739.46, status:'due', note:'Ian Barnes certified £156,739.46 net (after AFP1 deducted + 2.5% retention). Materials on site £47,815 accepted as goodwill - needs backup for AFP3.' },
@@ -3163,6 +3265,7 @@ window.addEventListener('DOMContentLoaded', () => {
   try { buildFinancialChart(); }  catch(e) { console.warn('Fin chart skipped:', e); }
   try { initProgBaseline(); applyProgOverrides(); } catch(e) {}
   try { buildVelocityPanel(); }   catch(e) {}
+  try { buildVelocityTrend(); }   catch(e) {}
   try { buildProgEditor(); }      catch(e) {}
   try { buildDelayLog(); }        catch(e) {}
   try { buildMilestones(); }      catch(e) {}
