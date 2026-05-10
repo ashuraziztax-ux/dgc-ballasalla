@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v19</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v20</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -391,6 +391,11 @@ body:not(.admin-mode) .admin-only { display: none !important; }
 .delay-tbl td { padding:7px 8px; border-bottom:1px solid var(--border); vertical-align:top; }
 .delay-tbl tr:last-child td { border-bottom:none; }
 .sandbox-banner { background:#f9731620; border:1px solid #f9731655; border-radius:8px; padding:8px 14px; margin-bottom:12px; font-size:12px; font-weight:700; color:#f97316; display:none; }
+.task-status-btn { border:none; border-radius:4px; font-size:10px; font-weight:700; padding:2px 7px; cursor:pointer; transition:all 0.12s; }
+.task-status-btn.not-started { background:#1e293b; color:#64748b; border:1px solid #334155; }
+.task-status-btn.in-progress { background:#f59e0b20; color:#f59e0b; border:1px solid #f59e0b55; }
+.task-status-btn.complete    { background:#22c55e20; color:#22c55e; border:1px solid #22c55e55; }
+
 .fab-quicklog {
   position:fixed; bottom:24px; right:24px; z-index:900;
   background:var(--accent); color:#000; border:none; border-radius:50px;
@@ -1166,8 +1171,8 @@ function resetAppearance() {
           <th>Start</th>
           <th>End</th>
           <th class="admin-only">Budget</th>
-          <th>Progress</th>
-          <th>Status</th>
+          <th>Done</th>
+          <th>Status (tap to update)</th>
         </tr>
       </thead>
       <tbody id="prog-tbody"></tbody>
@@ -3347,6 +3352,32 @@ function buildEOTPanel() {
   el.appendChild(note);
 }
 
+function getTaskProgress(taskWbs) {
+  var progs = lsGet('dgc_task_progress', '{}') || {};
+  return progs[taskWbs] !== undefined ? progs[taskWbs] : null;
+}
+
+function setTaskProgress(taskWbs, val) {
+  var progs = lsGet('dgc_task_progress', '{}') || {};
+  progs[taskWbs] = val;
+  lsSet('dgc_task_progress', progs);
+}
+
+function cycleTaskStatus(taskWbs, btnEl) {
+  var cur = getTaskProgress(taskWbs);
+  var next = cur === null || cur === 0 ? 50
+           : cur === 50 ? 100
+           : 0;
+  setTaskProgress(taskWbs, next);
+  // Update button appearance
+  var lbl = next === 0 ? 'Not started' : next === 50 ? 'In progress' : 'Complete';
+  var cls = next === 0 ? 'not-started' : next === 50 ? 'in-progress' : 'complete';
+  btnEl.textContent = lbl;
+  btnEl.className = 'task-status-btn ' + cls;
+  // Rebuild prog table to refresh mini-bars
+  try { buildProgTable(); } catch(e) {}
+}
+
 const AFPS = [
   { num:1, issued:'2026-04-01', invoice:'2026-04-07', payment:'2026-05-05', value:22984.59, net:22299, status:'paid', note:'Gross £22,985' },
   { num:2, issued:'2026-04-30', invoice:'2026-04-30', payment:'2026-05-28', value:156739.46, net:156739.46, status:'due', note:'Ian Barnes certified £156,739.46 net (after AFP1 deducted + 2.5% retention). Materials on site £47,815 accepted as goodwill - needs backup for AFP3.' },
@@ -4084,11 +4115,15 @@ function buildProgTable() {
       '<td><span class="zone-status ' + status + '" style="display:inline-block;">' + status.toUpperCase() + '</span></td></tr>';
     TASKS.filter(t => t.zone === z.id).forEach(t => {
       const ts = getTaskStatus(t);
+      var tProg = getTaskProgress(t.wbs);
+      var tProgVal = tProg !== null ? tProg : (t.progress||0);
+      var tStatusLbl = tProgVal === 0 ? 'Not started' : tProgVal === 50 ? 'In progress' : 'Complete';
+      var tStatusCls = tProgVal === 0 ? 'not-started' : tProgVal === 50 ? 'in-progress' : 'complete';
       html += '<tr><td style="color:var(--muted);">' + t.wbs + '</td><td class="task-indent">' + t.name + '</td><td style="color:var(--muted);font-size:11px;">' + t.assigned + '</td>' +
         '<td style="font-size:11px;">' + fmtShortDate(t.start) + '</td><td style="font-size:11px;">' + fmtShortDate(t.end) + '</td>' +
         '<td class="admin-only" style="font-size:11px;color:var(--accent);">' + fmt(t.budget) + '</td>' +
-        '<td><div class="mini-bar" style="width:80px;"><div class="mini-fill" style="width:' + (t.progress||0) + '%;background:' + stcol[ts] + ';"></div></div></td>' +
-        '<td><span class="status-dot" style="background:' + stcol[ts] + ';"></span><span style="font-size:10px;color:' + stcol[ts] + ';">' + (t.progress||0) + '%</span></td></tr>';
+        '<td><div class="mini-bar" style="width:80px;"><div class="mini-fill" style="width:' + tProgVal + '%;background:' + stcol[ts] + ';"></div></div></td>' +
+        '<td><button class="task-status-btn ' + tStatusCls + '" onclick="cycleTaskStatus(\'' + t.wbs + '\',this)" title="Click to cycle: Not started → In progress → Complete">' + tStatusLbl + '</button></td></tr>';
     });
   });
   tbody.innerHTML = html;
