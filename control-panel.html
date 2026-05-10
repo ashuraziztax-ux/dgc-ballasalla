@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v17</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v18</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -1231,6 +1231,18 @@ function resetAppearance() {
         </thead>
         <tbody id="budget-zone-table"></tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- Retention + EOT row -->
+  <div class="grid-2" style="margin-top:16px;">
+    <div class="card">
+      <div class="card-title">Retention Tracker</div>
+      <div id="retention-panel"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">EOT &amp; Delay Summary</div>
+      <div id="eot-panel"></div>
     </div>
   </div>
 
@@ -3175,6 +3187,107 @@ function buildAFPOverdueCheck() {
   subEl.textContent = '£' + ov.net.toLocaleString('en-GB',{minimumFractionDigits:0}) + ' — payment due ' + ov.due + ' — chase immediately';
 }
 
+function buildRetentionPanel() {
+  var el = document.getElementById('retention-panel');
+  if (!el) return;
+  el.innerHTML = '';
+
+  // Known certified values
+  var AFP1_GROSS = 22984.59;
+  var AFP2_GROSS = 167134.00;  // cumulative gross certified per AFP2
+  var RETENTION_RATE = 0.025;  // 2.5% (Ian Barnes applied this)
+  var CONTRACT_SUM   = 450000;
+
+  var ret1 = Math.round(AFP1_GROSS * RETENTION_RATE * 100) / 100;
+  var ret2 = Math.round(AFP2_GROSS * RETENTION_RATE * 100) / 100;
+  var retHeld  = ret2;  // cumulative held
+  var retPC    = Math.round(retHeld / 2 * 100) / 100;   // ~half released at PC
+  var retDefect= Math.round(retHeld / 2 * 100) / 100;   // ~half released at defects end
+  var maxRetention = Math.round(CONTRACT_SUM * RETENTION_RATE * 100) / 100;
+
+  var rows = [
+    {lbl:'AFP 1 gross certified',   val:'£' + AFP1_GROSS.toLocaleString('en-GB',{minimumFractionDigits:2}), note:''},
+    {lbl:'AFP 2 cumulative certified', val:'£' + AFP2_GROSS.toLocaleString('en-GB',{minimumFractionDigits:2}), note:'Ian Barnes figure'},
+    {lbl:'Retention rate',          val:'2.5%', note:'Contract rate 3% — Ian applied 2.5%', warn:true},
+    {lbl:'Retention held to date',  val:'£' + retHeld.toLocaleString('en-GB',{minimumFractionDigits:2}), col:'#f59e0b', bold:true},
+    {lbl:'Release at PC (~Jun 2026)', val:'£' + retPC.toLocaleString('en-GB',{minimumFractionDigits:2}), col:'#22c55e'},
+    {lbl:'Release at defects (~Jun 2027)', val:'£' + retDefect.toLocaleString('en-GB',{minimumFractionDigits:2}), col:'#60a5fa'},
+    {lbl:'Max retention (full contract)', val:'£' + maxRetention.toLocaleString('en-GB',{minimumFractionDigits:2}), note:'at 2.5% of £450k'},
+  ];
+
+  rows.forEach(function(r) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;';
+    var lbl = document.createElement('span');
+    lbl.style.color = 'var(--muted)';
+    lbl.textContent = r.lbl;
+    if (r.warn) lbl.style.color = '#f97316';
+    var val = document.createElement('span');
+    val.style.cssText = 'font-weight:' + (r.bold?'800':'600') + ';color:' + (r.col||'var(--text)') + ';';
+    val.textContent = r.val;
+    row.appendChild(lbl);
+    row.appendChild(val);
+    el.appendChild(row);
+    if (r.note) {
+      var note = document.createElement('div');
+      note.style.cssText = 'font-size:9px;color:var(--muted);padding-bottom:4px;';
+      note.textContent = '↳ ' + r.note;
+      el.appendChild(note);
+    }
+  });
+
+  var disc = document.createElement('div');
+  disc.style.cssText = 'font-size:10px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px solid var(--border);';
+  disc.textContent = 'Note: Retention discrepancy — contract specifies 3% but Ian Barnes applied 2.5%. Difference of £1,960 to reconcile at final account. Ensure 3% is the agreed rate before FA.';
+  el.appendChild(disc);
+}
+
+function buildEOTPanel() {
+  var el = document.getElementById('eot-panel');
+  if (!el) return;
+  el.innerHTML = '';
+
+  var ORIGINAL_END = '2026-06-12';  // original programme end
+  var AGREED_END   = '2026-06-29';  // agreed with Dandara (includes EOT)
+  var delays = loadDelayLog();
+
+  var clientDays = delays.filter(function(d){ return d.category==='client'; })
+                         .reduce(function(s,d){ return s+(d.days||0); },0);
+  var eotClaimed = delays.filter(function(d){ return d.category==='eot_claimed'; })
+                         .reduce(function(s,d){ return s+(d.days||0); },0);
+  var absorbedDays = delays.filter(function(d){ return d.category==='absorbed'; })
+                           .reduce(function(s,d){ return s+(d.days||0); },0);
+  var agreedEOT = Math.round((parseDate(AGREED_END) - parseDate(ORIGINAL_END)) / 86400000);
+
+  var rows = [
+    {lbl:'Original programme end',      val:parseDate(ORIGINAL_END).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}), col:'var(--muted)'},
+    {lbl:'Client-instructed delays',    val:clientDays.toFixed(1) + ' working days',  col:'#ef4444'},
+    {lbl:'EOT events claimed (unagreed)', val:eotClaimed.toFixed(1) + ' working days', col:'#f59e0b'},
+    {lbl:'Absorbed (DGC own risk)',     val:absorbedDays.toFixed(1) + ' working days', col:'#f97316'},
+    {lbl:'Calendar days of EOT agreed', val:agreedEOT + ' calendar days', col:'#22c55e', bold:true},
+    {lbl:'Agreed completion (Dandara)', val:parseDate(AGREED_END).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}), col:'var(--accent)', bold:true},
+  ];
+
+  rows.forEach(function(r) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;';
+    var lbl = document.createElement('span');
+    lbl.style.color = 'var(--muted)';
+    lbl.textContent = r.lbl;
+    var val = document.createElement('span');
+    val.style.cssText = 'font-weight:' + (r.bold?'800':'600') + ';color:' + (r.col||'var(--text)') + ';';
+    val.textContent = r.val;
+    row.appendChild(lbl); row.appendChild(val);
+    el.appendChild(row);
+  });
+
+  var note = document.createElement('div');
+  note.style.cssText = 'font-size:10px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px solid var(--border);';
+  note.textContent = 'EOT = Extension of Time. Client-instructed delays = grounds for formal EOT claim. '
+    + 'Agreed end date (29 Jun) confirmed verbally with Dandara — ensure formal written confirmation obtained before final account.';
+  el.appendChild(note);
+}
+
 const AFPS = [
   { num:1, issued:'2026-04-01', invoice:'2026-04-07', payment:'2026-05-05', value:22984.59, net:22299, status:'paid', note:'Gross £22,985' },
   { num:2, issued:'2026-04-30', invoice:'2026-04-30', payment:'2026-05-28', value:156739.46, net:156739.46, status:'due', note:'Ian Barnes certified £156,739.46 net (after AFP1 deducted + 2.5% retention). Materials on site £47,815 accepted as goodwill - needs backup for AFP3.' },
@@ -3609,6 +3722,8 @@ window.addEventListener('DOMContentLoaded', () => {
   try { buildProgEditor(); }      catch(e) {}
   try { buildDelayLog(); }        catch(e) {}
   try { buildAFPOverdueCheck(); }  catch(e) {}
+  try { buildRetentionPanel(); }   catch(e) {}
+  try { buildEOTPanel(); }         catch(e) {}
   try { buildVariationRegister(); } catch(e) {}
   try { buildMilestones(); }      catch(e) {}
   try { buildAttentionList(); }   catch(e) {}
