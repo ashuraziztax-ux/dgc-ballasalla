@@ -632,7 +632,7 @@ let state = {
   liked: JSON.parse(localStorage.getItem('ps_liked') || '[]'),
   disliked: new Set(JSON.parse(localStorage.getItem('ps_disliked') || '[]')),
   filters: JSON.parse(localStorage.getItem('ps_filters') || 'null') || {
-    lt: 'both', countries: [], maxPrice: 1500000, minBeds: 0, types: [], features: [], locations: []
+    lt: 'both', countries: [], maxPrice: 1500000, minBeds: 0, types: ['villa'], features: [], locations: ['Italy']
   },
   algoOn: false,
   mapShapes: [],
@@ -736,12 +736,12 @@ function renderQueue() {
   document.querySelector('.action-btns').style.display = 'flex';
 
   const toRender = state.queue.slice(0, 3);
-  toRender.reverse().forEach((prop, i) => {
-    const card = buildCard(prop, i === toRender.length - 1);
-    stack.appendChild(card);
+  // Append back-to-front so queue[0] ends up as firstChild → gets z-index:3 (top)
+  [...toRender].reverse().forEach((prop) => {
+    stack.insertBefore(buildCard(prop, false), stack.firstChild || null);
   });
 
-  const topCard = stack.lastChild;
+  const topCard = stack.firstChild;
   if (topCard) {
     state.currentPropId = parseInt(topCard.dataset.id);
     state.currentPhotoIdx = 0;
@@ -816,10 +816,10 @@ function initDrag(card) {
     const pct = Math.min(Math.abs(curX) / 60, 1);
     card.querySelector('.stamp-like').style.opacity = curX > 0 ? pct : 0;
     card.querySelector('.stamp-nope').style.opacity = curX < 0 ? pct : 0;
-    const next = card.previousSibling;
+    const next = card.nextSibling;
     if (next && next.classList.contains('prop-card')) {
-      const s = 0.90 + 0.05 * Math.min(Math.abs(curX) / THRESHOLD, 1);
-      next.style.transform = `scale(${s}) translateY(${16 - 8 * Math.min(Math.abs(curX)/THRESHOLD,1)}px)`;
+      const pct = Math.min(Math.abs(curX) / THRESHOLD, 1);
+      next.style.transform = `scale(${0.95 + 0.05 * pct}) translateY(${8 * (1 - pct)}px)`;
     }
   }
   function end() {
@@ -833,6 +833,8 @@ function initDrag(card) {
       card.style.transform = 'translate(0,0) rotate(0deg)';
       card.querySelector('.stamp-like').style.opacity = 0;
       card.querySelector('.stamp-nope').style.opacity = 0;
+      const snapNext = card.nextSibling;
+      if (snapNext && snapNext.classList.contains('prop-card')) snapNext.style.transform = '';
     }
   }
   function fly(card, dir) {
@@ -868,11 +870,11 @@ function finalize(card, direction) {
   saveState();
   card.remove();
   updateAlgoPill();
-  const next = document.querySelector('#card-stack .prop-card:last-child');
+  const next = document.querySelector('#card-stack .prop-card:first-child');
   if (next) {
     state.currentPropId = parseInt(next.dataset.id);
     next.style.transition = 'transform 0.2s ease';
-    next.style.transform = 'translate(0,0) scale(1)';
+    next.style.transform = '';
     initDrag(next);
   } else {
     state.queue = getFilteredQueue();
@@ -884,7 +886,7 @@ function finalize(card, direction) {
 }
 
 function swipeAction(dir) {
-  const card = document.querySelector('#card-stack .prop-card:last-child');
+  const card = document.querySelector('#card-stack .prop-card:first-child');
   if (!card) return;
   fly(card, dir === 'right' ? 1 : -1);
   setTimeout(() => finalize(card, dir), 350);
