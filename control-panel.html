@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v21</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v22</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -179,12 +179,38 @@ a { color: var(--accent); text-decoration: none; }
 .delay-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
 
 @media print {
-  .header, .nav, .main > *:not(#tab-report) { display: none !important; }
+  .header, .nav, .main > *:not(#tab-report):not(#tab-daily) { display: none !important; }
   #tab-report { display: block !important; }
   body { background: white; color: black; }
-  .card { border: 1px solid #ccc; }
+  .card { border: 1px solid #ccc; box-shadow:none; }
   .report-logo { color: #d97706; }
+  /* Daily log print mode */
+  body.printing-daily .main > *:not(#tab-daily) { display: none !important; }
+  body.printing-daily #tab-daily { display: block !important; }
+  body.printing-daily .daily-log-actions { display: none !important; }
+  body.printing-daily .grid-2 { grid-template-columns: 1fr 1fr !important; }
+  body.printing-daily input, body.printing-daily select, body.printing-daily textarea {
+    border: 1px solid #999 !important; background: white !important; color: black !important;
+  }
+  body.printing-daily .fab-quicklog { display: none !important; }
+  body.printing-daily #mobile-hint { display: none !important; }
 }
+.tooltip-wrap { position:relative; display:inline-flex; align-items:center; }
+.tooltip-btn {
+  width:16px; height:16px; border-radius:50%; border:1px solid var(--border);
+  background:var(--surface2); color:var(--muted); font-size:10px; font-weight:700;
+  cursor:help; display:inline-flex; align-items:center; justify-content:center;
+  margin-left:6px; flex-shrink:0; line-height:1;
+}
+.tooltip-box {
+  position:absolute; left:22px; top:-4px; z-index:500; width:220px;
+  background:#0f172a; border:1px solid var(--border); border-radius:8px;
+  padding:8px 10px; font-size:11px; color:var(--text); line-height:1.5;
+  box-shadow:0 4px 16px rgba(0,0,0,0.5); pointer-events:none;
+  opacity:0; transition:opacity 0.15s; white-space:normal;
+}
+.tooltip-btn:hover + .tooltip-box, .tooltip-btn:focus + .tooltip-box { opacity:1; }
+
 
 /* SEPARATOR */
 .section-sep { height: 1px; background: var(--border); margin: 16px 0; }
@@ -1109,11 +1135,11 @@ function resetAppearance() {
   <!-- Needs Attention + Milestones -->
   <div class="grid-2" style="margin-bottom:16px;">
     <div class="card">
-      <div class="card-title" style="display:flex;align-items:center;gap:8px;"><span style="color:#ef4444;">&#9888;</span> Needs Attention</div>
+      <div class="card-title" style="display:flex;align-items:center;gap:8px;"><span style="color:#ef4444;">&#9888;</span> Needs Attention<span class="tooltip-wrap"><button class="tooltip-btn" tabindex="-1">?</button><span class="tooltip-box">Auto-generated list of items that need your attention: zones behind plan, open delays, upcoming milestones within 14 days, and recent issues from Quick Log.</span></span></div>
       <div id="attention-list"><div style="color:var(--muted);font-size:12px;padding:8px 0;">Calculating...</div></div>
     </div>
     <div class="card">
-      <div class="card-title">Milestones</div>
+      <div class="card-title" style="display:flex;align-items:center;gap:8px;">Milestones<span class="tooltip-wrap"><button class="tooltip-btn" tabindex="-1">?</button><span class="tooltip-box">Key project dates with countdown. Green = on track. Orange = within 7 days. Red = overdue. Dates are programme targets — update with confirmed dates from Dandara.</span></span></div>
       <div id="milestones-list"></div>
     </div>
   </div>
@@ -1345,7 +1371,10 @@ function resetAppearance() {
 <div id="tab-daily" class="tab-content">
   <div class="grid-2">
         <div class="card" style="overflow-y:auto;max-height:calc(100vh - 160px);">
-      <div class="card-title">&#128203; DGC Daily Log &#8212; DGC-01/02</div>
+      <div class="card-title daily-log-actions" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>&#128203; DGC Daily Log &#8212; DGC-01/02</span>
+        <button class="btn btn-secondary" style="font-size:11px;" onclick="printDailyLog()" title="Print this log form">&#128424; Print</button>
+      </div>
 
       <!-- HEADER -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
@@ -2197,6 +2226,10 @@ function buildVelocityPanel() {
   ttlEl.className = 'card-title';
   ttlEl.style.marginBottom = '0';
   ttlEl.textContent = 'Velocity & Forecast';
+  var ttlTip = document.createElement('span');
+  ttlTip.innerHTML = '<span class="tooltip-wrap"><button class="tooltip-btn" tabindex="-1">?</button>'
+    + '<span class="tooltip-box">Shows how fast the project is progressing and when it will finish at the current rate. "No intervention" means: if nothing changes, this is the end date. Use Programme Editor to see what happens if you add resource or shift tasks.</span></span>';
+  ttlEl.appendChild(ttlTip);
   hdr.appendChild(ttlEl);
   var tgl = document.createElement('div');
   tgl.style.cssText = 'display:flex;gap:4px;margin-left:auto;';
@@ -2690,6 +2723,10 @@ function buildDelayBreakdown() {
   ttl.className = 'card-title';
   ttl.style.marginBottom = '14px';
   ttl.textContent = 'Delay Causes Breakdown';
+  var tipSpan = document.createElement('span');
+  tipSpan.innerHTML = '<span class="tooltip-wrap"><button class="tooltip-btn" tabindex="-1">?</button>'
+    + '<span class="tooltip-box">Visual breakdown of all delay days logged, grouped by who caused them. Client = Dandara instructed (grounds for EOT/compensation). Absorbed = DGC own risk. EOT claimed = formal extension claim not yet agreed.</span></span>';
+  ttl.appendChild(tipSpan);
   el.appendChild(ttl);
 
   // Sub-label: total days
@@ -3445,6 +3482,18 @@ function buildDelayClusterChart() {
       }
     }
   });
+}
+
+function printDailyLog() {
+  document.body.classList.add('printing-daily');
+  // Make sure the daily tab is visible
+  var tab = document.getElementById('tab-daily');
+  if (tab) { tab.style.display = 'block'; tab.classList.add('active'); }
+  window.print();
+  setTimeout(function() {
+    document.body.classList.remove('printing-daily');
+    if (tab) tab.style.display = '';
+  }, 500);
 }
 
 const AFPS = [
