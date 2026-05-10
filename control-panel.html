@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v20</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v21</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -1310,10 +1310,17 @@ function resetAppearance() {
     </div>
   </div>
 
-  <div class="card" style="margin-top:16px;">
-    <div class="card-title">Cashflow — Cumulative AFP</div>
-    <div class="chart-wrap-lg">
-      <canvas id="chart-cashflow2"></canvas>
+  <div class="grid-2" style="margin-top:16px;">
+    <div class="card">
+      <div class="card-title">Cashflow — Cumulative AFP</div>
+      <div class="chart-wrap-lg">
+        <canvas id="chart-cashflow2"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Delay Events — by Category &amp; Month</div>
+      <div class="chart-wrap-lg"><canvas id="chart-delay-cluster"></canvas></div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;">Stacked bars: delay days per month by category. Updates as you log events.</div>
     </div>
   </div>
 
@@ -3378,6 +3385,68 @@ function cycleTaskStatus(taskWbs, btnEl) {
   try { buildProgTable(); } catch(e) {}
 }
 
+function buildDelayClusterChart() {
+  var canvas = document.getElementById('chart-delay-cluster');
+  if (!canvas) return;
+  if (canvas._chart) { canvas._chart.destroy(); }
+
+  var log = loadDelayLog();
+  // Group by month + category
+  var months = {};
+  log.forEach(function(d) {
+    if (!d.date) return;
+    var mon = d.date.slice(0,7); // "2026-04"
+    if (!months[mon]) months[mon] = {client:0, eot_claimed:0, absorbed:0, variance:0, weather:0, design:0};
+    var cat = d.category || 'absorbed';
+    if (months[mon][cat] !== undefined) months[mon][cat] += (d.days||0);
+    else months[mon].absorbed += (d.days||0);
+  });
+
+  var labels = Object.keys(months).sort();
+  if (!labels.length) { canvas.style.display='none'; return; }
+  var fmtMon = function(m) {
+    try { return new Date(m+'-01T00:00:00').toLocaleDateString('en-GB',{month:'short',year:'2-digit'}); }
+    catch(e){ return m; }
+  };
+
+  var cats = [
+    {key:'client',      lbl:'Client-instructed', col:'#ef4444'},
+    {key:'eot_claimed', lbl:'EOT claimed',        col:'#60a5fa'},
+    {key:'absorbed',    lbl:'Absorbed',           col:'#f97316'},
+    {key:'variance',    lbl:'Productivity',       col:'#a855f7'},
+    {key:'weather',     lbl:'Weather',            col:'#38bdf8'},
+    {key:'design',      lbl:'Design',             col:'#34d399'},
+  ];
+
+  canvas._chart = new Chart(canvas.getContext('2d'), {
+    type:'bar',
+    data:{
+      labels: labels.map(fmtMon),
+      datasets: cats.map(function(c) {
+        return {
+          label: c.lbl,
+          data: labels.map(function(m){ return months[m][c.key]||0; }),
+          backgroundColor: c.col + 'cc',
+          borderColor: c.col,
+          borderWidth:1
+        };
+      })
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ labels:{ color:'#94a3b8', font:{size:10} } },
+        tooltip:{ callbacks:{ label:function(ctx){ return ctx.dataset.label+': '+ctx.parsed.y.toFixed(1)+'d'; } } }
+      },
+      scales:{
+        x:{ stacked:true, ticks:{color:'#64748b',font:{size:10}}, grid:{color:'#1e293b'} },
+        y:{ stacked:true, ticks:{color:'#64748b',font:{size:10},callback:function(v){return v+'d';}},
+            grid:{color:'#1e293b'}, title:{display:true,text:'Days',color:'#64748b',font:{size:10}} }
+      }
+    }
+  });
+}
+
 const AFPS = [
   { num:1, issued:'2026-04-01', invoice:'2026-04-07', payment:'2026-05-05', value:22984.59, net:22299, status:'paid', note:'Gross £22,985' },
   { num:2, issued:'2026-04-30', invoice:'2026-04-30', payment:'2026-05-28', value:156739.46, net:156739.46, status:'due', note:'Ian Barnes certified £156,739.46 net (after AFP1 deducted + 2.5% retention). Materials on site £47,815 accepted as goodwill - needs backup for AFP3.' },
@@ -3824,6 +3893,7 @@ window.addEventListener('DOMContentLoaded', () => {
   try { buildVelocityTrend(); }   catch(e) {}
   try { buildProgEditor(); }      catch(e) {}
   try { buildDelayLog(); }        catch(e) {}
+  try { buildDelayClusterChart(); } catch(e) {}
   try { buildAFPOverdueCheck(); }  catch(e) {}
   try { buildRetentionPanel(); }   catch(e) {}
   try { buildEOTPanel(); }         catch(e) {}
