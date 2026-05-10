@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v15</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v16</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -860,6 +860,7 @@ function resetAppearance() {
   <button class="admin-only" onclick="showTab('financial',this)">Financials</button>
   <button onclick="showTab('daily',this)">Daily Log</button>
   <button onclick="showTab('delays',this)">Delays</button>
+  <button class="admin-only" onclick="showTab('variations',this)">Variations</button>
   <button onclick="showTab('report',this)">Weekly Report</button>
 </div>
 
@@ -1620,6 +1621,70 @@ function resetAppearance() {
     </div>
   </div>
 </div>
+<!-- ═══════════════════════════════ VARIATIONS ═══════════════════════════════ -->
+<div id="tab-variations" class="tab-content admin-only">
+
+  <!-- AFA summary -->
+  <div class="kpi-grid" id="afa-kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:16px;"></div>
+
+  <!-- Variation register table -->
+  <div class="card" style="margin-bottom:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+      <div class="card-title" style="margin-bottom:0;">Variation Register</div>
+      <button class="btn btn-secondary" style="font-size:11px;" onclick="exportVarCSV()">&#8659; Export CSV</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="delay-tbl" id="var-table">
+        <thead>
+          <tr>
+            <th>Ref</th>
+            <th>Description</th>
+            <th>Submitted</th>
+            <th>Claimed (&#163;)</th>
+            <th>Agreed (&#163;)</th>
+            <th>Status</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="var-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Add variation form -->
+  <div class="card">
+    <div class="card-title">Add / Edit Variation</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div class="form-group"><label>Reference (CCE / VAR)</label>
+        <input type="text" id="var-ref" placeholder="e.g. CCE 101225 / VAR 5"></div>
+      <div class="form-group"><label>Date Submitted</label>
+        <input type="date" id="var-date"></div>
+      <div class="form-group" style="grid-column:1/-1;"><label>Description</label>
+        <input type="text" id="var-desc" placeholder="Brief description of the variation"></div>
+      <div class="form-group"><label>Value Claimed (&#163;)</label>
+        <input type="number" id="var-claimed" placeholder="0.00" min="0" step="0.01"></div>
+      <div class="form-group"><label>Value Agreed (&#163;)</label>
+        <input type="number" id="var-agreed" placeholder="0.00" min="0" step="0.01"></div>
+      <div class="form-group"><label>Status</label>
+        <select id="var-status">
+          <option value="submitted">Submitted — awaiting response</option>
+          <option value="agreed">Agreed — certified by Dandara</option>
+          <option value="disputed">Disputed — under discussion</option>
+          <option value="rejected">Rejected by Dandara</option>
+          <option value="withdrawn">Withdrawn by DGC</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1;"><label>Notes</label>
+        <input type="text" id="var-notes" placeholder="Any additional context (e.g. linked delay ref, instruction source)"></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-primary" onclick="addVariation()">Add Variation</button>
+      <span id="var-status-msg" style="font-size:11px;color:var(--green);font-weight:600;"></span>
+    </div>
+  </div>
+
+</div>
+
 <!-- ═══════════════════════════════ WEEKLY REPORT ═══════════════════════════════ -->
 <div id="tab-report" class="tab-content">
   <div style="margin-bottom:14px; display:flex; gap:10px;">
@@ -2917,6 +2982,142 @@ function importFullJSON(input) {
   input.value = '';
 }
 
+var VAR_REGISTER_DEFAULTS = [
+  {id:'V001', ref:'CCE 101221 / VAR 1', date:'2026-03-25', desc:'Hand excavation around utilities (road build)',
+   claimed:1405.50, agreed:1405.50, status:'agreed', notes:'AFP2 agreed, Ian Barnes certified'},
+  {id:'V002', ref:'CCE 101223 / VAR 2', date:'2026-03-27', desc:'Compound setup — additional fencing & welfare',
+   claimed:7004.05, agreed:7004.05, status:'agreed', notes:'AFP2 agreed, Ian Barnes certified'},
+  {id:'V003', ref:'CCE 101224 / VAR 3', date:'2026-04-02', desc:'MU scanning — Zones 1-3 utility search',
+   claimed:1552.00, agreed:1552.00, status:'agreed', notes:'AFP2 agreed'},
+  {id:'V004', ref:'CCE 101228 / VAR 4', date:'2026-04-08', desc:'300mm diameter scanning — additional areas',
+   claimed:963.10, agreed:963.10, status:'agreed', notes:'AFP2 agreed'},
+  {id:'V005', ref:'RT 101012 / VAR 5', date:'2026-04-15', desc:'Concrete removal delay — land drain obstruction',
+   claimed:340.00, agreed:340.00, status:'agreed', notes:'AFP2 agreed'},
+  {id:'V006', ref:'RT 101014 / VAR 6', date:'2026-04-18', desc:'Cold tar disposal — unforeseen hazardous material',
+   claimed:1331.13, agreed:1331.13, status:'agreed', notes:'AFP2 agreed'},
+  {id:'V007', ref:'RT 101308 / VAR 7', date:'2026-04-20', desc:'Concrete breaking — Plot 10 obstruction',
+   claimed:1513.86, agreed:1513.86, status:'agreed', notes:'AFP2 agreed'},
+  {id:'V008', ref:'RT 101310 / VAR 8', date:'2026-04-22', desc:'Asbestos discovery — make-safe & disposal',
+   claimed:341.88, agreed:341.88, status:'agreed', notes:'AFP2 agreed'},
+  {id:'V009', ref:'EOT-A / VAR 9', date:'2026-04-01', desc:'Extended prelims — prelim costs week 1 delay',
+   claimed:4506.05, agreed:0, status:'submitted', notes:'EOT claimed, not yet certified by Dandara'},
+  {id:'V010', ref:'EOT-B / VAR 10', date:'2026-04-08', desc:'Extended prelims — 4.5 working days concurrent delay',
+   claimed:5576.90, agreed:0, status:'submitted', notes:'EOT claimed, not yet certified'},
+  {id:'V011', ref:'EOT-C-G / VAR 11', date:'2026-04-15', desc:'Extended prelims — EOT weeks C through G (5 days)',
+   claimed:10764.09, agreed:0, status:'submitted', notes:'EOT claimed, not yet certified'},
+];
+
+function loadVarRegister() {
+  var stored = lsGet('dgc_var_register', 'null');
+  if (!stored) {
+    lsSet('dgc_var_register', VAR_REGISTER_DEFAULTS);
+    return JSON.parse(JSON.stringify(VAR_REGISTER_DEFAULTS));
+  }
+  return stored;
+}
+
+function addVariation() {
+  var ref    = (document.getElementById('var-ref')     ||{}).value||'';
+  var desc   = (document.getElementById('var-desc')    ||{}).value||'';
+  var date   = (document.getElementById('var-date')    ||{}).value||TODAY.toISOString().slice(0,10);
+  var claimed= parseFloat((document.getElementById('var-claimed')||{}).value||0)||0;
+  var agreed = parseFloat((document.getElementById('var-agreed') ||{}).value||0)||0;
+  var status = (document.getElementById('var-status')  ||{}).value||'submitted';
+  var notes  = (document.getElementById('var-notes')   ||{}).value||'';
+  var st = document.getElementById('var-status-msg');
+
+  if (!ref||!desc) {
+    if(st){st.style.color='var(--red)';st.textContent='Reference and description are required.';}
+    return;
+  }
+  var vars = loadVarRegister();
+  vars.push({id:'V'+Date.now(), ref:ref, date:date, desc:desc,
+             claimed:claimed, agreed:agreed, status:status, notes:notes});
+  lsSet('dgc_var_register', vars);
+  if(st){st.style.color='var(--green)';st.textContent='Variation added.';}
+  ['var-ref','var-desc','var-claimed','var-agreed','var-notes'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  buildVariationRegister();
+}
+
+function buildVariationRegister() {
+  var vars = loadVarRegister();
+  var tbody = document.getElementById('var-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  var statusCol = {agreed:'#22c55e', submitted:'#f59e0b', disputed:'#f97316', rejected:'#ef4444', withdrawn:'#64748b'};
+  var fmt = function(n){ return n ? '£'+parseFloat(n).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'; };
+  var fmtD = function(ds){ try{return new Date(ds+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'});}catch(e){return ds;} };
+
+  vars.forEach(function(v) {
+    var tr = document.createElement('tr');
+    var cols = [
+      {t:v.ref||'—', w:null},
+      {t:v.desc||'—', w:'280px'},
+      {t:fmtD(v.date), w:null},
+      {t:fmt(v.claimed), w:null},
+      {t:fmt(v.agreed), w:null},
+      {t:null, html:'<span style="font-size:10px;font-weight:700;color:'+(statusCol[v.status]||'#94a3b8')+';">'+((v.status||'').toUpperCase())+'</span>', w:null},
+      {t:v.notes||'—', w:'200px'}
+    ];
+    cols.forEach(function(col) {
+      var td = document.createElement('td');
+      if (col.w) td.style.maxWidth = col.w;
+      if (col.html) td.innerHTML = col.html;
+      else td.textContent = col.t;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+
+  buildAFAKPIs(vars);
+}
+
+function buildAFAKPIs(vars) {
+  var el = document.getElementById('afa-kpi-grid');
+  if (!el) return;
+  el.innerHTML = '';
+
+  var CONTRACT_SUM = 450000;
+  var agreedTotal = vars.filter(function(v){ return v.status==='agreed'; })
+                        .reduce(function(s,v){ return s+(v.agreed||0); }, 0);
+  var submittedTotal = vars.filter(function(v){ return v.status==='submitted'; })
+                           .reduce(function(s,v){ return s+(v.claimed||0); }, 0);
+  var disputedTotal = vars.filter(function(v){ return v.status==='disputed'; })
+                          .reduce(function(s,v){ return s+(v.claimed||0); }, 0);
+  var afa = CONTRACT_SUM + agreedTotal + submittedTotal + disputedTotal;
+  var fmt = function(n){ return '£'+n.toLocaleString('en-GB',{minimumFractionDigits:0,maximumFractionDigits:0}); };
+
+  var kpis = [
+    {lbl:'Contract Sum', val:fmt(CONTRACT_SUM), col:'var(--text)', sub:'signed contract'},
+    {lbl:'Agreed Variations', val:fmt(agreedTotal), col:'#22c55e', sub:'certified by Dandara'},
+    {lbl:'Submitted (uncertified)', val:fmt(submittedTotal), col:'#f59e0b', sub:'awaiting agreement'},
+    {lbl:'Disputed', val:fmt(disputedTotal), col:'#f97316', sub:'under discussion'},
+    {lbl:'Anticipated Final Account', val:fmt(afa), col:'var(--accent)', sub:'contract + all live claims', bold:true},
+  ];
+  kpis.forEach(function(k) {
+    var card = document.createElement('div');
+    card.className = 'kpi-card' + (k.bold?' accent':'');
+    card.innerHTML = '<div class="kpi-label">'+k.lbl+'</div>'
+      +'<div class="kpi-value" style="color:'+k.col+';font-size:'+(k.bold?'22':'18')+'px;">'+k.val+'</div>'
+      +'<div class="kpi-sub">'+k.sub+'</div>';
+    el.appendChild(card);
+  });
+}
+
+function exportVarCSV() {
+  var vars = loadVarRegister();
+  var rows = [['Reference','Description','Date Submitted','Claimed (GBP)','Agreed (GBP)','Status','Notes']];
+  vars.forEach(function(v) {
+    rows.push([v.ref||'', v.desc||'', v.date||'',
+               (v.claimed||0).toFixed(2), (v.agreed||0).toFixed(2), v.status||'', v.notes||'']);
+  });
+  var csv = rows.map(function(r){ return r.map(csvEscape).join(','); }).join('\r\n');
+  downloadFile('dgc-variation-register-'+TODAY.toISOString().slice(0,10)+'.csv', csv, 'text/csv;charset=utf-8;');
+}
+
 const AFPS = [
   { num:1, issued:'2026-04-01', invoice:'2026-04-07', payment:'2026-05-05', value:22984.59, net:22299, status:'paid', note:'Gross £22,985' },
   { num:2, issued:'2026-04-30', invoice:'2026-04-30', payment:'2026-05-28', value:156739.46, net:156739.46, status:'due', note:'Ian Barnes certified £156,739.46 net (after AFP1 deducted + 2.5% retention). Materials on site £47,815 accepted as goodwill - needs backup for AFP3.' },
@@ -3350,6 +3551,7 @@ window.addEventListener('DOMContentLoaded', () => {
   try { buildVelocityTrend(); }   catch(e) {}
   try { buildProgEditor(); }      catch(e) {}
   try { buildDelayLog(); }        catch(e) {}
+  try { buildVariationRegister(); } catch(e) {}
   try { buildMilestones(); }      catch(e) {}
   try { buildAttentionList(); }   catch(e) {}
 });
