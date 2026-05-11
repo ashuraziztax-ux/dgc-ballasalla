@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v27</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v28</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -463,6 +463,27 @@ body:not(.admin-mode) .admin-only { display: none !important; }
 .zh-task-row:last-child { border-bottom:none; }
 .zh-delay-row { padding:8px 0; border-bottom:1px solid var(--border); }
 .zh-delay-row:last-child { border-bottom:none; }
+
+/* ─── Staff Hours tab (v28) ─── */
+.sh-pattern-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+@media(max-width:600px){ .sh-pattern-grid { grid-template-columns:1fr; } }
+.sh-row { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:12px; }
+.sh-row:last-child { border-bottom:none; }
+.sh-row label { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:0.04em; min-width:80px; }
+.sh-row input[type=time], .sh-row select { background:var(--surface2); border:1px solid var(--border); border-radius:6px; color:var(--text); padding:4px 8px; font-size:12px; }
+.sh-kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin-bottom:16px; }
+.sh-kpi { background:var(--surface2); border-radius:8px; padding:12px; text-align:center; }
+.sh-kpi .val { font-size:22px; font-weight:800; line-height:1; margin-bottom:4px; }
+.sh-kpi .lbl { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; }
+.sh-week-table { width:100%; border-collapse:collapse; font-size:12px; }
+.sh-week-table th { padding:7px 8px; text-align:left; color:var(--muted); font-size:10px; font-weight:700; text-transform:uppercase; border-bottom:1px solid var(--border); }
+.sh-week-table td { padding:7px 8px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.sh-week-table tr:last-child td { border-bottom:none; }
+.sh-week-table input[type=number] { width:60px; background:var(--surface2); border:1px solid var(--border); border-radius:5px; color:var(--text); padding:3px 6px; font-size:12px; text-align:right; }
+.sh-diff-pos { color:#22c55e; font-weight:700; }
+.sh-diff-neg { color:#ef4444; font-weight:700; }
+.sh-diff-zero { color:var(--muted); }
+.sh-sat-tag { font-size:9px; background:#f59e0b20; color:#f59e0b; border:1px solid #f59e0b40; border-radius:8px; padding:1px 6px; margin-left:4px; }
 </style>
 </head>
 <body>
@@ -810,6 +831,7 @@ function clearForm() {
 <div class="nav">
   <button class="active" onclick="showTab('dashboard',this)">Dashboard</button>
   <button onclick="showTab('sitemap',this)">Site Map</button>
+  <button onclick="showTab('staffhours',this)">Staff Hours</button>
   <button onclick="showTab('programme',this)">Programme</button>
   <button onclick="showTab('gantt',this)">Gantt Chart</button>
   <button class="admin-only" onclick="showTab('financial',this)">Financials</button>
@@ -1028,6 +1050,83 @@ function clearForm() {
 
 <!-- ═══════════════════════════════ ZONES ═══════════════════════════════ -->
 
+
+<!-- ═══════════════════ STAFF HOURS ═══════════════════ -->
+<div id="tab-staffhours" class="tab-content">
+
+  <!-- Pattern Config -->
+  <div class="sh-pattern-grid">
+
+    <!-- Priced / Reference -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:10px;">&#128203; Priced Pattern <span style="font-size:10px;color:var(--muted);font-weight:400;">(contract reference — fixed)</span></div>
+      <div class="sh-row"><label>Mon–Thu</label><span>07:30 – 17:00</span><span style="color:var(--accent);font-weight:700;">9.0 h/day</span></div>
+      <div class="sh-row"><label>Friday</label><span>07:30 – 15:30</span><span style="color:var(--accent);font-weight:700;">7.5 h</span></div>
+      <div class="sh-row"><label>Saturday</label><span>Every other — 08:00 – 12:00</span><span style="color:var(--accent);font-weight:700;">4.0 h avg 2.0</span></div>
+      <div class="sh-row"><label>Break</label><span>1 hr total — 30 min paid by DGC</span></div>
+      <div class="sh-row" style="margin-top:8px;border-top:2px solid var(--accent);padding-top:10px;border-bottom:none;">
+        <label style="color:var(--text);font-weight:700;">Priced Avg</label>
+        <span style="font-size:18px;font-weight:800;color:#4ade80;">45.5 h/week</span>
+      </div>
+    </div>
+
+    <!-- Actual (editable) -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:10px;">&#9200; Actual Working Pattern <span style="font-size:10px;color:var(--muted);font-weight:400;">(edit to match site)</span></div>
+
+      <div class="sh-row">
+        <label>Mon–Thu start</label>
+        <input type="time" id="sh-monThu-start" value="07:30" onchange="shSavePattern();shRebuild()">
+        <input type="time" id="sh-monThu-end"   value="17:00" onchange="shSavePattern();shRebuild()">
+      </div>
+      <div class="sh-row">
+        <label>Friday start</label>
+        <input type="time" id="sh-fri-start" value="07:30" onchange="shSavePattern();shRebuild()">
+        <input type="time" id="sh-fri-end"   value="15:30" onchange="shSavePattern();shRebuild()">
+      </div>
+      <div class="sh-row">
+        <label>Break (unpaid)</label>
+        <select id="sh-break-mins" onchange="shSavePattern();shRebuild()">
+          <option value="30" selected>30 min unpaid (30 min paid)</option>
+          <option value="45">45 min unpaid (15 min paid)</option>
+          <option value="60">60 min unpaid (no paid break)</option>
+        </select>
+      </div>
+      <div class="sh-row">
+        <label>Saturday</label>
+        <select id="sh-sat-freq" onchange="shSavePattern();shRebuild()">
+          <option value="alternate" selected>Every other Saturday</option>
+          <option value="every">Every Saturday</option>
+          <option value="none">No Saturdays</option>
+        </select>
+      </div>
+      <div class="sh-row" id="sh-sat-times-row">
+        <label>Sat hours</label>
+        <input type="time" id="sh-sat-start" value="08:00" onchange="shSavePattern();shRebuild()">
+        <input type="time" id="sh-sat-end"   value="12:00" onchange="shSavePattern();shRebuild()">
+      </div>
+      <div class="sh-row" style="margin-top:8px;border-top:2px solid var(--accent2);padding-top:10px;border-bottom:none;">
+        <label style="color:var(--text);font-weight:700;">Actual Avg</label>
+        <span id="sh-actual-avg" style="font-size:18px;font-weight:800;color:#60a5fa;">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Impact KPIs -->
+  <div class="sh-kpi-row" id="sh-impact-kpis"></div>
+
+  <!-- Weekly Log -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+      <div class="card-title" style="margin-bottom:0;">&#128197; Weekly Hours Log</div>
+      <div style="font-size:11px;color:var(--muted);">Enter actual site hours each Friday. Includes all operatives on site.</div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="sh-week-table" id="sh-week-table-el"></table>
+    </div>
+  </div>
+
+</div>
 
 <!-- ═══════════════════════════════ PROGRAMME ═══════════════════════════════ -->
 <div id="tab-programme" class="tab-content">
@@ -3640,6 +3739,7 @@ function showTab(name, btn) {
   if(name === 'financial'){ try { buildFinancialChart(); } catch(e){} }
   if(name === 'report')   buildReport();
   if(name === 'sitemap')  buildSiteMap();
+  if(name === 'staffhours') buildStaffHours();
 }
 
 // ═══════════════════════ INIT ═══════════════════════
@@ -4412,6 +4512,244 @@ function smFocusZone(sectionId) {
   if (!sect) return;
   openZoneHealth(sect.zoneId);
 }
+// ══════════════════════════════════════════════════════════════════════════
+// STAFF HOURS (v28)
+// ══════════════════════════════════════════════════════════════════════════
+
+// Priced pattern constants (reference, never changed)
+var SH_PRICED = {
+  monThu:  { start:'07:30', end:'17:00', unpaidMins:30 },
+  friday:  { start:'07:30', end:'15:30', unpaidMins:30 },
+  saturday:{ freq:'alternate', start:'08:00', end:'12:00', unpaidMins:0 }
+};
+
+// PROJECT_START and PROJECT_END already in scope as global dates
+var SH_PROJ_START = new Date(2026, 2, 23); // 23 Mar 2026 (Monday)
+var SH_PROJ_END   = new Date(2026, 5, 29); // 29 Jun 2026
+
+function shTimeToHours(t) {
+  var p = t.split(':');
+  return parseInt(p[0],10) + parseInt(p[1],10)/60;
+}
+
+function shShiftHours(start, end, unpaidMins) {
+  return Math.max(0, shTimeToHours(end) - shTimeToHours(start) - unpaidMins/60);
+}
+
+function shWeeklyHours(pat, hasSat) {
+  var monThu = shShiftHours(pat.monThu.start, pat.monThu.end, pat.monThu.unpaidMins) * 4;
+  var fri    = shShiftHours(pat.friday.start,  pat.friday.end,  pat.friday.unpaidMins);
+  var sat    = 0;
+  if (hasSat && pat.saturday.freq !== 'none') {
+    sat = shShiftHours(pat.saturday.start, pat.saturday.end, pat.saturday.unpaidMins);
+  }
+  return Math.round((monThu + fri + sat) * 10) / 10;
+}
+
+function shAvgWeekHours(pat) {
+  if (pat.saturday.freq === 'every')     return shWeeklyHours(pat, true);
+  if (pat.saturday.freq === 'none')      return shWeeklyHours(pat, false);
+  // alternate: average of sat-week and non-sat-week
+  return Math.round((shWeeklyHours(pat, true) + shWeeklyHours(pat, false)) / 2 * 10) / 10;
+}
+
+// Load/save actual pattern
+function shLoadPattern() {
+  var stored = lsGet('dgc_staff_pattern', null);
+  if (stored) return stored;
+  return JSON.parse(JSON.stringify(SH_PRICED));
+}
+
+function shSavePattern() {
+  var pat = {
+    monThu:  { start: document.getElementById('sh-monThu-start').value,
+               end:   document.getElementById('sh-monThu-end').value,
+               unpaidMins: parseInt(document.getElementById('sh-break-mins').value,10) },
+    friday:  { start: document.getElementById('sh-fri-start').value,
+               end:   document.getElementById('sh-fri-end').value,
+               unpaidMins: parseInt(document.getElementById('sh-break-mins').value,10) },
+    saturday:{ freq:  document.getElementById('sh-sat-freq').value,
+               start: document.getElementById('sh-sat-start').value,
+               end:   document.getElementById('sh-sat-end').value,
+               unpaidMins: 0 }
+  };
+  lsSet('dgc_staff_pattern', pat);
+}
+
+// Load/save weekly hours log { 'YYYY-MM-DD': actualHours }
+function shLoadLog() { return lsGet('dgc_weekly_log', null) || {}; }
+function shSaveLog(log) { lsSet('dgc_weekly_log', log); }
+
+// Generate project weeks: [{key, monDate, friDate, isSatWeek}]
+function shProjectWeeks() {
+  var weeks = [];
+  var d = new Date(SH_PROJ_START);
+  var satWeek = false; // week 1: 23-27 Mar — assume no Saturday (first week)
+  while (d <= SH_PROJ_END) {
+    var mon = new Date(d);
+    var fri = new Date(d); fri.setDate(fri.getDate() + 4);
+    var sat = new Date(d); sat.setDate(sat.getDate() + 5);
+    weeks.push({
+      key:     mon.toISOString().slice(0,10),
+      monDate: mon,
+      friDate: fri,
+      satDate: sat,
+      isSatWeek: satWeek
+    });
+    d.setDate(d.getDate() + 7);
+    satWeek = !satWeek;
+  }
+  return weeks;
+}
+
+function shFmtDate(d) {
+  var dd = d.getDate(), mm = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+  return dd + ' ' + mm;
+}
+
+// ─── Main builder ─────────────────────────────────────────────────────────
+function buildStaffHours() {
+  var pat = shLoadPattern();
+  var log = shLoadLog();
+
+  // Restore form values
+  try {
+    document.getElementById('sh-monThu-start').value = pat.monThu.start;
+    document.getElementById('sh-monThu-end').value   = pat.monThu.end;
+    document.getElementById('sh-fri-start').value    = pat.friday.start;
+    document.getElementById('sh-fri-end').value      = pat.friday.end;
+    document.getElementById('sh-break-mins').value   = String(pat.monThu.unpaidMins);
+    document.getElementById('sh-sat-freq').value     = pat.saturday.freq;
+    document.getElementById('sh-sat-start').value    = pat.saturday.start;
+    document.getElementById('sh-sat-end').value      = pat.saturday.end;
+    var satRow = document.getElementById('sh-sat-times-row');
+    if (satRow) satRow.style.display = pat.saturday.freq === 'none' ? 'none' : '';
+  } catch(e) {}
+
+  shRebuild();
+}
+
+function shRebuild() {
+  var pat   = shLoadPattern();
+  var log   = shLoadLog();
+  var weeks = shProjectWeeks();
+  var today = TODAY;
+
+  // Update actual avg display
+  var avg = shAvgWeekHours(pat);
+  var avgEl = document.getElementById('sh-actual-avg');
+  if (avgEl) avgEl.textContent = avg + ' h/week';
+
+  // Show/hide saturday times row based on freq
+  var satRow = document.getElementById('sh-sat-times-row');
+  var satFreqEl = document.getElementById('sh-sat-freq');
+  if (satRow && satFreqEl) satRow.style.display = satFreqEl.value === 'none' ? 'none' : '';
+
+  var pricedAvg = 45.5;
+  var actualAvg = avg;
+  var efficiency = pricedAvg > 0 ? Math.round(actualAvg / pricedAvg * 1000) / 10 : 0;
+
+  // Cumulative totals for completed weeks
+  var pricedTotal = 0, actualTotal = 0, weeksLogged = 0;
+  weeks.forEach(function(w) {
+    if (w.friDate < today) {
+      var ph = shWeeklyHours(SH_PRICED, w.isSatWeek);
+      pricedTotal += ph;
+      var actual = log[w.key] !== undefined ? parseFloat(log[w.key]) : null;
+      if (actual !== null && !isNaN(actual)) { actualTotal += actual; weeksLogged++; }
+    }
+  });
+
+  var deficit = Math.round((pricedTotal - actualTotal) * 10) / 10;
+  var pricedDayHrs = shShiftHours(SH_PRICED.monThu.start, SH_PRICED.monThu.end, SH_PRICED.monThu.unpaidMins);
+  var extraDays = pricedDayHrs > 0 ? Math.round(deficit / pricedDayHrs * 10) / 10 : 0;
+
+  // Remaining weeks count
+  var weeksLeft = weeks.filter(function(w) { return w.monDate >= today; }).length;
+  var hoursLeft = weeksLeft * actualAvg;
+
+  // Impact KPIs
+  var kpiEl = document.getElementById('sh-impact-kpis');
+  if (kpiEl) {
+    var effCol = efficiency >= 95 ? '#22c55e' : efficiency >= 85 ? '#f59e0b' : '#ef4444';
+    var defCol = deficit > 0 ? '#ef4444' : '#22c55e';
+    kpiEl.innerHTML =
+      '<div class="sh-kpi"><div class="val" style="color:#4ade80;">' + pricedAvg + 'h</div><div class="lbl">Priced avg/week</div></div>' +
+      '<div class="sh-kpi"><div class="val" style="color:#60a5fa;">' + actualAvg + 'h</div><div class="lbl">Actual avg/week</div></div>' +
+      '<div class="sh-kpi"><div class="val" style="color:' + effCol + ';">' + efficiency + '%</div><div class="lbl">Hours efficiency</div></div>' +
+      (weeksLogged > 0 ?
+        '<div class="sh-kpi"><div class="val" style="color:' + defCol + ';">' + (deficit > 0 ? '-' : '+') + Math.abs(deficit) + 'h</div><div class="lbl">Hours ' + (deficit > 0 ? 'deficit' : 'surplus') + ' to date</div></div>' +
+        '<div class="sh-kpi"><div class="val" style="color:' + defCol + ';">' + Math.abs(extraDays) + ' days</div><div class="lbl">Programme ' + (deficit > 0 ? 'behind' : 'ahead') + ' (hrs)</div></div>'
+      : '<div class="sh-kpi"><div class="val" style="color:var(--muted);">—</div><div class="lbl">Log hours below to see deficit</div></div>') +
+      '<div class="sh-kpi"><div class="val" style="color:#a78bfa;">' + weeksLeft + '</div><div class="lbl">Weeks remaining</div></div>';
+  }
+
+  // Weekly table
+  var tbl = document.getElementById('sh-week-table-el');
+  if (!tbl) return;
+
+  var thead = '<thead><tr>' +
+    '<th>Week</th><th>Dates</th><th>Priced hrs</th><th>Actual hrs entered</th><th>Difference</th><th>Running deficit</th>' +
+    '</tr></thead>';
+
+  var running = 0;
+  var tbody = '<tbody>';
+  weeks.forEach(function(w) {
+    var isPast   = w.friDate < today;
+    var isCurrent = (w.monDate <= today && w.friDate >= today) || (!isPast && w.monDate <= today);
+    var wkNum    = weeks.indexOf(w) + 1;
+    var planned  = shWeeklyHours(pat, w.isSatWeek);
+    var priced   = shWeeklyHours(SH_PRICED, w.isSatWeek);
+    var actual   = log[w.key] !== undefined ? parseFloat(log[w.key]) : null;
+
+    if (isPast && actual !== null && !isNaN(actual)) running += actual - priced;
+
+    var diffVal  = (actual !== null && !isNaN(actual)) ? Math.round((actual - priced)*10)/10 : null;
+    var diffHtml = diffVal === null ? '<span style="color:var(--muted);">—</span>' :
+                   diffVal > 0 ? '<span class="sh-diff-pos">+' + diffVal + 'h</span>' :
+                   diffVal < 0 ? '<span class="sh-diff-neg">' + diffVal + 'h</span>' :
+                                 '<span class="sh-diff-zero">0h</span>';
+
+    var runHtml  = (isPast && actual !== null) ?
+      '<span style="color:' + (running < 0 ? '#ef4444' : '#22c55e') + ';font-weight:700;">' +
+      (running > 0 ? '+' : '') + Math.round(running*10)/10 + 'h</span>' : '—';
+
+    var rowStyle = isCurrent ? 'background:#f59e0b10;' : '';
+    var badge = w.isSatWeek ? '<span class="sh-sat-tag">Sat</span>' : '';
+
+    tbody += '<tr style="' + rowStyle + '">' +
+      '<td style="color:var(--muted);font-weight:600;">Wk ' + wkNum + badge + '</td>' +
+      '<td>' + shFmtDate(w.monDate) + ' – ' + shFmtDate(w.friDate) +
+        (w.isSatWeek && pat.saturday.freq !== 'none' ? ' + Sat ' + shFmtDate(w.satDate) : '') +
+      '</td>' +
+      '<td style="color:var(--accent);font-weight:600;">' + priced + 'h</td>' +
+      '<td>' +
+        '<input type="number" min="0" max="80" step="0.5" ' +
+        'value="' + (actual !== null && !isNaN(actual) ? actual : '') + '" ' +
+        'placeholder="' + planned + '" ' +
+        'onchange="shLogHours(\'' + w.key + '\',this.value)" ' +
+        'style="' + (isPast ? '' : 'opacity:0.5;') + '">' +
+      '</td>' +
+      '<td>' + diffHtml + '</td>' +
+      '<td>' + runHtml + '</td>' +
+      '</tr>';
+  });
+  tbody += '</tbody>';
+  tbl.innerHTML = thead + tbody;
+}
+
+function shLogHours(weekKey, value) {
+  var log = shLoadLog();
+  var v = parseFloat(value);
+  if (!isNaN(v) && v >= 0) {
+    log[weekKey] = v;
+  } else {
+    delete log[weekKey];
+  }
+  shSaveLog(log);
+  shRebuild();
+}
+
 // ═══════════════════════ ZONE HEALTH MODAL (v27) ═══════════════════════
 function openZoneHealth(zoneId) {
   var z = ZONES.find(function(zz) { return zz.id === zoneId; });
