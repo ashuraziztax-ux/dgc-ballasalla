@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v29</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v30</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -915,6 +915,37 @@ function clearForm() {
           <div style="font-size:20px;font-weight:700;color:#2dd4bf;" id="kpi-spend-pct">—%</div>
           <div style="font-size:8px;color:var(--muted);margin-bottom:4px;">cost incurred</div>
           <div style="height:3px;background:#1e293b;border-radius:2px;"><div id="bar-spend" style="height:3px;background:#2dd4bf;border-radius:2px;width:0%;"></div></div>
+        </div>
+      </div>
+    </div>
+    <!-- Programme Clock — 5-number summary (v30) -->
+    <div class="kpi-card" style="grid-column:span 3;padding:14px 18px;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:12px;">Programme Clock</div>
+      <div id="pc-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;text-align:center;">
+        <div>
+          <div style="font-size:26px;font-weight:800;color:var(--accent);" id="pc-total-weeks">—</div>
+          <div style="font-size:10px;font-weight:700;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">Total duration</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:3px;">23 Mar → 29 Jun agreed</div>
+        </div>
+        <div>
+          <div style="font-size:26px;font-weight:800;color:#60a5fa;" id="pc-elapsed-weeks">—</div>
+          <div style="font-size:10px;font-weight:700;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">Elapsed</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:3px;" id="pc-week-of">Week — of —</div>
+        </div>
+        <div>
+          <div style="font-size:26px;font-weight:800;color:#f59e0b;" id="pc-cal-weeks-left">—</div>
+          <div style="font-size:10px;font-weight:700;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">Left to deadline</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:3px;">calendar weeks to 29 Jun</div>
+        </div>
+        <div style="border-left:1px solid var(--border);padding-left:12px;">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">Forecast — Programme</div>
+          <div style="font-size:20px;font-weight:800;line-height:1.2;" id="pc-forecast-plan">—</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:4px;">tasks at planned speed<br><span id="pc-plan-rem" style="color:var(--accent);"></span></div>
+        </div>
+        <div style="border-left:1px solid var(--border);padding-left:12px;">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">Forecast — Real pace</div>
+          <div style="font-size:20px;font-weight:800;line-height:1.2;" id="pc-forecast-pace">—</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:4px;">adjusted for actual speed<br><span id="pc-pace-velocity" style="color:#a78bfa;"></span></div>
         </div>
       </div>
     </div>
@@ -3922,6 +3953,108 @@ function getTaskStatus(task) {
 }
 
 // ═══════════════════════ TAB NAV ═══════════════════════
+
+// ═══════════════════════ PROGRAMME CLOCK (v30) ═══════════════════════
+function buildProgrammeClock() {
+  try {
+    var start    = parseDate('2026-03-23');
+    var deadline = parseDate('2026-06-29');
+    var totalDays  = daysBetween(start, deadline);          // e.g. 98
+    var totalWeeks = Math.round(totalDays / 7 * 10) / 10;
+
+    var elapsedDays  = Math.max(0, daysBetween(start, TODAY));
+    var elapsedWeeks = Math.round(elapsedDays / 7 * 10) / 10;
+    var weekNum      = Math.max(1, Math.ceil(elapsedDays / 7));
+
+    var calDaysLeft  = Math.max(0, daysBetween(TODAY, deadline));
+    var calWeeksLeft = Math.round(calDaysLeft / 7 * 10) / 10;
+
+    // ── Zone-budget-weighted actual% and planned% ────────────────────────────
+    // Use zone-level progress (getZoneProgress) — the accurate source of truth.
+    // Zone dates give the planned schedule; zone budgets give the weighting.
+    var totBud = 0, totActDone = 0, totPlanDone = 0;
+    ZONES.forEach(function(z) {
+      var bud = z.budget || 0;
+      if (bud <= 0) return;
+      totBud += bud;
+
+      // Actual: zone progress % from localStorage (seeded from GanttPRO zone %)
+      var done = getZoneProgress(z.id) / 100;
+      totActDone += bud * done;
+
+      // Planned: how far into this zone should we be by today (by calendar)
+      var zs = parseDate(z.start), ze = parseDate(z.end);
+      var pf = 0;
+      if (TODAY >= ze) pf = 1;
+      else if (TODAY > zs) pf = Math.min(1, daysBetween(zs, TODAY) / Math.max(1, daysBetween(zs, ze)));
+      totPlanDone += bud * pf;
+    });
+
+    var actualPct  = totBud > 0 ? totActDone  / totBud * 100 : 0;
+    var plannedPct = totBud > 0 ? totPlanDone / totBud * 100 : 0;
+    var remWorkPct = Math.max(0, 100 - actualPct);
+
+    // ── Programme forecast ───────────────────────────────────────────────────
+    // "Tasks say X% left → X% of total programme duration still to go"
+    var remDaysPlan  = totalDays * remWorkPct / 100;
+    var finishPlan   = new Date(TODAY.getTime() + remDaysPlan * 86400000);
+    var vsDeadPlan   = daysBetween(deadline, finishPlan) / 7;  // +ve = late
+    var remWksPlan   = Math.round(remDaysPlan / 7 * 10) / 10;
+
+    // ── Real-pace forecast ───────────────────────────────────────────────────
+    // Velocity = actual% / planned% — how fast we're really going vs plan
+    var velocity    = (plannedPct > 3) ? Math.max(0.05, actualPct / plannedPct) : null;
+    var vsDeadPace  = null;
+    var remWksPace  = null;
+    if (velocity !== null) {
+      var remDaysPace = remDaysPlan / velocity;
+      var finishPace  = new Date(TODAY.getTime() + remDaysPace * 86400000);
+      vsDeadPace      = daysBetween(deadline, finishPace) / 7;
+      remWksPace      = Math.round(remDaysPace / 7 * 10) / 10;
+    }
+
+    // ── Format helper ────────────────────────────────────────────────────────
+    function fmtVsDead(wks) {
+      if (wks === null) return '<span style="color:var(--muted);">—</span>';
+      var abs = Math.abs(wks);
+      var label = abs < 1.5
+        ? Math.round(abs * 7) + ' days'
+        : (Math.round(abs * 10) / 10) + ' wks';
+      if (wks > 0.5)  return '<span style="color:#ef4444;">' + label + ' late</span>';
+      if (wks < -0.5) return '<span style="color:#22c55e;">' + label + ' early</span>';
+      return '<span style="color:#22c55e;">On time ✓</span>';
+    }
+
+    // ── Update DOM ───────────────────────────────────────────────────────────
+    var el;
+    el = document.getElementById('pc-total-weeks');
+    if (el) el.textContent = totalWeeks + ' wks';
+
+    el = document.getElementById('pc-elapsed-weeks');
+    if (el) el.textContent = elapsedWeeks + ' wks';
+
+    el = document.getElementById('pc-week-of');
+    if (el) el.textContent = 'Week ' + weekNum + ' of ' + Math.round(totalWeeks);
+
+    el = document.getElementById('pc-cal-weeks-left');
+    if (el) el.textContent = calWeeksLeft + ' wks';
+
+    el = document.getElementById('pc-forecast-plan');
+    if (el) el.innerHTML = fmtVsDead(vsDeadPlan);
+
+    el = document.getElementById('pc-plan-rem');
+    if (el) el.textContent = remWksPlan + ' wks of work left';
+
+    el = document.getElementById('pc-forecast-pace');
+    if (el) el.innerHTML = fmtVsDead(vsDeadPace);
+
+    el = document.getElementById('pc-pace-velocity');
+    if (el && velocity !== null) {
+      el.textContent = 'running at ' + Math.round(velocity * 100) + '% of plan speed';
+    }
+
+  } catch(e) { console.warn('buildProgrammeClock:', e); }
+}
 function showTab(name, btn) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
@@ -4071,6 +4204,7 @@ window.addEventListener('DOMContentLoaded', () => {
       lsSet('dgc_prog_live', null);
     }
   } catch(e) {}
+  try { buildProgrammeClock(); } catch(e) {}
   try { buildAlerts(); }         catch(e) {}
 
   // Mobile: add 'scroll to attention' hint on narrow screens
