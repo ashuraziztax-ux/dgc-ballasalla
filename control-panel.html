@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v23</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v24</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -194,6 +194,20 @@ a { color: var(--accent); text-decoration: none; }
   }
   body.printing-daily .fab-quicklog { display: none !important; }
   body.printing-daily #mobile-hint { display: none !important; }
+}
+/* ─── v24: Site Map zone cards — compact on mobile ─── */
+@media (max-width: 768px) {
+  .sm-zone-cards { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important; }
+  .sm-zone-cards .zone-dates,
+  .sm-zone-cards .zone-tasks-toggle,
+  .sm-zone-cards .zone-tasks,
+  .sm-zone-cards .zone-budget,
+  .sm-zone-cards .admin-only,
+  .sm-zone-cards input[type=range],
+  .sm-zone-cards .prog-pct { display: none !important; }
+  .sm-zone-cards .zone-card { padding: 8px; }
+  .sm-zone-cards .zone-name { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sm-zone-cards .zone-status { font-size: 9px; padding: 1px 4px; }
 }
 .tooltip-wrap { position:relative; display:inline-flex; align-items:center; }
 .tooltip-btn {
@@ -1158,14 +1172,19 @@ function resetAppearance() {
 
 <!-- ═══════════════════════════════ ZONES ═══════════════════════════════ -->
 <div id="tab-zones" class="tab-content">
-  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center;">
-    <span style="font-size:11px;color:var(--muted);font-weight:600;">SECTION MAP:</span>
-    <span style="font-size:11px;background:#ca8a0415;border:1px solid #ca8a0440;color:#ca8a04;padding:3px 10px;border-radius:12px;">A — Top Road</span>
-    <span style="font-size:11px;background:#d9770615;border:1px solid #d9770640;color:#d97706;padding:3px 10px;border-radius:12px;">B, C — Mid Road</span>
-    <span style="font-size:11px;background:#2563eb15;border:1px solid #2563eb40;color:#93c5fd;padding:3px 10px;border-radius:12px;">D, E — Road 3</span>
-    <span style="font-size:11px;background:#9333ea15;border:1px solid #9333ea40;color:#c4b5fd;padding:3px 10px;border-radius:12px;">F, G — Lower Road</span>
-    <span style="font-size:11px;background:#db277715;border:1px solid #db277740;color:#f9a8d4;padding:3px 10px;border-radius:12px;">H, I, J — Drains</span>
-    <span style="font-size:11px;color:var(--muted);margin-left:4px;">| Click a zone to see tasks</span>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;align-items:center;">
+    <span style="font-size:11px;color:var(--muted);font-weight:600;">ZONES:</span>
+    <span style="font-size:11px;background:#ca8a0415;border:1px solid #ca8a0440;color:#ca8a04;padding:2px 8px;border-radius:10px;">A — Top Road</span>
+    <span style="font-size:11px;background:#d9770615;border:1px solid #d9770640;color:#d97706;padding:2px 8px;border-radius:10px;">B — Mid Road</span>
+    <span style="font-size:11px;background:#f59e0b15;border:1px solid #f59e0b40;color:#f59e0b;padding:2px 8px;border-radius:10px;">C — Mid Road</span>
+    <span style="font-size:11px;background:#2563eb15;border:1px solid #2563eb40;color:#93c5fd;padding:2px 8px;border-radius:10px;">D — Road 3</span>
+    <span style="font-size:11px;background:#3b82f615;border:1px solid #3b82f640;color:#93c5fd;padding:2px 8px;border-radius:10px;">E — Road 3</span>
+    <span style="font-size:11px;background:#9333ea15;border:1px solid #9333ea40;color:#c4b5fd;padding:2px 8px;border-radius:10px;">F — Lower Road</span>
+    <span style="font-size:11px;background:#a855f715;border:1px solid #a855f740;color:#c4b5fd;padding:2px 8px;border-radius:10px;">G — Lower Road</span>
+    <span style="font-size:11px;background:#db277715;border:1px solid #db277740;color:#f9a8d4;padding:2px 8px;border-radius:10px;">H — Drains</span>
+    <span style="font-size:11px;background:#ec489915;border:1px solid #ec489940;color:#f9a8d4;padding:2px 8px;border-radius:10px;">I — Drains</span>
+    <span style="font-size:11px;background:#f43f5e15;border:1px solid #f43f5e40;color:#fda4af;padding:2px 8px;border-radius:10px;">J — Drains</span>
+    <span style="font-size:11px;color:var(--muted);margin-left:4px;">| Click a zone card to see tasks</span>
   </div>
   <div class="zone-grid" id="zone-cards-container"></div>
 </div>
@@ -1892,16 +1911,21 @@ function resetAppearance() {
 <!-- ═══════════════════════════════ SITE MAP ═══════════════════════════════ -->
 <div id="tab-sitemap" class="tab-content">
   <div class="card" style="padding:12px;">
-    <div class="card-title">Site Map — Section Progress</div>
+    <div class="card-title">&#128506; Site Map &amp; Zone Progress</div>
 
-    <!-- Section → Zone key -->
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;font-size:11px;">
-      <span style="color:var(--muted);font-weight:600;align-self:center;">SECTIONS:</span>
-      <span style="background:#ca8a0430;border:1px solid #ca8a04;color:#ca8a04;padding:3px 9px;border-radius:12px;font-weight:700;">A — Top Road</span>
-      <span style="background:#d9770630;border:1px solid #d97706;color:#d97706;padding:3px 9px;border-radius:12px;font-weight:700;">B, C — Mid Road</span>
-      <span style="background:#2563eb30;border:1px solid #2563eb;color:#93c5fd;padding:3px 9px;border-radius:12px;font-weight:700;">D, E — Road 3</span>
-      <span style="background:#9333ea30;border:1px solid #9333ea;color:#c4b5fd;padding:3px 9px;border-radius:12px;font-weight:700;">F, G — Lower Road</span>
-      <span style="background:#db277730;border:1px solid #db2777;color:#f9a8d4;padding:3px 9px;border-radius:12px;font-weight:700;">H, I, J — Drains</span>
+    <!-- Zone legend: individual A–J -->
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;font-size:11px;align-items:center;">
+      <span style="color:var(--muted);font-weight:600;">ZONES:</span>
+      <span style="background:#ca8a0430;border:1px solid #ca8a04;color:#ca8a04;padding:2px 8px;border-radius:10px;font-weight:700;">A — Top Road</span>
+      <span style="background:#d9770630;border:1px solid #d97706;color:#d97706;padding:2px 8px;border-radius:10px;font-weight:700;">B — Mid Road</span>
+      <span style="background:#f59e0b30;border:1px solid #f59e0b;color:#f59e0b;padding:2px 8px;border-radius:10px;font-weight:700;">C — Mid Road</span>
+      <span style="background:#2563eb30;border:1px solid #2563eb;color:#93c5fd;padding:2px 8px;border-radius:10px;font-weight:700;">D — Road 3</span>
+      <span style="background:#3b82f630;border:1px solid #3b82f6;color:#93c5fd;padding:2px 8px;border-radius:10px;font-weight:700;">E — Road 3</span>
+      <span style="background:#9333ea30;border:1px solid #9333ea;color:#c4b5fd;padding:2px 8px;border-radius:10px;font-weight:700;">F — Lower Road</span>
+      <span style="background:#a855f730;border:1px solid #a855f7;color:#c4b5fd;padding:2px 8px;border-radius:10px;font-weight:700;">G — Lower Road</span>
+      <span style="background:#db277730;border:1px solid #db2777;color:#f9a8d4;padding:2px 8px;border-radius:10px;font-weight:700;">H — Drains</span>
+      <span style="background:#ec489930;border:1px solid #ec4899;color:#f9a8d4;padding:2px 8px;border-radius:10px;font-weight:700;">I — Drains</span>
+      <span style="background:#f43f5e30;border:1px solid #f43f5e;color:#fda4af;padding:2px 8px;border-radius:10px;font-weight:700;">J — Drains</span>
     </div>
 
     <div style="position:relative;display:inline-block;max-width:100%;width:100%;">
@@ -1913,7 +1937,7 @@ function resetAppearance() {
 
         <!-- Section A — Zone 1 -->
         <g id="sm-sect-A" transform="translate(1365,340)" style="pointer-events:all;cursor:pointer;"
-           onclick="showTab('zones',null); setTimeout(()=>document.getElementById('tab-zones').scrollIntoView(),100)">
+           onclick="smFocusZone('A')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
           <circle r="34" fill="#ca8a04" stroke="white" stroke-width="2.5" id="sm-ring-A"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">A</text>
@@ -1923,7 +1947,7 @@ function resetAppearance() {
 
         <!-- Section B — Zone 2 -->
         <g id="sm-sect-B" transform="translate(1075,490)" style="pointer-events:all;cursor:pointer;"
-           onclick="showTab('zones',null); setTimeout(()=>document.getElementById('tab-zones').scrollIntoView(),100)">
+           onclick="smFocusZone('B')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
           <circle r="34" fill="#d97706" stroke="white" stroke-width="2.5" id="sm-ring-B"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">B</text>
@@ -1933,9 +1957,9 @@ function resetAppearance() {
 
         <!-- Section C — Zone 2 -->
         <g id="sm-sect-C" transform="translate(855,515)" style="pointer-events:all;cursor:pointer;"
-           onclick="showTab('zones',null); setTimeout(()=>document.getElementById('tab-zones').scrollIntoView(),100)">
+           onclick="smFocusZone('C')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
-          <circle r="34" fill="#d97706" stroke="white" stroke-width="2.5" id="sm-ring-C"/>
+          <circle r="34" fill="#f59e0b" stroke="white" stroke-width="2.5" id="sm-ring-C"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">C</text>
           <text text-anchor="middle" dy="7" fill="white" font-size="12" font-weight="700" font-family="system-ui,sans-serif" id="sm-pct-C">—%</text>
           <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Mid Road</text>
@@ -1943,7 +1967,7 @@ function resetAppearance() {
 
         <!-- Section D — Zone 3 -->
         <g id="sm-sect-D" transform="translate(900,785)" style="pointer-events:all;cursor:pointer;"
-           onclick="showTab('zones',null); setTimeout(()=>document.getElementById('tab-zones').scrollIntoView(),100)">
+           onclick="smFocusZone('D')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
           <circle r="34" fill="#2563eb" stroke="white" stroke-width="2.5" id="sm-ring-D"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">D</text>
@@ -1953,9 +1977,9 @@ function resetAppearance() {
 
         <!-- Section E — Zone 3 -->
         <g id="sm-sect-E" transform="translate(625,650)" style="pointer-events:all;cursor:pointer;"
-           onclick="showTab('zones',null); setTimeout(()=>document.getElementById('tab-zones').scrollIntoView(),100)">
+           onclick="smFocusZone('E')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
-          <circle r="34" fill="#2563eb" stroke="white" stroke-width="2.5" id="sm-ring-E"/>
+          <circle r="34" fill="#3b82f6" stroke="white" stroke-width="2.5" id="sm-ring-E"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">E</text>
           <text text-anchor="middle" dy="7" fill="white" font-size="12" font-weight="700" font-family="system-ui,sans-serif" id="sm-pct-E">—%</text>
           <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Road 3</text>
@@ -1963,7 +1987,7 @@ function resetAppearance() {
 
         <!-- Section F — Zone 4 -->
         <g id="sm-sect-F" transform="translate(425,780)" style="pointer-events:all;cursor:pointer;"
-           onclick="showTab('zones',null); setTimeout(()=>document.getElementById('tab-zones').scrollIntoView(),100)">
+           onclick="smFocusZone('F')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
           <circle r="34" fill="#9333ea" stroke="white" stroke-width="2.5" id="sm-ring-F"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">F</text>
@@ -1973,9 +1997,9 @@ function resetAppearance() {
 
         <!-- Section G — Zone 4 -->
         <g id="sm-sect-G" transform="translate(265,805)" style="pointer-events:all;cursor:pointer;"
-           onclick="showTab('zones',null); setTimeout(()=>document.getElementById('tab-zones').scrollIntoView(),100)">
+           onclick="smFocusZone('G')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
-          <circle r="34" fill="#9333ea" stroke="white" stroke-width="2.5" id="sm-ring-G"/>
+          <circle r="34" fill="#a855f7" stroke="white" stroke-width="2.5" id="sm-ring-G"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">G</text>
           <text text-anchor="middle" dy="7" fill="white" font-size="12" font-weight="700" font-family="system-ui,sans-serif" id="sm-pct-G">—%</text>
           <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Lower Rd</text>
@@ -1983,7 +2007,7 @@ function resetAppearance() {
 
         <!-- Section H — Zone 5 -->
         <g id="sm-sect-H" transform="translate(225,1005)" style="pointer-events:all;cursor:pointer;"
-           onclick="showTab('zones',null); setTimeout(()=>document.getElementById('tab-zones').scrollIntoView(),100)">
+           onclick="smFocusZone('H')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
           <circle r="34" fill="#db2777" stroke="white" stroke-width="2.5" id="sm-ring-H"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">H</text>
@@ -1993,9 +2017,9 @@ function resetAppearance() {
 
         <!-- Section I — Zone 5 -->
         <g id="sm-sect-I" transform="translate(148,988)" style="pointer-events:all;cursor:pointer;"
-           onclick="showTab('zones',null); setTimeout(()=>document.getElementById('tab-zones').scrollIntoView(),100)">
+           onclick="smFocusZone('I')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
-          <circle r="34" fill="#db2777" stroke="white" stroke-width="2.5" id="sm-ring-I"/>
+          <circle r="34" fill="#ec4899" stroke="white" stroke-width="2.5" id="sm-ring-I"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">I</text>
           <text text-anchor="middle" dy="7" fill="white" font-size="12" font-weight="700" font-family="system-ui,sans-serif" id="sm-pct-I">—%</text>
           <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Drains</text>
@@ -2003,9 +2027,9 @@ function resetAppearance() {
 
         <!-- Section J — Zone 5 -->
         <g id="sm-sect-J" transform="translate(78,895)" style="pointer-events:all;cursor:pointer;"
-           onclick="showTab('zones',null); setTimeout(()=>document.getElementById('tab-zones').scrollIntoView(),100)">
+           onclick="smFocusZone('J')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
-          <circle r="34" fill="#db2777" stroke="white" stroke-width="2.5" id="sm-ring-J"/>
+          <circle r="34" fill="#f43f5e" stroke="white" stroke-width="2.5" id="sm-ring-J"/>
           <text text-anchor="middle" dy="-8" fill="white" font-size="20" font-weight="900" font-family="system-ui,sans-serif">J</text>
           <text text-anchor="middle" dy="7" fill="white" font-size="12" font-weight="700" font-family="system-ui,sans-serif" id="sm-pct-J">—%</text>
           <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Drains</text>
@@ -2013,10 +2037,10 @@ function resetAppearance() {
       </svg>
     </div>
 
-    <!-- Per-section detail cards -->
+    <!-- Zone progress cards — full size desktop, compact mobile -->
     <div style="margin-top:16px;">
-      <div class="card-title">Section Detail — click any marker on map to go to Zone Progress</div>
-      <div id="sm-section-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:8px;"></div>
+      <div class="card-title">Zone Progress — drag slider to update, click zone to see tasks</div>
+      <div id="sm-zone-cards" class="zone-grid sm-zone-cards"></div>
     </div>
   </div>
 </div>
@@ -2030,16 +2054,16 @@ const TODAY = new Date();
 
 const ZONES = [
   { id:1,  wbs:'1',  name:'Site Setup',               shortName:'Setup',  budget:23807.29, start:'2026-03-23', end:'2026-06-12', color:'#64748b', type:'prelims' },
-  { id:2,  wbs:'2',  name:'Section A — Top Road',     shortName:'Sect A', budget:52649.24, start:'2026-03-25', end:'2026-04-15', color:'#ca8a04', type:'zone', section:'A' },
-  { id:3,  wbs:'3',  name:'Section B — Mid Road',     shortName:'Sect B', budget:22935.15, start:'2026-03-26', end:'2026-04-13', color:'#d97706', type:'zone', section:'B' },
-  { id:4,  wbs:'4',  name:'Section C — Mid Road',     shortName:'Sect C', budget:61160.94, start:'2026-04-10', end:'2026-05-06', color:'#f59e0b', type:'zone', section:'C' },
-  { id:5,  wbs:'5',  name:'Section D — Road 3',       shortName:'Sect D', budget:21372.99, start:'2026-03-27', end:'2026-04-28', color:'#2563eb', type:'zone', section:'D' },
-  { id:6,  wbs:'6',  name:'Section E — Road 3',       shortName:'Sect E', budget:71765.78, start:'2026-04-20', end:'2026-05-26', color:'#3b82f6', type:'zone', section:'E' },
-  { id:7,  wbs:'7',  name:'Section F — Lower Road',   shortName:'Sect F', budget:19577.42, start:'2026-03-31', end:'2026-05-15', color:'#9333ea', type:'zone', section:'F' },
-  { id:8,  wbs:'8',  name:'Section G — Lower Road',   shortName:'Sect G', budget:61592.86, start:'2026-05-08', end:'2026-06-12', color:'#a855f7', type:'zone', section:'G' },
-  { id:9,  wbs:'9',  name:'Section H — Soft Drain',   shortName:'Sect H', budget:15564.47, start:'2026-04-01', end:'2026-05-28', color:'#db2777', type:'zone', section:'H' },
-  { id:10, wbs:'10', name:'Section I — Soft Drain',   shortName:'Sect I', budget:7087.23,  start:'2026-05-22', end:'2026-05-29', color:'#ec4899', type:'zone', section:'I' },
-  { id:11, wbs:'11', name:'Section J — Soft Drain',   shortName:'Sect J', budget:7958.91,  start:'2026-05-28', end:'2026-06-11', color:'#f43f5e', type:'zone', section:'J' },
+  { id:2,  wbs:'2',  name:'Section A — Top Road',     shortName:'Zone A', budget:52649.24, start:'2026-03-25', end:'2026-04-15', color:'#ca8a04', type:'zone', section:'A' },
+  { id:3,  wbs:'3',  name:'Section B — Mid Road',     shortName:'Zone B', budget:22935.15, start:'2026-03-26', end:'2026-04-13', color:'#d97706', type:'zone', section:'B' },
+  { id:4,  wbs:'4',  name:'Section C — Mid Road',     shortName:'Zone C', budget:61160.94, start:'2026-04-10', end:'2026-05-06', color:'#f59e0b', type:'zone', section:'C' },
+  { id:5,  wbs:'5',  name:'Section D — Road 3',       shortName:'Zone D', budget:21372.99, start:'2026-03-27', end:'2026-04-28', color:'#2563eb', type:'zone', section:'D' },
+  { id:6,  wbs:'6',  name:'Section E — Road 3',       shortName:'Zone E', budget:71765.78, start:'2026-04-20', end:'2026-05-26', color:'#3b82f6', type:'zone', section:'E' },
+  { id:7,  wbs:'7',  name:'Section F — Lower Road',   shortName:'Zone F', budget:19577.42, start:'2026-03-31', end:'2026-05-15', color:'#9333ea', type:'zone', section:'F' },
+  { id:8,  wbs:'8',  name:'Section G — Lower Road',   shortName:'Zone G', budget:61592.86, start:'2026-05-08', end:'2026-06-12', color:'#a855f7', type:'zone', section:'G' },
+  { id:9,  wbs:'9',  name:'Section H — Soft Drain',   shortName:'Zone H', budget:15564.47, start:'2026-04-01', end:'2026-05-28', color:'#db2777', type:'zone', section:'H' },
+  { id:10, wbs:'10', name:'Section I — Soft Drain',   shortName:'Zone I', budget:7087.23,  start:'2026-05-22', end:'2026-05-29', color:'#ec4899', type:'zone', section:'I' },
+  { id:11, wbs:'11', name:'Section J — Soft Drain',   shortName:'Zone J', budget:7958.91,  start:'2026-05-28', end:'2026-06-11', color:'#f43f5e', type:'zone', section:'J' },
   { id:12, wbs:'12', name:'Demob & Handover',         shortName:'Demob',  budget:1435.50,  start:'2026-06-09', end:'2026-06-29', color:'#94a3b8', type:'demob' }
 ];
 
@@ -3510,16 +3534,16 @@ const AFPS = [
 
 // Section A-J mapping (physical drawing sections)
 const SECTIONS = [
-  { id:'A', zoneId:2,  zoneName:'Sect A', label:'Top Road',   x:1365, y:340  },
-  { id:'B', zoneId:3,  zoneName:'Sect B', label:'Mid Road',   x:1075, y:490  },
-  { id:'C', zoneId:4,  zoneName:'Sect C', label:'Mid Road',   x:855,  y:515  },
-  { id:'D', zoneId:5,  zoneName:'Sect D', label:'Road 3',     x:900,  y:785  },
-  { id:'E', zoneId:6,  zoneName:'Sect E', label:'Road 3',     x:625,  y:650  },
-  { id:'F', zoneId:7,  zoneName:'Sect F', label:'Lower Rd',   x:425,  y:780  },
-  { id:'G', zoneId:8,  zoneName:'Sect G', label:'Lower Rd',   x:265,  y:805  },
-  { id:'H', zoneId:9,  zoneName:'Sect H', label:'Soft Drain', x:225,  y:1005 },
-  { id:'I', zoneId:10, zoneName:'Sect I', label:'Soft Drain', x:148,  y:988  },
-  { id:'J', zoneId:11, zoneName:'Sect J', label:'Soft Drain', x:78,   y:895  },
+  { id:'A', zoneId:2,  zoneName:'Zone A', label:'Top Road',   x:1365, y:340  },
+  { id:'B', zoneId:3,  zoneName:'Zone B', label:'Mid Road',   x:1075, y:490  },
+  { id:'C', zoneId:4,  zoneName:'Zone C', label:'Mid Road',   x:855,  y:515  },
+  { id:'D', zoneId:5,  zoneName:'Zone D', label:'Road 3',     x:900,  y:785  },
+  { id:'E', zoneId:6,  zoneName:'Zone E', label:'Road 3',     x:625,  y:650  },
+  { id:'F', zoneId:7,  zoneName:'Zone F', label:'Lower Rd',   x:425,  y:780  },
+  { id:'G', zoneId:8,  zoneName:'Zone G', label:'Lower Rd',   x:265,  y:805  },
+  { id:'H', zoneId:9,  zoneName:'Zone H', label:'Soft Drain', x:225,  y:1005 },
+  { id:'I', zoneId:10, zoneName:'Zone I', label:'Soft Drain', x:148,  y:988  },
+  { id:'J', zoneId:11, zoneName:'Zone J', label:'Soft Drain', x:78,   y:895  },
 ];
 
 const SECTION_DEFAULTS = {'A':25,'B':69,'C':26,'D':23,'E':2,'F':0,'G':0,'H':0,'I':0,'J':0};
@@ -4201,7 +4225,7 @@ function buildUpcomingList() {
 }
 
 // ═══════════════════════ ZONE CARDS ═══════════════════════
-const ZONE_SECT_LABELS = {1:'Site-wide',2:'Sect A',3:'Sect B',4:'Sect C',5:'Sect D',6:'Sect E',7:'Sect F',8:'Sect G',9:'Sect H',10:'Sect I',11:'Sect J',12:''};
+const ZONE_SECT_LABELS = {1:'Site-wide',2:'Zone A',3:'Zone B',4:'Zone C',5:'Zone D',6:'Zone E',7:'Zone F',8:'Zone G',9:'Zone H',10:'Zone I',11:'Zone J',12:''};
 function buildZoneCards() {
   const container = document.getElementById('zone-cards-container');
   container.innerHTML = ZONES.map(z => {
@@ -4490,30 +4514,42 @@ function buildFinancialChart() {
 
 // ═══════════════════════ SITE MAP (Sections A-J) ═══════════════════════
 function buildSiteMap() {
-  const zoneColMap = {2:'#ca8a04',3:'#d97706',4:'#2563eb',5:'#9333ea',6:'#db2777'};
-  SECTIONS.forEach(s => {
-    const pct    = getSectionProgress(s.id);
-    const zone   = ZONES.find(z => z.id === s.zoneId);
-    const zSt    = zone ? getZoneStatus(zone) : 'upcoming';
-    const pctEl  = document.getElementById('sm-pct-' + s.id);
-    const ring   = document.getElementById('sm-ring-' + s.id);
-    if(pctEl) pctEl.textContent = pct + '%';
-    if(ring) {
-      if(zSt === 'late')     { ring.setAttribute('stroke','#fca5a5'); ring.setAttribute('stroke-width','4'); }
-      else if(zSt==='complete'){ ring.setAttribute('fill','#22c55e'); ring.setAttribute('stroke','white'); ring.setAttribute('stroke-width','2.5'); }
-      else                   { ring.setAttribute('stroke','white'); ring.setAttribute('stroke-width','2.5'); }
+  var stcol = { complete:'#22c55e', active:'#f59e0b', upcoming:'#64748b', late:'#ef4444' };
+
+  // Update SVG circle percentages + RAG ring from zone progress
+  SECTIONS.forEach(function(s) {
+    var zone  = ZONES.find(function(z) { return z.id === s.zoneId; });
+    var pct   = zone ? getZoneProgress(zone.id) : 0;
+    var zSt   = zone ? getZoneStatus(zone) : 'upcoming';
+    var pctEl = document.getElementById('sm-pct-' + s.id);
+    var ring  = document.getElementById('sm-ring-' + s.id);
+    if (pctEl) pctEl.textContent = pct + '%';
+    if (ring) {
+      var baseCol = zone ? zone.color : '#64748b';
+      if (zSt === 'late') {
+        ring.setAttribute('fill', baseCol);
+        ring.setAttribute('stroke', '#fca5a5');
+        ring.setAttribute('stroke-width', '4');
+      } else if (zSt === 'complete') {
+        ring.setAttribute('fill', '#22c55e');
+        ring.setAttribute('stroke', 'white');
+        ring.setAttribute('stroke-width', '2.5');
+      } else {
+        ring.setAttribute('fill', baseCol);
+        ring.setAttribute('stroke', 'white');
+        ring.setAttribute('stroke-width', '2.5');
+      }
     }
   });
 
-  /* ── Circle hover: direct property assignment prevents duplicate listeners ── */
+  // Circle hover: scale up + glow
   SECTIONS.forEach(function(s) {
     var g = document.getElementById('sm-sect-' + s.id);
-    if(!g) return;
-    /* Store base transform once on the element so re-renders don't stack scale() */
-    if(!g.dataset.baseTransform) g.dataset.baseTransform = g.getAttribute('transform') || '';
+    if (!g) return;
+    if (!g.dataset.baseTransform) g.dataset.baseTransform = g.getAttribute('transform') || '';
     var base = g.dataset.baseTransform;
     g.onmouseenter = function() {
-      g.setAttribute('transform', base + ' scale(2)');
+      g.setAttribute('transform', base + ' scale(1.35)');
       g.style.filter = 'drop-shadow(0 2px 12px rgba(0,0,0,0.7))';
     };
     g.onmouseleave = function() {
@@ -4522,21 +4558,48 @@ function buildSiteMap() {
     };
   });
 
-  const cards = document.getElementById('sm-section-cards');
-  if(!cards) return;
-  const zoneColour = {2:'#ca8a04',3:'#d97706',4:'#2563eb',5:'#9333ea',6:'#db2777'};
-  cards.innerHTML = SECTIONS.map(s => {
-    const pct = getSectionProgress(s.id);
-    const col = zoneColour[s.zoneId] || '#64748b';
-    return '<div style="background:var(--surface2);border:1px solid var(--border);border-left:3px solid ' + col + ';border-radius:6px;padding:10px 12px;">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">' +
-      '<span style="font-size:22px;font-weight:900;color:' + col + ';">' + s.id + '</span>' +
-      '<span style="font-size:14px;font-weight:700;color:white;">' + pct + '%</span></div>' +
-      '<div style="font-size:10px;color:var(--muted);margin-bottom:6px;">' + s.zoneName + ' — ' + s.label + '</div>' +
-      '<div style="background:var(--bg);border-radius:3px;height:5px;overflow:hidden;">' +
-      '<div style="width:' + Math.max(2,pct) + '%;height:100%;background:' + col + ';border-radius:3px;"></div></div>' +
-      '</div>';
+  // Zone progress cards below map (full size desktop, compact mobile)
+  var cards = document.getElementById('sm-zone-cards');
+  if (!cards) return;
+  var stcol2 = { complete:'#22c55e', active:'#f59e0b', upcoming:'#64748b', late:'#ef4444' };
+  cards.innerHTML = ZONES.filter(function(z) { return z.type === 'zone'; }).map(function(z) {
+    var prog   = getZoneProgress(z.id);
+    var status = getZoneStatus(z);
+    var rag    = getZoneRAG(z.id);
+    var tasks  = TASKS.filter(function(t) { return t.zone === z.id; });
+    return '<div class="zone-card ' + status + '" id="sm-zc-' + (z.section||z.id) + '" onclick="toggleZoneTasks(' + z.id + ')">' +
+      '<div class="zone-header"><div class="zone-name">' + z.name + '</div><span class="zone-status ' + status + '">' + status + '</span></div>' +
+      '<div class="zone-dates">' + fmtDate(z.start) + ' – ' + fmtDate(z.end) + '</div>' +
+      '<div class="zone-budget admin-only"><span>Budget: </span>' + fmt(z.budget) + '</div>' +
+      '<div class="progress-track"><div class="progress-fill ' + status + '" style="width:' + prog + '%"></div></div>' +
+      '<div style="margin:4px 0 6px;display:flex;justify-content:space-between;font-size:10px;">' +
+      '<span style="color:var(--muted);">Plan <b style="color:#64748b;">' + getZonePlannedPct(z.id) + '%</b></span>' +
+      '<span style="color:' + rag.col + ';font-weight:700;">' + rag.lbl + '</span>' +
+      '</div>' +
+      '<div class="progress-label"><span>Actual</span>' +
+      '<span style="display:flex;align-items:center;gap:8px;">' +
+      '<input type="range" min="0" max="100" value="' + prog + '" style="width:80px;accent-color:var(--accent);" ' +
+      'onclick="event.stopPropagation();" ' +
+      'oninput="event.stopPropagation();updateProgress(' + z.id + ',this.value,this.parentElement.querySelector('.prog-pct'));updateProgress(' + z.id + ',this.value,null);buildSiteMap();">' +
+      '<span class="prog-pct">' + prog + '%</span></span></div>' +
+      '<div class="zone-tasks-toggle">▼ ' + tasks.length + ' tasks</div>' +
+      '<div class="zone-tasks" id="zone-tasks-' + z.id + '">' +
+      tasks.map(function(t) {
+        return '<div class="task-row"><span class="task-name">' + t.wbs + ' – ' + t.name + '</span>' +
+          '<span class="task-dates">' + fmtShortDate(t.start) + '–' + fmtShortDate(t.end) + '</span>' +
+          '<span class="task-budget admin-only">' + fmt(t.budget) + '</span></div>';
+      }).join('') +
+      '</div></div>';
   }).join('');
+}
+
+function smFocusZone(sectionId) {
+  var el = document.getElementById('sm-zc-' + sectionId);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  el.style.transition = 'box-shadow 0.2s';
+  el.style.boxShadow = '0 0 0 3px var(--accent2), 0 0 16px rgba(245,158,11,0.4)';
+  setTimeout(function() { el.style.boxShadow = ''; }, 1500);
 }
 </script>
 <!-- Quick-Log FAB (admin only) -->
