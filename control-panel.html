@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v32</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v33</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -833,6 +833,7 @@ function clearForm() {
   <button onclick="showTab('sitemap',this)">Site Map</button>
   <button onclick="showTab('staffhours',this)">Staff Hours</button>
   <button onclick="showTab('programme',this)">Programme</button>
+  <button onclick="showTab('forecast',this)">Forecast</button>
   <button onclick="showTab('gantt',this)">Gantt Chart</button>
   <button class="admin-only" onclick="showTab('financial',this)">Financials</button>
   <button onclick="showTab('daily',this)">Daily Log</button>
@@ -1195,6 +1196,13 @@ function clearForm() {
   </div>
   <div class="card admin-only" style="margin-top:12px;" id="prog-editor-card">
     <div id="prog-editor-panel"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ FORECAST ══════════════════════════════════ -->
+<div id="tab-forecast" class="tab-content">
+  <div class="card">
+    <div id="forecast-panel"></div>
   </div>
 </div>
 
@@ -4124,6 +4132,258 @@ function buildProgrammeClock() {
 
   } catch(e) { console.warn('buildProgrammeClock:', e); }
 }
+
+// ═══════════════════════ FORECAST TAB (v33) ═══════════════════════
+function buildForecastTab() {
+  var el = document.getElementById('forecast-panel');
+  if (!el) return;
+  el.innerHTML = '';
+
+  // ── Calculations (zone-budget-weighted, same as buildVelocityPanel) ────────
+  var totalBudget = ZONES.reduce(function(s,z){ return s + (z.budget||0); }, 0);
+  var completedValue = 0;
+  ZONES.forEach(function(z) { completedValue += (z.budget||0) * (getZoneProgress(z.id)/100); });
+  var overallPct    = totalBudget > 0 ? completedValue / totalBudget * 100 : 0;
+  var projStart     = parseDate('2026-03-23');
+  var deadline      = parseDate('2026-06-29');
+  var daysElapsed   = Math.max(1, daysBetween(projStart, TODAY));
+  var totalCalDays  = daysBetween(projStart, deadline);
+  var calDaysLeft   = Math.max(0, daysBetween(TODAY, deadline));
+  var plannedPct    = Math.min(100, daysElapsed / totalCalDays * 100);
+  var variance      = overallPct - plannedPct;
+  var ratePerDay    = overallPct / daysElapsed;
+  var remaining     = Math.max(0, 100 - overallPct);
+
+  // ── IoM working-day end-date calculator ───────────────────────────────────
+  var IOM_BH_2026 = {'2026-04-03':1,'2026-04-06':1,'2026-05-04':1,'2026-05-25':1,'2026-06-12':1};
+  function isWorkDay(d) {
+    var dow = d.getDay();
+    if (dow === 0 || dow === 6) return false;
+    var k = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    return !IOM_BH_2026[k];
+  }
+  function addWorkDays(startDate, wdToAdd) {
+    if (wdToAdd <= 0) return new Date(startDate.getTime());
+    var d = new Date(startDate.getTime());
+    var added = 0;
+    var safety = Math.ceil(wdToAdd * 2) + 180;
+    while (added < Math.ceil(wdToAdd) && safety-- > 0) {
+      d.setDate(d.getDate() + 1);
+      if (isWorkDay(d)) added++;
+    }
+    return d;
+  }
+  function fmtDate(d) {
+    return d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+  }
+
+  // Programme has ~65 working days total (98 cal - 28 weekends - 5 IoM BH)
+  var totalProgWDs = 65;
+  // Remaining working days at current actual rate
+  var remWDsAtRate = ratePerDay > 0 ? (remaining / ratePerDay) * (65 / 98) : 9999;
+  var fcActual     = ratePerDay > 0 ? addWorkDays(TODAY, remWDsAtRate) : null;
+  var fcActualStr  = fcActual ? fmtDate(fcActual) : '—';
+  var fcLate       = fcActual ? fcActual > deadline : false;
+  var daysOff      = fcActual ? Math.round(Math.abs(fcActual - deadline) / 86400000) : 0;
+  var bannerColor  = fcLate ? '#ef4444' : '#22c55e';
+  var bannerBg     = fcLate ? '#ef444412' : '#22c55e12';
+  var bannerBdr    = fcLate ? '#ef444440' : '#22c55e40';
+
+  // Delay credit
+  var delayLog = loadDelayLog();
+  var accountedDays = delayLog.reduce(function(s, d) {
+    if (d.status === 'absorbed' || d.category === 'eot_claimed') return s;
+    return s + (d.days || 0);
+  }, 0);
+  var delayCreditPct  = Math.min(100 - overallPct, accountedDays / totalProgWDs * 100);
+  var accountedForPct = overallPct + delayCreditPct;
+  var surplusOrGap    = accountedForPct - plannedPct;
+
+  // ── Enhanced bar helper ───────────────────────────────────────────────────
+  function addForecastBar(container, labelTxt, barPct, mainCol, stackPct, stackCol, rightLbl, rightCol) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:14px;';
+
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;width:120px;flex-shrink:0;line-height:1.3;';
+    lbl.textContent = labelTxt;
+
+    var track = document.createElement('div');
+    track.style.cssText = 'flex:1;height:24px;background:var(--surface2);border-radius:8px;overflow:hidden;display:flex;position:relative;';
+
+    // Primary segment with % centred inside
+    var seg1Pct = Math.max(0, Math.min(100, barPct));
+    var seg1 = document.createElement('div');
+    seg1.style.cssText = 'height:100%;flex:0 0 ' + seg1Pct.toFixed(1) + '%;background:' + mainCol + ';display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;';
+    if (seg1Pct > 12) {
+      var innerPct = document.createElement('span');
+      innerPct.style.cssText = 'font-size:10px;font-weight:800;color:rgba(255,255,255,0.88);white-space:nowrap;pointer-events:none;';
+      innerPct.textContent = barPct.toFixed(1) + '%';
+      seg1.appendChild(innerPct);
+    }
+    track.appendChild(seg1);
+
+    // Stack segment (accounted-for credit, amber)
+    if (stackPct > 0) {
+      var seg2Pct = Math.max(0, Math.min(100 - seg1Pct, stackPct));
+      var seg2 = document.createElement('div');
+      seg2.style.cssText = 'height:100%;flex:0 0 ' + seg2Pct.toFixed(1) + '%;background:' + stackCol + ';display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;';
+      if (seg2Pct > 10) {
+        var innerPct2 = document.createElement('span');
+        innerPct2.style.cssText = 'font-size:10px;font-weight:800;color:rgba(0,0,0,0.55);white-space:nowrap;pointer-events:none;';
+        innerPct2.textContent = '+' + stackPct.toFixed(1) + '%';
+        seg2.appendChild(innerPct2);
+      }
+      track.appendChild(seg2);
+    }
+
+    row.appendChild(lbl);
+    row.appendChild(track);
+
+    // Right label (date or %)
+    var rightEl = document.createElement('div');
+    rightEl.style.cssText = 'font-size:11px;font-weight:700;color:' + (rightCol || 'var(--muted)') + ';width:82px;text-align:right;flex-shrink:0;line-height:1.3;';
+    rightEl.textContent = rightLbl || '';
+    row.appendChild(rightEl);
+
+    container.appendChild(row);
+  }
+
+  // ── Title ─────────────────────────────────────────────────────────────────
+  var titleEl = document.createElement('div');
+  titleEl.className = 'card-title';
+  titleEl.textContent = 'Velocity & Forecast';
+  el.appendChild(titleEl);
+
+  // ── No-intervention banner ────────────────────────────────────────────────
+  var banner = document.createElement('div');
+  banner.style.cssText = 'background:' + bannerBg + ';border:2px solid ' + bannerBdr + ';border-radius:12px;padding:18px 22px;margin-bottom:18px;';
+
+  var bannerLabel = document.createElement('div');
+  bannerLabel.style.cssText = 'font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:8px;';
+  bannerLabel.textContent = 'At current rate — no intervention';
+  banner.appendChild(bannerLabel);
+
+  var bannerMain = document.createElement('div');
+  bannerMain.style.cssText = 'display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:10px;';
+
+  var dateDisplay = document.createElement('div');
+  dateDisplay.style.cssText = 'font-size:32px;font-weight:900;color:' + bannerColor + ';line-height:1;letter-spacing:-0.5px;';
+  dateDisplay.textContent = fcActualStr;
+  bannerMain.appendChild(dateDisplay);
+
+  var daysOffEl = document.createElement('div');
+  daysOffEl.style.cssText = 'font-size:15px;font-weight:700;color:' + bannerColor + ';';
+  if (fcActual) {
+    daysOffEl.textContent = fcLate
+      ? '▲ ' + daysOff + ' days past agreed deadline'
+      : '▼ ' + daysOff + ' days ahead of deadline';
+  }
+  bannerMain.appendChild(daysOffEl);
+  banner.appendChild(bannerMain);
+
+  var bannerSub = document.createElement('div');
+  bannerSub.style.cssText = 'font-size:11px;color:var(--muted);border-top:1px solid ' + bannerBdr + ';padding-top:8px;display:flex;gap:18px;flex-wrap:wrap;';
+  var sub1 = document.createElement('span');
+  sub1.innerHTML = '<b style="color:var(--text);">Agreed deadline:</b> 29 Jun 2026 (confirmed with Dandara, includes EOT)';
+  var sub2 = document.createElement('span');
+  sub2.innerHTML = '<b style="color:var(--text);">Calendar days left:</b> ' + calDaysLeft + ' days to 29 Jun';
+  bannerSub.appendChild(sub1);
+  bannerSub.appendChild(sub2);
+  banner.appendChild(bannerSub);
+  el.appendChild(banner);
+
+  // ── Progress vs Plan bars (enhanced) ─────────────────────────────────────
+  var pbWrap = document.createElement('div');
+  pbWrap.style.cssText = 'margin-bottom:20px;';
+
+  var pbTitle = document.createElement('div');
+  pbTitle.style.cssText = 'font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:14px;';
+  pbTitle.textContent = 'Progress vs Plan — expected end dates (IoM working days)';
+  pbWrap.appendChild(pbTitle);
+
+  // Bar 1 — Actual: right label = honest forecast end date
+  addForecastBar(pbWrap, 'Actual (by value)', overallPct, 'var(--accent)', 0, '',
+    fcActualStr, fcLate ? '#ef4444' : '#22c55e');
+
+  // Bar 2 — Accounted for: right label = combined % (not a forecasted date)
+  addForecastBar(pbWrap, 'Accounted for', overallPct, 'var(--accent)', delayCreditPct, '#f59e0b',
+    accountedForPct.toFixed(1) + '%', '#f59e0b');
+
+  // Bar 3 — Planned at today: right label = agreed deadline
+  addForecastBar(pbWrap, 'Planned at today', plannedPct, '#64748b', 0, '',
+    '29 Jun 2026', '#94a3b8');
+
+  // ── Breakdown note ────────────────────────────────────────────────────────
+  var noteRow = document.createElement('div');
+  noteRow.style.cssText = 'margin-top:2px;padding:8px 0;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;';
+
+  var noteLeft = document.createElement('div');
+  noteLeft.style.cssText = 'font-size:10px;color:var(--muted);';
+  noteLeft.innerHTML = '<span style="color:#f59e0b;font-weight:700;">' + accountedDays.toFixed(1) + ' days</span>'
+    + ' agreed delays &nbsp;·  '
+    + '<span style="color:var(--accent);font-weight:700;">' + delayCreditPct.toFixed(1) + '%</span>'
+    + ' programme credit';
+  noteRow.appendChild(noteLeft);
+
+  var noteRight = document.createElement('div');
+  if (surplusOrGap >= -0.5) {
+    noteRight.style.cssText = 'font-size:11px;font-weight:700;color:#22c55e;';
+    noteRight.textContent = '✓ All gap accounted for'
+      + (surplusOrGap > 0.5 ? ' (+' + surplusOrGap.toFixed(1) + '% surplus)' : '');
+  } else {
+    noteRight.style.cssText = 'font-size:11px;font-weight:700;color:#ef4444;';
+    noteRight.textContent = 'Unexplained gap: ' + Math.abs(surplusOrGap).toFixed(1) + '%';
+  }
+  noteRow.appendChild(noteRight);
+  pbWrap.appendChild(noteRow);
+
+  // Variance row
+  var varRow = document.createElement('div');
+  varRow.style.cssText = 'display:flex;justify-content:flex-end;padding-right:4px;margin-top:4px;';
+  var varEl = document.createElement('div');
+  varEl.style.cssText = 'font-size:11px;font-weight:700;color:' + (variance >= 0 ? 'var(--green)' : 'var(--red)') + ';';
+  varEl.textContent = 'Variance (actual vs planned): ' + (variance >= 0 ? '+' : '') + variance.toFixed(1) + '%';
+  varRow.appendChild(varEl);
+  pbWrap.appendChild(varRow);
+  el.appendChild(pbWrap);
+
+  // ── KPI tiles ─────────────────────────────────────────────────────────────
+  var ratePerWeek = ratePerDay * 7;
+  var daysToTarget = calDaysLeft;
+  var weeksToTarget = (daysToTarget / 7).toFixed(1);
+  var kpis = [
+    {lbl:'Actual complete',   val: overallPct.toFixed(1) + '%',          col:'var(--text)'},
+    {lbl:'Speed (% / week)',  val: ratePerWeek.toFixed(2) + '%',          col:'var(--accent)'},
+    {lbl:'Weeks to deadline', val: weeksToTarget + ' wks',               col: daysToTarget < 21 ? 'var(--red)' : 'var(--muted)'},
+    {lbl:'Behind plan',       val: Math.abs(variance).toFixed(1) + '%',  col: variance < 0 ? 'var(--red)' : 'var(--green)'},
+  ];
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;';
+  kpis.forEach(function(k) {
+    var c = document.createElement('div');
+    c.className = 'vel-kpi';
+    var l = document.createElement('div'); l.className = 'lbl'; l.textContent = k.lbl;
+    var v = document.createElement('div'); v.className = 'val'; v.style.color = k.col; v.textContent = k.val;
+    c.appendChild(l); c.appendChild(v);
+    grid.appendChild(c);
+  });
+  el.appendChild(grid);
+
+  // ── Data confidence note ──────────────────────────────────────────────────
+  var note = document.createElement('div');
+  note.style.cssText = 'font-size:10px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px;';
+  var snaps = lsGet('dgc_snapshots','[]') || [];
+  var weeksData = Math.round(Math.max(1, daysElapsed) / 7);
+  var confLabel = snaps.length >= 4 ? 'Good confidence (' + snaps.length + ' snapshots)'
+    : snaps.length >= 2 ? 'Improving (' + snaps.length + ' snapshots — save weekly for better accuracy)'
+    : 'Low confidence — based on average rate since day 1 (save weekly snapshots to improve)';
+  note.innerHTML = '<strong>Data confidence:</strong> ' + confLabel
+    + ' &nbsp;&middot;&nbsp; ' + weeksData + ' weeks elapsed since site start (23 Mar 2026)'
+    + ' &nbsp;&middot;&nbsp; End dates use IoM working days (Mon–Fri, excl. IoM bank holidays 2026).';
+  el.appendChild(note);
+}
+
 function showTab(name, btn) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
@@ -4134,6 +4394,7 @@ function showTab(name, btn) {
   if(name === 'report')   buildReport();
   if(name === 'sitemap')  buildSiteMap();
   if(name === 'staffhours') buildStaffHours();
+  if(name === 'forecast')   buildForecastTab();
 }
 
 // ═══════════════════════ INIT ═══════════════════════
