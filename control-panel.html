@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v25</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v26</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -4417,7 +4417,7 @@ function buildSiteMap() {
       '<span style="display:flex;align-items:center;gap:8px;">' +
       '<input type="range" min="0" max="100" value="' + prog + '" style="width:80px;accent-color:var(--accent);" ' +
       'onclick="event.stopPropagation();" ' +
-      'oninput="event.stopPropagation();updateProgress(' + z.id + ',this.value,this.parentElement.querySelector('.prog-pct'));updateProgress(' + z.id + ',this.value,null);buildSiteMap();">' +
+      'oninput="event.stopPropagation();updateProgress(' + z.id + ',this.value,this.parentElement.querySelector(\'.prog-pct\');updateProgress(' + z.id + ',this.value,null);buildSiteMap();">' +
       '<span class="prog-pct">' + prog + '%</span></span></div>' +
       '<div class="zone-tasks-toggle">▼ ' + tasks.length + ' tasks</div>' +
       '<div class="zone-tasks" id="zone-tasks-' + z.id + '">' +
