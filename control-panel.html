@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v26</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v27</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -455,6 +455,14 @@ body:not(.admin-mode) .admin-only { display: none !important; }
   padding:8px 0; border-bottom:1px solid var(--border); font-size:12px;
 }
 .attn-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:3px; }
+/* ─── Zone Health Modal (v27) ─── */
+#zone-health-modal { position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,0.75); display:none; align-items:flex-start; justify-content:center; padding:20px 12px; overflow-y:auto; }
+#zone-health-panel { background:var(--surface); border:1px solid var(--border); border-radius:14px; width:100%; max-width:700px; padding:22px; box-shadow:0 24px 70px rgba(0,0,0,0.65); margin:auto; }
+.zh-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin:16px 0 10px; padding-top:14px; border-top:1px solid var(--border); }
+.zh-task-row { padding:8px 0; border-bottom:1px solid var(--border); }
+.zh-task-row:last-child { border-bottom:none; }
+.zh-delay-row { padding:8px 0; border-bottom:1px solid var(--border); }
+.zh-delay-row:last-child { border-bottom:none; }
 </style>
 </head>
 <body>
@@ -801,7 +809,6 @@ function clearForm() {
 
 <div class="nav">
   <button class="active" onclick="showTab('dashboard',this)">Dashboard</button>
-  <button onclick="showTab('zones',this)">Zone Progress</button>
   <button onclick="showTab('sitemap',this)">Site Map</button>
   <button onclick="showTab('programme',this)">Programme</button>
   <button onclick="showTab('gantt',this)">Gantt Chart</button>
@@ -1020,23 +1027,7 @@ function clearForm() {
 </div>
 
 <!-- ═══════════════════════════════ ZONES ═══════════════════════════════ -->
-<div id="tab-zones" class="tab-content">
-  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;align-items:center;">
-    <span style="font-size:11px;color:var(--muted);font-weight:600;">ZONES:</span>
-    <span style="font-size:11px;background:#ca8a0415;border:1px solid #ca8a0440;color:#ca8a04;padding:2px 8px;border-radius:10px;">A — Top Road</span>
-    <span style="font-size:11px;background:#d9770615;border:1px solid #d9770640;color:#d97706;padding:2px 8px;border-radius:10px;">B — Mid Road</span>
-    <span style="font-size:11px;background:#f59e0b15;border:1px solid #f59e0b40;color:#f59e0b;padding:2px 8px;border-radius:10px;">C — Mid Road</span>
-    <span style="font-size:11px;background:#2563eb15;border:1px solid #2563eb40;color:#93c5fd;padding:2px 8px;border-radius:10px;">D — Road 3</span>
-    <span style="font-size:11px;background:#3b82f615;border:1px solid #3b82f640;color:#93c5fd;padding:2px 8px;border-radius:10px;">E — Road 3</span>
-    <span style="font-size:11px;background:#9333ea15;border:1px solid #9333ea40;color:#c4b5fd;padding:2px 8px;border-radius:10px;">F — Lower Road</span>
-    <span style="font-size:11px;background:#a855f715;border:1px solid #a855f740;color:#c4b5fd;padding:2px 8px;border-radius:10px;">G — Lower Road</span>
-    <span style="font-size:11px;background:#db277715;border:1px solid #db277740;color:#f9a8d4;padding:2px 8px;border-radius:10px;">H — Drains</span>
-    <span style="font-size:11px;background:#ec489915;border:1px solid #ec489940;color:#f9a8d4;padding:2px 8px;border-radius:10px;">I — Drains</span>
-    <span style="font-size:11px;background:#f43f5e15;border:1px solid #f43f5e40;color:#fda4af;padding:2px 8px;border-radius:10px;">J — Drains</span>
-    <span style="font-size:11px;color:var(--muted);margin-left:4px;">| Click a zone card to see tasks</span>
-  </div>
-  <div class="zone-grid" id="zone-cards-container"></div>
-</div>
+
 
 <!-- ═══════════════════════════════ PROGRAMME ═══════════════════════════════ -->
 <div id="tab-programme" class="tab-content">
@@ -4396,47 +4387,181 @@ function buildSiteMap() {
   // Zone progress cards below map (full size desktop, compact mobile)
   var cards = document.getElementById('sm-zone-cards');
   if (!cards) return;
-  var stcol2 = { complete:'#22c55e', active:'#f59e0b', upcoming:'#64748b', late:'#ef4444' };
   cards.innerHTML = ZONES.filter(function(z) { return z.type === 'zone'; }).map(function(z) {
     var prog   = getZoneProgress(z.id);
     var status = getZoneStatus(z);
     var rag    = getZoneRAG(z.id);
     var tasks  = TASKS.filter(function(t) { return t.zone === z.id; });
-    return '<div class="zone-card ' + status + '" id="sm-zc-' + (z.section||z.id) + '" onclick="toggleZoneTasks(' + z.id + ')">' +
+    return '<div class="zone-card ' + status + '" id="sm-zc-' + (z.section||z.id) + '" onclick="openZoneHealth(' + z.id + ')" style="cursor:pointer;">' +
       '<div class="zone-header"><div class="zone-name">' + z.name + '</div><span class="zone-status ' + status + '">' + status + '</span></div>' +
       '<div class="zone-dates">' + fmtDate(z.start) + ' – ' + fmtDate(z.end) + '</div>' +
       '<div class="zone-budget admin-only"><span>Budget: </span>' + fmt(z.budget) + '</div>' +
       '<div class="progress-track"><div class="progress-fill ' + status + '" style="width:' + prog + '%"></div></div>' +
-      '<div style="margin:4px 0 6px;display:flex;justify-content:space-between;font-size:10px;">' +
+      '<div style="margin:4px 0 8px;display:flex;justify-content:space-between;font-size:10px;">' +
       '<span style="color:var(--muted);">Plan <b style="color:#64748b;">' + getZonePlannedPct(z.id) + '%</b></span>' +
-      '<span style="color:' + rag.col + ';font-weight:700;">' + rag.lbl + '</span>' +
-      '</div>' +
-      '<div class="progress-label"><span>Actual</span>' +
-      '<span style="display:flex;align-items:center;gap:8px;">' +
-      '<input type="range" min="0" max="100" value="' + prog + '" style="width:80px;accent-color:var(--accent);" ' +
-      'onclick="event.stopPropagation();" ' +
-      'oninput="event.stopPropagation();updateProgress(' + z.id + ',this.value,this.parentElement.querySelector(\'.prog-pct\');updateProgress(' + z.id + ',this.value,null);buildSiteMap();">' +
-      '<span class="prog-pct">' + prog + '%</span></span></div>' +
-      '<div class="zone-tasks-toggle">▼ ' + tasks.length + ' tasks</div>' +
-      '<div class="zone-tasks" id="zone-tasks-' + z.id + '">' +
-      tasks.map(function(t) {
-        return '<div class="task-row"><span class="task-name">' + t.wbs + ' – ' + t.name + '</span>' +
-          '<span class="task-dates">' + fmtShortDate(t.start) + '–' + fmtShortDate(t.end) + '</span>' +
-          '<span class="task-budget admin-only">' + fmt(t.budget) + '</span></div>';
-      }).join('') +
-      '</div></div>';
+      '<span style="color:' + rag.col + ';font-weight:700;">' + rag.lbl + '</span></div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;">' +
+      '<span style="color:var(--accent);font-weight:700;">' + prog + '% done</span>' +
+      '<span style="color:var(--muted);">' + tasks.length + ' tasks &bull; tap for detail</span></div>' +
+      '</div>';
   }).join('');
 }
 
 function smFocusZone(sectionId) {
-  var el = document.getElementById('sm-zc-' + sectionId);
-  if (!el) return;
-  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  el.style.transition = 'box-shadow 0.2s';
-  el.style.boxShadow = '0 0 0 3px var(--accent2), 0 0 16px rgba(245,158,11,0.4)';
-  setTimeout(function() { el.style.boxShadow = ''; }, 1500);
+  var sect = SECTIONS.find(function(s) { return s.id === sectionId; });
+  if (!sect) return;
+  openZoneHealth(sect.zoneId);
 }
+// ═══════════════════════ ZONE HEALTH MODAL (v27) ═══════════════════════
+function openZoneHealth(zoneId) {
+  var z = ZONES.find(function(zz) { return zz.id === zoneId; });
+  if (!z) return;
+  var prog    = getZoneProgress(z.id);
+  var planned = getZonePlannedPct(z.id);
+  var status  = getZoneStatus(z);
+  var rag     = getZoneRAG(z.id);
+  var tasks   = TASKS.filter(function(t) { return t.zone === z.id; });
+  var delays  = loadDelayLog();
+  var vars    = isAdmin ? loadVarRegister() : [];
+  var spent   = z.budget * prog / 100;
+
+  // Task counts
+  var tDone = 0, tWip = 0, tNot = 0;
+  tasks.forEach(function(t) {
+    var v = getTaskProgress(t.wbs); v = v !== null ? v : (t.progress || 0);
+    if (v >= 100) tDone++; else if (v >= 50) tWip++; else tNot++;
+  });
+
+  // Tasks HTML
+  var tasksHtml = tasks.length ? tasks.map(function(t) {
+    var tp  = getTaskProgress(t.wbs); tp = tp !== null ? tp : (t.progress || 0);
+    var lbl = tp === 0 ? 'Not started' : tp < 100 ? 'In progress' : 'Complete';
+    var cls = tp === 0 ? 'not-started' : tp < 100 ? 'in-progress' : 'complete';
+    var bar = tp >= 100 ? '#22c55e' : tp >= 50 ? '#f59e0b' : '#334155';
+    return '<div class="zh-task-row">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">' +
+      '<span style="font-size:10px;color:var(--muted);min-width:44px;flex-shrink:0;">' + t.wbs + '</span>' +
+      '<span style="flex:1;font-size:12px;font-weight:600;color:var(--text);">' + t.name + '</span>' +
+      '<button class="task-status-btn ' + cls + '" onclick="cycleTaskStatus('' + t.wbs + '',this);try{buildSiteMap();}catch(e){}" style="flex-shrink:0;">' + lbl + '</button>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:8px;">' +
+      '<div style="flex:1;height:5px;background:var(--surface2);border-radius:3px;"><div style="height:5px;border-radius:3px;width:' + tp + '%;background:' + bar + ';"></div></div>' +
+      '<span style="font-size:10px;font-weight:700;color:' + bar + ';min-width:30px;text-align:right;">' + tp + '%</span>' +
+      '<span style="font-size:10px;color:var(--muted);min-width:90px;text-align:right;">' + fmtShortDate(t.start) + '–' + fmtShortDate(t.end) + '</span>' +
+      (isAdmin ? '<span style="font-size:10px;color:var(--accent);min-width:50px;text-align:right;">' + fmt(t.budget) + '</span>' : '') +
+      '</div></div>';
+  }).join('') : '<div style="color:var(--muted);font-size:12px;padding:8px 0;">No tasks assigned</div>';
+
+  // Delays HTML (site-wide blockers)
+  var delaysHtml = delays.length ? delays.map(function(d) {
+    var catCls = d.category === 'client' ? 'delay-cat-client' :
+                 d.category === 'absorbed' ? 'delay-cat-absorbed' :
+                 d.category === 'eot_claimed' ? 'delay-cat-eot' : 'delay-cat-variance';
+    var catLbl = d.category === 'client' ? 'Client' :
+                 d.category === 'absorbed' ? 'Absorbed' :
+                 d.category === 'eot_claimed' ? 'EOT' : 'Variance';
+    return '<div class="zh-delay-row">' +
+      '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;">' +
+      '<span class="delay-cat-chip ' + catCls + '">' + catLbl + '</span>' +
+      '<span style="font-size:10px;color:var(--muted);">' + d.ref + '</span>' +
+      '<span style="font-size:10px;color:var(--muted);margin-left:auto;">' + d.date + ' &bull; ' + d.days + 'd</span>' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--text);">' + d.description + '</div>' +
+      (isAdmin && d.cost ? '<div style="font-size:10px;color:var(--accent);margin-top:2px;">Cost: ' + fmt(d.cost) + ' &bull; ' + (d.status || '').toUpperCase() + '</div>' : '') +
+      '</div>';
+  }).join('') : '<div style="color:var(--muted);font-size:12px;padding:8px 0;">No delays recorded</div>';
+
+  // Variations HTML (admin only)
+  var varsHtml = '';
+  if (isAdmin && vars.length) {
+    varsHtml = vars.map(function(v) {
+      var sc = v.status === 'agreed' ? '#22c55e' : v.status === 'submitted' ? '#f59e0b' : '#ef4444';
+      return '<div class="zh-delay-row">' +
+        '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;">' +
+        '<span style="font-size:10px;font-weight:700;color:' + sc + ';">' + (v.status||'').toUpperCase() + '</span>' +
+        '<span style="font-size:10px;color:var(--muted);">' + v.ref + '</span>' +
+        '<span style="font-size:10px;color:var(--accent);margin-left:auto;">' + (v.agreed ? 'Agreed: ' + fmt(v.agreed) : 'Claimed: ' + fmt(v.claimed)) + '</span>' +
+        '</div>' +
+        '<div style="font-size:12px;color:var(--text);">' + v.desc + '</div>' +
+        (v.notes ? '<div style="font-size:10px;color:var(--muted);margin-top:2px;">' + v.notes + '</div>' : '') +
+        '</div>';
+    }).join('');
+  }
+
+  // Assemble HTML
+  var html =
+    // ── Header ──
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">' +
+    '<div style="width:16px;height:16px;border-radius:50%;background:' + z.color + ';flex-shrink:0;"></div>' +
+    '<div style="flex:1;">' +
+    '<div style="font-size:17px;font-weight:800;color:var(--text);line-height:1.2;">' + z.name + '</div>' +
+    '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + fmtDate(z.start) + ' – ' + fmtDate(z.end) + '</div>' +
+    '</div>' +
+    '<span class="zone-status ' + status + '" style="font-size:11px;padding:3px 10px;">' + status.toUpperCase() + '</span>' +
+    '<span style="color:' + rag.col + ';font-size:14px;font-weight:800;margin-left:4px;">' + rag.lbl + '</span>' +
+    '<button onclick="closeZoneHealth()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:0 4px;line-height:1;margin-left:8px;">&times;</button>' +
+    '</div>' +
+
+    // ── Progress ──
+    '<div style="margin-bottom:4px;">' +
+    '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">' +
+    '<span style="color:var(--muted);">Actual <strong style="color:var(--accent);font-size:18px;">' + prog + '%</strong></span>' +
+    '<span style="color:var(--muted);">Plan <strong style="color:#64748b;font-size:15px;">' + planned + '%</strong></span>' +
+    '</div>' +
+    '<div style="position:relative;height:14px;background:var(--surface2);border-radius:7px;">' +
+    '<div style="height:100%;border-radius:7px;background:' + rag.col + ';width:' + prog + '%;transition:width 0.4s;"></div>' +
+    (planned > 0 && planned < 100 ? '<div style="position:absolute;top:-3px;height:20px;width:2px;background:#64748b;border-radius:1px;left:' + Math.min(100,planned) + '%;"></div>' : '') +
+    '</div>' +
+    '</div>' +
+
+    // ── Finance (admin) ──
+    (isAdmin ?
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px;margin-bottom:4px;">' +
+    '<div style="text-align:center;background:var(--surface2);border-radius:8px;padding:10px 6px;">' +
+    '<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Budget</div>' +
+    '<div style="font-size:17px;font-weight:800;color:#4ade80;">' + fmt(z.budget) + '</div></div>' +
+    '<div style="text-align:center;background:var(--surface2);border-radius:8px;padding:10px 6px;">' +
+    '<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Est. Spent</div>' +
+    '<div style="font-size:17px;font-weight:800;color:var(--accent);">' + fmt(spent) + '</div></div>' +
+    '<div style="text-align:center;background:var(--surface2);border-radius:8px;padding:10px 6px;">' +
+    '<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Remaining</div>' +
+    '<div style="font-size:17px;font-weight:800;color:#60a5fa;">' + fmt(Math.max(0,z.budget-spent)) + '</div></div>' +
+    '</div>' : '') +
+
+    // ── Tasks ──
+    '<div class="zh-section-title">Tasks (' + tasks.length + ')' +
+    '<span style="font-weight:400;margin-left:10px;">' +
+    '<span style="color:#22c55e;">' + tDone + ' done</span> &bull; ' +
+    '<span style="color:#f59e0b;">' + tWip + ' in progress</span> &bull; ' +
+    '<span style="color:#64748b;">' + tNot + ' not started</span></span></div>' +
+    tasksHtml +
+
+    // ── Delays ──
+    '<div class="zh-section-title">&#9888; Site Delays &amp; Blockers (' + delays.length + ')</div>' +
+    delaysHtml +
+
+    // ── Variations (admin) ──
+    (isAdmin && vars.length ?
+    '<div class="zh-section-title">Variations (' + vars.length + ')</div>' + varsHtml : '');
+
+  document.getElementById('zone-health-content').innerHTML = html;
+  document.getElementById('zone-health-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeZoneHealth() {
+  document.getElementById('zone-health-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
 </script>
+<!-- Zone Health Modal (v27) -->
+<div id="zone-health-modal" onclick="if(event.target===this)closeZoneHealth()">
+  <div id="zone-health-panel">
+    <div id="zone-health-content"></div>
+  </div>
+</div>
+
 <!-- Quick-Log FAB (admin only) -->
 <button class="fab-quicklog admin-only" onclick="openQuickLog()" title="Quick log">+ Quick Log</button>
 
