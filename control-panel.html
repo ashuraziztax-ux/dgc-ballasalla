@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v31</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v32</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -938,14 +938,14 @@ function clearForm() {
           <div style="font-size:9px;color:var(--muted);margin-top:3px;">calendar weeks to 29 Jun</div>
         </div>
         <div style="border-left:1px solid var(--border);padding-left:12px;">
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">Forecast — Programme</div>
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">Speed needed — 29 Jun</div>
           <div style="font-size:20px;font-weight:800;line-height:1.2;" id="pc-forecast-plan">—</div>
-          <div style="font-size:9px;color:var(--muted);margin-top:4px;">tasks at planned speed<br><span id="pc-plan-rem" style="color:var(--accent);"></span></div>
+          <div style="font-size:9px;color:var(--muted);margin-top:4px;">of plan speed needed<br><span id="pc-plan-rem" style="color:var(--muted);"></span></div>
         </div>
         <div style="border-left:1px solid var(--border);padding-left:12px;">
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">Forecast — Real pace</div>
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">Honest forecast (current pace)</div>
           <div style="font-size:20px;font-weight:800;line-height:1.2;" id="pc-forecast-pace">—</div>
-          <div style="font-size:9px;color:var(--muted);margin-top:4px;">adjusted for actual speed<br><span id="pc-pace-velocity" style="color:#a78bfa;"></span></div>
+          <div style="font-size:9px;color:var(--muted);margin-top:4px;">if nothing changes<br><span id="pc-pace-velocity" style="color:#a78bfa;"></span></div>
         </div>
       </div>
     </div>
@@ -4055,23 +4055,22 @@ function buildProgrammeClock() {
     var plannedPct = totBud > 0 ? totPlanDone / totBud * 100 : 0;
     var remWorkPct = Math.max(0, 100 - actualPct);
 
-    // ── Programme forecast ───────────────────────────────────────────────────
-    // "Tasks say X% left → X% of total programme duration still to go"
-    var remDaysPlan  = totalDays * remWorkPct / 100;
-    var finishPlan   = new Date(TODAY.getTime() + remDaysPlan * 86400000);
-    var vsDeadPlan   = daysBetween(deadline, finishPlan) / 7;  // +ve = late
-    var remWksPlan   = Math.round(remDaysPlan / 7 * 10) / 10;
+    // ── Speed needed to hit 29 Jun ───────────────────────────────────────────
+    // How fast does the team need to work (as % of plan speed) to finish by deadline?
+    // remWorkPct% of work left. At 100% plan speed = remWorkPct% of total calendar.
+    var remDaysPlan  = totalDays * remWorkPct / 100;  // days if working at 100% plan
+    var reqSpeedPct  = calDaysLeft > 0 ? Math.round(remDaysPlan / calDaysLeft * 100) : null;
+    // reqSpeedPct > 100 → need to go faster than plan (very tight)
+    // reqSpeedPct ≤ 100 → can still hit deadline at or below plan speed
 
-    // ── Real-pace forecast ───────────────────────────────────────────────────
+    // ── Honest forecast — at current pace ───────────────────────────────────
     // Velocity = actual% / planned% — how fast we're really going vs plan
     var velocity    = (plannedPct > 3) ? Math.max(0.05, actualPct / plannedPct) : null;
     var vsDeadPace  = null;
-    var remWksPace  = null;
     if (velocity !== null) {
       var remDaysPace = remDaysPlan / velocity;
       var finishPace  = new Date(TODAY.getTime() + remDaysPace * 86400000);
       vsDeadPace      = daysBetween(deadline, finishPace) / 7;
-      remWksPace      = Math.round(remDaysPace / 7 * 10) / 10;
     }
 
     // ── Format helper ────────────────────────────────────────────────────────
@@ -4100,12 +4099,21 @@ function buildProgrammeClock() {
     el = document.getElementById('pc-cal-weeks-left');
     if (el) el.textContent = calWeeksLeft + ' wks';
 
+    // Speed needed cell
     el = document.getElementById('pc-forecast-plan');
-    if (el) el.innerHTML = fmtVsDead(vsDeadPlan);
-
+    if (el && reqSpeedPct !== null) {
+      var spCol = reqSpeedPct > 110 ? '#ef4444' : reqSpeedPct > 90 ? '#f59e0b' : '#22c55e';
+      el.innerHTML = '<span style="color:' + spCol + ';">' + reqSpeedPct + '%</span>';
+    }
     el = document.getElementById('pc-plan-rem');
-    if (el) el.textContent = remWksPlan + ' wks of work left';
+    if (el && reqSpeedPct !== null) {
+      var spNote = reqSpeedPct > 100
+        ? Math.round(reqSpeedPct - 100) + '% faster than plan needed'
+        : 'achievable at ' + reqSpeedPct + '% of plan';
+      el.textContent = spNote;
+    }
 
+    // Honest forecast cell
     el = document.getElementById('pc-forecast-pace');
     if (el) el.innerHTML = fmtVsDead(vsDeadPace);
 
