@@ -889,44 +889,56 @@ function clearForm() {
         </div>
       </div>
     </div>
+    <!-- Days Remaining + Working Days Left combined -->
     <div class="kpi-card blue">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <div class="kpi-label" style="margin-bottom:0;">Days Remaining</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
         <span id="job-status-pill" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;padding:2px 8px;border-radius:10px;background:#22c55e20;color:#22c55e;border:1px solid #22c55e40;">Active</span>
+        <div id="prog-status-badge" style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;background:#f9731620;color:#f97316;border:1px solid #f9731640;display:inline-block;">Behind Programme</div>
       </div>
-      <div class="kpi-value" id="kpi-days">—</div>
-      <div class="kpi-sub" id="kpi-days-sub">to agreed completion 29 Jun</div>
-      <div id="prog-status-badge" style="margin-top:8px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;background:#f9731620;color:#f97316;border:1px solid #f9731640;display:inline-block;">Behind Programme</div>
-      <div id="kpi-forecast-row" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div>
+          <div class="kpi-label">Days Remaining</div>
+          <div class="kpi-value" id="kpi-days">—</div>
+          <div class="kpi-sub" id="kpi-days-sub">to agreed completion 29 Jun</div>
+        </div>
+        <div>
+          <div class="kpi-label">Working Days Left</div>
+          <div class="kpi-value" id="kpi-working-days">—</div>
+          <div class="kpi-sub" id="kpi-working-hrs">IoM bank hols applied</div>
+        </div>
+      </div>
+      <div id="kpi-forecast-row" style="padding-top:8px;border-top:1px solid var(--border);">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:3px;">No-intervention finish</div>
         <div id="kpi-forecast-date" style="font-size:18px;font-weight:800;color:#ef4444;">—</div>
         <div id="kpi-forecast-off" style="font-size:10px;color:#ef4444;font-weight:600;margin-top:1px;">—</div>
       </div>
     </div>
+    <!-- Contract Value + Next Payment + Programme Budget combined -->
     <div class="kpi-card green admin-only">
-      <div class="kpi-label">Contract Value</div>
-      <div class="kpi-value">£450k</div>
-      <div class="kpi-sub">contract sum (AFP2)</div>
+      <div class="kpi-label" style="margin-bottom:10px;">Financials</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">Contract Value</div>
+          <div style="font-size:20px;font-weight:800;color:#4ade80;line-height:1;">£450k</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;">AFP2 contract sum</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">Next Payment</div>
+          <div style="font-size:20px;font-weight:800;color:var(--accent);line-height:1;" id="kpi-next-payment">—</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;" id="kpi-next-payment-date">—</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">Programme Budget</div>
+          <div style="font-size:20px;font-weight:800;color:#60a5fa;line-height:1;">£367k</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;">total cost plan</div>
+        </div>
+      </div>
     </div>
-    <div class="kpi-card accent admin-only">
-      <div class="kpi-label">Next Payment</div>
-      <div class="kpi-value" id="kpi-next-payment">—</div>
-      <div class="kpi-sub" id="kpi-next-payment-date">—</div>
-    </div>
-    <div class="kpi-card blue admin-only">
-      <div class="kpi-label">Programme Budget</div>
-      <div class="kpi-value">£367k</div>
-      <div class="kpi-sub">total cost plan</div>
-    </div>
+    <!-- Zones Open -->
     <div class="kpi-card orange">
-      <div class="kpi-label">Sections Active</div>
+      <div class="kpi-label">Zones Open</div>
       <div class="kpi-value" id="kpi-active-zones">—</div>
       <div class="kpi-sub">running concurrently</div>
-    </div>
-    <div class="kpi-card blue">
-      <div class="kpi-label">Working Days Left</div>
-      <div class="kpi-value" id="kpi-working-days">—</div>
-      <div class="kpi-sub" id="kpi-working-hrs">IoM bank hols applied</div>
     </div>
   </div>
 
