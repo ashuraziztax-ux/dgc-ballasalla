@@ -489,8 +489,8 @@ function checkPw(){
   }
 }
 
-// ADMIN / USER MODE TOGGLE
-var isAdmin = false;
+// ADMIN / USER MODE TOGGLE  (default: admin ON for testing)
+var isAdmin = true;
 function toggleMode(){
   isAdmin = !isAdmin;
   if(isAdmin){
@@ -507,9 +507,12 @@ function toggleMode(){
   try{ sessionStorage.setItem('dgc_mode', isAdmin ? 'admin' : 'user'); }catch(e){}
   try{ buildAlerts(); }catch(e){}
 }
-// Restore mode from session
+// Restore mode from session (default admin, so seed session if not already set)
 (function(){
-  try{ if(sessionStorage.getItem('dgc_mode')==='admin'){ isAdmin=true; document.body.classList.add('admin-mode'); } }catch(e){}
+  try{
+    if(sessionStorage.getItem('dgc_mode') === null){ sessionStorage.setItem('dgc_mode','admin'); }
+    if(sessionStorage.getItem('dgc_mode')==='admin'){ isAdmin=true; document.body.classList.add('admin-mode'); }
+  }catch(e){ document.body.classList.add('admin-mode'); }
 })();
 // ══════════════════════════════════════════════════════
 // VOICE DIARY — recording, AI cleanup, save/load
