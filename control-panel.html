@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v35</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v36</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -1118,16 +1118,20 @@ function clearForm() {
   <!-- Pattern Config -->
   <div class="sh-pattern-grid">
 
-    <!-- Priced / Reference -->
+    <!-- Contract reference -->
     <div class="card">
-      <div class="card-title" style="margin-bottom:10px;">&#128203; Priced Pattern <span style="font-size:10px;color:var(--muted);font-weight:400;">(contract reference — fixed)</span></div>
-      <div class="sh-row"><label>Mon–Thu</label><span>07:30 – 17:00</span><span style="color:var(--accent);font-weight:700;">9.0 h/day</span></div>
-      <div class="sh-row"><label>Friday</label><span>07:30 – 15:30</span><span style="color:var(--accent);font-weight:700;">7.5 h</span></div>
-      <div class="sh-row"><label>Saturday</label><span>Every other — 08:00 – 12:00</span><span style="color:var(--accent);font-weight:700;">4.0 h avg 2.0</span></div>
-      <div class="sh-row"><label>Break</label><span>1 hr total — 30 min paid by DGC</span></div>
-      <div class="sh-row" style="margin-top:8px;border-top:2px solid var(--accent);padding-top:10px;border-bottom:none;">
-        <label style="color:var(--text);font-weight:700;">Priced Avg</label>
-        <span style="font-size:18px;font-weight:800;color:#4ade80;">45.5 h/week</span>
+      <div class="card-title" style="margin-bottom:10px;">&#128203; Contract Pattern <span style="font-size:10px;color:var(--muted);font-weight:400;">(reference — fixed)</span></div>
+      <div class="sh-row"><label>Mon–Thu</label><span>07:30–17:00 (9.5h gross)</span></div>
+      <div class="sh-row"><label>Friday</label><span>07:30–15:30 (8.0h gross)</span></div>
+      <div class="sh-row"><label>Saturday</label><span>Alternate — 08:00–12:00 (4.0h)</span></div>
+      <div class="sh-row"><label>Break</label><span>60 min total &bull; 30 min paid by DGC</span></div>
+      <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Productive h/man</div>
+        <div style="font-size:16px;font-weight:800;color:#60a5fa;">43.0 h/wk</div>
+        <div style="font-size:9px;color:var(--muted);">gross − 60 min break</div></div>
+        <div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Cost h/man</div>
+        <div style="font-size:16px;font-weight:800;color:#4ade80;">45.5 h/wk</div>
+        <div style="font-size:9px;color:var(--muted);">gross − 30 min (DGC pays half break)</div></div>
       </div>
     </div>
 
@@ -1169,6 +1173,39 @@ function clearForm() {
       <div class="sh-row" style="margin-top:8px;border-top:2px solid var(--accent2);padding-top:10px;border-bottom:none;">
         <label style="color:var(--text);font-weight:700;">Actual Avg</label>
         <span id="sh-actual-avg" style="font-size:18px;font-weight:800;color:#60a5fa;">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gangs & Crew -->
+  <div class="card" style="margin-bottom:12px;">
+    <div class="card-title" style="margin-bottom:10px;">&#128737; Gangs &amp; Crew on Site</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end;">
+      <div>
+        <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Number of gangs</label>
+        <input type="number" id="sh-gangs" min="1" max="20" value="2"
+          style="width:80px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:16px;font-weight:700;padding:6px 10px;"
+          onchange="shSaveGangConfig();shRebuild()">
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Men per gang</label>
+        <input type="number" id="sh-men-per-gang" min="1" max="30" value="6"
+          style="width:80px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:16px;font-weight:700;padding:6px 10px;"
+          onchange="shSaveGangConfig();shRebuild()">
+      </div>
+      <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:10px 16px;">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Total men on site</div>
+        <div id="sh-total-men" style="font-size:28px;font-weight:900;color:var(--accent);">—</div>
+      </div>
+      <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:10px 16px;">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Total cost hrs/week</div>
+        <div id="sh-total-cost-hrs" style="font-size:28px;font-weight:900;color:#4ade80;">—</div>
+        <div style="font-size:9px;color:var(--muted);">all men combined</div>
+      </div>
+      <div style="text-align:center;background:var(--surface2);border-radius:10px;padding:10px 16px;">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Total productive hrs/week</div>
+        <div id="sh-total-prod-hrs" style="font-size:28px;font-weight:900;color:#60a5fa;">—</div>
+        <div style="font-size:9px;color:var(--muted);">all men combined</div>
       </div>
     </div>
   </div>
@@ -3905,18 +3942,18 @@ function getTimeProgress() {
 
 // What % SHOULD be done by today — each task contributes its budget × how far through its planned dates we are
 function getPlannedProgress() {
+  // Zone-budget-weighted planned % — matches actual % methodology
   let totBudget = 0, totPlanned = 0;
-  TASKS.forEach(t => {
-    if(!t.start || !t.end || t.isGroup) return;
-    const bud = t.budget || 0;
-    if(bud <= 0) return;
-    const s = parseDate(t.start), e = parseDate(t.end);
-    const totalDays = Math.max(daysBetween(s, e), 1);
-    let plannedFrac = 0;
-    if(TODAY >= e) plannedFrac = 1;
-    else if(TODAY > s) plannedFrac = daysBetween(s, TODAY) / totalDays;
+  ZONES.forEach(z => {
+    const bud = z.budget || 0;
+    if (bud <= 0) return;
     totBudget += bud;
-    totPlanned += bud * plannedFrac;
+    const s = parseDate(z.start), e = parseDate(z.end);
+    const dur = Math.max(1, daysBetween(s, e));
+    let pf = 0;
+    if (TODAY >= e) pf = 1;
+    else if (TODAY > s) pf = Math.min(1, daysBetween(s, TODAY) / dur);
+    totPlanned += bud * pf;
   });
   return totBudget > 0 ? Math.round(totPlanned / totBudget * 100) : 0;
 }
@@ -4001,20 +4038,19 @@ function shiftDateByWorkingDays(date, days) {
   return d;
 }
 function getRevisedPlanProgress() {
-  // Ask: what was the original plan for (today minus EOT days)?
+  // Zone-budget-weighted planned % using today shifted back by EOT working days
   const adjustedToday = shiftDateByWorkingDays(TODAY, -EOT_WORKING_DAYS);
   let totBudget = 0, totPlanned = 0;
-  TASKS.forEach(t => {
-    if(!t.start || !t.end || t.isGroup) return;
-    const bud = t.budget || 0;
-    if(bud <= 0) return;
-    const s = parseDate(t.start), e = parseDate(t.end);
-    const totalDays = Math.max(daysBetween(s, e), 1);
-    let plannedFrac = 0;
-    if(adjustedToday >= e) plannedFrac = 1;
-    else if(adjustedToday > s) plannedFrac = daysBetween(s, adjustedToday) / totalDays;
+  ZONES.forEach(z => {
+    const bud = z.budget || 0;
+    if (bud <= 0) return;
     totBudget += bud;
-    totPlanned += bud * plannedFrac;
+    const s = parseDate(z.start), e = parseDate(z.end);
+    const dur = Math.max(1, daysBetween(s, e));
+    let pf = 0;
+    if (adjustedToday >= e) pf = 1;
+    else if (adjustedToday > s) pf = Math.min(1, daysBetween(s, adjustedToday) / dur);
+    totPlanned += bud * pf;
   });
   return totBudget > 0 ? Math.round(totPlanned / totBudget * 100) : 0;
 }
@@ -5385,7 +5421,25 @@ function buildStaffHours() {
     if (satRow) satRow.style.display = pat.saturday.freq === 'none' ? 'none' : '';
   } catch(e) {}
 
+  // Gang config restore
+  try {
+    var gc = shLoadGangConfig();
+    var ge = document.getElementById('sh-gangs');
+    var me = document.getElementById('sh-men-per-gang');
+    if (ge) ge.value = gc.gangs;
+    if (me) me.value = gc.menPerGang;
+  } catch(e) {}
   shRebuild();
+}
+
+function shLoadGangConfig() {
+  var d = lsGet('dgc_gang_config', null);
+  return d || { gangs: 2, menPerGang: 6 };
+}
+function shSaveGangConfig() {
+  var gangs = parseInt(document.getElementById('sh-gangs').value || '2', 10);
+  var mpg   = parseInt(document.getElementById('sh-men-per-gang').value || '6', 10);
+  lsSet('dgc_gang_config', { gangs: Math.max(1,gangs), menPerGang: Math.max(1,mpg) });
 }
 
 function shRebuild() {
@@ -5394,52 +5448,95 @@ function shRebuild() {
   var weeks = shProjectWeeks();
   var today = TODAY;
 
-  // Update actual avg display
-  var avg = shAvgWeekHours(pat);
-  var avgEl = document.getElementById('sh-actual-avg');
-  if (avgEl) avgEl.textContent = avg + ' h/week';
+  // Gang config
+  var gangCfg    = shLoadGangConfig();
+  var totalMen   = gangCfg.gangs * gangCfg.menPerGang;
 
-  // Show/hide saturday times row based on freq
-  var satRow = document.getElementById('sh-sat-times-row');
+  // Restore gang inputs
+  try {
+    var gangsEl = document.getElementById('sh-gangs');
+    var mpgEl   = document.getElementById('sh-men-per-gang');
+    if (gangsEl && !gangsEl._set) { gangsEl.value = gangCfg.gangs;      gangsEl._set = true; }
+    if (mpgEl   && !mpgEl._set)   { mpgEl.value   = gangCfg.menPerGang; mpgEl._set   = true; }
+  } catch(e) {}
+
+  // Per-man weekly averages
+  function prodWeeklyHours(p, hasSat) {
+    // Productive = gross - 60 min break
+    function prodDay(start, end) { return Math.max(0, shTimeToHours(end) - shTimeToHours(start) - 1.0); }
+    var h = prodDay(p.monThu.start, p.monThu.end) * 4
+          + prodDay(p.friday.start,  p.friday.end);
+    if (hasSat && p.saturday.freq !== 'none')
+      h += Math.max(0, shTimeToHours(p.saturday.end) - shTimeToHours(p.saturday.start));
+    return Math.round(h * 10) / 10;
+  }
+  function costWeeklyHours(p, hasSat) {
+    // Cost = gross - 30 min (DGC pays half break)
+    return shWeeklyHours(p, hasSat); // existing function already uses unpaidMins=30
+  }
+
+  function prodAvg(p) {
+    if (p.saturday.freq === 'every')    return prodWeeklyHours(p, true);
+    if (p.saturday.freq === 'none')     return prodWeeklyHours(p, false);
+    return Math.round((prodWeeklyHours(p,true)+prodWeeklyHours(p,false))/2*10)/10;
+  }
+  function costAvg(p) { return shAvgWeekHours(p); }
+
+  var prodPerMan = prodAvg(pat);
+  var costPerMan = costAvg(pat);
+
+  // Update actual avg display
+  var avgEl = document.getElementById('sh-actual-avg');
+  if (avgEl) avgEl.textContent = costPerMan + ' h/week (cost)';
+
+  // Show/hide saturday times row
+  var satRow   = document.getElementById('sh-sat-times-row');
   var satFreqEl = document.getElementById('sh-sat-freq');
   if (satRow && satFreqEl) satRow.style.display = satFreqEl.value === 'none' ? 'none' : '';
 
-  var pricedAvg = 45.5;
-  var actualAvg = avg;
-  var efficiency = pricedAvg > 0 ? Math.round(actualAvg / pricedAvg * 1000) / 10 : 0;
+  // Update gang summary tiles
+  var totalMenEl = document.getElementById('sh-total-men');
+  if (totalMenEl) totalMenEl.textContent = totalMen + ' men';
+  var totalCostEl = document.getElementById('sh-total-cost-hrs');
+  if (totalCostEl) totalCostEl.textContent = Math.round(costPerMan * totalMen * 10)/10 + 'h';
+  var totalProdEl = document.getElementById('sh-total-prod-hrs');
+  if (totalProdEl) totalProdEl.textContent = Math.round(prodPerMan * totalMen * 10)/10 + 'h';
 
-  // Cumulative totals for completed weeks
-  var pricedTotal = 0, actualTotal = 0, weeksLogged = 0;
+  // Reference priced cost (contract): 45.5h/man/week cost hours
+  var contractCostPerMan = 45.5;
+  var contractProdPerMan = 43.0;
+
+  // Cumulative totals
+  var targetTotal = 0, actualTotal = 0, weeksLogged = 0;
   weeks.forEach(function(w) {
     if (w.friDate < today) {
-      var ph = shWeeklyHours(SH_PRICED, w.isSatWeek);
-      pricedTotal += ph;
+      var wkCost = costWeeklyHours(pat, w.isSatWeek) * totalMen;
+      targetTotal += wkCost;
       var actual = log[w.key] !== undefined ? parseFloat(log[w.key]) : null;
       if (actual !== null && !isNaN(actual)) { actualTotal += actual; weeksLogged++; }
     }
   });
 
-  var deficit = Math.round((pricedTotal - actualTotal) * 10) / 10;
-  var pricedDayHrs = shShiftHours(SH_PRICED.monThu.start, SH_PRICED.monThu.end, SH_PRICED.monThu.unpaidMins);
-  var extraDays = pricedDayHrs > 0 ? Math.round(deficit / pricedDayHrs * 10) / 10 : 0;
+  var deficit   = Math.round((targetTotal - actualTotal) * 10) / 10;
+  var dayHrsCost = costWeeklyHours(pat, false) / 5; // approx hrs per man day
+  var extraDays = dayHrsCost * totalMen > 0 ? Math.round(deficit / (dayHrsCost * totalMen) * 10) / 10 : 0;
+  var efficiency = targetTotal > 0 && actualTotal > 0 ? Math.round(actualTotal / targetTotal * 1000) / 10 : 0;
 
-  // Remaining weeks count
   var weeksLeft = weeks.filter(function(w) { return w.monDate >= today; }).length;
-  var hoursLeft = weeksLeft * actualAvg;
 
-  // Impact KPIs
+  // KPI tiles
   var kpiEl = document.getElementById('sh-impact-kpis');
   if (kpiEl) {
-    var effCol = efficiency >= 95 ? '#22c55e' : efficiency >= 85 ? '#f59e0b' : '#ef4444';
+    var effCol = efficiency >= 95 ? '#22c55e' : efficiency >= 80 ? '#f59e0b' : '#ef4444';
     var defCol = deficit > 0 ? '#ef4444' : '#22c55e';
     kpiEl.innerHTML =
-      '<div class="sh-kpi"><div class="val" style="color:#4ade80;">' + pricedAvg + 'h</div><div class="lbl">Priced avg/week</div></div>' +
-      '<div class="sh-kpi"><div class="val" style="color:#60a5fa;">' + actualAvg + 'h</div><div class="lbl">Actual avg/week</div></div>' +
-      '<div class="sh-kpi"><div class="val" style="color:' + effCol + ';">' + efficiency + '%</div><div class="lbl">Hours efficiency</div></div>' +
-      (weeksLogged > 0 ?
-        '<div class="sh-kpi"><div class="val" style="color:' + defCol + ';">' + (deficit > 0 ? '-' : '+') + Math.abs(deficit) + 'h</div><div class="lbl">Hours ' + (deficit > 0 ? 'deficit' : 'surplus') + ' to date</div></div>' +
-        '<div class="sh-kpi"><div class="val" style="color:' + defCol + ';">' + Math.abs(extraDays) + ' days</div><div class="lbl">Programme ' + (deficit > 0 ? 'behind' : 'ahead') + ' (hrs)</div></div>'
-      : '<div class="sh-kpi"><div class="val" style="color:var(--muted);">—</div><div class="lbl">Log hours below to see deficit</div></div>') +
+      '<div class="sh-kpi"><div class="val" style="color:#60a5fa;">' + prodPerMan + 'h</div><div class="lbl">Productive h/man/wk<br><span style="font-size:9px;color:var(--muted);">gross − 60 min</span></div></div>' +
+      '<div class="sh-kpi"><div class="val" style="color:#4ade80;">' + costPerMan + 'h</div><div class="lbl">Cost h/man/wk<br><span style="font-size:9px;color:var(--muted);">DGC pays gross − 30 min</span></div></div>' +
+      '<div class="sh-kpi"><div class="val" style="color:var(--accent);">' + gangCfg.gangs + ' gang' + (gangCfg.gangs !== 1 ? 's' : '') + ' \xd7 ' + gangCfg.menPerGang + '</div><div class="lbl">' + totalMen + ' men on site total</div></div>' +
+      (weeksLogged > 0
+        ? '<div class="sh-kpi"><div class="val" style="color:' + effCol + ';">' + efficiency + '%</div><div class="lbl">Hours efficiency</div></div>' +
+          '<div class="sh-kpi"><div class="val" style="color:' + defCol + ';">' + (deficit > 0 ? '−' : '+') + Math.abs(deficit) + 'h</div><div class="lbl">Hours ' + (deficit > 0 ? 'deficit' : 'surplus') + '<br><span style="font-size:9px;color:var(--muted);">' + Math.abs(extraDays) + ' programme days</span></div></div>'
+        : '<div class="sh-kpi"><div class="val" style="color:var(--muted);">—</div><div class="lbl">Log hours below<br>to see efficiency</div></div>') +
       '<div class="sh-kpi"><div class="val" style="color:#a78bfa;">' + weeksLeft + '</div><div class="lbl">Weeks remaining</div></div>';
   }
 
@@ -5448,44 +5545,54 @@ function shRebuild() {
   if (!tbl) return;
 
   var thead = '<thead><tr>' +
-    '<th>Week</th><th>Dates</th><th>Priced hrs</th><th>Actual hrs entered</th><th>Difference</th><th>Running deficit</th>' +
+    '<th>Week</th>' +
+    '<th>Dates</th>' +
+    '<th>Prod h/man</th>' +
+    '<th>Cost h/man</th>' +
+    '<th>Total cost hrs<br><span style="font-size:9px;font-weight:400;color:var(--muted);">(' + totalMen + ' men)</span></th>' +
+    '<th>Actual hrs logged</th>' +
+    '<th>Difference</th>' +
+    '<th>Running</th>' +
     '</tr></thead>';
 
   var running = 0;
   var tbody = '<tbody>';
   weeks.forEach(function(w) {
-    var isPast   = w.friDate < today;
+    var isPast    = w.friDate < today;
     var isCurrent = (w.monDate <= today && w.friDate >= today) || (!isPast && w.monDate <= today);
-    var wkNum    = weeks.indexOf(w) + 1;
-    var planned  = shWeeklyHours(pat, w.isSatWeek);
-    var priced   = shWeeklyHours(SH_PRICED, w.isSatWeek);
-    var actual   = log[w.key] !== undefined ? parseFloat(log[w.key]) : null;
+    var wkNum     = weeks.indexOf(w) + 1;
+    var prodH     = prodWeeklyHours(pat, w.isSatWeek);
+    var costH     = costWeeklyHours(pat, w.isSatWeek);
+    var totalCostH = Math.round(costH * totalMen * 10) / 10;
+    var actual    = log[w.key] !== undefined ? parseFloat(log[w.key]) : null;
 
-    if (isPast && actual !== null && !isNaN(actual)) running += actual - priced;
+    if (isPast && actual !== null && !isNaN(actual)) running += actual - totalCostH;
 
-    var diffVal  = (actual !== null && !isNaN(actual)) ? Math.round((actual - priced)*10)/10 : null;
+    var diffVal  = (actual !== null && !isNaN(actual)) ? Math.round((actual - totalCostH)*10)/10 : null;
     var diffHtml = diffVal === null ? '<span style="color:var(--muted);">—</span>' :
-                   diffVal > 0 ? '<span class="sh-diff-pos">+' + diffVal + 'h</span>' :
-                   diffVal < 0 ? '<span class="sh-diff-neg">' + diffVal + 'h</span>' :
-                                 '<span class="sh-diff-zero">0h</span>';
+                   diffVal > 0  ? '<span class="sh-diff-pos">+' + diffVal + 'h</span>' :
+                   diffVal < 0  ? '<span class="sh-diff-neg">' + diffVal + 'h</span>' :
+                                  '<span class="sh-diff-zero">0h</span>';
 
-    var runHtml  = (isPast && actual !== null) ?
+    var runHtml = (isPast && actual !== null) ?
       '<span style="color:' + (running < 0 ? '#ef4444' : '#22c55e') + ';font-weight:700;">' +
       (running > 0 ? '+' : '') + Math.round(running*10)/10 + 'h</span>' : '—';
 
     var rowStyle = isCurrent ? 'background:#f59e0b10;' : '';
-    var badge = w.isSatWeek ? '<span class="sh-sat-tag">Sat</span>' : '';
+    var badge    = w.isSatWeek ? '<span class="sh-sat-tag">Sat</span>' : '';
 
     tbody += '<tr style="' + rowStyle + '">' +
       '<td style="color:var(--muted);font-weight:600;">Wk ' + wkNum + badge + '</td>' +
       '<td>' + shFmtDate(w.monDate) + ' – ' + shFmtDate(w.friDate) +
         (w.isSatWeek && pat.saturday.freq !== 'none' ? ' + Sat ' + shFmtDate(w.satDate) : '') +
       '</td>' +
-      '<td style="color:var(--accent);font-weight:600;">' + priced + 'h</td>' +
+      '<td style="color:#60a5fa;font-weight:600;">' + prodH + 'h</td>' +
+      '<td style="color:#4ade80;font-weight:600;">' + costH + 'h</td>' +
+      '<td style="color:var(--accent);font-weight:700;">' + totalCostH + 'h</td>' +
       '<td>' +
-        '<input type="number" min="0" max="80" step="0.5" ' +
+        '<input type="number" min="0" max="9999" step="0.5" ' +
         'value="' + (actual !== null && !isNaN(actual) ? actual : '') + '" ' +
-        'placeholder="' + planned + '" ' +
+        'placeholder="' + totalCostH + '" ' +
         'onchange="shLogHours(\'' + w.key + '\',this.value)" ' +
         'style="' + (isPast ? '' : 'opacity:0.5;') + '">' +
       '</td>' +
@@ -5496,7 +5603,6 @@ function shRebuild() {
   tbody += '</tbody>';
   tbl.innerHTML = thead + tbody;
 }
-
 function shLogHours(weekKey, value) {
   var log = shLoadLog();
   var v = parseFloat(value);
