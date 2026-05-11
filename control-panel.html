@@ -981,12 +981,6 @@ function clearForm() {
         <canvas id="chart-progress"></canvas>
       </div>
     </div>
-    <div class="card admin-only">
-      <div class="card-title">Cashflow — AFP Schedule</div>
-      <div class="chart-wrap-lg">
-        <canvas id="chart-cashflow"></canvas>
-      </div>
-    </div>
   </div>
 
   <!-- Needs Attention + Milestones -->
@@ -4002,17 +3996,6 @@ function buildDashboardCharts() {
                y:{ ticks:{color:'#94a3b8',font:{size:10},callback:v=>v+'%'}, grid:{color:'#2e3347'}, max:100 } } }
   });
 
-  const months = ["Mar '26","Apr '26","May '26","Jun '26","Jul '26"];
-  const cumulative = [0, 22985, 167134, 167134, 450142];
-  const ctx2 = document.getElementById('chart-cashflow').getContext('2d');
-  new Chart(ctx2, {
-    type:'line',
-    data:{ labels:months, datasets:[{ label:'Cumulative AFP', data:cumulative, borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.1)', fill:true, tension:0.3, pointBackgroundColor:'#22c55e' }]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ labels:{ color:'#94a3b8', font:{size:11} } } },
-      scales:{ x:{ ticks:{color:'#94a3b8',font:{size:10}}, grid:{color:'#2e3347'} },
-               y:{ ticks:{color:'#94a3b8',font:{size:10},callback:v=>'£'+(v/1000).toFixed(0)+'k'}, grid:{color:'#2e3347'} } } }
-  });
 }
 
 // ═══════════════════════ ZONE SUMMARY LIST ═══════════════════════
