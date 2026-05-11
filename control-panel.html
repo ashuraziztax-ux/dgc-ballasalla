@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v40</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v41</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -1955,7 +1955,10 @@ function clearForm() {
 <!-- ═══════════════════════════════ SITE MAP ═══════════════════════════════ -->
 <div id="tab-sitemap" class="tab-content">
   <div class="card" style="padding:12px;">
-    <div class="card-title">&#128506; Site Map &amp; Zone Progress</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
+      <div class="card-title" style="margin:0;">&#128506; Site Map &amp; Zone Progress</div>
+      <button id="sm-reposition-btn" class="admin-only" onclick="smToggleDrag()" style="background:#1e3a4a;border:1px solid #38bdf8;color:#38bdf8;border-radius:6px;padding:4px 12px;font-size:10px;font-weight:700;cursor:pointer;letter-spacing:0.3px;">&#9654; Reposition circles</button>
+    </div>
 
     <!-- Zone legend: individual A–J -->
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;font-size:11px;align-items:center;">
@@ -2079,6 +2082,17 @@ function clearForm() {
           <text text-anchor="middle" dy="20" fill="rgba(255,255,255,0.82)" font-size="8.5" font-family="system-ui,sans-serif">Drains</text>
         </g>
       </svg>
+
+      <!-- Drag toolbar (admin-only) -->
+      <div id="sm-drag-toolbar" class="admin-only" style="display:none;position:absolute;top:8px;left:8px;z-index:200;background:rgba(0,0,0,0.82);border:1px solid #38bdf8;border-radius:8px;padding:8px 12px;font-size:11px;color:#f8fafc;backdrop-filter:blur(4px);">
+        <div style="font-weight:700;color:#38bdf8;margin-bottom:6px;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;">&#9654; Drag mode active — grab any circle</div>
+        <div id="sm-drag-coords" style="font-family:monospace;font-size:12px;color:#fbbf24;margin-bottom:8px;min-height:16px;">Drag a circle to see coordinates</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button onclick="smCopyPositions()" style="background:#0f766e;border:none;color:white;border-radius:5px;padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer;">&#128203; Copy all coords</button>
+          <button onclick="smResetPositions()" style="background:#7f1d1d;border:none;color:white;border-radius:5px;padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer;">&#8635; Reset to defaults</button>
+        </div>
+        <textarea id="sm-coord-out" readonly style="display:none;margin-top:8px;width:260px;height:180px;background:#0f172a;border:1px solid #334155;border-radius:5px;color:#86efac;font-family:monospace;font-size:10px;padding:6px;resize:none;"></textarea>
+      </div>
     </div>
 
     <!-- Zone progress cards — full size desktop, compact mobile -->
@@ -5215,8 +5229,157 @@ function buildFinancialChart() {
 }
 
 // ═══════════════════════ SITE MAP (Sections A-J) ═══════════════════════
+// ── Site map drag-to-reposition (admin only) ─────────────────────────────
+var SM_DRAG_ACTIVE = false;
+
+function smToggleDrag() {
+  SM_DRAG_ACTIVE = !SM_DRAG_ACTIVE;
+  var btn     = document.getElementById('sm-reposition-btn');
+  var toolbar = document.getElementById('sm-drag-toolbar');
+  if (SM_DRAG_ACTIVE) {
+    if (btn)     { btn.textContent = '✕ Exit reposition'; btn.style.background='#7f1d1d'; btn.style.borderColor='#ef4444'; btn.style.color='#fca5a5'; }
+    if (toolbar) toolbar.style.display = 'block';
+    smEnableDrag();
+  } else {
+    if (btn)     { btn.textContent = '▶ Reposition circles'; btn.style.background='#1e3a4a'; btn.style.borderColor='#38bdf8'; btn.style.color='#38bdf8'; }
+    if (toolbar) toolbar.style.display = 'none';
+    var out = document.getElementById('sm-coord-out');
+    if (out) out.style.display = 'none';
+    smDisableDrag();
+  }
+}
+
+function smEnableDrag() {
+  var svg = document.querySelector('#tab-sitemap svg');
+  if (!svg) return;
+  var dragging = null;
+  var startSvgPt = null;
+  var startXY    = null;
+
+  function svgPt(e) {
+    var pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+
+  SECTIONS.forEach(function(s) {
+    var g = document.getElementById('sm-sect-' + s.id);
+    if (!g) return;
+    g.style.cursor = 'grab';
+    g._smMouseDown = function(e) {
+      if (!SM_DRAG_ACTIVE) return;
+      e.preventDefault(); e.stopPropagation();
+      dragging = { g: g, id: s.id };
+      g.style.cursor = 'grabbing';
+      g.style.filter = 'drop-shadow(0 0 12px #38bdf8)';
+      startSvgPt = svgPt(e);
+      var t = g.getAttribute('transform') || 'translate(0,0)';
+      var m = t.match(/translate\(([^,]+),([^)]+)\)/);
+      startXY = m ? { x: parseFloat(m[1]), y: parseFloat(m[2]) } : { x: 0, y: 0 };
+    };
+    g.addEventListener('mousedown', g._smMouseDown);
+  });
+
+  svg._smMouseMove = function(e) {
+    if (!dragging) return;
+    var cur = svgPt(e);
+    var nx  = Math.round(startXY.x + cur.x - startSvgPt.x);
+    var ny  = Math.round(startXY.y + cur.y - startSvgPt.y);
+    dragging.g.setAttribute('transform', 'translate(' + nx + ',' + ny + ')');
+    var cd = document.getElementById('sm-drag-coords');
+    if (cd) cd.textContent = 'Zone ' + dragging.id + ': (' + nx + ', ' + ny + ')';
+  };
+  svg.addEventListener('mousemove', svg._smMouseMove);
+
+  svg._smMouseUp = function() {
+    if (!dragging) return;
+    var t = dragging.g.getAttribute('transform');
+    var m = t.match(/translate\(([^,]+),([^)]+)\)/);
+    if (m) {
+      var nx = Math.round(parseFloat(m[1])), ny = Math.round(parseFloat(m[2]));
+      dragging.g.dataset.baseTransform = 'translate(' + nx + ',' + ny + ')';
+      var positions = lsGet('dgc_circle_positions', '{}') || {};
+      positions[dragging.id] = { x: nx, y: ny };
+      lsSet('dgc_circle_positions', positions);
+    }
+    dragging.g.style.cursor = 'grab';
+    dragging.g.style.filter = '';
+    dragging = null;
+  };
+  svg.addEventListener('mouseup',   svg._smMouseUp);
+  svg.addEventListener('mouseleave', svg._smMouseUp);
+}
+
+function smDisableDrag() {
+  var svg = document.querySelector('#tab-sitemap svg');
+  if (!svg) return;
+  if (svg._smMouseMove) svg.removeEventListener('mousemove',   svg._smMouseMove);
+  if (svg._smMouseUp)   svg.removeEventListener('mouseup',     svg._smMouseUp);
+  if (svg._smMouseUp)   svg.removeEventListener('mouseleave',  svg._smMouseUp);
+  SECTIONS.forEach(function(s) {
+    var g = document.getElementById('sm-sect-' + s.id);
+    if (g) {
+      g.style.cursor = 'pointer';
+      if (g._smMouseDown) g.removeEventListener('mousedown', g._smMouseDown);
+    }
+  });
+}
+
+function smCopyPositions() {
+  var positions = lsGet('dgc_circle_positions', '{}') || {};
+  var lines = [];
+  SECTIONS.forEach(function(s) {
+    var pos = positions[s.id];
+    var g   = document.getElementById('sm-sect-' + s.id);
+    var x = s.x, y = s.y;
+    if (pos) { x = pos.x; y = pos.y; }
+    else if (g) {
+      var t = g.getAttribute('transform') || '';
+      var m = t.match(/translate\(([^,]+),([^)]+)\)/);
+      if (m) { x = Math.round(parseFloat(m[1])); y = Math.round(parseFloat(m[2])); }
+    }
+    lines.push('Zone ' + s.id + ': (' + x + ', ' + y + ')');
+  });
+  var out = document.getElementById('sm-coord-out');
+  if (out) {
+    out.value = lines.join('\n');
+    out.style.display = 'block';
+    out.select();
+    try { document.execCommand('copy'); } catch(e) {}
+  }
+}
+
+function smResetPositions() {
+  if (!confirm('Reset all circles to default positions?')) return;
+  lsSet('dgc_circle_positions', {});
+  SECTIONS.forEach(function(s) {
+    var g = document.getElementById('sm-sect-' + s.id);
+    if (g) {
+      var t = 'translate(' + s.x + ',' + s.y + ')';
+      g.setAttribute('transform', t);
+      g.dataset.baseTransform = t;
+    }
+  });
+  var cd = document.getElementById('sm-drag-coords');
+  if (cd) cd.textContent = 'Reset to defaults';
+}
+
 function buildSiteMap() {
   var stcol = { complete:'#22c55e', active:'#f59e0b', upcoming:'#64748b', late:'#ef4444' };
+
+  // Apply any saved custom positions from drag-to-reposition
+  try {
+    var customPos = lsGet('dgc_circle_positions', '{}') || {};
+    Object.keys(customPos).forEach(function(id) {
+      var pos = customPos[id];
+      var g = document.getElementById('sm-sect-' + id);
+      if (g && pos) {
+        var t = 'translate(' + pos.x + ',' + pos.y + ')';
+        g.setAttribute('transform', t);
+        g.dataset.baseTransform = t;
+      }
+    });
+  } catch(e) {}
 
   // Update SVG circle percentages + RAG ring from zone progress
   SECTIONS.forEach(function(s) {
