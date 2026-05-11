@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v30</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v31</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -2510,35 +2510,96 @@ function buildVelocityPanel() {
   pbTitle.textContent = 'Progress vs Plan';
   pbWrap.appendChild(pbTitle);
 
-  [
-    {lbl:'Actual (by value)', pct:overallPct, col:'var(--accent)'},
-    {lbl:'Planned at today',  pct:plannedPct, col:'var(--muted)'}
-  ].forEach(function(bar) {
+  // ── Delay credit for "Accounted for" bar ──────────────────────────────────
+  // Include: agreed + claimed + open risk tickets (exclude absorbed + eot_claimed)
+  // eot_claimed is already baked into plannedPct via the 29 Jun deadline
+  var delayLog = loadDelayLog();
+  var accountedDays = delayLog.reduce(function(s, d) {
+    if (d.status === 'absorbed' || d.category === 'eot_claimed') return s;
+    return s + (d.days || 0);
+  }, 0);
+  // Also count open risk tickets (all categories, not yet agreed)
+  var openDays = delayLog.reduce(function(s, d) {
+    return d.status === 'open' ? s + (d.days || 0) : s;
+  }, 0);
+
+  // Programme ≈ 65 working days (98 cal days − 28 weekends − 5 IoM bank hols)
+  var totalProgWDs = 65;
+  // Express agreed delays as % of total programme working time
+  var delayCreditPct = Math.min(100 - overallPct, accountedDays / totalProgWDs * 100);
+  var accountedForPct = overallPct + delayCreditPct;
+  var surplusOrGap = accountedForPct - plannedPct; // +ve = surplus, -ve = gap
+
+  // ── Bar helper ──────────────────────────────────────────────────────────────
+  function addBar(container, labelTxt, barPct, mainCol, stackPct, stackCol, valueTxt, valueCol) {
     var row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;';
     var lbl = document.createElement('div');
     lbl.style.cssText = 'font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;width:120px;flex-shrink:0;';
-    lbl.textContent = bar.lbl;
+    lbl.textContent = labelTxt;
     var track = document.createElement('div');
-    track.style.cssText = 'flex:1;height:12px;background:var(--surface2);border-radius:6px;overflow:hidden;';
-    var fill = document.createElement('div');
-    fill.style.cssText = 'height:100%;border-radius:6px;background:' + bar.col + ';width:' + Math.min(100,bar.pct).toFixed(1) + '%;';
-    track.appendChild(fill);
+    track.style.cssText = 'flex:1;height:12px;background:var(--surface2);border-radius:6px;overflow:hidden;display:flex;';
+    // Base segment
+    var seg1 = document.createElement('div');
+    seg1.style.cssText = 'height:100%;flex:0 0 ' + Math.min(100, barPct).toFixed(1) + '%;background:' + mainCol + ';';
+    track.appendChild(seg1);
+    // Stack segment (for accounted-for bar)
+    if (stackPct > 0) {
+      var seg2 = document.createElement('div');
+      seg2.style.cssText = 'height:100%;flex:0 0 ' + Math.min(100 - barPct, stackPct).toFixed(1) + '%;background:' + stackCol + ';';
+      track.appendChild(seg2);
+    }
     row.appendChild(lbl);
     row.appendChild(track);
     var pctLbl = document.createElement('div');
-    pctLbl.style.cssText = 'font-size:12px;font-weight:800;color:' + bar.col + ';width:44px;text-align:right;flex-shrink:0;';
-    pctLbl.textContent = bar.pct.toFixed(1) + '%';
+    pctLbl.style.cssText = 'font-size:12px;font-weight:800;color:' + (valueCol||mainCol) + ';width:44px;text-align:right;flex-shrink:0;';
+    pctLbl.textContent = valueTxt || (barPct.toFixed(1) + '%');
     row.appendChild(pctLbl);
-    pbWrap.appendChild(row);
-  });
+    container.appendChild(row);
+  }
 
-  // Variance row
+  // Bar 1 — Actual
+  addBar(pbWrap, 'Actual (by value)', overallPct, 'var(--accent)', 0, '', '', '');
+
+  // Bar 2 — Accounted for (actual = green, delay credit = amber)
+  addBar(pbWrap, 'Accounted for', overallPct, 'var(--accent)', delayCreditPct, '#f59e0b',
+    accountedForPct.toFixed(1) + '%', '#f59e0b');
+
+  // Bar 3 — Planned at today
+  addBar(pbWrap, 'Planned at today', plannedPct, '#64748b', 0, '', '', '');
+
+  // ── Breakdown note ──────────────────────────────────────────────────────────
+  var noteRow = document.createElement('div');
+  noteRow.style.cssText = 'margin-top:4px;padding:8px 0;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;';
+
+  var noteLeft = document.createElement('div');
+  noteLeft.style.cssText = 'font-size:10px;color:var(--muted);';
+  noteLeft.innerHTML = '<span style="color:#f59e0b;font-weight:700;">' + accountedDays.toFixed(1) + ' days</span>'
+    + ' agreed delays credited &nbsp;·&nbsp; '
+    + '<span style="color:var(--accent);font-weight:700;">' + delayCreditPct.toFixed(1) + '%</span>'
+    + ' programme credit';
+  noteRow.appendChild(noteLeft);
+
+  var noteRight = document.createElement('div');
+  if (surplusOrGap >= -0.5) {
+    // Delays more than account for the gap
+    noteRight.style.cssText = 'font-size:11px;font-weight:700;color:#22c55e;';
+    noteRight.textContent = '✓ All gap accounted for'
+      + (surplusOrGap > 0.5 ? ' (+' + surplusOrGap.toFixed(1) + '% surplus)' : '');
+  } else {
+    // Some gap remains unexplained
+    noteRight.style.cssText = 'font-size:11px;font-weight:700;color:#ef4444;';
+    noteRight.textContent = 'Unexplained gap: ' + Math.abs(surplusOrGap).toFixed(1) + '%';
+  }
+  noteRow.appendChild(noteRight);
+  pbWrap.appendChild(noteRow);
+
+  // Variance
   var varRow = document.createElement('div');
-  varRow.style.cssText = 'display:flex;justify-content:flex-end;padding-right:4px;margin-top:-2px;';
+  varRow.style.cssText = 'display:flex;justify-content:flex-end;padding-right:4px;margin-top:4px;';
   var varEl = document.createElement('div');
   varEl.style.cssText = 'font-size:11px;font-weight:700;color:' + (variance >= 0 ? 'var(--green)' : 'var(--red)') + ';';
-  varEl.textContent = 'Variance: ' + (variance >= 0 ? '+' : '') + variance.toFixed(1) + '%';
+  varEl.textContent = 'Variance (actual vs planned): ' + (variance >= 0 ? '+' : '') + variance.toFixed(1) + '%';
   varRow.appendChild(varEl);
   pbWrap.appendChild(varRow);
   el.appendChild(pbWrap);
