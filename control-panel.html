@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v38</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v39</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -4204,21 +4204,22 @@ function buildForecastTab() {
   if (!el) return;
   el.innerHTML = '';
 
-  // ── Core calculations ─────────────────────────────────────────────────────
+  // ── Core progress ─────────────────────────────────────────────────────────
   var totalBudget = ZONES.reduce(function(s,z){ return s + (z.budget||0); }, 0);
   var completedValue = 0;
   ZONES.forEach(function(z){ completedValue += (z.budget||0) * (getZoneProgress(z.id)/100); });
   var overallPct   = totalBudget > 0 ? completedValue / totalBudget * 100 : 0;
   var projStart    = parseDate('2026-03-23');
-  var agreedDL     = parseDate('2026-06-29');   // agreed deadline incl. all EOT
+  var agreedDL     = parseDate('2026-06-29');   // last agreed end incl. all EOT
   var daysElapsed  = Math.max(1, daysBetween(projStart, TODAY));
   var totalCalDays = daysBetween(projStart, agreedDL);
   var calDaysLeft  = Math.max(0, daysBetween(TODAY, agreedDL));
-  var plannedPct   = Math.min(100, daysElapsed / totalCalDays * 100); // where we SHOULD be today
+  var plannedPct   = Math.min(100, daysElapsed / totalCalDays * 100);
   var ratePerDay   = overallPct / daysElapsed;
   var remaining    = Math.max(0, 100 - overallPct);
+  var totalProgWDs = 65; // 98 cal - 28 wknds - 5 IoM BH
 
-  // ── IoM working-day calculator ────────────────────────────────────────────
+  // ── IoM working-day helpers ───────────────────────────────────────────────
   var IOM_BH_2026 = {'2026-04-03':1,'2026-04-06':1,'2026-05-04':1,'2026-05-25':1,'2026-06-12':1};
   function isWorkDay(d) {
     var dow = d.getDay();
@@ -4228,132 +4229,127 @@ function buildForecastTab() {
   }
   function addWorkDays(startDate, wdToAdd) {
     if (Math.abs(wdToAdd) < 0.05) return new Date(startDate.getTime());
-    var d = new Date(startDate.getTime());
-    var target = Math.ceil(Math.abs(wdToAdd));
-    var dir = wdToAdd >= 0 ? 1 : -1;
-    var added = 0, safety = target * 2 + 200;
-    while (added < target && safety-- > 0) {
-      d.setDate(d.getDate() + dir);
-      if (isWorkDay(d)) added++;
-    }
+    var d = new Date(startDate.getTime()); var dir = wdToAdd >= 0 ? 1 : -1;
+    var target = Math.ceil(Math.abs(wdToAdd)), added = 0, safety = target * 2 + 200;
+    while (added < target && safety-- > 0) { d.setDate(d.getDate() + dir); if (isWorkDay(d)) added++; }
     return d;
   }
-  function fmtD(d) {
-    return d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
-  }
+  function fmtD(d) { return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
 
-  // ── Delay log analysis ────────────────────────────────────────────────────
-  var totalProgWDs = 65;
+  // ── Delay log — four buckets ───────────────────────────────────────────────
   var delayLog = loadDelayLog();
 
+  // EOT — already baked into 29 Jun deadline, not counted in bars
   var eotWDs = delayLog.filter(function(d){ return d.category === 'eot_claimed'; })
                        .reduce(function(s,d){ return s + (d.days||0); }, 0);
 
-  var clientAgreedWDs = delayLog.filter(function(d){
-    return d.category === 'client' && d.status === 'agreed';
-  }).reduce(function(s,d){ return s + (d.days||0); }, 0);
-
-  var agreedCreditWDs = delayLog.filter(function(d){
+  // 1. Agreed & signed off — formally signed by both parties
+  var agreedSignedWDs = delayLog.filter(function(d){
     return d.status === 'agreed' && d.category !== 'eot_claimed' && d.category !== 'absorbed';
   }).reduce(function(s,d){ return s + (d.days||0); }, 0);
 
-  var allLoggedWDs = delayLog.filter(function(d){
-    return d.category !== 'absorbed' && d.category !== 'eot_claimed' && d.status !== 'absorbed';
+  // 2. In dispute / not yet signed — claimed or open, not absorbed, not EOT
+  var inDisputeWDs = delayLog.filter(function(d){
+    return (d.status === 'claimed' || d.status === 'open')
+      && d.category !== 'absorbed' && d.category !== 'eot_claimed';
   }).reduce(function(s,d){ return s + (d.days||0); }, 0);
 
-  // ── Plan deadlines ────────────────────────────────────────────────────────
-  var originalDeadline = addWorkDays(agreedDL, -eotWDs);
-  var origCalDays      = daysBetween(projStart, originalDeadline);
-  var origPlannedPct   = origCalDays > 0 ? Math.min(100, daysElapsed / origCalDays * 100) : 100;
+  // 3. Absorbed internal — DGC's own non-billable delays (not claimed, not presented to client)
+  var absorbedWDs = delayLog.filter(function(d){
+    return d.category === 'absorbed' || d.status === 'absorbed';
+  }).reduce(function(s,d){ return s + (d.days||0); }, 0);
 
-  var clientDeadline   = addWorkDays(originalDeadline, clientAgreedWDs);
-  var clientCalDays    = daysBetween(projStart, clientDeadline);
-  var clientPlannedPct = clientCalDays > 0 ? Math.min(100, daysElapsed / clientCalDays * 100) : 100;
+  // Cumulative totals
+  var allSignedAndDisputed  = agreedSignedWDs + inDisputeWDs;          // signed + in dispute
+  var allInclAbsorbed       = allSignedAndDisputed + absorbedWDs;       // full internal view
 
-  // ── Forecast dates ────────────────────────────────────────────────────────
-  // Raw — no delay credit
-  var fcRawWDs  = ratePerDay > 0 ? (remaining / ratePerDay) * (65/98) : 9999;
-  var fcDateRaw = ratePerDay > 0 ? addWorkDays(TODAY, fcRawWDs) : null;
+  // ── Plan deadlines for plan bars ──────────────────────────────────────────
+  var originalDeadline  = addWorkDays(agreedDL, -eotWDs);
+  var origCalDays       = daysBetween(projStart, originalDeadline);
+  var origPlannedPct    = origCalDays > 0 ? Math.min(100, daysElapsed / origCalDays * 100) : 100;
+  var clientAgreedWDs   = delayLog.filter(function(d){ return d.category==='client' && d.status==='agreed'; })
+                                  .reduce(function(s,d){ return s+(d.days||0); }, 0);
+  var clientDeadline    = addWorkDays(originalDeadline, clientAgreedWDs);
+  var clientCalDays     = daysBetween(projStart, clientDeadline);
+  var clientPlannedPct  = clientCalDays > 0 ? Math.min(100, daysElapsed / clientCalDays * 100) : 100;
 
-  // Agreed delays credited — DGC contractual position
-  var adjElapsed_agreed = Math.max(1, daysElapsed - agreedCreditWDs * (totalCalDays / totalProgWDs));
-  var adjRate_agreed    = overallPct / adjElapsed_agreed;
-  var fcWDs_agreed      = adjRate_agreed > 0 ? (remaining / adjRate_agreed) * (65/98) : 9999;
-  var fcDate_agreed     = adjRate_agreed > 0 ? addWorkDays(TODAY, fcWDs_agreed) : null;
-
-  // All DGC logged delays credited — internal view
-  var adjElapsed_all = Math.max(1, daysElapsed - allLoggedWDs * (totalCalDays / totalProgWDs));
-  var adjRate_all    = overallPct / adjElapsed_all;
-  var fcWDs_all      = adjRate_all > 0 ? (remaining / adjRate_all) * (65/98) : 9999;
-  var fcDate_all     = adjRate_all > 0 ? addWorkDays(TODAY, fcWDs_all) : null;
-
-  function daysDiff(d) { // +ve = late vs agreed DL, -ve = early
-    return d ? Math.round((d - agreedDL) / 86400000) : null;
+  // ── DRAG speed forecast helper ────────────────────────────────────────────
+  // DRAG speed = actual pace adjusted for delay days — removes time lost to
+  // delays from the elapsed clock so the true working rate is revealed.
+  // Remaining work is then projected forward at that adjusted rate.
+  function dragForecast(creditWDs) {
+    var adjElapsed = Math.max(1, daysElapsed - creditWDs * (totalCalDays / totalProgWDs));
+    var adjRate    = overallPct / adjElapsed;
+    if (adjRate <= 0) return null;
+    return addWorkDays(TODAY, (remaining / adjRate) * (65/98));
   }
 
-  // ── Title ─────────────────────────────────────────────────────────────────
-  var titEl = document.createElement('div');
-  titEl.className = 'card-title';
-  titEl.style.marginBottom = '14px';
-  titEl.textContent = 'Velocity & Forecast';
-  el.appendChild(titEl);
+  var fcDateRaw      = ratePerDay > 0 ? addWorkDays(TODAY, (remaining/ratePerDay)*(65/98)) : null;
+  var fcDateSigned   = dragForecast(agreedSignedWDs);      // agreed & signed off only
+  var fcDateClaimed  = dragForecast(allSignedAndDisputed);  // + in dispute
+  var fcDateInternal = dragForecast(allInclAbsorbed);       // + absorbed (full internal)
 
-  // ── 3-tile date banner ────────────────────────────────────────────────────
-  //  Tile 1: what the client expects (agreed end)
-  //  Tile 2: where we will end up at current pace (raw reality)
-  //  Tile 3: DGC expected end crediting all agreed delays (adjusted reality)
-
-  var rawDiff  = daysDiff(fcDateRaw);
-  var agDiff   = daysDiff(fcDate_agreed);
-
+  function daysDiff(d) { return d ? Math.round((d - agreedDL) / 86400000) : null; }
   function diffTxt(diff) {
     if (diff === null) return '—';
     if (diff === 0) return 'On the deadline';
-    return (diff > 0 ? '▲ ' + diff + ' days late' : '▼ ' + Math.abs(diff) + ' days early');
+    return diff > 0 ? '▲ ' + diff + ' days late' : '▼ ' + Math.abs(diff) + ' days early';
   }
-  function diffCol(diff) {
-    if (diff === null) return 'var(--muted)';
-    return diff > 0 ? '#f87171' : '#4ade80';
-  }
+  function diffCol(diff) { return diff === null ? 'var(--muted)' : diff > 0 ? '#f87171' : '#4ade80'; }
+  function borderCol(diff) { return diff === null ? 'var(--border)' : diff > 0 ? '#f87171' : '#4ade80'; }
 
+  var rawDiff    = daysDiff(fcDateRaw);
+  var signedDiff = daysDiff(fcDateSigned);
+
+  // ── Title ─────────────────────────────────────────────────────────────────
+  var titEl = document.createElement('div');
+  titEl.className = 'card-title'; titEl.style.marginBottom = '14px';
+  titEl.textContent = 'Velocity & Forecast';
+  el.appendChild(titEl);
+
+  // ── 3-tile banner ─────────────────────────────────────────────────────────
   var banner = document.createElement('div');
   banner.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;';
 
-  function makeTile(heading, dateStr, subTxt, subCol, borderCol) {
+  function makeTile(heading, dateStr, sub1, sub1Col, sub2, borderC) {
     var tile = document.createElement('div');
-    tile.style.cssText = 'background:var(--surface2);border:2px solid ' + borderCol + ';border-radius:10px;padding:14px 12px;text-align:center;';
+    tile.style.cssText = 'background:var(--surface2);border:2px solid ' + borderC + ';border-radius:10px;padding:14px 12px;text-align:center;';
     tile.innerHTML =
-      '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:' + borderCol + ';margin-bottom:6px;">' + heading + '</div>' +
+      '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:' + borderC + ';margin-bottom:6px;">' + heading + '</div>' +
       '<div style="font-size:20px;font-weight:900;color:var(--text);line-height:1.1;letter-spacing:-0.3px;">' + (dateStr || '—') + '</div>' +
-      '<div style="font-size:10px;font-weight:700;color:' + subCol + ';margin-top:5px;">' + subTxt + '</div>';
+      '<div style="font-size:10px;font-weight:700;color:' + sub1Col + ';margin-top:5px;">' + sub1 + '</div>' +
+      (sub2 ? '<div style="font-size:9px;color:var(--muted);margin-top:2px;">' + sub2 + '</div>' : '');
     return tile;
   }
 
-  // Tile 1: agreed end (neutral, blue)
+  // Tile 1: last agreed end (blue — neutral reference)
   banner.appendChild(makeTile(
     'Last agreed end date',
     fmtD(agreedDL),
-    'Incl. all EOT &amp; agreed delays',
+    'What client expects',
     'var(--muted)',
+    'Incl. all EOT &amp; agreed delays',
     '#38bdf8'
   ));
 
-  // Tile 2: at current pace — raw reality
+  // Tile 2: at current rate — raw reality, no adjustments
   banner.appendChild(makeTile(
-    'At current rate — no credit',
+    'At current rate',
     fcDateRaw ? fmtD(fcDateRaw) : '—',
     diffTxt(rawDiff),
     diffCol(rawDiff),
-    rawDiff !== null && rawDiff > 0 ? '#f87171' : '#4ade80'
+    'No delay adjustments',
+    borderCol(rawDiff)
   ));
 
-  // Tile 3: DGC adjusted — crediting agreed delays
+  // Tile 3: DGC programme DRAG speed — agreed signed delays factored into rate
   banner.appendChild(makeTile(
-    'DGC expected end',
-    fcDate_agreed ? fmtD(fcDate_agreed) : '—',
-    diffTxt(agDiff) + ' (agreed delays credited)',
-    diffCol(agDiff),
-    agDiff !== null && agDiff > 0 ? '#fb923c' : '#4ade80'
+    'DGC programme speed',
+    fcDateSigned ? fmtD(fcDateSigned) : '—',
+    diffTxt(signedDiff),
+    diffCol(signedDiff),
+    'DRAG speed — signed delays removed from clock',
+    borderCol(signedDiff)
   ));
 
   el.appendChild(banner);
@@ -4361,34 +4357,44 @@ function buildForecastTab() {
   // ── Bar helper ────────────────────────────────────────────────────────────
   function addBar(container, opts) {
     var row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:11px;';
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:10px;';
 
     var lbl = document.createElement('div');
-    lbl.style.cssText = 'font-size:10px;font-weight:600;color:' + (opts.dim ? 'var(--muted)' : 'var(--text)') + ';text-transform:uppercase;letter-spacing:0.03em;width:140px;flex-shrink:0;line-height:1.3;';
-    lbl.textContent = opts.label;
+    lbl.style.cssText = 'font-size:10px;font-weight:600;color:' + (opts.dim ? 'var(--muted)' : 'var(--text)') +
+      ';text-transform:uppercase;letter-spacing:0.03em;width:148px;flex-shrink:0;line-height:1.3;';
+    lbl.innerHTML = opts.label;
     row.appendChild(lbl);
 
     var track = document.createElement('div');
-    track.style.cssText = 'flex:1;height:22px;background:var(--surface2);border-radius:7px;overflow:hidden;display:flex;';
-
+    track.style.cssText = 'flex:1;height:22px;background:var(--surface2);border-radius:7px;overflow:hidden;';
     var p1 = Math.max(0, Math.min(100, opts.pct));
-    var seg1 = document.createElement('div');
-    seg1.style.cssText = 'height:100%;flex:0 0 ' + p1.toFixed(1) + '%;background:' + opts.col + ';display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;opacity:' + (opts.dim ? '0.5' : '1') + ';';
+    var seg = document.createElement('div');
+    seg.style.cssText = 'height:100%;width:' + p1.toFixed(1) + '%;background:' + opts.col +
+      ';display:flex;align-items:center;justify-content:center;border-radius:7px 0 0 7px;opacity:' + (opts.dim ? '0.45' : '1') + ';';
     if (p1 > 10) {
-      var inner = document.createElement('span');
-      inner.style.cssText = 'font-size:10px;font-weight:800;color:rgba(255,255,255,0.9);white-space:nowrap;';
-      inner.textContent = opts.pct.toFixed(1) + '%';
-      seg1.appendChild(inner);
+      var inn = document.createElement('span');
+      inn.style.cssText = 'font-size:10px;font-weight:800;color:rgba(255,255,255,0.9);white-space:nowrap;';
+      inn.textContent = opts.pct.toFixed(1) + '%';
+      seg.appendChild(inn);
     }
-    track.appendChild(seg1);
+    track.appendChild(seg);
     row.appendChild(track);
 
     var rgt = document.createElement('div');
-    rgt.style.cssText = 'font-size:11px;font-weight:700;color:' + (opts.rightCol || 'var(--muted)') + ';width:92px;text-align:right;flex-shrink:0;line-height:1.3;';
+    rgt.style.cssText = 'font-size:11px;font-weight:700;color:' + (opts.rightCol || 'var(--muted)') +
+      ';width:92px;text-align:right;flex-shrink:0;line-height:1.3;';
     rgt.textContent = opts.rightTxt || '';
     row.appendChild(rgt);
 
-    container.appendChild(row);
+    if (opts.note) {
+      var note = document.createElement('div');
+      note.style.cssText = 'font-size:9px;color:var(--muted);margin-top:-6px;margin-bottom:4px;padding-left:158px;';
+      note.textContent = opts.note;
+      container.appendChild(row);
+      container.appendChild(note);
+    } else {
+      container.appendChild(row);
+    }
   }
 
   function sectionLabel(container, txt) {
@@ -4398,71 +4404,77 @@ function buildForecastTab() {
     container.appendChild(d);
   }
 
-  // ── Section 1: The Programme — what the plan says ─────────────────────────
+  // ── Section 1: The Programme ──────────────────────────────────────────────
   sectionLabel(el, 'The programme — what should happen');
 
-  // Bar 1: original baseline (before any EOT or delays)
   addBar(el, {
     label: 'Original baseline',
-    pct:   origPlannedPct,
-    col:   '#475569',
-    rightTxt: fmtD(originalDeadline),
-    rightCol: '#64748b',
-    dim: true
+    pct: origPlannedPct, col: '#475569',
+    rightTxt: fmtD(originalDeadline), rightCol: '#64748b', dim: true
   });
-
-  // Bar 2: plan after client delays outside DGC control
   addBar(el, {
     label: 'After client delays',
-    pct:   clientPlannedPct,
-    col:   '#b45309',
-    rightTxt: fmtD(clientDeadline),
-    rightCol: '#d97706',
-    dim: false
+    pct: clientPlannedPct, col: '#b45309',
+    rightTxt: fmtD(clientDeadline), rightCol: '#d97706'
   });
-
-  // Bar 3: agreed programme — where we should be TODAY on the agreed plan
   addBar(el, {
     label: 'Agreed plan today',
-    pct:   plannedPct,
-    col:   '#f59e0b',
-    rightTxt: '29 Jun 2026',
-    rightCol: '#f59e0b',
-    dim: false
+    pct: plannedPct, col: '#f59e0b',
+    rightTxt: '29 Jun 2026', rightCol: '#f59e0b',
+    note: 'Where we should be right now on the agreed programme'
   });
 
-  // ── Section 2: Reality — where we actually are ────────────────────────────
+  // ── Section 2: Reality ────────────────────────────────────────────────────
   sectionLabel(el, 'Reality — where we are & when we finish');
 
-  // Bar 4: actual progress — raw, no delay credit
-  var bar4late = fcDateRaw ? fcDateRaw > agreedDL : false;
+  // Bar 4: raw — no adjustments at all
+  var r4l = fcDateRaw ? fcDateRaw > agreedDL : false;
   addBar(el, {
-    label: 'Actual now (no credit)',
-    pct:   overallPct,
-    col:   bar4late ? '#ef4444' : '#22c55e',
+    label: 'Actual — no adjustments',
+    pct: overallPct, col: r4l ? '#ef4444' : '#22c55e',
     rightTxt: fcDateRaw ? fmtD(fcDateRaw) : '—',
-    rightCol: bar4late ? '#ef4444' : '#22c55e',
-    dim: false
+    rightCol: r4l ? '#ef4444' : '#22c55e'
   });
 
-  // Bar 5: actual progress — all DGC logged delays (agreed + internal risk tickets)
-  var bar5late = fcDate_all ? fcDate_all > agreedDL : false;
+  // Bar 5: agreed & signed off (formally signed variations + risk tickets)
+  var r5d = daysDiff(fcDateSigned);
   addBar(el, {
-    label: 'All DGC delays credited',
-    pct:   overallPct,
-    col:   bar5late ? '#f97316' : '#0d9488',
-    rightTxt: fcDate_all ? fmtD(fcDate_all) : '—',
-    rightCol: bar5late ? '#f97316' : '#0d9488',
-    dim: false
+    label: 'Agreed &amp; signed off',
+    pct: overallPct, col: '#f59e0b',
+    rightTxt: fcDateSigned ? fmtD(fcDateSigned) : '—',
+    rightCol: diffCol(r5d),
+    note: agreedSignedWDs.toFixed(1) + ' WDs signed off — variations &amp; risk tickets agreed with client'
+  });
+
+  // Bar 6: + in dispute / not yet signed
+  var r6d = daysDiff(fcDateClaimed);
+  addBar(el, {
+    label: 'Agreed + in dispute',
+    pct: overallPct, col: '#f97316',
+    rightTxt: fcDateClaimed ? fmtD(fcDateClaimed) : '—',
+    rightCol: diffCol(r6d),
+    note: inDisputeWDs > 0
+      ? ('+' + inDisputeWDs.toFixed(1) + ' WDs claimed but not yet signed off')
+      : 'No delays currently in dispute'
+  });
+
+  // Bar 7: + absorbed internal (DGC eyes only — not presented to client)
+  var r7d = daysDiff(fcDateInternal);
+  addBar(el, {
+    label: '<span style="color:var(--muted);">+ Absorbed (internal)</span>',
+    pct: overallPct, col: '#6366f1',
+    rightTxt: fcDateInternal ? fmtD(fcDateInternal) : '—',
+    rightCol: diffCol(r7d),
+    note: absorbedWDs.toFixed(1) + ' WDs absorbed — non-billable, not presented to client'
   });
 
   // ── KPI row ───────────────────────────────────────────────────────────────
   var kpis = [
-    { lbl: 'Actual complete',  val: overallPct.toFixed(1)+'%',               col: 'var(--text)' },
-    { lbl: 'Plan says today',  val: plannedPct.toFixed(1)+'%',               col: '#f59e0b' },
-    { lbl: 'vs Plan',          val: (overallPct-plannedPct).toFixed(1)+'%',  col: overallPct>=plannedPct ? 'var(--green)' : 'var(--red)' },
-    { lbl: 'Speed %/week',     val: (ratePerDay*7).toFixed(2)+'%',           col: 'var(--accent)' },
-    { lbl: 'Weeks to deadline',val: (calDaysLeft/7).toFixed(1)+' wks',       col: calDaysLeft<21 ? 'var(--red)' : 'var(--muted)' },
+    { lbl:'Actual complete',    val: overallPct.toFixed(1)+'%',              col:'var(--text)' },
+    { lbl:'Plan says today',    val: plannedPct.toFixed(1)+'%',              col:'#f59e0b' },
+    { lbl:'vs Plan',            val: (overallPct-plannedPct).toFixed(1)+'%', col: overallPct>=plannedPct ? 'var(--green)' : 'var(--red)' },
+    { lbl:'DRAG speed %/wk',   val: (ratePerDay*7).toFixed(2)+'%',          col:'var(--accent)' },
+    { lbl:'Weeks to deadline',  val: (calDaysLeft/7).toFixed(1)+' wks',      col: calDaysLeft<21 ? 'var(--red)' : 'var(--muted)' },
   ];
   var grid = document.createElement('div');
   grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-top:16px;';
@@ -4474,35 +4486,16 @@ function buildForecastTab() {
   });
   el.appendChild(grid);
 
-  // ── Breakdown note ────────────────────────────────────────────────────────
-  var noteRow = document.createElement('div');
-  noteRow.style.cssText = 'margin-top:12px;padding:8px 0;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;';
-
-  var noteLeft = document.createElement('div');
-  noteLeft.style.cssText = 'font-size:10px;color:var(--muted);';
-  noteLeft.innerHTML =
+  // ── Footer note ───────────────────────────────────────────────────────────
+  var note = document.createElement('div');
+  note.style.cssText = 'margin-top:12px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);';
+  note.innerHTML =
     'EOT baked into deadline: <b style="color:var(--text);">' + eotWDs.toFixed(1) + ' WDs</b>'
-    + ' &nbsp;·&nbsp; Agreed client delays: <b style="color:#f59e0b;">' + agreedCreditWDs.toFixed(1) + ' WDs</b>'
-    + ' &nbsp;·&nbsp; All DGC logged: <b style="color:#0d9488;">' + allLoggedWDs.toFixed(1) + ' WDs</b>';
-  noteRow.appendChild(noteLeft);
-
-  var noteRight = document.createElement('div');
-  noteRight.style.cssText = 'font-size:10px;color:var(--muted);';
-  noteRight.innerHTML = 'Forecasts use IoM working days &nbsp;·&nbsp; Agreed deadline: <b style="color:var(--text);">29 Jun 2026</b>';
-  noteRow.appendChild(noteRight);
-  el.appendChild(noteRow);
-
-  // ── Data confidence ───────────────────────────────────────────────────────
-  var snaps = lsGet('dgc_snapshots','[]') || [];
-  var dn = document.createElement('div');
-  dn.style.cssText = 'font-size:10px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px;margin-top:10px;';
-  var conf = snaps.length>=4 ? 'Good confidence ('+snaps.length+' snapshots)'
-    : snaps.length>=2 ? 'Improving ('+snaps.length+' snapshots)'
-    : 'Low confidence — save weekly snapshots to improve accuracy';
-  dn.innerHTML = '<b>Data confidence:</b> ' + conf
-    + ' &nbsp;·&nbsp; Bar 3 (amber) = agreed plan: where DGC should be today.'
-    + ' Bar 4 = reality at current pace. Bar 5 = reality accounting for all logged delays.';
-  el.appendChild(dn);
+    + ' &nbsp;·&nbsp; Signed off: <b style="color:#f59e0b;">' + agreedSignedWDs.toFixed(1) + ' WDs</b>'
+    + ' &nbsp;·&nbsp; In dispute: <b style="color:#f97316;">' + inDisputeWDs.toFixed(1) + ' WDs</b>'
+    + ' &nbsp;·&nbsp; Absorbed (internal): <b style="color:#6366f1;">' + absorbedWDs.toFixed(1) + ' WDs</b>'
+    + '<br>DRAG speed = actual pace with agreed signed days removed from elapsed clock. Forecasts use IoM working days.';
+  el.appendChild(note);
 }
 function showTab(name, btn) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
