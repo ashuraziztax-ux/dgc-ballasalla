@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v24</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v25</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -225,7 +225,6 @@ a { color: var(--accent); text-decoration: none; }
 }
 .tooltip-btn:hover + .tooltip-box, .tooltip-btn:focus + .tooltip-box { opacity:1; }
 
-
 /* SEPARATOR */
 .section-sep { height: 1px; background: var(--border); margin: 16px 0; }
 .section-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; font-weight: 600; }
@@ -404,14 +403,11 @@ body:not(.admin-mode) .admin-only { display: none !important; }
 .alert.info    { border-left: 3px solid var(--accent2) !important; }
 .alert.success { border-left: 3px solid var(--green) !important; }
 
-/* ─── v8: Voice diary + appearance editor ─── */
+/* ─── v8: Voice diary ─── */
 #diary-text { transition: border-color 0.2s; }
 #diary-text:focus { border-color: var(--accent) !important; outline: none; }
 #diary-rec-btn.rec-on { background:#ef444430 !important; border-color:#ef4444 !important; animation: dRecPulse 1.2s ease-in-out infinite; }
 @keyframes dRecPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.75;transform:scale(0.97)} }
-#appear-fab { transition: transform 0.15s, box-shadow 0.15s; }
-#appear-fab:hover { transform: scale(1.1); box-shadow: 0 6px 20px rgba(0,0,0,0.5) !important; }
-.appear-swatch:hover { transform: scale(1.15); }
 
 /* ── PROGRAMME EDITOR v10 ── */
 .prog-editor-table th { padding:7px 8px; text-align:left; color:var(--muted); font-size:10px; font-weight:700; text-transform:uppercase; border-bottom:1px solid var(--border); white-space:nowrap; }
@@ -778,161 +774,6 @@ function clearForm() {
 }
 
 // ══════════════════════════════════════════════════════
-// APPEARANCE EDITOR — floating panel, accent + font size
-// ══════════════════════════════════════════════════════
-var _appearOpen = false;
-
-function initAppearance() {
-  // Restore saved settings
-  try {
-    var sa = localStorage.getItem('dgc_accent');
-    var sf = localStorage.getItem('dgc_fontsize');
-    var sff= localStorage.getItem('dgc_fontfamily');
-    if(sa)  document.documentElement.style.setProperty('--accent', sa);
-    if(sf)  document.documentElement.style.fontSize = sf + 'px';
-    if(sff) {
-      document.body.style.fontFamily = sff;
-      document.querySelectorAll('textarea,input').forEach(function(el){ el.style.fontFamily=sff; });
-    }
-  } catch(e){}
-
-  // ── Floating palette button (FAB) ──
-  var fab = document.createElement('button');
-  fab.id        = 'appear-fab';
-  fab.innerHTML = '🎨';
-  fab.title     = 'Appearance — colours & text size';
-  fab.onclick   = toggleAppearPanel;
-  fab.style.cssText = 'position:fixed;bottom:20px;right:20px;width:46px;height:46px;'
-    + 'border-radius:50%;background:var(--surface2);border:1px solid var(--border);'
-    + 'color:white;font-size:22px;cursor:pointer;z-index:9990;display:flex;'
-    + 'align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.45);padding:0;';
-  document.body.appendChild(fab);
-
-  // ── Panel built with DOM methods (avoids all quote-escaping issues) ──
-  var panel = document.createElement('div');
-  panel.id = 'appear-panel';
-  panel.style.cssText = 'position:fixed;bottom:76px;right:16px;background:var(--surface);'
-    + 'border:1px solid var(--border);border-radius:14px;padding:18px;z-index:9991;'
-    + 'width:270px;box-shadow:0 8px 32px rgba(0,0,0,0.55);display:none;';
-
-  // Title + close button
-  var titleRow = document.createElement('div');
-  titleRow.style.cssText = 'font-size:12px;font-weight:800;color:var(--text);margin-bottom:14px;'
-    + 'text-transform:uppercase;letter-spacing:0.07em;display:flex;justify-content:space-between;align-items:center;';
-  titleRow.innerHTML = '<span>🎨 Appearance</span>';
-  var xBtn = document.createElement('button');
-  xBtn.innerHTML = '&times;';
-  xBtn.onclick = toggleAppearPanel;
-  xBtn.style.cssText = 'background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;padding:0;line-height:1;';
-  titleRow.appendChild(xBtn);
-  panel.appendChild(titleRow);
-
-  // Helper: section label
-  function mkLabel(txt) {
-    var d = document.createElement('div');
-    d.style.cssText = 'font-size:10px;text-transform:uppercase;letter-spacing:0.06em;'
-      + 'color:var(--muted);margin-bottom:8px;margin-top:12px;font-weight:700;';
-    d.textContent = txt;
-    panel.appendChild(d);
-  }
-  // Helper: flex row
-  function mkRow(gap) {
-    var d = document.createElement('div');
-    d.style.cssText = 'display:flex;gap:' + (gap||'8px') + ';flex-wrap:wrap;margin-bottom:4px;';
-    panel.appendChild(d);
-    return d;
-  }
-
-  // ── Accent colour swatches ──
-  mkLabel('Accent Colour');
-  var cRow = mkRow('8px');
-  [['#f59e0b','Amber (default)'],['#38bdf8','Sky Blue'],['#22c55e','Green'],
-   ['#a78bfa','Purple'],['#f97316','Orange'],['#fb7185','Pink'],
-   ['#2dd4bf','Teal'],['#facc15','Yellow'],['#e2e8f0','White']
-  ].forEach(function(c) {
-    var sw = document.createElement('div');
-    sw.title = c[1];
-    sw.style.cssText = 'width:28px;height:28px;border-radius:50%;background:' + c[0]
-      + ';cursor:pointer;border:2px solid transparent;box-sizing:border-box;transition:transform 0.12s,border-color 0.12s;';
-    (function(col) {
-      sw.addEventListener('click',     function(){ setAppearAccent(col); });
-      sw.addEventListener('mouseover', function(){ sw.style.borderColor='white'; sw.style.transform='scale(1.15)'; });
-      sw.addEventListener('mouseout',  function(){ sw.style.borderColor='transparent'; sw.style.transform='scale(1)'; });
-    })(c[0]);
-    cRow.appendChild(sw);
-  });
-
-  // ── Text size buttons ──
-  mkLabel('Text Size');
-  var sRow = mkRow('6px');
-  [['13','Small'],['15','Medium'],['17','Large'],['19','X-Large']].forEach(function(f) {
-    var btn = document.createElement('button');
-    btn.textContent = f[1];
-    btn.style.cssText = 'flex:1;padding:6px 0;background:var(--surface2);border:1px solid var(--border);'
-      + 'border-radius:6px;color:var(--text);font-size:' + f[0] + 'px;cursor:pointer;';
-    (function(px){ btn.addEventListener('click', function(){ setAppearFont(px); }); })(f[0]);
-    sRow.appendChild(btn);
-  });
-
-  // ── Font family buttons ──
-  mkLabel('Font');
-  var fRow = mkRow('6px');
-  [['system-ui,sans-serif','System'],['Courier New,monospace','Mono'],['Georgia,serif','Serif']].forEach(function(f) {
-    var btn = document.createElement('button');
-    btn.textContent = f[1];
-    btn.style.cssText = 'flex:1;padding:5px 4px;background:var(--surface2);border:1px solid var(--border);'
-      + 'border-radius:6px;color:var(--text);font-size:11px;cursor:pointer;font-family:' + f[0] + ';';
-    (function(fam){ btn.addEventListener('click', function(){ setAppearFontFamily(fam); }); })(f[0]);
-    fRow.appendChild(btn);
-  });
-
-  // ── Reset button ──
-  var resetBtn = document.createElement('button');
-  resetBtn.textContent = '↺ Reset to defaults';
-  resetBtn.onclick = resetAppearance;
-  resetBtn.style.cssText = 'width:100%;padding:7px;background:#ef444415;border:1px solid #ef444435;'
-    + 'color:#ef4444;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;margin-top:14px;';
-  panel.appendChild(resetBtn);
-
-  document.body.appendChild(panel);
-}
-
-function toggleAppearPanel() {
-  _appearOpen = !_appearOpen;
-  var p = document.getElementById('appear-panel');
-  if(p) p.style.display = _appearOpen ? 'block' : 'none';
-}
-
-function setAppearAccent(col) {
-  document.documentElement.style.setProperty('--accent', col);
-  try{ localStorage.setItem('dgc_accent', col); }catch(e){}
-}
-
-function setAppearFont(px) {
-  document.documentElement.style.fontSize = px + 'px';
-  try{ localStorage.setItem('dgc_fontsize', px); }catch(e){}
-}
-
-function setAppearFontFamily(fam) {
-  document.body.style.fontFamily = fam;
-  try{ localStorage.setItem('dgc_fontfamily', fam); }catch(e){}
-  // Also apply to textareas/inputs
-  document.querySelectorAll('textarea,input').forEach(function(el){
-    el.style.fontFamily = fam;
-  });
-}
-
-function resetAppearance() {
-  document.documentElement.style.setProperty('--accent', '#f59e0b');
-  document.documentElement.style.fontSize = '';
-  document.body.style.fontFamily = '';
-  document.querySelectorAll('textarea,input').forEach(function(el){ el.style.fontFamily=''; });
-  try{
-    localStorage.removeItem('dgc_accent');
-    localStorage.removeItem('dgc_fontsize');
-    localStorage.removeItem('dgc_fontfamily');
-  }catch(e){}
-}
 
 </script>
 
@@ -1085,7 +926,6 @@ function resetAppearance() {
       <div class="kpi-sub" id="kpi-working-hrs">IoM bank hols applied</div>
     </div>
   </div>
-
 
   <!-- ═══ PROGRAMME TIMELINE ═══ -->
   <div class="card" style="margin-bottom:16px;">
@@ -2045,7 +1885,6 @@ function resetAppearance() {
   </div>
 </div>
 
-
 </div><!-- /main -->
 
 <script>
@@ -2828,7 +2667,6 @@ function buildDelayBreakdown() {
   foot.appendChild(fv);
   el.appendChild(foot);
 }
-
 
 var MILESTONES = [
   {id:'ms1', date:'2026-05-22', lbl:'AFP 3 submission target',              cat:'financial'},
@@ -3974,7 +3812,6 @@ window.addEventListener('DOMContentLoaded', () => {
   try { buildBudgetZoneTable(); } catch(e) {}
   try { buildTodayPlan(); }      catch(e) {}
   try { loadDiaryEntries(); }    catch(e) {}
-  try { initAppearance(); }      catch(e) {}
   try { buildReportMeta(); }     catch(e) {}
   try { buildTimeline(); }        catch(e) { console.warn('Timeline skipped:', e); }
   try { buildDashboardCharts(); } catch(e) { console.warn('Charts skipped:', e); }
