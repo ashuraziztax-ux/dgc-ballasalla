@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v48</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v49</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -4232,17 +4232,13 @@ function buildForecastTab() {
   // Absorbed: actual end + internal risk tickets (never presented to client)
   // DGC eyes only — to reconcile where time was lost
   var absorbedEndDate  = addWorkDays(actualEndDate, absorbedWDs);
-  // DRAG speed: adjusts elapsed clock for agreed delays — shows true crew working rate
-  var adjElapsed = Math.max(1, daysElapsed - agreedSignedWDs * (totalCalDays / totalProgWDs));
-  var adjRate    = overallPct / adjElapsed;
-  var effEndDate = adjRate > 0 ? addWorkDays(TODAY, (remaining / adjRate) * (totalProgWDs / totalCalDays)) : null;
-
-  // Efficiency tile: raw rate — no adjustments at all — 'the way we really are'
-  // effPct = what % of the programmed daily rate we are actually achieving
-  var rawRate    = overallPct > 0 ? overallPct / daysElapsed : 0;
-  var rawEndDate = rawRate > 0 ? addWorkDays(TODAY, (remaining / rawRate) * (totalProgWDs / totalCalDays)) : null;
-  var effPct     = daysElapsed > 0 ? Math.round(overallPct * totalCalDays / daysElapsed) : 0;
-  // effPct < 100 = working slower than programmed, 100 = exactly on programme speed
+  // Efficiency: plan pace vs actual pace — drag applied to all remaining work
+  // efficiencyPct  = actual / plan pace  e.g. plan 51%, actual 43% → 84%
+  // dragFactor     = plan / actual        e.g. 84% → future tasks take ×1.19 planned time
+  // dragEndDate    = remainingProgWDs × dragFactor from today
+  var efficiencyPct = plannedPct > 0 ? Math.round(overallPct / plannedPct * 100) : 100;
+  var dragFactor    = (plannedPct > 0 && overallPct > 0) ? plannedPct / overallPct : 1;
+  var dragEndDate   = addWorkDays(TODAY, remainingProgWDs * dragFactor);
 
   function daysDiff(d) { return d ? Math.round((d - agreedDL) / 86400000) : null; }
   function diffTxt(diff) {
@@ -4255,7 +4251,7 @@ function buildForecastTab() {
 
   var actualDiff   = daysDiff(actualEndDate);
   var proposedDiff = daysDiff(proposedEndDate);
-  var effDiff      = daysDiff(effEndDate);
+  var dragDiff     = daysDiff(dragEndDate);
 
   // ── Title ─────────────────────────────────────────────────────────────────
   var titEl = document.createElement('div');
@@ -4280,13 +4276,12 @@ function buildForecastTab() {
     'Agreed at last 2-week meeting', 'var(--muted)', 'All EOT baked in', '#38bdf8'));
   banner.appendChild(makeTile('Actual end date', fmtD(actualEndDate),
     diffTxt(actualDiff), diffCol(actualDiff), "Today's programme", borderCol(actualDiff)));
-  var rawDiff = daysDiff(rawEndDate);
-  var effCol = effPct >= 100 ? '#4ade80' : effPct >= 80 ? '#f59e0b' : '#f87171';
+  var effCol = efficiencyPct >= 100 ? '#4ade80' : efficiencyPct >= 80 ? '#f59e0b' : '#f87171';
   banner.appendChild(makeTile('Efficiency',
-    rawEndDate ? fmtD(rawEndDate) : '—',
-    diffTxt(rawDiff), diffCol(rawDiff),
-    'At current speed &nbsp;&bull;&nbsp; <b style="color:' + effCol + ';">' + effPct + '%</b> of programme rate',
-    borderCol(rawDiff)));
+    fmtD(dragEndDate),
+    diffTxt(dragDiff), diffCol(dragDiff),
+    'Plan <b>' + Math.round(plannedPct) + '%</b> &nbsp;·&nbsp; Actual <b>' + Math.round(overallPct) + '%</b> &nbsp;·&nbsp; <b style="color:' + effCol + ';">' + efficiencyPct + '%</b> efficiency',
+    borderCol(dragDiff)));
   el.appendChild(banner);
 
   // ── Bar helper — Programme page style ─────────────────────────────────────
@@ -4374,8 +4369,8 @@ function buildForecastTab() {
   subNote(el, '<b>' + absorbedWDs.toFixed(1) + '</b> WDs internal risk tickets — not presented to client &nbsp;·&nbsp; DGC eyes only &nbsp;·&nbsp; Reconcile where time was lost');
 
   addBar(el, 'Efficiency', overallPct, '#0ea5e9', 0, '',
-    effEndDate ? fmtD(effEndDate) : 'TBD', effEndDate ? diffCol(effDiff) : 'var(--muted)', false);
-  subNote(el, 'Actual % &nbsp;·&nbsp; End date at real working speed (DRAG rate) &nbsp;·&nbsp; <i style="color:var(--accent);">Calculation to be confirmed</i>');
+    fmtD(dragEndDate), diffCol(dragDiff), false);
+  subNote(el, 'Plan <b>' + Math.round(plannedPct) + '%</b> vs actual <b>' + Math.round(overallPct) + '%</b> &nbsp;·&nbsp; <b>' + efficiencyPct + '%</b> efficiency &nbsp;·&nbsp; remaining ' + remainingProgWDs.toFixed(0) + ' WDs at ' + dragFactor.toFixed(2) + '× programme time');
 
   // ── KPI tiles ─────────────────────────────────────────────────────────────
   var actualVsDeadline = daysDiff(actualEndDate);
@@ -4384,10 +4379,10 @@ function buildForecastTab() {
              : actualVsDeadline > 0      ? '+' + actualVsDeadline + ' days late'
              : Math.abs(actualVsDeadline) + ' days early';
   var avdCol = actualVsDeadline > 0 ? 'var(--red)' : actualVsDeadline < 0 ? 'var(--green)' : 'var(--text)';
-  var effKpiCol = effPct >= 100 ? 'var(--green)' : effPct >= 80 ? '#f59e0b' : 'var(--red)';
+  var effKpiCol = efficiencyPct >= 100 ? 'var(--green)' : efficiencyPct >= 80 ? '#f59e0b' : 'var(--red)';
   var kpis = [
     { lbl:'Actual complete',  val: overallPct.toFixed(1)+'%',  col:'var(--text)' },
-    { lbl:'Efficiency',       val: effPct+'% of plan speed',   col: effKpiCol },
+    { lbl:'Efficiency',       val: efficiencyPct+'% of plan',  col: effKpiCol },
     { lbl:'vs 29 Jun',        val: avdTxt,                     col: avdCol },
     { lbl:'Agreed & signed',  val: agreedSignedWDs.toFixed(1)+' WDs', col:'#f59e0b' },
     { lbl:'In dispute',       val: inDisputeWDs.toFixed(1)+' WDs',    col:'#f97316' },
