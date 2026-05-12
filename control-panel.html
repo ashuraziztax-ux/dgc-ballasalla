@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v50</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v51</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -863,6 +863,7 @@ function clearForm() {
   <button class="no-client" onclick="showTab('staffhours',this)">Staff Hours</button>
   <button onclick="showTab('programme',this)">Programme</button>
   <button onclick="showTab('forecast',this)">Forecast</button>
+  <button onclick="showTab('efficiency',this)">Efficiency</button>
   <button onclick="showTab('gantt',this)">Gantt Chart</button>
   <button class="admin-only" onclick="showTab('financial',this)">Financials</button>
   <button class="no-client" onclick="showTab('daily',this)">Daily Log</button>
@@ -2097,6 +2098,10 @@ function clearForm() {
       <div id="sm-zone-cards" class="zone-grid sm-zone-cards"></div>
     </div>
   </div>
+</div>
+
+<div id="tab-efficiency" class="tab-content">
+  <div id="efficiency-panel" style="max-width:900px;margin:0 auto;padding:16px;"></div>
 </div>
 
 </div><!-- /main -->
@@ -4410,7 +4415,149 @@ function buildForecastTab() {
     +' &nbsp;·&nbsp; Absorbed: <b style="color:#6366f1;">'+absorbedWDs.toFixed(1)+' WDs</b>'
     +'<br>Programme bars: fill = where plan says we should be today &nbsp;·&nbsp; Reality bars: fill = actual % done &nbsp;·&nbsp; Dates on right = projected end for each scenario.';
   el.appendChild(note);
+
+  // ── Efficiency page link ──────────────────────────────────────────────
+  var effBtn = document.createElement('div');
+  effBtn.style.cssText = 'margin-top:14px;text-align:right;';
+  effBtn.innerHTML = '<button onclick="var nb=document.querySelector(\'[onclick*=efficiency]\');showTab(\'efficiency\',nb);" '
+    + 'style="background:#0c2233;border:1px solid #0ea5e9;color:#38bdf8;border-radius:7px;padding:6px 16px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;">'
+    + '&#9656; Open Efficiency Analysis</button>';
+  el.appendChild(effBtn);
+
+  // ── Log efficiency reading whenever it changes ─────────────────────────
+  try {
+    logEfficiencyReading(TODAY.toISOString().slice(0,10), efficiencyPct,
+      Math.round(overallPct * 10)/10, Math.round(plannedPct * 10)/10,
+      fmtD(dragEndDate), Math.round(dragFactor * 100)/100);
+  } catch(e) {}
 }
+
+// ════════════════════════════════════════════════════════════
+// EFFICIENCY LOG + TAB (v51)
+// ════════════════════════════════════════════════════════════
+
+function logEfficiencyReading(dateStr, eff, actual, planned, endDateStr, drag) {
+  try {
+    var log = lsGet('dgc_eff_log', '[]') || [];
+    var last = log[log.length - 1];
+    // Only write a new entry if the efficiency % or actual % changed
+    if (!last || last.eff !== eff || last.actual !== actual) {
+      log.push({ date: dateStr, eff: eff, actual: actual, planned: planned,
+                 end: endDateStr, drag: drag });
+      if (log.length > 500) log = log.slice(-500);
+      lsSet('dgc_eff_log', log);
+    }
+  } catch(e) {}
+}
+
+function buildEfficiencyTab() {
+  var el = document.getElementById('efficiency-panel');
+  if (!el) return;
+  el.innerHTML = '';
+
+  var log = (lsGet('dgc_eff_log', '[]') || []).slice().reverse(); // newest first
+
+  // ── Header ────────────────────────────────────────────────────────────────
+  var hdr = document.createElement('div');
+  hdr.className = 'card';
+  hdr.style.marginBottom = '16px';
+
+  var latest = log[0] || null;
+  var effCol  = latest ? (latest.eff >= 100 ? '#4ade80' : latest.eff >= 80 ? '#f59e0b' : '#f87171') : 'var(--muted)';
+  hdr.innerHTML =
+    '<div class="card-title" style="margin-bottom:12px;">&#9881; Efficiency Analysis</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:12px;">'
+    + '<div style="background:var(--surface2);border-radius:8px;padding:12px;text-align:center;">'
+    +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">Current Efficiency</div>'
+    +   '<div style="font-size:28px;font-weight:900;color:' + effCol + ';">' + (latest ? latest.eff + '%' : '—') + '</div>'
+    +   '<div style="font-size:9px;color:var(--muted);margin-top:2px;">plan pace vs actual pace</div>'
+    + '</div>'
+    + '<div style="background:var(--surface2);border-radius:8px;padding:12px;text-align:center;">'
+    +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">Realistic End Date</div>'
+    +   '<div style="font-size:18px;font-weight:900;color:var(--text);">' + (latest ? latest.end : '—') + '</div>'
+    +   '<div style="font-size:9px;color:var(--muted);margin-top:2px;">at current efficiency</div>'
+    + '</div>'
+    + '<div style="background:var(--surface2);border-radius:8px;padding:12px;text-align:center;">'
+    +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">Drag Factor</div>'
+    +   '<div style="font-size:22px;font-weight:900;color:var(--text);">' + (latest ? '×' + latest.drag : '—') + '</div>'
+    +   '<div style="font-size:9px;color:var(--muted);margin-top:2px;">planned days become this many</div>'
+    + '</div>'
+    + '<div style="background:var(--surface2);border-radius:8px;padding:12px;text-align:center;">'
+    +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">Readings logged</div>'
+    +   '<div style="font-size:22px;font-weight:900;color:var(--text);">' + log.length + '</div>'
+    +   '<div style="font-size:9px;color:var(--muted);margin-top:2px;">since tracking began</div>'
+    + '</div>'
+    + '</div>'
+    + '<div style="font-size:10px;color:var(--muted);padding-top:8px;border-top:1px solid var(--border);">'
+    + 'Efficiency = actual % done &divide; plan % done today &nbsp;&middot;&nbsp; '
+    + 'Drag factor = 1 &divide; efficiency (how much longer each planned day takes) &nbsp;&middot;&nbsp; '
+    + 'A new reading is logged each time the efficiency % changes.'
+    + '</div>';
+  el.appendChild(hdr);
+
+  // ── Coming soon: zone-level breakdown ─────────────────────────────────────
+  var stub = document.createElement('div');
+  stub.className = 'card';
+  stub.style.marginBottom = '16px';
+  stub.innerHTML =
+    '<div class="card-title" style="margin-bottom:6px;">Zone-level Efficiency Breakdown <span style="font-size:10px;font-weight:400;color:var(--muted);text-transform:none;">— coming soon</span></div>'
+    + '<div style="color:var(--muted);font-size:12px;padding:16px 0;text-align:center;">'
+    + 'Zone-by-zone efficiency (which areas are ahead / behind plan, where drag is worst) will be built here. '
+    + '<br>Data is already available — this view will let you drill into each zone and see trends over time.'
+    + '</div>';
+  el.appendChild(stub);
+
+  // ── Historical log table ───────────────────────────────────────────────────
+  var logCard = document.createElement('div');
+  logCard.className = 'card';
+
+  if (!log.length) {
+    logCard.innerHTML =
+      '<div class="card-title" style="margin-bottom:8px;">Efficiency Log</div>'
+      + '<div style="color:var(--muted);font-size:12px;padding:16px 0;text-align:center;">'
+      + 'No readings yet — open the Forecast tab to log the first reading.'
+      + '</div>';
+  } else {
+    var tblHtml =
+      '<div class="card-title" style="margin-bottom:10px;">Efficiency Log</div>'
+      + '<div style="overflow-x:auto;">'
+      + '<table style="width:100%;border-collapse:collapse;font-size:11px;">'
+      + '<thead><tr style="border-bottom:2px solid var(--border);">'
+      + '<th style="text-align:left;padding:6px 8px;color:var(--muted);font-weight:700;white-space:nowrap;">Date</th>'
+      + '<th style="text-align:center;padding:6px 8px;color:var(--muted);font-weight:700;">Efficiency</th>'
+      + '<th style="text-align:center;padding:6px 8px;color:var(--muted);font-weight:700;">Actual %</th>'
+      + '<th style="text-align:center;padding:6px 8px;color:var(--muted);font-weight:700;">Plan %</th>'
+      + '<th style="text-align:center;padding:6px 8px;color:var(--muted);font-weight:700;">Drag ×</th>'
+      + '<th style="text-align:right;padding:6px 8px;color:var(--muted);font-weight:700;white-space:nowrap;">Realistic End</th>'
+      + '</tr></thead><tbody>';
+
+    log.forEach(function(r, i) {
+      var ec = r.eff >= 100 ? '#4ade80' : r.eff >= 80 ? '#f59e0b' : '#f87171';
+      var prev = log[i + 1];
+      var arrow = '';
+      if (prev) {
+        if (r.eff > prev.eff)       arrow = ' <span style="color:#4ade80;">&#9650;</span>';
+        else if (r.eff < prev.eff)  arrow = ' <span style="color:#f87171;">&#9660;</span>';
+      }
+      var rowBg = i % 2 === 0 ? '' : 'background:var(--surface2);';
+      tblHtml +=
+        '<tr style="border-bottom:1px solid var(--border);' + rowBg + '">'
+        + '<td style="padding:6px 8px;color:var(--muted);">' + r.date + '</td>'
+        + '<td style="padding:6px 8px;text-align:center;font-weight:700;color:' + ec + ';">' + r.eff + '%' + arrow + '</td>'
+        + '<td style="padding:6px 8px;text-align:center;">' + r.actual + '%</td>'
+        + '<td style="padding:6px 8px;text-align:center;color:var(--muted);">' + r.planned + '%</td>'
+        + '<td style="padding:6px 8px;text-align:center;color:var(--muted);">×' + r.drag + '</td>'
+        + '<td style="padding:6px 8px;text-align:right;font-weight:600;">' + r.end + '</td>'
+        + '</tr>';
+    });
+
+    tblHtml += '</tbody></table></div>';
+    logCard.innerHTML = tblHtml;
+  }
+
+  el.appendChild(logCard);
+}
+
 function showTab(name, btn) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
@@ -4422,6 +4569,7 @@ function showTab(name, btn) {
   if(name === 'sitemap')  buildSiteMap();
   if(name === 'staffhours') buildStaffHours();
   if(name === 'forecast')   buildForecastTab();
+  if(name === 'efficiency') buildEfficiencyTab();
 }
 
 // ═══════════════════════ INIT ═══════════════════════
