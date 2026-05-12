@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v55</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v56</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -859,11 +859,10 @@ function clearForm() {
 </div>
 
 <div class="nav">
-  <button class="active" onclick="showTab('dashboard',this)">Dashboard</button>
+  <button onclick="showTab('forecast',this)">Forecast</button>
   <button onclick="showTab('sitemap',this)">Site Map</button>
   <button class="no-client" onclick="showTab('staffhours',this)">Staff Hours</button>
   <button onclick="showTab('programme',this)">Programme</button>
-  <button onclick="showTab('forecast',this)">Forecast</button>
   <button onclick="showTab('efficiency',this)">Efficiency</button>
   <button onclick="showTab('gantt',this)">Gantt Chart</button>
   <button class="admin-only" onclick="showTab('financial',this)">Financials</button>
@@ -871,6 +870,7 @@ function clearForm() {
   <button onclick="showTab('delays',this)">Delays</button>
   <button class="admin-only" onclick="showTab('variations',this)">Variations</button>
   <button onclick="showTab('report',this)">Weekly Report</button>
+  <button class="active" onclick="showTab('dashboard',this)">Dashboard</button>
 </div>
 
 <div class="main">
@@ -4355,6 +4355,12 @@ function buildForecastTab() {
     row.appendChild(rgt);
 
     container.appendChild(row);
+
+    // % through label — shown under the bar
+    var pLbl = document.createElement('div');
+    pLbl.style.cssText = 'font-size:9px;font-weight:700;color:var(--muted);margin:-2px 0 4px 140px;line-height:1.2;opacity:'+(dimmed?'0.45':'0.8')+';;';
+    pLbl.textContent = Math.round(p1) + '% through';
+    container.appendChild(pLbl);
   }
 
   function sectionLabel(container, txt) {
@@ -4449,13 +4455,6 @@ function buildForecastTab() {
     +'<br>Programme bars: fill = where plan says we should be today &nbsp;·&nbsp; Reality bars: fill = actual % done &nbsp;·&nbsp; Dates on right = projected end for each scenario.';
   el.appendChild(note);
 
-  // ── Efficiency page link ──────────────────────────────────────────────
-  var effBtn = document.createElement('div');
-  effBtn.style.cssText = 'margin-top:14px;text-align:right;';
-  effBtn.innerHTML = '<button onclick="var nb=document.querySelector(\'[onclick*=efficiency]\');showTab(\'efficiency\',nb);" '
-    + 'style="background:#0c2233;border:1px solid #0ea5e9;color:#38bdf8;border-radius:7px;padding:6px 16px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;">'
-    + '&#9656; Open Efficiency Analysis</button>';
-  el.appendChild(effBtn);
 
   // ── Log efficiency reading whenever it changes ─────────────────────────
   try {
