@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v53</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v54</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -3841,6 +3841,24 @@ function calcForecast() {
 }
 
 function getZonePlannedPct(zoneId) {
+  // Duration-weighted task-schedule planned %:
+  // For each task in the zone, how much of its duration should be done by TODAY?
+  // This matches GanttPro's methodology rather than naive calendar interpolation.
+  var tasks = TASKS.filter(function(t){ return t.zone === zoneId; });
+  if (tasks.length) {
+    var totalDur = 0, doneDur = 0;
+    tasks.forEach(function(t) {
+      if (!t.start || !t.end) return;
+      var s = parseDate(t.start), e = parseDate(t.end);
+      var dur = Math.max(1, Math.round((e - s) / 86400000) + 1);
+      totalDur += dur;
+      if (TODAY >= e)      { doneDur += dur; }         // fully past
+      else if (TODAY > s)  { doneDur += Math.round((TODAY - s) / 86400000); } // partial
+      // TODAY <= s: 0 done (task not started yet per programme)
+    });
+    if (totalDur > 0) return Math.round(doneDur / totalDur * 100);
+  }
+  // Fallback: calendar interpolation using zone dates
   var z = ZONES.find(function(z){ return z.id===zoneId; });
   if (!z) return 0;
   var s = parseDate(z.start), e = parseDate(z.end);
