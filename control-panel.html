@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v54</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v55</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
 :root {
   --bg: #0f1117;
@@ -1225,6 +1226,9 @@ function clearForm() {
 
 <!-- ═══════════════════════════════ PROGRAMME ═══════════════════════════════ -->
 <div id="tab-programme" class="tab-content">
+  <div class="card" style="margin-bottom:12px;" id="programme-master-header">
+    <div id="programme-header-panel"></div>
+  </div>
   <div class="card" style="margin-bottom:12px;" id="velocity-card">
     <div id="velocity-panel"></div>
     <div id="velocity-trend-wrap" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:none;">
@@ -2125,7 +2129,7 @@ const ZONES = [
   { id:12, wbs:'12', name:'Demob & Handover',         shortName:'Demob',  budget:1435.50,  start:'2026-06-09', end:'2026-06-29', color:'#94a3b8', type:'demob' }
 ];
 
-const TASKS = [
+let TASKS = [
   {wbs:'1.1',zone:1,name:'Site Mobilisation',assigned:'Gang A',start:'2026-03-23',end:'2026-03-24',progress:100,budget:0},
   {wbs:'1.2',zone:1,name:'Setting Out (Main Site)',assigned:'Paul Carey Site Engineer',start:'2026-04-08',end:'2026-04-09',progress:0,budget:0},
   {wbs:'1.3',zone:1,name:'Prelims - Site Management',assigned:'Site Manager - David',start:'2026-03-23',end:'2026-06-12',progress:0,budget:0},
@@ -3818,7 +3822,17 @@ function updateSectionProgress(id, val, lbl) {
   if(document.getElementById('tab-sitemap').classList.contains('active')) buildSiteMap();
 }
 
-const ZONE_DEFAULTS = {1:24,2:45,3:74,4:74,5:64,6:64,7:7,8:7,9:0,10:0,11:0,12:0};
+let ZONE_DEFAULTS = {1:24,2:45,3:74,4:74,5:64,6:64,7:7,8:7,9:0,10:0,11:0,12:0};
+
+// ── Programme override: load uploaded GanttPro schedule from localStorage ──
+(function(){
+  try {
+    var _ov = JSON.parse(localStorage.getItem('dgc_programme_override') || 'null');
+    if (_ov && _ov.tasks && Array.isArray(_ov.tasks) && _ov.tasks.length) {
+      TASKS = _ov.tasks;
+    }
+  } catch(e) {}
+})();
 
 function calcForecast() {
   try {
@@ -4577,6 +4591,258 @@ function buildEfficiencyTab() {
   el.appendChild(logCard);
 }
 
+
+// ════════════════════════════════════════════════════════════
+// PROGRAMME MASTER PAGE (v55)
+// ════════════════════════════════════════════════════════════
+
+// ── Zone header: call this whenever programme tab is shown ─────────────────
+function buildProgrammeHeader() {
+  var el = document.getElementById('programme-header-panel');
+  if (!el) return;
+
+  // ── Core calcs ────────────────────────────────────────────────────────────
+  var totalBudget = ZONES.reduce(function(s,z){ return s+(z.budget||0); }, 0);
+  var completedValue = 0;
+  ZONES.forEach(function(z){ completedValue += (z.budget||0)*(getZoneProgress(z.id)/100); });
+  var overallPct = totalBudget > 0 ? completedValue/totalBudget*100 : 0;
+
+  // Task-schedule planned % (same as getZonePlannedPct methodology but global)
+  var _td = 0, _dd = 0;
+  TASKS.filter(function(t){return t.start&&t.end;}).forEach(function(t){
+    var s = parseDate(t.start), e = parseDate(t.end);
+    var dur = Math.max(1, Math.round((e-s)/86400000)+1);
+    _td += dur;
+    if (TODAY >= e)     { _dd += dur; }
+    else if (TODAY > s) { _dd += Math.round((TODAY-s)/86400000); }
+  });
+  var plannedPct = _td > 0 ? _dd/_td*100 : 0;
+
+  var agreedDL   = parseDate('2026-06-29');
+  var totalProgWDs = 65;
+
+  // Working-day helpers (IoM 2026 bank holidays)
+  var IOM_BH = {'2026-04-03':1,'2026-04-06':1,'2026-05-04':1,'2026-05-25':1,'2026-06-12':1};
+  function isWD(d) {
+    var wd = d.getDay();
+    if (wd===0||wd===6) return false;
+    var k = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    return !IOM_BH[k];
+  }
+  function addWD(start, n) {
+    if (Math.abs(n)<0.05) return new Date(start.getTime());
+    var d=new Date(start.getTime()); var dir=n>=0?1:-1;
+    var tgt=Math.ceil(Math.abs(n)), added=0, safety=tgt*2+200;
+    while(added<tgt && safety-->0){d.setDate(d.getDate()+dir);if(isWD(d))added++;}
+    return d;
+  }
+  function fd(d){ return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
+  function daysDL(d){ return d ? Math.round((d-agreedDL)/86400000) : null; }
+
+  var remainingProgWDs = Math.max(0, totalProgWDs*(1-overallPct/100));
+  var atPaceEnd  = addWD(TODAY, remainingProgWDs);
+  var ef         = (plannedPct>0 && overallPct>0) ? plannedPct/overallPct : 1;
+  var dragEnd    = addWD(TODAY, remainingProgWDs*ef);
+  var dragDiff   = daysDL(dragEnd);
+  var effPct     = plannedPct>0 ? Math.round(overallPct/plannedPct*100) : 100;
+
+  var diffTxt = function(d){ return d===0?'On time':(d>0?'+'+d+' days':d+' days'); };
+  var diffCol = function(d){ return d>0?'#f87171':d<0?'#4ade80':'var(--text)'; };
+  var effCol  = effPct>=100?'#4ade80':effPct>=80?'#f59e0b':'#f87171';
+
+  var mode = window.progViewMode || 'programme';
+  var override = (function(){ try{ return JSON.parse(localStorage.getItem('dgc_programme_override')||'null'); }catch(e){return null;} })();
+  var uploadLabel = override
+    ? '&#10003; ' + (override.fileName||'uploaded') + ' &nbsp;&middot;&nbsp; ' + (override.uploadDate||'?')
+    : 'Default programme (embedded at last update)';
+
+  el.innerHTML =
+    // ── Top row: label + controls ────────────────────────────────────────────
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:14px;">'
+    + '<div>'
+    +   '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:3px;">Current Programme</div>'
+    +   '<div style="font-size:11px;color:' + (override?'#4ade80':'var(--muted)') + ';">' + uploadLabel + '</div>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+    // Mode toggle button
+    +   '<button id="prog-mode-btn" onclick="window.progViewMode=(window.progViewMode||\'programme\')===\'programme\'?\'efficiency\':\'programme\';buildProgrammeHeader();buildProgTable();" '
+    +     'style="background:' + (mode==='efficiency'?'rgba(245,158,11,0.15)':'var(--surface2)') + ';'
+    +     'border:1px solid ' + (mode==='efficiency'?'#f59e0b':'var(--border)') + ';'
+    +     'color:' + (mode==='efficiency'?'#f59e0b':'var(--text)') + ';'
+    +     'border-radius:6px;padding:5px 13px;font-size:11px;font-weight:700;cursor:pointer;">'
+    +     (mode==='efficiency'?'&#9888;&#xFE0E; Efficiency Adjusted':'&#128202; As Programmed')
+    +   '</button>'
+    // Upload button (admin only)
+    +   '<label class="admin-only" style="cursor:pointer;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 13px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:5px;">'
+    +     '&#8679; Upload GanttPro Excel'
+    +     '<input type="file" accept=".xlsx,.xls" style="display:none;" onchange="handleProgUpload(this)">'
+    +   '</label>'
+    // Clear button (only if override exists)
+    +   (override
+        ? '<button class="admin-only" onclick="if(confirm(\'Clear uploaded programme and revert to embedded defaults?\')){localStorage.removeItem(\'dgc_programme_override\');location.reload();}" '
+          + 'style="background:transparent;border:1px solid #f87171;color:#f87171;border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer;">&#10005; Clear</button>'
+        : '')
+    + '</div>'
+    + '</div>'
+    // ── Metric tiles ─────────────────────────────────────────────────────────
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;">'
+    // Expected end date (efficiency-adjusted)
+    +   '<div style="background:var(--surface2);border-radius:8px;padding:13px;text-align:center;border:1px solid ' + diffCol(dragDiff) + '30;">'
+    +     '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">Expected End Date</div>'
+    +     '<div style="font-size:16px;font-weight:900;color:' + diffCol(dragDiff) + ';">' + fd(dragEnd) + '</div>'
+    +     '<div style="font-size:9px;color:' + diffCol(dragDiff) + ';font-weight:700;margin-top:3px;">' + diffTxt(dragDiff) + ' vs 29 Jun</div>'
+    +   '</div>'
+    // At-programme-pace end
+    +   '<div style="background:var(--surface2);border-radius:8px;padding:13px;text-align:center;">'
+    +     '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">At Programme Pace</div>'
+    +     '<div style="font-size:16px;font-weight:900;color:var(--text);">' + fd(atPaceEnd) + '</div>'
+    +     '<div style="font-size:9px;color:var(--muted);margin-top:3px;">if 100% efficiency from today</div>'
+    +   '</div>'
+    // Efficiency
+    +   '<div style="background:var(--surface2);border-radius:8px;padding:13px;text-align:center;">'
+    +     '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">Current Efficiency</div>'
+    +     '<div style="font-size:24px;font-weight:900;color:' + effCol + ';">' + effPct + '%</div>'
+    +     '<div style="font-size:9px;color:var(--muted);margin-top:3px;">actual ' + Math.round(overallPct) + '% &divide; plan ' + Math.round(plannedPct) + '%</div>'
+    +   '</div>'
+    // GanttPro progress
+    +   '<div style="background:var(--surface2);border-radius:8px;padding:13px;text-align:center;">'
+    +     '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">GanttPro Progress</div>'
+    +     '<div style="font-size:24px;font-weight:900;color:#38bdf8;">' + Math.round(overallPct) + '%</div>'
+    +     '<div style="font-size:9px;color:var(--muted);margin-top:3px;">' + Math.round(remainingProgWDs) + ' WDs remaining</div>'
+    +   '</div>'
+    + '</div>';
+}
+
+// ── GanttPro Excel parser ─────────────────────────────────────────────────────
+// Returns array of raw row objects {wbs, name, start, end, assigned, budget, progress}
+function parseGanttProExcel(workbook) {
+  try {
+    var sheet = workbook.Sheets[workbook.SheetNames[0]];
+    var rows  = XLSX.utils.sheet_to_json(sheet, {header:1, defval:''});
+
+    // Find header row (look for WBS and a name/task column)
+    var headerRow = -1, colMap = {};
+    for (var i = 0; i < Math.min(15, rows.length); i++) {
+      var row = rows[i].map(function(c){ return String(c).toLowerCase().trim(); });
+      if (row.some(function(h){ return h==='wbs'||h==='task name'||h==='name'; })) {
+        headerRow = i;
+        row.forEach(function(h, ci) {
+          if (h === 'wbs')                                    colMap.wbs      = ci;
+          if ((h==='task name'||h==='name'||h.includes('task')) && colMap.name===undefined) colMap.name = ci;
+          if (h.includes('start'))                            colMap.start    = ci;
+          if (h==='finish'||h==='end'||h.includes('finish')||h.includes('end date'))   colMap.end = ci;
+          if (h.includes('assign')||h.includes('resource'))  colMap.assigned = ci;
+          if (h.includes('budget')||h==='cost'||h.includes('total cost'))              colMap.budget = ci;
+          if (h.includes('%')||h.includes('complete')||h.includes('progress'))         colMap.progress= ci;
+        });
+        break;
+      }
+    }
+    if (headerRow < 0 || colMap.wbs === undefined) return null;
+
+    // Parse date from Excel serial or string
+    function xlDate(v) {
+      if (!v) return '';
+      if (typeof v === 'number') {
+        var d = new Date(Math.round((v - 25569) * 86400000));
+        return d.getUTCFullYear() + '-'
+          + String(d.getUTCMonth()+1).padStart(2,'0') + '-'
+          + String(d.getUTCDate()).padStart(2,'0');
+      }
+      var s = String(v).trim();
+      // DD/MM/YYYY
+      var m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+      if (m) return m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');
+      // YYYY-MM-DD already
+      if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+      return '';
+    }
+
+    var parsed = [];
+    for (var ri = headerRow + 1; ri < rows.length; ri++) {
+      var row = rows[ri];
+      var wbs = String(row[colMap.wbs] || '').trim();
+      if (!wbs || !wbs.includes('.')) continue; // skip zone-level summary rows
+      var startStr = xlDate(colMap.start !== undefined ? row[colMap.start] : '');
+      var endStr   = xlDate(colMap.end   !== undefined ? row[colMap.end]   : '');
+      if (!startStr || !endStr) continue; // skip rows without dates
+      parsed.push({
+        wbs:      wbs,
+        name:     String(row[colMap.name]     || '').trim(),
+        start:    startStr,
+        end:      endStr,
+        assigned: String(row[colMap.assigned] || '').trim(),
+        budget:   parseFloat(String(row[colMap.budget]||'').replace(/[£,$,]/g,''))||0,
+        progress: Math.round(parseFloat(String(row[colMap.progress]||'').replace(/%/g,''))||0)
+      });
+    }
+    return parsed.length ? parsed : null;
+  } catch(e) { console.error('parseGanttProExcel:', e); return null; }
+}
+
+// ── Merge upload rows into TASKS by WBS base-match ────────────────────────────
+// Strips trailing letter suffix for comparison: "3.1B" base = "3.1"
+// So an upload row "3.1" updates both "3.1B" and "3.1C"
+function applyGanttProUpdate(uploadRows) {
+  var updated = TASKS.map(function(t){ return Object.assign({}, t); });
+  var matched = 0;
+  uploadRows.forEach(function(ur) {
+    var urBase = ur.wbs.replace(/[A-Z]$/,'');
+    updated.forEach(function(t) {
+      var tBase = t.wbs.replace(/[A-Z]$/,'');
+      if (tBase === urBase) {
+        if (ur.start)    t.start    = ur.start;
+        if (ur.end)      t.end      = ur.end;
+        if (ur.assigned) t.assigned = ur.assigned;
+        matched++;
+      }
+    });
+  });
+  return { tasks: updated, matched: matched, total: uploadRows.length };
+}
+
+// ── Handle file upload ────────────────────────────────────────────────────────
+function handleProgUpload(inputEl) {
+  var file = inputEl.files && inputEl.files[0];
+  inputEl.value = ''; // reset so same file can be re-selected
+  if (!file) return;
+  if (typeof XLSX === 'undefined') {
+    alert('SheetJS library not loaded. Please check your internet connection and try again.');
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = new Uint8Array(e.target.result);
+      var wb   = XLSX.read(data, {type:'array', cellDates:false});
+      var rows = parseGanttProExcel(wb);
+      if (!rows || !rows.length) {
+        alert('No valid tasks found in the file.\n\nExpected columns: WBS, Task Name/Name, Start, Finish/End.\nCheck the file is a GanttPro export (.xlsx).');
+        return;
+      }
+      var result = applyGanttProUpdate(rows);
+      var msg = 'Parsed ' + rows.length + ' rows from "' + file.name + '".\n'
+              + result.matched + ' task date(s) updated.\n\n'
+              + 'Save this programme as the current master?';
+      if (!confirm(msg)) return;
+      var saveObj = {
+        tasks:      result.tasks,
+        uploadDate: TODAY.toISOString().slice(0,10),
+        fileName:   file.name
+      };
+      try { localStorage.setItem('dgc_programme_override', JSON.stringify(saveObj)); } catch(e) {
+        alert('Failed to save to localStorage: ' + e.message); return;
+      }
+      alert('Programme saved. The page will now reload to apply the updated schedule.');
+      location.reload();
+    } catch(err) {
+      alert('Error reading file: ' + err.message);
+    }
+  };
+  reader.onerror = function(){ alert('Could not read file.'); };
+  reader.readAsArrayBuffer(file);
+}
+
 function showTab(name, btn) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
@@ -4589,6 +4855,7 @@ function showTab(name, btn) {
   if(name === 'staffhours') buildStaffHours();
   if(name === 'forecast')   buildForecastTab();
   if(name === 'efficiency') buildEfficiencyTab();
+  if(name === 'programme')  buildProgrammeHeader();
 }
 
 // ═══════════════════════ INIT ═══════════════════════
@@ -5049,9 +5316,42 @@ function updateProgress(zoneId, value, label) {
 
 // ═══════════════════════ PROGRAMME TABLE ═══════════════════════
 function buildProgTable() {
+  // ── Efficiency-adjusted mode: compute drag factor ─────────────────────
+  var effMode = (window.progViewMode === 'efficiency');
+  var dragEf = 1;
+  if (effMode) {
+    try {
+      var _tb2 = ZONES.reduce(function(s,z){return s+(z.budget||0);},0);
+      var _cv2 = 0; ZONES.forEach(function(z){_cv2+=(z.budget||0)*(getZoneProgress(z.id)/100);});
+      var _op2 = _tb2>0?_cv2/_tb2*100:0;
+      var _td2=0,_dd2=0;
+      TASKS.filter(function(t){return t.start&&t.end;}).forEach(function(t){
+        var s2=parseDate(t.start),e2=parseDate(t.end);
+        var dur2=Math.max(1,Math.round((e2-s2)/86400000)+1);
+        _td2+=dur2;
+        if(TODAY>=e2) _dd2+=dur2; else if(TODAY>s2) _dd2+=Math.round((TODAY-s2)/86400000);
+      });
+      var _pp2=_td2>0?_dd2/_td2*100:0;
+      dragEf=(_pp2>0&&_op2>0)?_pp2/_op2:1;
+    } catch(e) {}
+  }
+  // For incomplete future tasks: project end = today + remaining × dragEf
+  function adjEndDate(endStr, progVal) {
+    if (!effMode || dragEf <= 1.01 || progVal >= 100) return null;
+    var e3 = parseDate(endStr); if (!e3 || e3 <= TODAY) return null;
+    var remMs = e3.getTime() - TODAY.getTime();
+    return new Date(TODAY.getTime() + Math.round(remMs * dragEf)).toISOString().slice(0,10);
+  }
+
   const tbody  = document.getElementById('prog-tbody');
   const stcol  = { complete:'#22c55e', active:'#f59e0b', upcoming:'#64748b', late:'#ef4444' };
   let html = '';
+  if (effMode && dragEf > 1.01) {
+    var effPct2 = Math.round(100/dragEf);
+    html += '<tr><td colspan="8" style="background:rgba(245,158,11,0.12);color:#f59e0b;font-size:10px;font-weight:700;padding:6px 10px;text-align:center;">'
+      + '&#9888;&#xFE0E; Efficiency Adjusted — remaining durations ×' + (Math.round(dragEf*100)/100) + ' drag (' + effPct2 + '% efficiency) — amber = projected end at current pace'
+      + '</td></tr>';
+  }
   ZONES.forEach(z => {
     const prog = getZoneProgress(z.id), status = getZoneStatus(z);
     html += '<tr class="zone-row"><td>' + z.wbs + '</td><td colspan="2">' + z.name + '</td><td>' + fmtShortDate(z.start) + '</td><td>' + fmtShortDate(z.end) + '</td><td class="admin-only">' + fmt(z.budget) + '</td>' +
@@ -5063,8 +5363,12 @@ function buildProgTable() {
       var tProgVal = tProg !== null ? tProg : (t.progress||0);
       var tStatusLbl = tProgVal === 0 ? 'Not started' : tProgVal === 50 ? 'In progress' : 'Complete';
       var tStatusCls = tProgVal === 0 ? 'not-started' : tProgVal === 50 ? 'in-progress' : 'complete';
+      var adjEnd = adjEndDate(t.end, tProgVal);
+      var endCell = adjEnd
+        ? '<td style="font-size:11px;"><div style="color:#f59e0b;font-weight:700;">' + fmtShortDate(adjEnd) + '</div><div style="font-size:9px;color:var(--muted);">' + fmtShortDate(t.end) + '</div></td>'
+        : '<td style="font-size:11px;">' + fmtShortDate(t.end) + '</td>';
       html += '<tr><td style="color:var(--muted);">' + t.wbs + '</td><td class="task-indent">' + t.name + '</td><td style="color:var(--muted);font-size:11px;">' + t.assigned + '</td>' +
-        '<td style="font-size:11px;">' + fmtShortDate(t.start) + '</td><td style="font-size:11px;">' + fmtShortDate(t.end) + '</td>' +
+        '<td style="font-size:11px;">' + fmtShortDate(t.start) + '</td>' + endCell +
         '<td class="admin-only" style="font-size:11px;color:var(--accent);">' + fmt(t.budget) + '</td>' +
         '<td><div class="mini-bar" style="width:80px;"><div class="mini-fill" style="width:' + tProgVal + '%;background:' + stcol[ts] + ';"></div></div></td>' +
         '<td><button class="task-status-btn ' + tStatusCls + '" onclick="cycleTaskStatus(\'' + t.wbs + '\',this)" title="Click to cycle: Not started → In progress → Complete">' + tStatusLbl + '</button></td></tr>';
@@ -5072,7 +5376,6 @@ function buildProgTable() {
   });
   tbody.innerHTML = html;
 }
-
 // ═══════════════════════ BUDGET TABLE (Financial tab) ═══════════════════════
 function buildBudgetZoneTable() {
   const el = document.getElementById('budget-zone-table');
