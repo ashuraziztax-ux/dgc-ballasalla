@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v52</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v53</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -886,9 +886,9 @@ function clearForm() {
 
         <!-- Certified Work Completed -->
         <div style="text-align:center;">
-          <div id="hero-source-label" style="font-size:10px;font-weight:700;color:#34d399;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">Certified Work Completed (GanttPro — physical only)</div>
+          <div id="hero-source-label" style="font-size:10px;font-weight:700;color:#34d399;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">Physical Progress (GanttPro)</div>
           <div style="font-size:52px;font-weight:800;color:#34d399;line-height:1;" id="kpi-certified-pct">—%</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:4px;">AFP work excl. materials</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;">Budget-weighted zone progress</div>
         </div>
 
         <!-- Behind indicator (centre) -->
@@ -936,9 +936,9 @@ function clearForm() {
           <div style="height:3px;background:#1e293b;border-radius:2px;"><div id="bar-planned" style="height:3px;background:#a78bfa;border-radius:2px;width:0%;"></div></div>
         </div>
         <div style="text-align:center;">
-          <div style="font-size:9px;color:var(--muted);letter-spacing:.06em;margin-bottom:3px;text-transform:uppercase;">Actual Done</div>
+          <div style="font-size:9px;color:var(--muted);letter-spacing:.06em;margin-bottom:3px;text-transform:uppercase;">AFP Certified</div>
           <div style="font-size:20px;font-weight:700;color:var(--accent);" id="kpi-progress">—%</div>
-          <div style="font-size:8px;color:var(--muted);margin-bottom:4px;">GanttPro budget-wtd</div>
+          <div style="font-size:8px;color:var(--muted);margin-bottom:4px;">invoiced &amp; certified to date</div>
           <div style="height:3px;background:#1e293b;border-radius:2px;"><div id="bar-actual" style="height:3px;background:var(--accent);border-radius:2px;width:0%;"></div></div>
         </div>
         <div class="admin-only" style="text-align:center;">
@@ -4603,18 +4603,18 @@ window.addEventListener('DOMContentLoaded', () => {
     var heroLabel = document.getElementById('hero-source-label');
     if(heroLabel) heroLabel.textContent = dataSource === 'afp'
       ? 'Dandara Certified (AFP 2) — includes MOS & variations'
-      : 'Certified Work Completed (GanttPro — physical only)';
+      : 'Physical Progress (GanttPro)';
     var heroLabelRight = document.getElementById('hero-source-label-right');
     if(heroLabelRight) heroLabelRight.textContent = dataSource === 'afp'
       ? 'Physical work only (excl. MOS & variations)'
       : 'Current Revised Plan';
   } catch(e) {}
 
-  set('kpi-progress',      progress + '%');
+  set('kpi-progress',      certifiedPct + '%');  // secondary row: AFP certified
   set('kpi-time-pct',      timePct + '%');
   set('kpi-planned-pct',   plannedPct + '%');
   set('kpi-revised-pct',   revisedPct + '%');
-  set('kpi-certified-pct', certifiedPct + '%');
+  set('kpi-certified-pct', progress + '%');      // hero: GanttPro physical progress
   set('kpi-spend-pct',     spendPct + '%');
 
   setW('bar-actual',    progress);
@@ -4622,15 +4622,15 @@ window.addEventListener('DOMContentLoaded', () => {
   setW('bar-planned',   plannedPct);
   setW('bar-spend',     spendPct);
 
-  // Hero bar: certified (green fill), gap (red zone), revised marker
-  const gapPct = Math.max(0, revisedPct - certifiedPct);
+  // Hero bar: GanttPro physical fill (green), gap to revised (red), revised marker
+  const gapPct = Math.max(0, revisedPct - progress);
   set('kpi-gap-pct', gapPct + '%');
   try {
     const barC = document.getElementById('bar-certified');
     const barG = document.getElementById('bar-gap');
     const barM = document.getElementById('bar-revised-marker');
-    if(barC) barC.style.width = Math.min(certifiedPct, 100) + '%';
-    if(barG) { barG.style.left = Math.min(certifiedPct, 100) + '%'; barG.style.width = Math.min(gapPct, 100 - certifiedPct) + '%'; }
+    if(barC) barC.style.width = Math.min(progress, 100) + '%';
+    if(barG) { barG.style.left = Math.min(progress, 100) + '%'; barG.style.width = Math.min(gapPct, 100 - progress) + '%'; }
     if(barM) barM.style.left = 'calc(' + Math.min(revisedPct, 100) + '% - 1px)';
     // If on target or ahead, hide gap and use green marker
     if(gapPct <= 0) {
