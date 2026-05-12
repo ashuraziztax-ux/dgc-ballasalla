@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v51</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v52</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -4389,7 +4389,8 @@ function buildForecastTab() {
     { lbl:'Actual complete',  val: overallPct.toFixed(1)+'%',  col:'var(--text)' },
     { lbl:'Efficiency',       val: efficiencyPct+'% of plan',  col: effKpiCol },
     { lbl:'vs 29 Jun',        val: avdTxt,                     col: avdCol },
-    { lbl:'Realistic end',    val: fmtD(dragEndDate),  col: dragDiff > 0 ? '#f87171' : '#4ade80' },
+    { lbl:'Realistic end',    val: dragDiff === 0 ? 'On time' : (dragDiff > 0 ? '+'+dragDiff+' days' : dragDiff+' days'),
+                              col: dragDiff > 0 ? '#f87171' : dragDiff < 0 ? '#4ade80' : 'var(--text)' },
     { lbl:'In dispute',       val: inDisputeWDs.toFixed(1)+' WDs',    col:'#f97316' },
     { lbl:'Absorbed',         val: absorbedWDs.toFixed(1)+' WDs',     col:'#6366f1' },
     { lbl:'Days to deadline', val: Math.max(0,Math.round(daysBetween(TODAY,agreedDL)))+' days',
@@ -4428,7 +4429,7 @@ function buildForecastTab() {
   try {
     logEfficiencyReading(TODAY.toISOString().slice(0,10), efficiencyPct,
       Math.round(overallPct * 10)/10, Math.round(plannedPct * 10)/10,
-      fmtD(dragEndDate), Math.round(dragFactor * 100)/100);
+      fmtD(dragEndDate), Math.round(dragFactor * 100)/100, dragDiff);
   } catch(e) {}
 }
 
@@ -4436,14 +4437,14 @@ function buildForecastTab() {
 // EFFICIENCY LOG + TAB (v51)
 // ════════════════════════════════════════════════════════════
 
-function logEfficiencyReading(dateStr, eff, actual, planned, endDateStr, drag) {
+function logEfficiencyReading(dateStr, eff, actual, planned, endDateStr, drag, diff) {
   try {
     var log = lsGet('dgc_eff_log', '[]') || [];
     var last = log[log.length - 1];
     // Only write a new entry if the efficiency % or actual % changed
     if (!last || last.eff !== eff || last.actual !== actual) {
       log.push({ date: dateStr, eff: eff, actual: actual, planned: planned,
-                 end: endDateStr, drag: drag });
+                 end: endDateStr, drag: drag, diff: (diff || 0) });
       if (log.length > 500) log = log.slice(-500);
       lsSet('dgc_eff_log', log);
     }
@@ -4473,9 +4474,9 @@ function buildEfficiencyTab() {
     +   '<div style="font-size:9px;color:var(--muted);margin-top:2px;">plan pace vs actual pace</div>'
     + '</div>'
     + '<div style="background:var(--surface2);border-radius:8px;padding:12px;text-align:center;">'
-    +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">Realistic End Date</div>'
-    +   '<div style="font-size:18px;font-weight:900;color:var(--text);">' + (latest ? latest.end : '—') + '</div>'
-    +   '<div style="font-size:9px;color:var(--muted);margin-top:2px;">at current efficiency</div>'
+    +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">Realistic vs 29 Jun</div>'
+    +   '<div style="font-size:20px;font-weight:900;color:' + (latest ? (latest.diff > 0 ? '#f87171' : latest.diff < 0 ? '#4ade80' : 'var(--text)') : 'var(--muted)') + ';">' + (latest ? (latest.diff === 0 ? 'On time' : (latest.diff > 0 ? '+'+latest.diff+' days' : latest.diff+' days')) : '—') + '</div>'
+    +   '<div style="font-size:9px;color:var(--muted);margin-top:2px;">' + (latest ? latest.end : '') + '</div>'
     + '</div>'
     + '<div style="background:var(--surface2);border-radius:8px;padding:12px;text-align:center;">'
     +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">Drag Factor</div>'
@@ -4528,7 +4529,7 @@ function buildEfficiencyTab() {
       + '<th style="text-align:center;padding:6px 8px;color:var(--muted);font-weight:700;">Actual %</th>'
       + '<th style="text-align:center;padding:6px 8px;color:var(--muted);font-weight:700;">Plan %</th>'
       + '<th style="text-align:center;padding:6px 8px;color:var(--muted);font-weight:700;">Drag ×</th>'
-      + '<th style="text-align:right;padding:6px 8px;color:var(--muted);font-weight:700;white-space:nowrap;">Realistic End</th>'
+      + '<th style="text-align:right;padding:6px 8px;color:var(--muted);font-weight:700;white-space:nowrap;">vs 29 Jun</th>'
       + '</tr></thead><tbody>';
 
     log.forEach(function(r, i) {
@@ -4547,7 +4548,7 @@ function buildEfficiencyTab() {
         + '<td style="padding:6px 8px;text-align:center;">' + r.actual + '%</td>'
         + '<td style="padding:6px 8px;text-align:center;color:var(--muted);">' + r.planned + '%</td>'
         + '<td style="padding:6px 8px;text-align:center;color:var(--muted);">×' + r.drag + '</td>'
-        + '<td style="padding:6px 8px;text-align:right;font-weight:600;">' + r.end + '</td>'
+        + '<td style="padding:6px 8px;text-align:right;font-weight:600;color:' + (r.diff > 0 ? '#f87171' : r.diff < 0 ? '#4ade80' : 'var(--text)') + ';">' + (r.diff === 0 ? 'On time' : (r.diff > 0 ? '+'+r.diff+'d' : r.diff+'d')) + '<div style="font-size:9px;font-weight:400;color:var(--muted);">' + (r.end || '') + '</div></td>'
         + '</tr>';
     });
 
