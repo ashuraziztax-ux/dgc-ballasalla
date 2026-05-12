@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v59</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v60</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -1433,7 +1433,7 @@ function clearForm() {
     <div style="font-size:12px; color:var(--muted); line-height:1.7;">
       <div>• AFP 1 (£22,985 gross) — confirm payment received from Dandara.</div>
       <div>• AFP 2 submitted 30 Apr: gross certified <strong style="color:var(--accent)">£167,134 cumulative</strong> | net <strong style="color:var(--accent)">£156,739.46</strong> (Ian Barnes certified, 2.5% retention) | due <strong style="color:var(--accent)">28 May 2026</strong>.</div>
-      <div>• <strong style="color:var(--red)">Programme behind:</strong> Kerbs (0%), Tarmac (0%), Type 1 subbase (0%), Terram (0%) not started in any zone. Zone 1 had planned completion 15 Apr — still no kerbs or tarmac.</div>
+      <div>• <strong style="color:var(--red)">Programme behind:</strong> Kerbs (0%), Tarmac (0%), Type 1 subbase (0%), Terram (0%) not started in any zone.</div>
       <div>• <strong style="color:var(--orange)">7 time extension variations (A–G) already raised</strong> — weeks of additional prelims being claimed. Start date under dispute.</div>
       <div>• Materials on Site £47,815 (manhole rings, covers, pipe) — on site, not yet installed, included in AFP2.</div>
       <div>• Services (0%) and Street Lighting (0%) not yet started — will fall into AFP 3/4.</div>
@@ -3511,7 +3511,7 @@ function buildAFAKPIs(vars) {
   if (!el) return;
   el.innerHTML = '';
 
-  var CONTRACT_SUM = 450000;
+  // Uses global CONTRACT_SUM (£450,142) — removed local shadow
   var agreedTotal = vars.filter(function(v){ return v.status==='agreed'; })
                         .reduce(function(s,v){ return s+(v.agreed||0); }, 0);
   var submittedTotal = vars.filter(function(v){ return v.status==='submitted'; })
@@ -3599,7 +3599,7 @@ function buildRetentionPanel() {
   var AFP1_GROSS = 22984.59;
   var AFP2_GROSS = 167134.00;  // cumulative gross certified per AFP2
   var RETENTION_RATE = 0.025;  // 2.5% (Ian Barnes applied this)
-  var CONTRACT_SUM   = 450000;
+  // Uses global CONTRACT_SUM (£450,142) — removed local shadow
 
   var ret1 = Math.round(AFP1_GROSS * RETENTION_RATE * 100) / 100;
   var ret2 = Math.round(AFP2_GROSS * RETENTION_RATE * 100) / 100;
@@ -3615,7 +3615,7 @@ function buildRetentionPanel() {
     {lbl:'Retention held to date',  val:'£' + retHeld.toLocaleString('en-GB',{minimumFractionDigits:2}), col:'#f59e0b', bold:true},
     {lbl:'Release at PC (~Jun 2026)', val:'£' + retPC.toLocaleString('en-GB',{minimumFractionDigits:2}), col:'#22c55e'},
     {lbl:'Release at defects (~Jun 2027)', val:'£' + retDefect.toLocaleString('en-GB',{minimumFractionDigits:2}), col:'#60a5fa'},
-    {lbl:'Max retention (full contract)', val:'£' + maxRetention.toLocaleString('en-GB',{minimumFractionDigits:2}), note:'at 2.5% of £450k'},
+    {lbl:'Max retention (full contract)', val:'£' + maxRetention.toLocaleString('en-GB',{minimumFractionDigits:2}), note:'at 2.5% of £450,142 (BoQ contract sum)'},
   ];
 
   rows.forEach(function(r) {
@@ -3838,10 +3838,13 @@ function updateSectionProgress(id, val, lbl) {
 
 let ZONE_DEFAULTS = {1:32,2:75,3:82,4:82,5:72,6:72,7:22,8:22,9:5,10:5,11:0,12:0}; // QS update 12 May 2026: 55% actual
 
-// ── Baseline: capture embedded TASKS before any programme override ──────────
-// TASKS_BASELINE is always the last agreed programme (embedded data).
-// TASKS may be overridden by a GanttPro upload on the Programme tab.
-var TASKS_BASELINE = TASKS.slice();
+// ── Embedded baseline: immutable deep copy before any override or drag-edit ──
+// TASKS_EMBEDDED is captured here and NEVER overwritten:
+//   · Gantt 'Last Agreed' mode shows this (the signed-off programme)
+//   · getRevisedPlanProgress() uses this for pre-EOT plan position
+// (TASKS_BASELINE is a separate var used by the drag-edit system;
+//  initProgBaseline() resets it on DOMContentLoaded — potentially to an override.)
+var TASKS_EMBEDDED = JSON.parse(JSON.stringify(TASKS));
 
 // ── Programme override: load uploaded GanttPro schedule from localStorage ──
 (function(){
@@ -3965,7 +3968,6 @@ function getPlannedProgress() {
   // spans), matching the QS/GanttPro methodology.
   // Old zone-calendar method gave ~67% because Zone 2 ended Apr 29 → counted
   // 100% of its £52,649 budget as 'should be done', inflating the total.
-  // Task-schedule method gives ~53% — matching the QS figure for 12 May 2026.
   var totBudget = 0, totPlanned = 0;
   ZONES.forEach(function(z) {
     var bud = z.budget || 0;
@@ -3978,13 +3980,20 @@ function getPlannedProgress() {
 
 // Budget spent: sum of task.actual vs sum of task.budget
 function getSpendProgress() {
-  const totBudget = TASKS.reduce((a,t) => a + (t.budget||0), 0);
-  const totActual = TASKS.reduce((a,t) => a + (t.actual||0), 0);
-  return totBudget > 0 ? Math.round(totActual / totBudget * 100) : 0;
+  // t.actual is not populated on any task (costs tracked via AFP, not task-level).
+  // Proxy: budget-weighted physical progress per zone (best available estimate).
+  var totBudget = 0, totSpent = 0;
+  ZONES.forEach(function(z) {
+    var bud = z.budget || 0;
+    if (bud <= 0) return;
+    totBudget += bud;
+    totSpent  += bud * (getZoneProgress(z.id) / 100);
+  });
+  return totBudget > 0 ? Math.round(totSpent / totBudget * 100) : 0;
 }
 
 // AFP certified work (excl materials on site & variations) as % of contract sum
-// Updated each AFP — AFP2: gross £167,134 less £47,815 materials less £15,508 variations = £103,811
+// Updated each AFP — AFP2: gross £167,134 less £47,815 materials less £15,508 variations = £103,810
 const AFP_CERTIFIED_WORK = 103810; // Physical measured work only (excl. MOS, variations) from AFP2
 
 // ── AFP2 full data (from Application No. 2, dated 30 Apr 2026) ──
@@ -4039,7 +4048,7 @@ function getCertifiedWorkPct() {
 
 // Revised planned progress — shifts reference date back by agreed EOT working days
 // so the plan accounts for legitimate delays and scope changes
-const EOT_WORKING_DAYS = 8; // 23 Mar original ~19 Jun → agreed 26 Jun = ~8 working days extension
+const EOT_WORKING_DAYS = 5; // original ~19 Jun → agreed 26 Jun = 5 working days (QS confirmed May 2026)
 function shiftDateByWorkingDays(date, days) {
   const IOM_BH = ['2026-04-03','2026-04-06','2026-05-04','2026-05-25','2026-06-12'];
   let d = new Date(date.getTime());
@@ -4060,8 +4069,8 @@ function getRevisedPlanProgress() {
   // Shows 'where should we have been on the original pre-EOT baseline?'
   // Uses individual task schedules (not zone calendar spans) to match QS methodology.
   var adjDate = shiftDateByWorkingDays(TODAY, -EOT_WORKING_DAYS);
-  var src = (typeof TASKS_BASELINE !== 'undefined' && TASKS_BASELINE.length)
-    ? TASKS_BASELINE : TASKS;
+  var src = (typeof TASKS_EMBEDDED !== 'undefined' && TASKS_EMBEDDED.length)
+    ? TASKS_EMBEDDED : TASKS;
   var zoneTotDur = {}, zoneDoneDur = {};
   src.forEach(function(t) {
     if (!t.start || !t.end || !t.zone) return;
@@ -4097,9 +4106,8 @@ function getZoneStatus(zone) {
   const s = parseDate(zone.start), e = parseDate(zone.end);
   if(TODAY > e) return 'complete';
   if(TODAY < s) return 'upcoming';
-  const elapsed = daysBetween(s, TODAY);
-  const total   = daysBetween(s, e);
-  const planned = elapsed / total;
+  // Task-schedule planned% (consistent with KPI tiles, QS methodology)
+  const planned = getZonePlannedPct(zone.id) / 100;
   const actual  = getZoneProgress(zone.id) / 100;
   if(actual < planned - 0.1) return 'late';
   return 'active';
@@ -4134,29 +4142,17 @@ function buildProgrammeClock() {
     var calDaysLeft  = Math.max(0, daysBetween(TODAY, deadline));
     var calWeeksLeft = Math.round(calDaysLeft / 7 * 10) / 10;
 
-    // ── Zone-budget-weighted actual% and planned% ────────────────────────────
-    // Use zone-level progress (getZoneProgress) — the accurate source of truth.
-    // Zone dates give the planned schedule; zone budgets give the weighting.
-    var totBud = 0, totActDone = 0, totPlanDone = 0;
+    // ── Actual% (zone-budget-weighted) and planned% (task-schedule, matches QS) ─
+    var totBud = 0, totActDone = 0;
     ZONES.forEach(function(z) {
       var bud = z.budget || 0;
       if (bud <= 0) return;
       totBud += bud;
-
-      // Actual: zone progress % from localStorage (seeded from GanttPRO zone %)
-      var done = getZoneProgress(z.id) / 100;
-      totActDone += bud * done;
-
-      // Planned: how far into this zone should we be by today (by calendar)
-      var zs = parseDate(z.start), ze = parseDate(z.end);
-      var pf = 0;
-      if (TODAY >= ze) pf = 1;
-      else if (TODAY > zs) pf = Math.min(1, daysBetween(zs, TODAY) / Math.max(1, daysBetween(zs, ze)));
-      totPlanDone += bud * pf;
+      totActDone += bud * (getZoneProgress(z.id) / 100);
     });
-
-    var actualPct  = totBud > 0 ? totActDone  / totBud * 100 : 0;
-    var plannedPct = totBud > 0 ? totPlanDone / totBud * 100 : 0;
+    var actualPct  = totBud > 0 ? totActDone / totBud * 100 : 0;
+    // Planned: call getPlannedProgress() so clock, KPI tiles, and QS all agree
+    var plannedPct = getPlannedProgress();
     var remWorkPct = Math.max(0, 100 - actualPct);
 
     // ── Speed needed to hit 26 Jun ───────────────────────────────────────────
@@ -4422,7 +4418,7 @@ function buildForecastTab() {
   subNote(el, 'Baseline + client-caused delays before we could start — by the time we could actually begin');
 
   addBar(el, 'Agreed plan today', plannedPct, '#f59e0b', 0, '', fmtD(agreedDL), '#f59e0b', false);
-  subNote(el, 'QS update 12 May 2026 (Ansophie Kennaugh) &nbsp;·&nbsp; All current variations included &nbsp;·&nbsp; At today: plan <b>53%</b>, actual <b>55%</b> — slightly ahead');
+  subNote(el, 'QS update 12 May 2026 (Ansophie Kennaugh) &nbsp;·&nbsp; All current variations included &nbsp;·&nbsp; At today: plan <b>'+Math.round(plannedPct)+'%</b> &nbsp;·&nbsp; actual <b>'+Math.round(overallPct)+'%</b>');
 
   // ── Section 2: Reality ────────────────────────────────────────────────────
   // All bars show actual % complete — same fill, different end dates & colours
@@ -4918,7 +4914,7 @@ window.addEventListener('DOMContentLoaded', () => {
   try {
     var heroLabel = document.getElementById('hero-source-label');
     if(heroLabel) heroLabel.textContent = dataSource === 'afp'
-      ? 'Dandara Certified (AFP 2) — includes MOS & variations'
+      ? 'Dandara Certified (AFP 2) — physical work only (excl. MOS & variations)'
       : 'Physical Progress (GanttPro)';
     var heroLabelRight = document.getElementById('hero-source-label-right');
     if(heroLabelRight) heroLabelRight.textContent = dataSource === 'afp'
@@ -5234,12 +5230,8 @@ function buildTimeline() {
 function buildDashboardCharts() {
   const zoneNames = ZONES.map(z => z.shortName);
   const progData  = ZONES.map(z => getZoneProgress(z.id));
-  const plannedData = ZONES.map(z => {
-    const s = parseDate(z.start), e = parseDate(z.end);
-    if(TODAY >= e) return 100;
-    if(TODAY <= s) return 0;
-    return Math.min(100, Math.round(daysBetween(s,TODAY)/daysBetween(s,e)*100));
-  });
+  // Task-schedule planned% (consistent with KPI tiles)
+  const plannedData = ZONES.map(z => getZonePlannedPct(z.id));
 
   const ctx1 = document.getElementById('chart-progress').getContext('2d');
   new Chart(ctx1, {
@@ -5490,7 +5482,7 @@ function buildReport() {
     rptZones.innerHTML = ZONES.map(z => {
       const prog = getZoneProgress(z.id), st = getZoneStatus(z);
       const s = parseDate(z.start), e = parseDate(z.end);
-      const planned = TODAY >= e ? 100 : TODAY <= s ? 0 : Math.min(100, Math.round(daysBetween(s,TODAY)/daysBetween(s,e)*100));
+      const planned = getZonePlannedPct(z.id);
       const variance = prog - planned;
       return '<tr><td>' + z.shortName + '</td><td>' + planned + '%</td><td>' + prog + '%</td>' +
         '<td style="color:' + (variance >= 0 ? stcol.active : stcol.late) + ';font-weight:700;">' + (variance >= 0 ? '+' : '') + variance + '%</td>' +
@@ -5574,7 +5566,7 @@ function buildGantt() {
   // ── Mode toggle: 'agreed' = embedded baseline, 'current' = uploaded programme
   var gMode    = window.ganttMode || 'agreed';
   var override = (function(){ try{ return JSON.parse(localStorage.getItem('dgc_programme_override')||'null'); }catch(e){return null;} })();
-  var tasks    = (gMode === 'current' && override) ? TASKS : TASKS_BASELINE;
+  var tasks    = (gMode === 'current' && override) ? TASKS : TASKS_EMBEDDED;
 
   // Update button styles
   var btnA = document.getElementById('gantt-btn-agreed');
