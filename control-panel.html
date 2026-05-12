@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v56</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v57</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -927,7 +927,7 @@ function clearForm() {
         <div style="text-align:center;">
           <div style="font-size:9px;color:var(--muted);letter-spacing:.06em;margin-bottom:3px;text-transform:uppercase;">Time Elapsed</div>
           <div style="font-size:20px;font-weight:700;color:#60a5fa;" id="kpi-time-pct">—%</div>
-          <div style="font-size:8px;color:var(--muted);margin-bottom:4px;">23 Mar → 29 Jun</div>
+          <div style="font-size:8px;color:var(--muted);margin-bottom:4px;">23 Mar → 26 Jun</div>
           <div style="height:3px;background:#1e293b;border-radius:2px;"><div id="bar-time" style="height:3px;background:#60a5fa;border-radius:2px;width:0%;"></div></div>
         </div>
         <div style="text-align:center;">
@@ -957,7 +957,7 @@ function clearForm() {
         <div>
           <div style="font-size:26px;font-weight:800;color:var(--accent);" id="pc-total-weeks">—</div>
           <div style="font-size:10px;font-weight:700;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">Total duration</div>
-          <div style="font-size:9px;color:var(--muted);margin-top:3px;">23 Mar → 29 Jun agreed</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:3px;">23 Mar → 26 Jun agreed</div>
         </div>
         <div>
           <div style="font-size:26px;font-weight:800;color:#60a5fa;" id="pc-elapsed-weeks">—</div>
@@ -967,10 +967,10 @@ function clearForm() {
         <div>
           <div style="font-size:26px;font-weight:800;color:#f59e0b;" id="pc-cal-weeks-left">—</div>
           <div style="font-size:10px;font-weight:700;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">Left to deadline</div>
-          <div style="font-size:9px;color:var(--muted);margin-top:3px;">calendar weeks to 29 Jun</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:3px;">calendar weeks to 26 Jun</div>
         </div>
         <div style="border-left:1px solid var(--border);padding-left:12px;">
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">Speed needed — 29 Jun</div>
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">Speed needed — 26 Jun</div>
           <div style="font-size:20px;font-weight:800;line-height:1.2;" id="pc-forecast-plan">—</div>
           <div style="font-size:9px;color:var(--muted);margin-top:4px;">of plan speed needed<br><span id="pc-plan-rem" style="color:var(--muted);"></span></div>
         </div>
@@ -991,7 +991,7 @@ function clearForm() {
         <div>
           <div class="kpi-label">Days Remaining</div>
           <div class="kpi-value" id="kpi-days">—</div>
-          <div class="kpi-sub" id="kpi-days-sub">to agreed completion 29 Jun</div>
+          <div class="kpi-sub" id="kpi-days-sub">to agreed completion 26 Jun</div>
         </div>
         <div>
           <div class="kpi-label">Working Days Left</div>
@@ -1043,7 +1043,7 @@ function clearForm() {
       <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:6px;flex-wrap:wrap;gap:4px;">
         <span><strong style="color:#22c55e;">Start</strong> 23 Mar 2026</span>
         <span id="tl-today-label" style="color:var(--accent2);font-weight:600;"></span>
-        <span><strong style="color:#f59e0b;">Agreed end</strong> 29 Jun 2026</span>
+        <span><strong style="color:#f59e0b;">Agreed end</strong> 26 Jun 2026</span>
         <span id="tl-projected-label" class="admin-only" style="color:#f97316;font-weight:600;"></span>
       </div>
 
@@ -1426,7 +1426,7 @@ function clearForm() {
       <div>&bull; QS to update BoQ/cashflow once programme zones revised to new layout.</div>
       <div>&bull; <strong style="color:var(--accent2)">Contract sum discrepancy:</strong> Signed contract £450,000 vs BoQ total £450,142.39 &mdash; £142 gap. Reconcile at final account.</div>
       <div>&bull; <strong style="color:var(--orange)">Main contractor&rsquo;s discount:</strong> BoQ includes -£10,800.75 Dandara discount &ldquo;to be omitted at FA&rdquo; &mdash; track and exclude from final settlement.</div>
-      <div>&bull; <strong style="color:var(--muted)">Defects period:</strong> 12 months from PC (agreed 29 Jun 2026). Estimated defects end: <strong>29 Jun 2027</strong>. Final retention release (~£1,960) due at defects end.</div>
+      <div>&bull; <strong style="color:var(--muted)">Defects period:</strong> 12 months from PC (agreed 26 Jun 2026). Estimated defects end: <strong>26 Jun 2027</strong>. Final retention release (~£1,960) due at defects end.</div>
     </div>
   </div>
 </div>
@@ -2126,7 +2126,7 @@ const ZONES = [
   { id:9,  wbs:'9',  name:'Section H — Soft Drain',   shortName:'Zone H', budget:15564.47, start:'2026-04-16', end:'2026-06-16', color:'#db2777', type:'zone', section:'H' },
   { id:10, wbs:'10', name:'Section I — Soft Drain',   shortName:'Zone I', budget:7087.23,  start:'2026-04-16', end:'2026-05-29', color:'#ec4899', type:'zone', section:'I' },
   { id:11, wbs:'11', name:'Section J — Soft Drain',   shortName:'Zone J', budget:7958.91,  start:'2026-04-16', end:'2026-06-19', color:'#f43f5e', type:'zone', section:'J' },
-  { id:12, wbs:'12', name:'Demob & Handover',         shortName:'Demob',  budget:1435.50,  start:'2026-06-09', end:'2026-06-29', color:'#94a3b8', type:'demob' }
+  { id:12, wbs:'12', name:'Demob & Handover',         shortName:'Demob',  budget:1435.50,  start:'2026-06-09', end:'2026-06-26', color:'#94a3b8', type:'demob' }
 ];
 
 let TASKS = [
@@ -2539,7 +2539,7 @@ function buildVelocityPanel() {
   var projStart  = new Date('2026-03-23T00:00:00');
   var today      = new Date();
   var daysElapsed = Math.max(1, Math.round((today - projStart) / 86400000));
-  var targetEnd  = new Date('2026-06-29T00:00:00');
+  var targetEnd  = new Date('2026-06-26T00:00:00');
   var totalCalDays = Math.round((targetEnd - projStart) / 86400000);
   var plannedPct = Math.min(100, daysElapsed / totalCalDays * 100);
   var variance   = overallPct - plannedPct;
@@ -2586,7 +2586,7 @@ function buildVelocityPanel() {
   var bannerSub = document.createElement('div');
   bannerSub.style.cssText = 'font-size:11px;color:var(--muted);border-top:1px solid ' + bannerBdr + ';padding-top:8px;display:flex;gap:18px;flex-wrap:wrap;';
   var sub1 = document.createElement('span');
-  sub1.innerHTML = '<b style="color:var(--text);">Agreed deadline:</b> 29 Jun 2026 (confirmed with Dandara, includes EOT)';
+  sub1.innerHTML = '<b style="color:var(--text);">Agreed deadline:</b> 26 Jun 2026 (QS updated programme, 12 May 2026 — includes all variations &amp; EOT)';
   var sub2 = document.createElement('span');
   sub2.innerHTML = '<b style="color:var(--text);">Time remaining:</b> ' + weeksToTarget + ' weeks (' + daysToTarget + ' calendar days)';
   bannerSub.appendChild(sub1);
@@ -2605,7 +2605,7 @@ function buildVelocityPanel() {
 
   // ── Delay credit for "Accounted for" bar ──────────────────────────────────
   // Include: agreed + claimed + open risk tickets (exclude absorbed + eot_claimed)
-  // eot_claimed is already baked into plannedPct via the 29 Jun deadline
+  // eot_claimed is already baked into plannedPct via the 26 Jun deadline
   var delayLog = loadDelayLog();
   var accountedDays = delayLog.reduce(function(s, d) {
     if (d.status === 'absorbed' || d.category === 'eot_claimed') return s;
@@ -2916,7 +2916,7 @@ var DELAY_DEFAULTS = [
   {id:'D011',date:'2026-04-23',ref:'RT 101307',category:'absorbed',description:'100mm Type 1 substituted for 6F2 on granular bedding — slower to install',days:0.5,status:'absorbed',cost:0},
   {id:'D012',date:'2026-03-24',ref:'EOT-A',category:'eot_claimed',description:'Extended prelims week 1 — site setup and compound beyond original programme (revised completion to 19 Jun)',days:5.0,status:'claimed',cost:4506.05},
   {id:'D013',date:'2026-03-31',ref:'EOT-B',category:'eot_claimed',description:'Extended prelims 4.5 days — MU scanning, mobilisation delays (revised to 26 Jun)',days:4.5,status:'claimed',cost:5576.90},
-  {id:'D014',date:'2026-04-08',ref:'EOT-C/D/E/F/G',category:'eot_claimed',description:'Scanning, concrete, asbestos and design delays — cumulative 5 days (revised to 29 Jun agreed, 3 Jul claimed)',days:5.0,status:'claimed',cost:10764.09}
+  {id:'D014',date:'2026-04-08',ref:'EOT-C/D/E/F/G',category:'eot_claimed',description:'Scanning, concrete, asbestos and design delays — cumulative 5 days (revised to 26 Jun agreed, 3 Jul claimed)',days:5.0,status:'claimed',cost:10764.09}
 ];
 
 function loadDelayLog() {
@@ -3150,7 +3150,7 @@ var MILESTONES = [
   {id:'ms3', date:'2026-06-15', lbl:'All kerbs & drainage complete (target)', cat:'programme'},
   {id:'ms4', date:'2026-06-22', lbl:'Bitumac / tarmac all zones (target)',   cat:'programme'},
   {id:'ms5', date:'2026-06-26', lbl:'Snagging & reinstatement complete',     cat:'programme'},
-  {id:'ms6', date:'2026-06-29', lbl:'Practical Completion — agreed deadline', cat:'handover'},
+  {id:'ms6', date:'2026-06-26', lbl:'Practical Completion — agreed deadline', cat:'handover'},
 ];
 
 function openQuickLog() {
@@ -3242,7 +3242,7 @@ function recordSnapshot() {
   var today = TODAY.toISOString().slice(0,10);
   // Avoid duplicate same-day snapshot
   snapshots = snapshots.filter(function(s){ return s.date !== today; });
-  var target = new Date('2026-06-29T00:00:00');
+  var target = new Date('2026-06-26T00:00:00');
   var totalDays = Math.round((target - new Date('2026-03-23T00:00:00')) / 86400000);
   var elapsed = Math.max(1, Math.round((TODAY - new Date('2026-03-23T00:00:00')) / 86400000));
   var planned = Math.min(100, Math.round(elapsed / totalDays * 100));
@@ -3637,7 +3637,7 @@ function buildEOTPanel() {
   el.innerHTML = '';
 
   var ORIGINAL_END = '2026-06-12';  // original programme end
-  var AGREED_END   = '2026-06-29';  // agreed with Dandara (includes EOT)
+  var AGREED_END   = '2026-06-26';  // agreed with Dandara (includes EOT)
   var delays = loadDelayLog();
 
   var clientDays = delays.filter(function(d){ return d.category==='client'; })
@@ -3673,7 +3673,7 @@ function buildEOTPanel() {
   var note = document.createElement('div');
   note.style.cssText = 'font-size:10px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px solid var(--border);';
   note.textContent = 'EOT = Extension of Time. Client-instructed delays = grounds for formal EOT claim. '
-    + 'Agreed end date (29 Jun) confirmed verbally with Dandara — ensure formal written confirmation obtained before final account.';
+    + 'Agreed end date (26 Jun) confirmed verbally with Dandara — ensure formal written confirmation obtained before final account.';
   el.appendChild(note);
 }
 
@@ -3822,7 +3822,7 @@ function updateSectionProgress(id, val, lbl) {
   if(document.getElementById('tab-sitemap').classList.contains('active')) buildSiteMap();
 }
 
-let ZONE_DEFAULTS = {1:24,2:45,3:74,4:74,5:64,6:64,7:7,8:7,9:0,10:0,11:0,12:0};
+let ZONE_DEFAULTS = {1:32,2:75,3:82,4:82,5:72,6:72,7:22,8:22,9:5,10:5,11:0,12:0}; // QS update 12 May 2026: 55% actual
 
 // ── Programme override: load uploaded GanttPro schedule from localStorage ──
 (function(){
@@ -3847,7 +3847,7 @@ function calcForecast() {
     var daysNeeded = rate > 0 ? Math.round(remaining/rate) : 9999;
     var fc = new Date(TODAY.getTime());
     fc.setDate(fc.getDate()+daysNeeded);
-    var target = new Date('2026-06-29T00:00:00');
+    var target = new Date('2026-06-26T00:00:00');
     return { date:fc, pct:pct, rate:rate, late: fc>target,
              daysOff: Math.round(Math.abs(fc-target)/86400000),
              str: fc.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) };
@@ -3933,7 +3933,7 @@ function getCertifiedPct() {
 // Programme start 23 Mar (includes variation/prelim weeks). Main drainage works from 8 Apr.
 function getTimeProgress() {
   const start = parseDate('2026-03-23');
-  const end   = parseDate('2026-06-29');
+  const end   = parseDate('2026-06-26');
   const total = daysBetween(start, end);
   const elapsed = Math.min(Math.max(daysBetween(start, TODAY), 0), total);
   return Math.round(elapsed / total * 100);
@@ -4020,7 +4020,7 @@ function getCertifiedWorkPct() {
 
 // Revised planned progress — shifts reference date back by agreed EOT working days
 // so the plan accounts for legitimate delays and scope changes
-const EOT_WORKING_DAYS = 8; // 23 Mar original ~19 Jun → agreed 29 Jun = ~8 working days extension
+const EOT_WORKING_DAYS = 8; // 23 Mar original ~19 Jun → agreed 26 Jun = ~8 working days extension
 function shiftDateByWorkingDays(date, days) {
   const IOM_BH = ['2026-04-03','2026-04-06','2026-05-04','2026-05-25','2026-06-12'];
   let d = new Date(date.getTime());
@@ -4091,7 +4091,7 @@ function getTaskStatus(task) {
 function buildProgrammeClock() {
   try {
     var start    = parseDate('2026-03-23');
-    var deadline = parseDate('2026-06-29');
+    var deadline = parseDate('2026-06-26');
     var totalDays  = daysBetween(start, deadline);          // e.g. 98
     var totalWeeks = Math.round(totalDays / 7 * 10) / 10;
 
@@ -4127,7 +4127,7 @@ function buildProgrammeClock() {
     var plannedPct = totBud > 0 ? totPlanDone / totBud * 100 : 0;
     var remWorkPct = Math.max(0, 100 - actualPct);
 
-    // ── Speed needed to hit 29 Jun ───────────────────────────────────────────
+    // ── Speed needed to hit 26 Jun ───────────────────────────────────────────
     // How fast does the team need to work (as % of plan speed) to finish by deadline?
     // remWorkPct% of work left. At 100% plan speed = remWorkPct% of total calendar.
     var remDaysPlan  = totalDays * remWorkPct / 100;  // days if working at 100% plan
@@ -4209,7 +4209,7 @@ function buildForecastTab() {
   ZONES.forEach(function(z){ completedValue += (z.budget||0) * (getZoneProgress(z.id)/100); });
   var overallPct   = totalBudget > 0 ? completedValue / totalBudget * 100 : 0;
   var projStart    = parseDate('2026-03-23');
-  var agreedDL     = parseDate('2026-06-29');
+  var agreedDL     = parseDate('2026-06-26');
   var daysElapsed  = Math.max(1, daysBetween(projStart, TODAY));
   var totalCalDays = daysBetween(projStart, agreedDL);
   var calDaysLeft  = Math.max(0, daysBetween(TODAY, agreedDL));
@@ -4390,7 +4390,7 @@ function buildForecastTab() {
   subNote(el, 'Baseline + client-caused delays before we could start — by the time we could actually begin');
 
   addBar(el, 'Agreed plan today', plannedPct, '#f59e0b', 0, '', fmtD(agreedDL), '#f59e0b', false);
-  subNote(el, 'Agreed at last 2-week meeting &nbsp;·&nbsp; All variations signed off at that point &nbsp;·&nbsp; Next meeting 13 May');
+  subNote(el, 'QS update 12 May 2026 (Ansophie Kennaugh) &nbsp;·&nbsp; All current variations included &nbsp;·&nbsp; At today: plan <b>53%</b>, actual <b>55%</b> — slightly ahead');
 
   // ── Section 2: Reality ────────────────────────────────────────────────────
   // All bars show actual % complete — same fill, different end dates & colours
@@ -4426,7 +4426,7 @@ function buildForecastTab() {
   var kpis = [
     { lbl:'Actual complete',  val: overallPct.toFixed(1)+'%',  col:'var(--text)' },
     { lbl:'Efficiency',       val: efficiencyPct+'% of plan',  col: effKpiCol },
-    { lbl:'vs 29 Jun',        val: avdTxt,                     col: avdCol },
+    { lbl:'vs 26 Jun',        val: avdTxt,                     col: avdCol },
     { lbl:'Realistic end',    val: dragDiff === 0 ? 'On time' : (dragDiff > 0 ? '+'+dragDiff+' days' : dragDiff+' days'),
                               col: dragDiff > 0 ? '#f87171' : dragDiff < 0 ? '#4ade80' : 'var(--text)' },
     { lbl:'In dispute',       val: inDisputeWDs.toFixed(1)+' WDs',    col:'#f97316' },
@@ -4448,7 +4448,7 @@ function buildForecastTab() {
   var note = document.createElement('div');
   note.style.cssText = 'margin-top:12px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);';
   note.innerHTML =
-    'EOT baked into 29 Jun: <b style="color:var(--text);">'+eotWDs.toFixed(1)+' WDs</b>'
+    'EOT baked into 26 Jun: <b style="color:var(--text);">'+eotWDs.toFixed(1)+' WDs</b>'
     +' &nbsp;·&nbsp; Agreed &amp; signed: <b style="color:#f59e0b;">'+agreedSignedWDs.toFixed(1)+' WDs</b>'
     +' &nbsp;·&nbsp; In dispute: <b style="color:#f97316;">'+inDisputeWDs.toFixed(1)+' WDs</b>'
     +' &nbsp;·&nbsp; Absorbed: <b style="color:#6366f1;">'+absorbedWDs.toFixed(1)+' WDs</b>'
@@ -4505,7 +4505,7 @@ function buildEfficiencyTab() {
     +   '<div style="font-size:9px;color:var(--muted);margin-top:2px;">plan pace vs actual pace</div>'
     + '</div>'
     + '<div style="background:var(--surface2);border-radius:8px;padding:12px;text-align:center;">'
-    +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">Realistic vs 29 Jun</div>'
+    +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">Realistic vs 26 Jun</div>'
     +   '<div style="font-size:20px;font-weight:900;color:' + (latest ? (latest.diff > 0 ? '#f87171' : latest.diff < 0 ? '#4ade80' : 'var(--text)') : 'var(--muted)') + ';">' + (latest ? (latest.diff === 0 ? 'On time' : (latest.diff > 0 ? '+'+latest.diff+' days' : latest.diff+' days')) : '—') + '</div>'
     +   '<div style="font-size:9px;color:var(--muted);margin-top:2px;">' + (latest ? latest.end : '') + '</div>'
     + '</div>'
@@ -4560,7 +4560,7 @@ function buildEfficiencyTab() {
       + '<th style="text-align:center;padding:6px 8px;color:var(--muted);font-weight:700;">Actual %</th>'
       + '<th style="text-align:center;padding:6px 8px;color:var(--muted);font-weight:700;">Plan %</th>'
       + '<th style="text-align:center;padding:6px 8px;color:var(--muted);font-weight:700;">Drag ×</th>'
-      + '<th style="text-align:right;padding:6px 8px;color:var(--muted);font-weight:700;white-space:nowrap;">vs 29 Jun</th>'
+      + '<th style="text-align:right;padding:6px 8px;color:var(--muted);font-weight:700;white-space:nowrap;">vs 26 Jun</th>'
       + '</tr></thead><tbody>';
 
     log.forEach(function(r, i) {
@@ -4617,7 +4617,7 @@ function buildProgrammeHeader() {
   });
   var plannedPct = _td > 0 ? _dd/_td*100 : 0;
 
-  var agreedDL   = parseDate('2026-06-29');
+  var agreedDL   = parseDate('2026-06-26');
   var totalProgWDs = 65;
 
   // Working-day helpers (IoM 2026 bank holidays)
@@ -4689,7 +4689,7 @@ function buildProgrammeHeader() {
     +   '<div style="background:var(--surface2);border-radius:8px;padding:13px;text-align:center;border:1px solid ' + diffCol(dragDiff) + '30;">'
     +     '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">Expected End Date</div>'
     +     '<div style="font-size:16px;font-weight:900;color:' + diffCol(dragDiff) + ';">' + fd(dragEnd) + '</div>'
-    +     '<div style="font-size:9px;color:' + diffCol(dragDiff) + ';font-weight:700;margin-top:3px;">' + diffTxt(dragDiff) + ' vs 29 Jun</div>'
+    +     '<div style="font-size:9px;color:' + diffCol(dragDiff) + ';font-weight:700;margin-top:3px;">' + diffTxt(dragDiff) + ' vs 26 Jun</div>'
     +   '</div>'
     // At-programme-pace end
     +   '<div style="background:var(--surface2);border-radius:8px;padding:13px;text-align:center;">'
@@ -4937,7 +4937,7 @@ window.addEventListener('DOMContentLoaded', () => {
   } catch(e) {}
 
   try {
-    const completion = parseDate('2026-06-29');
+    const completion = parseDate('2026-06-26');
     set('kpi-days', daysBetween(TODAY, completion));
   } catch(e) {}
 
@@ -4963,7 +4963,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   try {
     const IOM_BH = ['2026-04-03','2026-04-06','2026-05-04','2026-05-25','2026-06-12'];
-    const completion = parseDate('2026-06-29');
+    const completion = parseDate('2026-06-26');
     let wdCount = 0, cursor = new Date(TODAY);
     while(cursor <= completion) {
       const dow = cursor.getDay(), ds = cursor.toISOString().slice(0,10);
@@ -5080,7 +5080,7 @@ function buildAlerts() {
   var ALERTS = [
     { id:'qs-contract-gap', type:'warning', icon:'&#x1F4CB;', msg:'<strong>QS flag:</strong> Signed contract £450,000 vs BoQ total £450,142.39 &mdash; £142 gap to reconcile at final account. BoQ also contains -£10,800.75 Dandara discount &ldquo;to be omitted at FA&rdquo; &mdash; ensure excluded from final settlement.', adminOnly:true, isQuestion:false },
     { id:'afp1-received',   type:'info',    icon:'&#x1F4B3;', question:'AFP 1 rolled into AFP 2 (&pound;156,739 combined). Confirm payment received from Dandara?', hint:'Ian Barnes certified both as one payment &mdash; due 28 May 2026', adminOnly:true, isQuestion:true },
-    { id:'programme-warn',  type:'warning', icon:'&#x26A0;&#xFE0F;',  msg:'<strong>Programme position:</strong> Kerbs (0%), Tarmac (0%), Type 1 subbase (0%) not started across any zone per AFP 2. Behind programme &mdash; partly late start (not slippage), partly slower progress in places. Agreed revised completion with Dandara: <strong>29 Jun 2026</strong>. Formal EOT to be raised when closer.', adminOnly:false, isQuestion:false },
+    { id:'programme-warn',  type:'warning', icon:'&#x26A0;&#xFE0F;',  msg:'<strong>Programme position:</strong> Kerbs (0%), Tarmac (0%), Type 1 subbase (0%) not started across any zone per AFP 2. Behind programme &mdash; partly late start (not slippage), partly slower progress in places. Agreed revised completion with Dandara: <strong>26 Jun 2026</strong>. Formal EOT to be raised when closer.', adminOnly:false, isQuestion:false },
     { id:'afp2-received',   type:'info',    icon:'&#x1F4CB;', question:'AFP 2 (&pound;156,739.46) payment received from Dandara?', hint:'Ian Barnes certified &middot; Due 28 May 2026', adminOnly:true,  isQuestion:true  }
   ];
 
@@ -5116,7 +5116,7 @@ function buildAlerts() {
 function buildTimeline() {
   var IOM_BH = ['2026-04-03','2026-04-06','2026-05-04','2026-05-25','2026-06-12'];
   var START   = parseDate('2026-03-23');
-  var AGREED  = parseDate('2026-06-29');
+  var AGREED  = parseDate('2026-06-26');
 
   // Count working days between two dates
   function wdBetween(a, b) {
@@ -5451,7 +5451,7 @@ function buildReport() {
   const rptProgress = document.getElementById('rpt-progress');
   if(rptProgress) rptProgress.textContent = getOverallProgress() + '%';
   const rptDays = document.getElementById('rpt-days');
-  if(rptDays) rptDays.textContent = daysBetween(TODAY, parseDate('2026-06-29'));
+  if(rptDays) rptDays.textContent = daysBetween(TODAY, parseDate('2026-06-26'));
   const rptZones = document.getElementById('rpt-zones-table');
   if(rptZones) {
     const stcol = { complete:'#22c55e', active:'#f59e0b', late:'#ef4444', upcoming:'#64748b' };
@@ -5467,7 +5467,7 @@ function buildReport() {
   }
   const rptNarr = document.getElementById('rpt-programme-narrative');
   if(rptNarr) {
-    rptNarr.innerHTML = 'Revised completion date agreed with Dandara: <strong>29 Jun 2026</strong>. ' +
+    rptNarr.innerHTML = 'Revised completion date agreed with Dandara: <strong>26 Jun 2026</strong>. ' +
       'The programme position reflects a combination of a delayed start to works (not programme slippage) and some slower progress in certain sections. ' +
       'DGC has raised 7 EOT variations (A–G) for additional prelim weeks. Formal extension of time to be raised when closer — may not be required if time is recovered. ' +
       'Kerbs, tarmac and Type 1 subbase not yet started in any zone as of AFP 2 (30 Apr 2026).';
@@ -5833,7 +5833,7 @@ var SH_PRICED = {
 
 // PROJECT_START and PROJECT_END already in scope as global dates
 var SH_PROJ_START = new Date(2026, 2, 23); // 23 Mar 2026 (Monday)
-var SH_PROJ_END   = new Date(2026, 5, 29); // 29 Jun 2026
+var SH_PROJ_END   = new Date(2026, 5, 29); // 26 Jun 2026
 
 function shTimeToHours(t) {
   var p = t.split(':');
