@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v60</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v61</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -1276,16 +1276,21 @@ function clearForm() {
 <!-- ═══════════════════════════════ GANTT ═══════════════════════════════ -->
 <div id="tab-gantt" class="tab-content">
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);flex-shrink:0;">Showing:</div>
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);flex-shrink:0;">View:</div>
     <button id="gantt-btn-agreed"
       onclick="window.ganttMode='agreed';buildGantt();"
       style="background:#0ea5e9;border:1px solid #0ea5e9;color:#fff;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;">
-      &#128202; Last Agreed Programme
+      &#128202; Last Agreed
     </button>
-    <button id="gantt-btn-current"
-      onclick="window.ganttMode='current';buildGantt();"
-      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;opacity:0.5;" disabled>
-      &#8679; Current Programme
+    <button id="gantt-btn-uploaded"
+      onclick="window.ganttMode='uploaded';buildGantt();"
+      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;opacity:0.4;" disabled>
+      &#11014; Last Uploaded
+    </button>
+    <button id="gantt-btn-compare"
+      onclick="window.ganttMode='compare';buildGantt();"
+      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;opacity:0.4;" disabled>
+      &#8853; Overlay Compare
     </button>
     <span id="gantt-upload-label" style="font-size:10px;color:var(--muted);"></span>
   </div>
@@ -5563,58 +5568,75 @@ function buildGantt() {
   const body = document.getElementById('gantt-body');
   if(!head || !body) return;
 
-  // ── Mode toggle: 'agreed' = embedded baseline, 'current' = uploaded programme
-  var gMode    = window.ganttMode || 'agreed';
-  var override = (function(){ try{ return JSON.parse(localStorage.getItem('dgc_programme_override')||'null'); }catch(e){return null;} })();
-  var tasks    = (gMode === 'current' && override) ? TASKS : TASKS_EMBEDDED;
+  // ── Mode: agreed=embedded baseline, uploaded=last GanttPro upload, compare=both ─
+  var gMode     = window.ganttMode || 'agreed';
+  var override  = (function(){ try{ return JSON.parse(localStorage.getItem('dgc_programme_override')||'null'); }catch(e){return null;} })();
+  var hasUpload = !!(override && override.tasks && override.tasks.length);
 
-  // Update button styles
-  var btnA = document.getElementById('gantt-btn-agreed');
-  var btnC = document.getElementById('gantt-btn-current');
+  // Primary task set for rows (agree is always the row source in compare mode)
+  var tasks = (gMode === 'uploaded' && hasUpload) ? TASKS : TASKS_EMBEDDED;
+
+  // ── Button states ────────────────────────────────────────────────────────
+  var btnA   = document.getElementById('gantt-btn-agreed');
+  var btnU   = document.getElementById('gantt-btn-uploaded');
+  var btnCmp = document.getElementById('gantt-btn-compare');
   var uploadLbl = document.getElementById('gantt-upload-label');
-  if (btnA) {
-    btnA.style.background = gMode === 'agreed' ? '#0ea5e9' : 'var(--surface2)';
-    btnA.style.borderColor = gMode === 'agreed' ? '#0ea5e9' : 'var(--border)';
-    btnA.style.color = gMode === 'agreed' ? '#fff' : 'var(--text)';
-    btnA.style.opacity = '1';
-  }
-  if (btnC) {
-    if (override) {
-      btnC.removeAttribute('disabled');
-      btnC.style.opacity = '1';
-      btnC.style.background = gMode === 'current' ? '#0ea5e9' : 'var(--surface2)';
-      btnC.style.borderColor = gMode === 'current' ? '#0ea5e9' : 'var(--border)';
-      btnC.style.color = gMode === 'current' ? '#fff' : 'var(--text)';
-      btnC.title = 'Uploaded: ' + (override.fileName||'?') + '  ·  ' + (override.uploadDate||'?');
+  var BLU = '#0ea5e9', SURF = 'var(--surface2)', BDR = 'var(--border)', TXT = 'var(--text)';
+  function setBtn(btn, active, enabled) {
+    if (!btn) return;
+    if (enabled) {
+      btn.removeAttribute('disabled');
+      btn.style.opacity     = '1';
+      btn.style.background  = active ? BLU : SURF;
+      btn.style.borderColor = active ? BLU : BDR;
+      btn.style.color       = active ? '#fff' : TXT;
     } else {
-      btnC.setAttribute('disabled','true');
-      btnC.style.opacity = '0.4';
-      btnC.style.background = 'var(--surface2)';
-      btnC.style.color = 'var(--muted)';
-      btnC.title = 'No updated programme uploaded yet — use the Programme tab to upload a GanttPro Excel';
+      btn.setAttribute('disabled','true');
+      btn.style.opacity     = '0.4';
+      btn.style.background  = SURF;
+      btn.style.borderColor = BDR;
+      btn.style.color       = 'var(--muted)';
     }
   }
-  if (uploadLbl) uploadLbl.textContent = (gMode === 'current' && override)
-    ? (override.fileName || '') + ' \u00b7 ' + (override.uploadDate || '')
-    : '';
+  setBtn(btnA,   gMode === 'agreed',   true);
+  setBtn(btnU,   gMode === 'uploaded', hasUpload);
+  setBtn(btnCmp, gMode === 'compare',  hasUpload);
+  if (btnU   && hasUpload) btnU.title   = 'Uploaded: '    + (override.fileName||'?') + '  ·  ' + (override.uploadDate||'?');
+  if (btnCmp && hasUpload) btnCmp.title = 'Overlay agreed vs uploaded: ' + (override.fileName||'?');
+  if (uploadLbl) uploadLbl.textContent =
+    (gMode !== 'agreed' && hasUpload) ? (override.fileName||'') + ' · ' + (override.uploadDate||'') : '';
 
-  const allDates = tasks.flatMap(t => [parseDate(t.start), parseDate(t.end)]);
-  const minDate  = new Date(Math.min(...allDates));
-  const maxDate  = new Date(Math.max(...allDates));
+  // ── Uploaded task lookup (for compare overlay) ───────────────────────────
+  var uploadedMap = {};
+  if (gMode === 'compare' && hasUpload) {
+    TASKS.forEach(function(t) { if (t.wbs) uploadedMap[t.wbs] = t; });
+  }
+
+  // ── Date axis: in compare mode span BOTH programmes ──────────────────────
+  var axisTasks = (gMode === 'compare' && hasUpload)
+    ? TASKS_EMBEDDED.concat(TASKS)
+    : tasks;
+  const allDates = axisTasks.flatMap(function(t){ return [parseDate(t.start), parseDate(t.end)]; }).filter(Boolean);
+  if (!allDates.length) return;
+  const minDate   = new Date(Math.min.apply(null, allDates));
+  const maxDate   = new Date(Math.max.apply(null, allDates));
   const totalDays = daysBetween(minDate, maxDate) + 5;
 
   // Week headers
   const weeks = [];
-  let d = new Date(minDate);
-  while(d <= maxDate) {
-    weeks.push(new Date(d));
-    d.setDate(d.getDate() + 7);
-  }
-  head.innerHTML = '<tr><th style="min-width:40px;">WBS</th><th style="min-width:220px;">Task</th><th style="min-width:90px;">Assigned</th>' +
-    '<th class="gantt-bar-cell">' +
-    '<div style="position:relative;height:20px;">' +
-    weeks.map(w => '<span style="position:absolute;left:' + (daysBetween(minDate,w)/totalDays*100).toFixed(1) + '%;font-size:9px;color:#94a3b8;white-space:nowrap;">' + fmtShortDate(w.toISOString().slice(0,10)) + '</span>').join('') +
-    '</div></th></tr>';
+  let wd = new Date(minDate);
+  while(wd <= maxDate) { weeks.push(new Date(wd)); wd.setDate(wd.getDate() + 7); }
+  var compareLegend = (gMode === 'compare' && hasUpload)
+    ? '<div style="padding:2px 0 5px;font-size:9px;color:var(--muted);display:flex;align-items:center;gap:10px;">'
+      + '<span><span style="display:inline-block;width:12px;height:8px;background:#0ea5e9;border-radius:2px;opacity:0.9;vertical-align:middle;margin-right:3px;"></span>Last Agreed</span>'
+      + '<span><span style="display:inline-block;width:12px;height:8px;background:#f59e0b;border-radius:2px;opacity:0.6;vertical-align:middle;margin-right:3px;"></span>Last Uploaded</span>'
+      + '</div>' : '';
+  head.innerHTML = '<tr><th style="min-width:40px;">WBS</th><th style="min-width:220px;">Task</th><th style="min-width:90px;">Assigned</th>'
+    + '<th class="gantt-bar-cell">'
+    + compareLegend
+    + '<div style="position:relative;height:20px;">'
+    + weeks.map(function(w){ return '<span style="position:absolute;left:' + (daysBetween(minDate,w)/totalDays*100).toFixed(1) + '%;font-size:9px;color:#94a3b8;white-space:nowrap;">' + fmtShortDate(w.toISOString().slice(0,10)) + '</span>'; }).join('')
+    + '</div></th></tr>';
 
   const todayPct = (daysBetween(minDate, TODAY) / totalDays * 100).toFixed(1);
   const stcol  = { complete:'complete', active:'active-task', upcoming:'upcoming-task', late:'late-task' };
@@ -5624,22 +5646,42 @@ function buildGantt() {
     const zs = parseDate(z.start), ze = parseDate(z.end);
     const zLeft = (daysBetween(minDate, zs) / totalDays * 100).toFixed(1);
     const zW    = ((daysBetween(zs, ze)+1) / totalDays * 100).toFixed(1);
-    html += '<tr class="zone-row"><td>' + z.wbs + '</td><td>' + z.name + '</td><td></td><td class="gantt-bar-cell">' +
-      '<div class="gantt-bar-wrapper"><div class="gantt-bar zone" style="left:' + zLeft + '%;width:' + zW + '%"></div>' +
-      '<div class="today-line" style="left:' + todayPct + '%"><span class="gantt-today-label">Today</span></div></div></td></tr>';
+    html += '<tr class="zone-row"><td>' + z.wbs + '</td><td>' + z.name + '</td><td></td><td class="gantt-bar-cell">'
+      + '<div class="gantt-bar-wrapper"><div class="gantt-bar zone" style="left:' + zLeft + '%;width:' + zW + '%"></div>'
+      + '<div class="today-line" style="left:' + todayPct + '%"><span class="gantt-today-label">Today</span></div></div></td></tr>';
+
     tasks.filter(t => t.zone === z.id).forEach(t => {
       const ts = parseDate(t.start), te = parseDate(t.end);
       const left = (daysBetween(minDate, ts) / totalDays * 100).toFixed(1);
       const w    = (Math.max(1, daysBetween(ts, te)+1) / totalDays * 100).toFixed(1);
       const cls  = stcol[getTaskStatus(t)];
-      html += '<tr><td style="color:var(--muted);">' + t.wbs + '</td><td class="task-indent" style="font-size:11px;">' + t.name + '</td><td style="font-size:10px;color:var(--muted);">' + t.assigned + '</td>' +
-        '<td class="gantt-bar-cell"><div class="gantt-bar-wrapper"><div class="gantt-bar ' + cls + '" style="left:' + left + '%;width:' + w + '%"></div>' +
-        '<div class="today-line" style="left:' + todayPct + '%"></div></div></td></tr>';
+
+      // ── Overlay ghost bar (compare mode only) ────────────────────────────
+      var ghostBar = '';
+      if (gMode === 'compare' && uploadedMap[t.wbs]) {
+        var ut = uploadedMap[t.wbs];
+        var uts = parseDate(ut.start), ute = parseDate(ut.end);
+        if (uts && ute) {
+          var uleft = (daysBetween(minDate, uts) / totalDays * 100).toFixed(1);
+          var uw    = (Math.max(1, daysBetween(uts, ute)+1) / totalDays * 100).toFixed(1);
+          ghostBar = '<div class="gantt-bar" style="left:' + uleft + '%;width:' + uw
+            + '%;background:#f59e0b;opacity:0.55;z-index:2;pointer-events:none;"></div>';
+        }
+      }
+
+      html += '<tr>'
+        + '<td style="color:var(--muted);">' + t.wbs + '</td>'
+        + '<td class="task-indent" style="font-size:11px;">' + t.name + '</td>'
+        + '<td style="font-size:10px;color:var(--muted);">' + t.assigned + '</td>'
+        + '<td class="gantt-bar-cell"><div class="gantt-bar-wrapper">'
+        + '<div class="gantt-bar ' + cls + '" style="left:' + left + '%;width:' + w + '%"></div>'
+        + ghostBar
+        + '<div class="today-line" style="left:' + todayPct + '%"></div>'
+        + '</div></td></tr>';
     });
   });
   body.innerHTML = html;
 }
-
 // ═══════════════════════ FINANCIAL CHART ═══════════════════════
 function buildFinancialChart() {
   const ctx = document.getElementById('chart-financial');
