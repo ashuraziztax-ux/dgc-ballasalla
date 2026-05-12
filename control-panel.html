@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v57</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v58</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -1275,6 +1275,20 @@ function clearForm() {
 
 <!-- ═══════════════════════════════ GANTT ═══════════════════════════════ -->
 <div id="tab-gantt" class="tab-content">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);flex-shrink:0;">Showing:</div>
+    <button id="gantt-btn-agreed"
+      onclick="window.ganttMode='agreed';buildGantt();"
+      style="background:#0ea5e9;border:1px solid #0ea5e9;color:#fff;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;">
+      &#128202; Last Agreed Programme
+    </button>
+    <button id="gantt-btn-current"
+      onclick="window.ganttMode='current';buildGantt();"
+      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;opacity:0.5;" disabled>
+      &#8679; Current Programme
+    </button>
+    <span id="gantt-upload-label" style="font-size:10px;color:var(--muted);"></span>
+  </div>
   <div class="card" style="overflow:auto;">
     <div class="gantt-container">
       <table class="gantt-table" id="gantt-table">
@@ -3824,6 +3838,11 @@ function updateSectionProgress(id, val, lbl) {
 
 let ZONE_DEFAULTS = {1:32,2:75,3:82,4:82,5:72,6:72,7:22,8:22,9:5,10:5,11:0,12:0}; // QS update 12 May 2026: 55% actual
 
+// ── Baseline: capture embedded TASKS before any programme override ──────────
+// TASKS_BASELINE is always the last agreed programme (embedded data).
+// TASKS may be overridden by a GanttPro upload on the Programme tab.
+var TASKS_BASELINE = TASKS.slice();
+
 // ── Programme override: load uploaded GanttPro schedule from localStorage ──
 (function(){
   try {
@@ -5539,7 +5558,42 @@ function buildGantt() {
   const body = document.getElementById('gantt-body');
   if(!head || !body) return;
 
-  const allDates = TASKS.flatMap(t => [parseDate(t.start), parseDate(t.end)]);
+  // ── Mode toggle: 'agreed' = embedded baseline, 'current' = uploaded programme
+  var gMode    = window.ganttMode || 'agreed';
+  var override = (function(){ try{ return JSON.parse(localStorage.getItem('dgc_programme_override')||'null'); }catch(e){return null;} })();
+  var tasks    = (gMode === 'current' && override) ? TASKS : TASKS_BASELINE;
+
+  // Update button styles
+  var btnA = document.getElementById('gantt-btn-agreed');
+  var btnC = document.getElementById('gantt-btn-current');
+  var uploadLbl = document.getElementById('gantt-upload-label');
+  if (btnA) {
+    btnA.style.background = gMode === 'agreed' ? '#0ea5e9' : 'var(--surface2)';
+    btnA.style.borderColor = gMode === 'agreed' ? '#0ea5e9' : 'var(--border)';
+    btnA.style.color = gMode === 'agreed' ? '#fff' : 'var(--text)';
+    btnA.style.opacity = '1';
+  }
+  if (btnC) {
+    if (override) {
+      btnC.removeAttribute('disabled');
+      btnC.style.opacity = '1';
+      btnC.style.background = gMode === 'current' ? '#0ea5e9' : 'var(--surface2)';
+      btnC.style.borderColor = gMode === 'current' ? '#0ea5e9' : 'var(--border)';
+      btnC.style.color = gMode === 'current' ? '#fff' : 'var(--text)';
+      btnC.title = 'Uploaded: ' + (override.fileName||'?') + '  ·  ' + (override.uploadDate||'?');
+    } else {
+      btnC.setAttribute('disabled','true');
+      btnC.style.opacity = '0.4';
+      btnC.style.background = 'var(--surface2)';
+      btnC.style.color = 'var(--muted)';
+      btnC.title = 'No updated programme uploaded yet — use the Programme tab to upload a GanttPro Excel';
+    }
+  }
+  if (uploadLbl) uploadLbl.textContent = (gMode === 'current' && override)
+    ? (override.fileName || '') + ' \u00b7 ' + (override.uploadDate || '')
+    : '';
+
+  const allDates = tasks.flatMap(t => [parseDate(t.start), parseDate(t.end)]);
   const minDate  = new Date(Math.min(...allDates));
   const maxDate  = new Date(Math.max(...allDates));
   const totalDays = daysBetween(minDate, maxDate) + 5;
@@ -5568,7 +5622,7 @@ function buildGantt() {
     html += '<tr class="zone-row"><td>' + z.wbs + '</td><td>' + z.name + '</td><td></td><td class="gantt-bar-cell">' +
       '<div class="gantt-bar-wrapper"><div class="gantt-bar zone" style="left:' + zLeft + '%;width:' + zW + '%"></div>' +
       '<div class="today-line" style="left:' + todayPct + '%"><span class="gantt-today-label">Today</span></div></div></td></tr>';
-    TASKS.filter(t => t.zone === z.id).forEach(t => {
+    tasks.filter(t => t.zone === z.id).forEach(t => {
       const ts = parseDate(t.start), te = parseDate(t.end);
       const left = (daysBetween(minDate, ts) / totalDays * 100).toFixed(1);
       const w    = (Math.max(1, daysBetween(ts, te)+1) / totalDays * 100).toFixed(1);
