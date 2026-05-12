@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v47</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v48</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -3859,9 +3859,9 @@ function getZoneRAG(zoneId) {
                  return {col:'#ef4444', lbl:gap+'% behind — at risk', gap:gap, cls:'rag-red'};
 }
 
-// Auto-derive zone progress from tasks when no manual override exists.
-// This means updating the TASKS array (via apply scripts) automatically
-// refreshes all zone progress figures across the dashboard.
+// Compute zone progress from TASKS (unweighted average).
+// Used only as last resort — ZONE_DEFAULTS (duration-weighted) takes priority.
+// Update ZONE_DEFAULTS via apply script whenever GanttPro Excel is imported.
 function getZoneProgressFromTasks(zoneId) {
   const tasks = TASKS.filter(t => t.zone === zoneId);
   if (!tasks.length) return ZONE_DEFAULTS[zoneId] || 0;
@@ -3870,8 +3870,11 @@ function getZoneProgressFromTasks(zoneId) {
 
 function getZoneProgress(zoneId) {
   const s = lsGet('dgc_zone_progress', '{}');
-  // Manual slider override takes priority; otherwise compute from TASKS
+  // 1. Manual slider override takes priority
   if (s && s[zoneId] !== undefined) return s[zoneId];
+  // 2. ZONE_DEFAULTS = duration-weighted GanttPro level-1 values (authoritative)
+  if (ZONE_DEFAULTS[zoneId] !== undefined) return ZONE_DEFAULTS[zoneId];
+  // 3. Last resort: unweighted task average
   return getZoneProgressFromTasks(zoneId);
 }
 
