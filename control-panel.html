@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v44</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v45</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -1004,7 +1004,7 @@ function clearForm() {
       </div>
     </div>
     <!-- Contract Value + Next Payment + Programme Budget combined -->
-    <div class="kpi-card green admin-only">
+    <div class="kpi-card green admin-only" style="grid-column:span 2;">
       <div class="kpi-label" style="margin-bottom:10px;">Financials</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
         <div>
@@ -3925,9 +3925,20 @@ function getZoneRAG(zoneId) {
                  return {col:'#ef4444', lbl:gap+'% behind — at risk', gap:gap, cls:'rag-red'};
 }
 
+// Auto-derive zone progress from tasks when no manual override exists.
+// This means updating the TASKS array (via apply scripts) automatically
+// refreshes all zone progress figures across the dashboard.
+function getZoneProgressFromTasks(zoneId) {
+  const tasks = TASKS.filter(t => t.zone === zoneId);
+  if (!tasks.length) return ZONE_DEFAULTS[zoneId] || 0;
+  return Math.round(tasks.reduce((s,t) => s + (t.progress||0), 0) / tasks.length);
+}
+
 function getZoneProgress(zoneId) {
   const s = lsGet('dgc_zone_progress', '{}');
-  return s[zoneId] !== undefined ? s[zoneId] : (ZONE_DEFAULTS[zoneId] || 0);
+  // Manual slider override takes priority; otherwise compute from TASKS
+  if (s && s[zoneId] !== undefined) return s[zoneId];
+  return getZoneProgressFromTasks(zoneId);
 }
 
 function getOverallProgress() {
@@ -4550,17 +4561,17 @@ window.addEventListener('DOMContentLoaded', () => {
   } catch(e) {}
 
   try {
+    // Zones Open: any zone with progress started (>0%) but not yet done (<100%)
     const activeZones = ZONES.filter(z => {
-      const s = parseDate(z.start), e = parseDate(z.end);
-      return TODAY >= s && TODAY <= e;
+      const prog = getZoneProgress(z.id);
+      return prog > 0 && prog < 100;
     });
     set('kpi-active-zones', activeZones.length || '—');
     try {
-      const zRoadName = {1:'Site Setup',2:'Top Road',3:'Mid Road',4:'Road 3',5:'Lower Road',6:'Drains',7:'Demob'};
       const azEl = document.getElementById('kpi-active-zones');
       if(azEl && azEl.nextElementSibling) {
         azEl.nextElementSibling.textContent = activeZones.length
-          ? activeZones.map(z => zRoadName[z.id] || z.shortName).join(' · ')
+          ? activeZones.map(z => z.shortName || z.name).join(' · ')
           : 'none currently active';
       }
     } catch(e8){}
@@ -4594,11 +4605,12 @@ window.addEventListener('DOMContentLoaded', () => {
       lsSet('dgc_prog_live', null);
     }
   } catch(e) {}
-  // v29: sync zone progress to GanttPRO 11 May 2026
+  // v45: clear stale v29 hardcoded zone values — let getZoneProgressFromTasks() compute dynamically
   try {
-    var _zpv29 = lsGet('dgc_zone_progress', '{}');
-    if (!_zpv29 || !_zpv29._v29migrated) {
-      lsSet('dgc_zone_progress', {_v29migrated:true,1:24,2:45,3:74,4:74,5:64,6:64,7:7,8:7,9:0,10:0,11:0,12:0});
+    var _zpv45 = lsGet('dgc_zone_progress', '{}');
+    if (!_zpv45 || !_zpv45._v45migrated) {
+      // Wipe old hardcoded seed — progress now auto-derived from TASKS array
+      lsSet('dgc_zone_progress', {_v45migrated:true});
       lsSet('dgc_prog_live', null);
     }
   } catch(e) {}
