@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v45</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v46</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -4295,11 +4295,17 @@ function buildForecastTab() {
   // Absorbed: actual end + internal risk tickets (never presented to client)
   // DGC eyes only — to reconcile where time was lost
   var absorbedEndDate  = addWorkDays(actualEndDate, absorbedWDs);
-  // Efficiency: DRAG speed — adjusts elapsed clock for agreed delays, shows true working rate
-  // Calculation to be confirmed — placeholder using agreed-credit DRAG speed
+  // DRAG speed: adjusts elapsed clock for agreed delays — shows true crew working rate
   var adjElapsed = Math.max(1, daysElapsed - agreedSignedWDs * (totalCalDays / totalProgWDs));
   var adjRate    = overallPct / adjElapsed;
-  var effEndDate = adjRate > 0 ? addWorkDays(TODAY, (remaining / adjRate) * (totalProgWDs / totalCalDays * 7 / 5)) : null;
+  var effEndDate = adjRate > 0 ? addWorkDays(TODAY, (remaining / adjRate) * (totalProgWDs / totalCalDays)) : null;
+
+  // Efficiency tile: raw rate — no adjustments at all — 'the way we really are'
+  // effPct = what % of the programmed daily rate we are actually achieving
+  var rawRate    = overallPct > 0 ? overallPct / daysElapsed : 0;
+  var rawEndDate = rawRate > 0 ? addWorkDays(TODAY, (remaining / rawRate) * (totalProgWDs / totalCalDays)) : null;
+  var effPct     = daysElapsed > 0 ? Math.round(overallPct * totalCalDays / daysElapsed) : 0;
+  // effPct < 100 = working slower than programmed, 100 = exactly on programme speed
 
   function daysDiff(d) { return d ? Math.round((d - agreedDL) / 86400000) : null; }
   function diffTxt(diff) {
@@ -4337,10 +4343,13 @@ function buildForecastTab() {
     'Agreed at last 2-week meeting', 'var(--muted)', 'All EOT baked in', '#38bdf8'));
   banner.appendChild(makeTile('Actual end date', fmtD(actualEndDate),
     diffTxt(actualDiff), diffCol(actualDiff), "Today's programme", borderCol(actualDiff)));
-  banner.appendChild(makeTile('DGC proposed', proposedEndDate ? fmtD(proposedEndDate) : '—',
-    diffTxt(proposedDiff), diffCol(proposedDiff),
-    inDisputeWDs > 0 ? '+' + inDisputeWDs.toFixed(1) + ' WDs in dispute' : 'No delays in dispute',
-    borderCol(proposedDiff)));
+  var rawDiff = daysDiff(rawEndDate);
+  var effCol = effPct >= 100 ? '#4ade80' : effPct >= 80 ? '#f59e0b' : '#f87171';
+  banner.appendChild(makeTile('Efficiency',
+    rawEndDate ? fmtD(rawEndDate) : '—',
+    diffTxt(rawDiff), diffCol(rawDiff),
+    'At current speed &nbsp;&bull;&nbsp; <b style="color:' + effCol + ';">' + effPct + '%</b> of programme rate',
+    borderCol(rawDiff)));
   el.appendChild(banner);
 
   // ── Bar helper — Programme page style ─────────────────────────────────────
@@ -4432,15 +4441,22 @@ function buildForecastTab() {
   subNote(el, 'Actual % &nbsp;·&nbsp; End date at real working speed (DRAG rate) &nbsp;·&nbsp; <i style="color:var(--accent);">Calculation to be confirmed</i>');
 
   // ── KPI tiles ─────────────────────────────────────────────────────────────
+  var actualVsDeadline = daysDiff(actualEndDate);
+  var avdTxt = actualVsDeadline === null ? '—'
+             : actualVsDeadline === 0    ? 'On time'
+             : actualVsDeadline > 0      ? '+' + actualVsDeadline + ' days late'
+             : Math.abs(actualVsDeadline) + ' days early';
+  var avdCol = actualVsDeadline > 0 ? 'var(--red)' : actualVsDeadline < 0 ? 'var(--green)' : 'var(--text)';
+  var effKpiCol = effPct >= 100 ? 'var(--green)' : effPct >= 80 ? '#f59e0b' : 'var(--red)';
   var kpis = [
     { lbl:'Actual complete',  val: overallPct.toFixed(1)+'%',  col:'var(--text)' },
-    { lbl:'Plan says today',  val: plannedPct.toFixed(1)+'%',  col:'#f59e0b' },
-    { lbl:'vs Plan (raw)',    val: (overallPct-plannedPct>=0?'+':'')+(overallPct-plannedPct).toFixed(1)+'%',
-                              col: overallPct>=plannedPct?'var(--green)':'var(--red)' },
+    { lbl:'Efficiency',       val: effPct+'% of plan speed',   col: effKpiCol },
+    { lbl:'vs 29 Jun',        val: avdTxt,                     col: avdCol },
     { lbl:'Agreed & signed',  val: agreedSignedWDs.toFixed(1)+' WDs', col:'#f59e0b' },
     { lbl:'In dispute',       val: inDisputeWDs.toFixed(1)+' WDs',    col:'#f97316' },
     { lbl:'Absorbed',         val: absorbedWDs.toFixed(1)+' WDs',     col:'#6366f1' },
-    { lbl:'Weeks to end',     val: (calDaysLeft/7).toFixed(1)+' wks', col: calDaysLeft<21?'var(--red)':'var(--muted)' },
+    { lbl:'Days to deadline', val: Math.max(0,Math.round(daysBetween(TODAY,agreedDL)))+' days',
+                              col: calDaysLeft < 21 ? 'var(--red)' : 'var(--muted)' },
   ];
   var grid = document.createElement('div');
   grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-top:16px;';
