@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v42</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v43</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -4250,33 +4250,24 @@ function buildForecastTab() {
   }
   function fmtD(d) { return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
 
-  // ── Delay log — three buckets (EOT already baked into 29 Jun) ────────────
+  // ── Delay buckets ─────────────────────────────────────────────────────────
   var delayLog = loadDelayLog();
-
-  var eotWDs = delayLog.filter(function(d){ return d.category === 'eot_claimed'; })
-                       .reduce(function(s,d){ return s + (d.days||0); }, 0);
-
-  // Agreed & signed off — formally signed by both parties
+  var eotWDs = delayLog.filter(function(d){ return d.category==='eot_claimed'; })
+                       .reduce(function(s,d){ return s+(d.days||0); }, 0);
   var agreedSignedWDs = delayLog.filter(function(d){
-    return d.status === 'agreed' && d.category !== 'eot_claimed' && d.category !== 'absorbed';
-  }).reduce(function(s,d){ return s + (d.days||0); }, 0);
-
-  // In dispute / not yet signed — claimed or open, not absorbed, not EOT
+    return d.status==='agreed' && d.category!=='eot_claimed' && d.category!=='absorbed';
+  }).reduce(function(s,d){ return s+(d.days||0); }, 0);
   var inDisputeWDs = delayLog.filter(function(d){
-    return (d.status === 'claimed' || d.status === 'open')
-      && d.category !== 'absorbed' && d.category !== 'eot_claimed';
-  }).reduce(function(s,d){ return s + (d.days||0); }, 0);
-
-  // Absorbed internal — DGC's non-billable delays
+    return (d.status==='claimed'||d.status==='open') && d.category!=='absorbed' && d.category!=='eot_claimed';
+  }).reduce(function(s,d){ return s+(d.days||0); }, 0);
   var absorbedWDs = delayLog.filter(function(d){
-    return d.category === 'absorbed' || d.status === 'absorbed';
-  }).reduce(function(s,d){ return s + (d.days||0); }, 0);
-
+    return d.category==='absorbed' || d.status==='absorbed';
+  }).reduce(function(s,d){ return s+(d.days||0); }, 0);
   var allSignedAndDisputed = agreedSignedWDs + inDisputeWDs;
   var allInclAbsorbed      = allSignedAndDisputed + absorbedWDs;
 
-  // ── Plan deadlines ────────────────────────────────────────────────────────
-  var clientAgreedWDs  = delayLog.filter(function(d){ return d.category==='client' && d.status==='agreed'; })
+  // ── Plan deadlines for plan bars ──────────────────────────────────────────
+  var clientAgreedWDs  = delayLog.filter(function(d){ return d.category==='client'&&d.status==='agreed'; })
                                  .reduce(function(s,d){ return s+(d.days||0); }, 0);
   var originalDeadline = addWorkDays(agreedDL, -eotWDs);
   var origCalDays      = daysBetween(projStart, originalDeadline);
@@ -4285,29 +4276,35 @@ function buildForecastTab() {
   var clientCalDays    = daysBetween(projStart, clientDeadline);
   var clientPlannedPct = clientCalDays > 0 ? Math.min(100, daysElapsed / clientCalDays * 100) : 100;
 
-  // ── DRAG speed forecasts ──────────────────────────────────────────────────
-  // Removes credited delay days from the elapsed clock to reveal true working rate
+  // ── DRAG speed helpers ────────────────────────────────────────────────────
+  // scenarioPlanPct: where the plan says we SHOULD be today, given delay credits
+  // This removes lost days from the clock — each scenario gives a different position
+  function scenarioPlanPct(creditWDs) {
+    var delayCalDays = creditWDs * (totalCalDays / totalProgWDs);
+    return Math.max(0, Math.min(100, (daysElapsed - delayCalDays) / totalCalDays * 100));
+  }
   function dragForecast(creditWDs) {
     var adjElapsed = Math.max(1, daysElapsed - creditWDs * (totalCalDays / totalProgWDs));
     var adjRate    = overallPct / adjElapsed;
     return adjRate > 0 ? addWorkDays(TODAY, (remaining / adjRate) * (65/98)) : null;
   }
 
-  // Actual = progress adjusted for agreed & signed delays
+  var planActual   = scenarioPlanPct(agreedSignedWDs);   // where plan says today (agreed)
+  var planProposed = scenarioPlanPct(allSignedAndDisputed);
+  var planInternal = scenarioPlanPct(allInclAbsorbed);
+
   var fcDateActual   = dragForecast(agreedSignedWDs);
-  // DGC Proposed = actual + in-dispute delays added on top
   var fcDateProposed = dragForecast(allSignedAndDisputed);
-  // Internal = all including absorbed
   var fcDateInternal = dragForecast(allInclAbsorbed);
 
   function daysDiff(d) { return d ? Math.round((d - agreedDL) / 86400000) : null; }
   function diffTxt(diff) {
     if (diff === null) return '—';
-    if (diff === 0) return 'On the deadline';
+    if (diff === 0)    return 'On the deadline';
     return diff > 0 ? '▲ ' + diff + ' days late' : '▼ ' + Math.abs(diff) + ' days early';
   }
-  function diffCol(diff)    { return diff === null ? 'var(--muted)' : diff > 0 ? '#f87171' : '#4ade80'; }
-  function borderCol(diff)  { return diff === null ? 'var(--border)' : diff > 0 ? '#f87171' : '#4ade80'; }
+  function diffCol(diff)   { return diff===null?'var(--muted)':diff>0?'#f87171':'#4ade80'; }
+  function borderCol(diff) { return diff===null?'var(--border)':diff>0?'#f87171':'#4ade80'; }
 
   var actualDiff   = daysDiff(fcDateActual);
   var proposedDiff = daysDiff(fcDateProposed);
@@ -4319,172 +4316,147 @@ function buildForecastTab() {
   el.appendChild(titEl);
 
   // ── 3-tile banner ─────────────────────────────────────────────────────────
-  //  Tile 1: contract end (29 Jun) — what client expects
-  //  Tile 2: actual end — agreed & signed delays credited (this IS the actual)
-  //  Tile 3: DGC proposed — adds in-dispute delays on top
-
   var banner = document.createElement('div');
   banner.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;';
-
   function makeTile(heading, dateStr, sub1, sub1Col, sub2, borderC) {
     var tile = document.createElement('div');
-    tile.style.cssText = 'background:var(--surface2);border:2px solid ' + borderC + ';border-radius:10px;padding:14px 12px;text-align:center;';
+    tile.style.cssText = 'background:var(--surface2);border:2px solid '+borderC+';border-radius:10px;padding:14px 12px;text-align:center;';
     tile.innerHTML =
-      '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:' + borderC + ';margin-bottom:6px;">' + heading + '</div>' +
-      '<div style="font-size:20px;font-weight:900;color:var(--text);line-height:1.1;letter-spacing:-0.3px;">' + (dateStr || '—') + '</div>' +
-      '<div style="font-size:10px;font-weight:700;color:' + sub1Col + ';margin-top:5px;">' + sub1 + '</div>' +
-      (sub2 ? '<div style="font-size:9px;color:var(--muted);margin-top:2px;">' + sub2 + '</div>' : '');
+      '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:'+borderC+';margin-bottom:6px;">'+heading+'</div>'+
+      '<div style="font-size:20px;font-weight:900;color:var(--text);line-height:1.1;letter-spacing:-0.3px;">'+(dateStr||'—')+'</div>'+
+      '<div style="font-size:10px;font-weight:700;color:'+sub1Col+';margin-top:5px;">'+sub1+'</div>'+
+      (sub2?'<div style="font-size:9px;color:var(--muted);margin-top:2px;">'+sub2+'</div>':'');
     return tile;
   }
-
-  // Tile 1: contract end — neutral blue
-  banner.appendChild(makeTile(
-    'Last agreed end date',
-    fmtD(agreedDL),
-    'Contract end incl. all EOT',
-    'var(--muted)', '', '#38bdf8'
-  ));
-
-  // Tile 2: actual end — agreed & signed delays credited
-  banner.appendChild(makeTile(
-    'Actual end date',
-    fcDateActual ? fmtD(fcDateActual) : '—',
-    diffTxt(actualDiff),
-    diffCol(actualDiff),
-    'Agreed &amp; signed delays credited',
-    borderCol(actualDiff)
-  ));
-
-  // Tile 3: DGC proposed — adds in-dispute delays
-  banner.appendChild(makeTile(
-    'DGC proposed',
-    fcDateProposed ? fmtD(fcDateProposed) : '—',
-    diffTxt(proposedDiff),
-    diffCol(proposedDiff),
-    inDisputeWDs > 0 ? '+' + inDisputeWDs.toFixed(1) + ' WDs in dispute added' : 'No delays in dispute',
-    borderCol(proposedDiff)
-  ));
-
+  banner.appendChild(makeTile('Last agreed end date', fmtD(agreedDL),
+    'Contract end incl. all EOT', 'var(--muted)', '', '#38bdf8'));
+  banner.appendChild(makeTile('Actual end date', fcDateActual?fmtD(fcDateActual):'—',
+    diffTxt(actualDiff), diffCol(actualDiff), 'Agreed &amp; signed delays credited', borderCol(actualDiff)));
+  banner.appendChild(makeTile('DGC proposed', fcDateProposed?fmtD(fcDateProposed):'—',
+    diffTxt(proposedDiff), diffCol(proposedDiff),
+    inDisputeWDs>0?'+'+inDisputeWDs.toFixed(1)+' WDs in dispute':'No delays in dispute', borderCol(proposedDiff)));
   el.appendChild(banner);
 
-  // ── Bar helper ────────────────────────────────────────────────────────────
-  function addBar(container, opts) {
+  // ── Bar helper — matches Programme page style exactly ─────────────────────
+  // seg1: primary fill (amber). seg2: optional overlay (green surplus or grey plan marker).
+  // rightTxt: date string. rightCol: colour.
+  function addBar(container, labelTxt, seg1Pct, seg1Col, seg2Pct, seg2Col, rightTxt, rightCol, dimmed) {
     var row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:10px;';
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;';
 
     var lbl = document.createElement('div');
-    lbl.style.cssText = 'font-size:10px;font-weight:600;color:' + (opts.dim ? 'var(--muted)' : 'var(--text)') +
-      ';text-transform:uppercase;letter-spacing:0.03em;width:148px;flex-shrink:0;line-height:1.3;';
-    lbl.innerHTML = opts.label;
+    lbl.style.cssText = 'font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;' +
+      'letter-spacing:0.04em;width:130px;flex-shrink:0;line-height:1.3;opacity:'+(dimmed?'0.55':'1')+';';
+    lbl.textContent = labelTxt;
     row.appendChild(lbl);
 
     var track = document.createElement('div');
-    track.style.cssText = 'flex:1;height:22px;background:var(--surface2);border-radius:7px;overflow:hidden;';
-    var p1 = Math.max(0, Math.min(100, opts.pct));
-    var seg = document.createElement('div');
-    seg.style.cssText = 'height:100%;width:' + p1.toFixed(1) + '%;background:' + opts.col +
-      ';display:flex;align-items:center;justify-content:center;border-radius:7px 0 0 7px;opacity:' + (opts.dim ? '0.45' : '1') + ';';
-    if (p1 > 10) {
-      var inn = document.createElement('span');
-      inn.style.cssText = 'font-size:10px;font-weight:800;color:rgba(255,255,255,0.9);white-space:nowrap;';
-      inn.textContent = opts.pct.toFixed(1) + '%';
-      seg.appendChild(inn);
+    track.style.cssText = 'flex:1;height:14px;background:var(--surface2);border-radius:6px;overflow:hidden;display:flex;opacity:'+(dimmed?'0.55':'1')+';';
+
+    var p1 = Math.max(0, Math.min(100, seg1Pct));
+    var s1 = document.createElement('div');
+    s1.style.cssText = 'height:100%;flex:0 0 '+p1.toFixed(1)+'%;background:'+seg1Col+';border-radius:6px 0 0 6px;transition:flex-basis 0.8s ease;';
+    track.appendChild(s1);
+
+    if (seg2Pct > 0) {
+      var p2 = Math.min(100 - p1, seg2Pct);
+      var s2 = document.createElement('div');
+      s2.style.cssText = 'height:100%;flex:0 0 '+p2.toFixed(1)+'%;background:'+seg2Col+';transition:flex-basis 0.8s ease;';
+      track.appendChild(s2);
     }
-    track.appendChild(seg);
     row.appendChild(track);
 
     var rgt = document.createElement('div');
-    rgt.style.cssText = 'font-size:11px;font-weight:700;color:' + (opts.rightCol || 'var(--muted)') +
-      ';width:92px;text-align:right;flex-shrink:0;line-height:1.3;';
-    rgt.textContent = opts.rightTxt || '';
+    rgt.style.cssText = 'font-size:11px;font-weight:800;color:'+(rightCol||'var(--muted)')+';' +
+      'width:90px;text-align:right;flex-shrink:0;white-space:nowrap;opacity:'+(dimmed?'0.55':'1')+';';
+    rgt.textContent = rightTxt || '';
     row.appendChild(rgt);
 
     container.appendChild(row);
-
-    if (opts.note) {
-      var note = document.createElement('div');
-      note.style.cssText = 'font-size:9px;color:var(--muted);margin-top:-6px;margin-bottom:4px;padding-left:158px;';
-      note.innerHTML = opts.note;
-      container.appendChild(note);
-    }
   }
 
   function sectionLabel(container, txt) {
     var d = document.createElement('div');
-    d.style.cssText = 'font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin:14px 0 8px 0;border-top:1px solid var(--border);padding-top:10px;';
+    d.style.cssText = 'font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;' +
+      'color:var(--muted);margin:14px 0 8px 0;border-top:1px solid var(--border);padding-top:10px;';
     d.textContent = txt;
+    container.appendChild(d);
+  }
+
+  function subNote(container, html) {
+    var d = document.createElement('div');
+    d.style.cssText = 'font-size:9px;color:var(--muted);margin:-4px 0 8px 140px;line-height:1.4;';
+    d.innerHTML = html;
     container.appendChild(d);
   }
 
   // ── Section 1: The Programme ──────────────────────────────────────────────
   sectionLabel(el, 'The programme — what should happen');
 
-  addBar(el, {
-    label: 'Original baseline',
-    pct: origPlannedPct, col: '#475569',
-    rightTxt: fmtD(originalDeadline), rightCol: '#64748b', dim: true
-  });
-  addBar(el, {
-    label: 'After client delays',
-    pct: clientPlannedPct, col: '#b45309',
-    rightTxt: fmtD(clientDeadline), rightCol: '#d97706'
-  });
-  addBar(el, {
-    label: 'Agreed plan today',
-    pct: plannedPct, col: '#f59e0b',
-    rightTxt: '29 Jun 2026', rightCol: '#f59e0b',
-    note: 'Where we should be right now on the agreed programme'
-  });
+  addBar(el, 'Original baseline', origPlannedPct, '#475569', 0, '', fmtD(originalDeadline), '#64748b', true);
+  addBar(el, 'After client delays', clientPlannedPct, '#b45309', 0, '', fmtD(clientDeadline), '#d97706', false);
+  addBar(el, 'Agreed plan today', plannedPct, '#f59e0b', 0, '', '29 Jun 2026', '#f59e0b', false);
+  subNote(el, 'Where we should be right now on the agreed programme');
 
   // ── Section 2: Reality ────────────────────────────────────────────────────
+  // Each bar = [amber: plan position for this scenario] + [green: how far ahead we are]
+  // Plan position differs per scenario → bars are visually distinct
+  // Right label = projected end date for that scenario
   sectionLabel(el, 'Reality — where we are & when we finish');
 
-  // Bar A: Actual — agreed & signed delays credited = this IS the actual position
-  var bAd = daysDiff(fcDateActual);
-  addBar(el, {
-    label: 'Actual',
-    pct: overallPct, col: diffCol(bAd) === '#4ade80' ? '#22c55e' : '#ef4444',
-    rightTxt: fcDateActual ? fmtD(fcDateActual) : '—',
-    rightCol: diffCol(bAd),
-    note: agreedSignedWDs.toFixed(1) + ' WDs agreed &amp; signed off — these are real, credited against the clock'
-  });
+  // Bar A: Actual — agreed & signed delays credited
+  // Amber = where plan says we should be (planActual %)
+  // Green = surplus above plan (overallPct - planActual)
+  var surplusActual   = Math.max(0, overallPct - planActual);
+  var deficitActual   = Math.max(0, planActual - overallPct);
+  var r1Col           = diffCol(actualDiff) === '#4ade80' ? '#22c55e' : '#ef4444';
+  // If ahead: amber plan + green surplus. If behind: green actual + red deficit.
+  if (surplusActual >= 0 && planActual <= overallPct) {
+    addBar(el, 'Actual', planActual, '#f59e0b', surplusActual, '#22c55e',
+      fcDateActual ? fmtD(fcDateActual) : '—', diffCol(actualDiff), false);
+    subNote(el, 'Plan says <b>'+planActual.toFixed(1)+'%</b> today &nbsp;·&nbsp; Actual <b style="color:#22c55e;">'+overallPct.toFixed(1)+'%</b> &nbsp;·&nbsp; <b style="color:#22c55e;">+'+surplusActual.toFixed(1)+'% ahead</b> &nbsp;·&nbsp; '+agreedSignedWDs.toFixed(1)+' WDs signed off');
+  } else {
+    addBar(el, 'Actual', overallPct, '#22c55e', deficitActual, '#ef444460',
+      fcDateActual ? fmtD(fcDateActual) : '—', diffCol(actualDiff), false);
+    subNote(el, 'Plan says <b>'+planActual.toFixed(1)+'%</b> today &nbsp;·&nbsp; Actual <b style="color:#f87171;">'+overallPct.toFixed(1)+'%</b> &nbsp;·&nbsp; <b style="color:#f87171;">'+deficitActual.toFixed(1)+'% behind</b>');
+  }
 
-  // Bar B: DGC Proposed — actual + in-dispute delays not yet agreed
-  var bBd = daysDiff(fcDateProposed);
-  addBar(el, {
-    label: 'DGC Proposed',
-    pct: overallPct, col: '#f97316',
-    rightTxt: fcDateProposed ? fmtD(fcDateProposed) : '—',
-    rightCol: diffCol(bBd),
-    note: inDisputeWDs > 0
-      ? 'Actual + ' + inDisputeWDs.toFixed(1) + ' WDs not yet agreed — DGC&apos;s claim to client'
-      : 'No delays currently in dispute — same as actual'
-  });
+  // Bar B: DGC Proposed — adds in-dispute delays
+  var surplusProposed = Math.max(0, overallPct - planProposed);
+  var deficitProposed = Math.max(0, planProposed - overallPct);
+  if (surplusProposed >= 0 && planProposed <= overallPct) {
+    addBar(el, 'DGC Proposed', planProposed, '#f97316', surplusProposed, '#22c55e',
+      fcDateProposed ? fmtD(fcDateProposed) : '—', diffCol(proposedDiff), false);
+    subNote(el, inDisputeWDs > 0
+      ? 'Plan says <b>'+planProposed.toFixed(1)+'%</b> today &nbsp;·&nbsp; '+inDisputeWDs.toFixed(1)+' WDs in dispute added &nbsp;·&nbsp; DGC&apos;s claim to client'
+      : 'No delays in dispute — same as Actual');
+  } else {
+    addBar(el, 'DGC Proposed', overallPct, '#22c55e', deficitProposed, '#ef444460',
+      fcDateProposed ? fmtD(fcDateProposed) : '—', diffCol(proposedDiff), false);
+    subNote(el, 'Plan says <b>'+planProposed.toFixed(1)+'%</b> &nbsp;·&nbsp; '+deficitProposed.toFixed(1)+'% behind even with claimed delays');
+  }
 
-  // Bar C: Full internal view — adds absorbed non-billable delays
-  var bCd = daysDiff(fcDateInternal);
-  addBar(el, {
-    label: '<span style="color:var(--muted);">+ Absorbed (internal)</span>',
-    pct: overallPct, col: '#6366f1',
-    rightTxt: fcDateInternal ? fmtD(fcDateInternal) : '—',
-    rightCol: diffCol(bCd),
-    note: absorbedWDs.toFixed(1) + ' WDs absorbed — non-billable, DGC eyes only, for internal learning'
-  });
+  // Bar C: Internal view — adds absorbed
+  var surplusInternal = Math.max(0, overallPct - planInternal);
+  var dInt = daysDiff(fcDateInternal);
+  addBar(el, '+ Absorbed (internal)', planInternal, '#6366f1', surplusInternal, '#a5b4fc',
+    fcDateInternal ? fmtD(fcDateInternal) : '—', diffCol(dInt), false);
+  subNote(el, absorbedWDs.toFixed(1)+' WDs absorbed — non-billable, DGC eyes only &nbsp;·&nbsp; Plan position drops to <b>'+planInternal.toFixed(1)+'%</b>');
 
-  // ── KPI row ───────────────────────────────────────────────────────────────
+  // ── KPI tiles ─────────────────────────────────────────────────────────────
   var kpis = [
     { lbl:'Actual complete',   val: overallPct.toFixed(1)+'%',              col:'var(--text)' },
     { lbl:'Plan says today',   val: plannedPct.toFixed(1)+'%',              col:'#f59e0b' },
-    { lbl:'vs Plan',           val: (overallPct-plannedPct).toFixed(1)+'%', col: overallPct>=plannedPct ? 'var(--green)' : 'var(--red)' },
+    { lbl:'vs Plan (raw)',     val: (overallPct-plannedPct).toFixed(1)+'%', col: overallPct>=plannedPct?'var(--green)':'var(--red)' },
     { lbl:'DRAG speed %/wk',  val: (ratePerDay*7).toFixed(2)+'%',          col:'var(--accent)' },
-    { lbl:'Weeks to deadline', val: (calDaysLeft/7).toFixed(1)+' wks',      col: calDaysLeft<21 ? 'var(--red)' : 'var(--muted)' },
+    { lbl:'Weeks to deadline', val: (calDaysLeft/7).toFixed(1)+' wks',      col: calDaysLeft<21?'var(--red)':'var(--muted)' },
   ];
   var grid = document.createElement('div');
   grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-top:16px;';
   kpis.forEach(function(k){
-    var c = document.createElement('div'); c.className = 'vel-kpi';
-    var l = document.createElement('div'); l.className='lbl'; l.textContent=k.lbl;
-    var v = document.createElement('div'); v.className='val'; v.style.color=k.col; v.textContent=k.val;
+    var c=document.createElement('div'); c.className='vel-kpi';
+    var l=document.createElement('div'); l.className='lbl'; l.textContent=k.lbl;
+    var v=document.createElement('div'); v.className='val'; v.style.color=k.col; v.textContent=k.val;
     c.appendChild(l); c.appendChild(v); grid.appendChild(c);
   });
   el.appendChild(grid);
@@ -4493,11 +4465,11 @@ function buildForecastTab() {
   var note = document.createElement('div');
   note.style.cssText = 'margin-top:12px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);';
   note.innerHTML =
-    'EOT baked into 29 Jun: <b style="color:var(--text);">' + eotWDs.toFixed(1) + ' WDs</b>'
-    + ' &nbsp;·&nbsp; Agreed &amp; signed: <b style="color:#22c55e;">' + agreedSignedWDs.toFixed(1) + ' WDs</b>'
-    + ' &nbsp;·&nbsp; In dispute: <b style="color:#f97316;">' + inDisputeWDs.toFixed(1) + ' WDs</b>'
-    + ' &nbsp;·&nbsp; Absorbed (internal): <b style="color:#6366f1;">' + absorbedWDs.toFixed(1) + ' WDs</b>'
-    + '<br>DRAG speed removes agreed signed days from elapsed clock to show true working rate.';
+    'EOT baked into 29 Jun: <b style="color:var(--text);">'+eotWDs.toFixed(1)+' WDs</b>'
+    +' &nbsp;·&nbsp; Agreed &amp; signed: <b style="color:#f59e0b;">'+agreedSignedWDs.toFixed(1)+' WDs</b>'
+    +' &nbsp;·&nbsp; In dispute: <b style="color:#f97316;">'+inDisputeWDs.toFixed(1)+' WDs</b>'
+    +' &nbsp;·&nbsp; Absorbed: <b style="color:#6366f1;">'+absorbedWDs.toFixed(1)+' WDs</b>'
+    +'<br>Amber = where plan should be today for that scenario &nbsp;·&nbsp; Green = how far ahead &nbsp;·&nbsp; DRAG speed removes agreed delay days from the elapsed clock.';
   el.appendChild(note);
 }
 function showTab(name, btn) {
