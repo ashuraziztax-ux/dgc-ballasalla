@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v58</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v59</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -3960,18 +3960,18 @@ function getTimeProgress() {
 
 // What % SHOULD be done by today — each task contributes its budget × how far through its planned dates we are
 function getPlannedProgress() {
-  // Zone-budget-weighted planned % — matches actual % methodology
-  let totBudget = 0, totPlanned = 0;
-  ZONES.forEach(z => {
-    const bud = z.budget || 0;
+  // Task-schedule methodology: budget-weighted average of per-zone planned %.
+  // getZonePlannedPct() uses individual task start/end dates (not zone calendar
+  // spans), matching the QS/GanttPro methodology.
+  // Old zone-calendar method gave ~67% because Zone 2 ended Apr 29 → counted
+  // 100% of its £52,649 budget as 'should be done', inflating the total.
+  // Task-schedule method gives ~53% — matching the QS figure for 12 May 2026.
+  var totBudget = 0, totPlanned = 0;
+  ZONES.forEach(function(z) {
+    var bud = z.budget || 0;
     if (bud <= 0) return;
     totBudget += bud;
-    const s = parseDate(z.start), e = parseDate(z.end);
-    const dur = Math.max(1, daysBetween(s, e));
-    let pf = 0;
-    if (TODAY >= e) pf = 1;
-    else if (TODAY > s) pf = Math.min(1, daysBetween(s, TODAY) / dur);
-    totPlanned += bud * pf;
+    totPlanned += bud * (getZonePlannedPct(z.id) / 100);
   });
   return totBudget > 0 ? Math.round(totPlanned / totBudget * 100) : 0;
 }
@@ -4056,19 +4056,32 @@ function shiftDateByWorkingDays(date, days) {
   return d;
 }
 function getRevisedPlanProgress() {
-  // Zone-budget-weighted planned % using today shifted back by EOT working days
-  const adjustedToday = shiftDateByWorkingDays(TODAY, -EOT_WORKING_DAYS);
-  let totBudget = 0, totPlanned = 0;
-  ZONES.forEach(z => {
-    const bud = z.budget || 0;
+  // Task-schedule methodology with TODAY shifted back by EOT working days.
+  // Shows 'where should we have been on the original pre-EOT baseline?'
+  // Uses individual task schedules (not zone calendar spans) to match QS methodology.
+  var adjDate = shiftDateByWorkingDays(TODAY, -EOT_WORKING_DAYS);
+  var src = (typeof TASKS_BASELINE !== 'undefined' && TASKS_BASELINE.length)
+    ? TASKS_BASELINE : TASKS;
+  var zoneTotDur = {}, zoneDoneDur = {};
+  src.forEach(function(t) {
+    if (!t.start || !t.end || !t.zone) return;
+    var s = parseDate(t.start), e = parseDate(t.end);
+    if (!s || !e) return;
+    var dur = Math.max(1, Math.round((e - s) / 86400000) + 1);
+    var done = 0;
+    if (adjDate >= e)      done = dur;
+    else if (adjDate > s)  done = Math.round((adjDate - s) / 86400000);
+    zoneTotDur[t.zone]  = (zoneTotDur[t.zone]  || 0) + dur;
+    zoneDoneDur[t.zone] = (zoneDoneDur[t.zone] || 0) + done;
+  });
+  var totBudget = 0, totPlanned = 0;
+  ZONES.forEach(function(z) {
+    var bud = z.budget || 0;
     if (bud <= 0) return;
     totBudget += bud;
-    const s = parseDate(z.start), e = parseDate(z.end);
-    const dur = Math.max(1, daysBetween(s, e));
-    let pf = 0;
-    if (adjustedToday >= e) pf = 1;
-    else if (adjustedToday > s) pf = Math.min(1, daysBetween(s, adjustedToday) / dur);
-    totPlanned += bud * pf;
+    var td = zoneTotDur[z.id] || 0;
+    var dd = zoneDoneDur[z.id] || 0;
+    if (td > 0) totPlanned += bud * (dd / td);
   });
   return totBudget > 0 ? Math.round(totPlanned / totBudget * 100) : 0;
 }
