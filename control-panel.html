@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v46</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v47</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -1085,16 +1085,12 @@ function clearForm() {
     </div>
   </div>
 
-  <!-- Needs Attention + Milestones -->
-  <div class="grid-2" style="margin-bottom:16px;">
-    <div class="card">
-      <div class="card-title" style="display:flex;align-items:center;gap:8px;"><span style="color:#ef4444;">&#9888;</span> Needs Attention<span class="tooltip-wrap"><button class="tooltip-btn" tabindex="-1">?</button><span class="tooltip-box">Auto-generated list of items that need your attention: zones behind plan, open delays, upcoming milestones within 14 days, and recent issues from Quick Log.</span></span></div>
-      <div id="attention-list"><div style="color:var(--muted);font-size:12px;padding:8px 0;">Calculating...</div></div>
+  <!-- Milestones — full width, plan dates only -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title" style="display:flex;align-items:center;gap:8px;">Milestones
+      <span style="font-size:10px;font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;">— last agreed programme dates</span>
     </div>
-    <div class="card">
-      <div class="card-title" style="display:flex;align-items:center;gap:8px;">Milestones<span class="tooltip-wrap"><button class="tooltip-btn" tabindex="-1">?</button><span class="tooltip-box">Key project dates with countdown. Green = on track. Orange = within 7 days. Red = overdue. Dates are programme targets — update with confirmed dates from Dandara.</span></span></div>
-      <div id="milestones-list"></div>
-    </div>
+    <div id="milestones-list"></div>
   </div>
 
   <div class="grid-2">
@@ -3192,22 +3188,23 @@ function saveQuickLog() {
   var st = document.getElementById('ql-status');
   if (st) { st.style.color='var(--green)'; st.textContent='Saved! Add another or close.'; }
   if (noteEl) noteEl.value = '';
-  buildAttentionList();
 }
 
 function buildMilestones() {
   var el = document.getElementById('milestones-list');
   if (!el) return;
   el.innerHTML = '';
+  // 2-column grid — full width card
+  el.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:0 24px;';
   var catCol = {financial:'#22c55e', inspection:'#f97316', programme:'#60a5fa', handover:'#a855f7'};
   MILESTONES.forEach(function(ms) {
     var d = parseDate(ms.date);
     var diff = Math.round((d - TODAY) / 86400000);
     var col = catCol[ms.cat] || '#64748b';
-    var badge = diff < 0 ? Math.abs(diff)+'d overdue' : diff+'d away';
-    var badgeCol = diff < 0 ? '#ef4444' : diff <= 7 ? '#f97316' : '#64748b';
+    var badge = diff < 0 ? Math.abs(diff)+'d overdue' : diff === 0 ? 'TODAY' : diff+'d away';
+    var badgeCol = diff < 0 ? '#ef4444' : diff <= 7 ? '#f97316' : '#22c55e';
     var row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);';
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);';
     var dot = document.createElement('div');
     dot.style.cssText = 'width:10px;height:10px;border-radius:50%;background:'+col+';flex-shrink:0;';
     var info = document.createElement('div');
@@ -3220,77 +3217,14 @@ function buildMilestones() {
     dt.textContent = d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
     info.appendChild(lbl); info.appendChild(dt);
     var chip = document.createElement('span');
-    chip.style.cssText = 'font-size:10px;font-weight:700;color:'+badgeCol+';white-space:nowrap;';
+    chip.style.cssText = 'font-size:11px;font-weight:700;color:'+badgeCol+';white-space:nowrap;';
     chip.textContent = badge;
     row.appendChild(dot); row.appendChild(info); row.appendChild(chip);
     el.appendChild(row);
   });
 }
 
-function buildAttentionList() {
-  var el = document.getElementById('attention-list');
-  if (!el) return;
-  el.innerHTML = '';
-  var items = [];
-
-  ZONES.forEach(function(z) {
-    var rag = getZoneRAG(z.id);
-    if (rag.cls === 'rag-red')
-      items.push({col:'#ef4444', msg:z.shortName+' — '+rag.lbl, sub:'Zone progress significantly behind programme'});
-  });
-  if (items.length === 0) {
-    ZONES.forEach(function(z) {
-      var rag = getZoneRAG(z.id);
-      if (rag.cls === 'rag-amber')
-        items.push({col:'#f59e0b', msg:z.shortName+' — '+rag.lbl, sub:'Monitor — behind plan but not critical yet'});
-    });
-  }
-
-  var delays = loadDelayLog().filter(function(d){ return d.status==='open'; });
-  if (delays.length)
-    items.push({col:'#f97316', msg:delays.length+' open delay event'+(delays.length>1?'s':'')+' unresolved',
-                sub:'Review and update status in Delays tab'});
-
-  MILESTONES.forEach(function(ms) {
-    var d = parseDate(ms.date);
-    var diff = Math.round((d-TODAY)/86400000);
-    if (diff >= 0 && diff <= 14)
-      items.push({col:'#a855f7', msg:ms.lbl, sub:diff===0?'TODAY':diff+'d away'});
-    else if (diff < 0)
-      items.push({col:'#ef4444', msg:ms.lbl+' — OVERDUE', sub:Math.abs(diff)+'d past target date'});
-  });
-
-  var ql = lsGet('dgc_quicklog','[]') || [];
-  ql.filter(function(q){ return q.type==='issue'||q.type==='delay'; }).slice(0,2)
-    .forEach(function(q) {
-      items.push({col:'#60a5fa',
-        msg:'['+q.type.toUpperCase()+'] '+q.note.substring(0,60)+(q.note.length>60?'...':''),
-        sub:'Logged '+q.date+(q.by?' by '+q.by:'')});
-    });
-
-  if (!items.length) {
-    el.innerHTML = '<div style="color:#22c55e;font-size:12px;padding:12px 0;text-align:center;font-weight:600;">&#10003; Nothing urgent right now</div>';
-    return;
-  }
-  items.forEach(function(item) {
-    var row = document.createElement('div');
-    row.className = 'attn-row';
-    var dot = document.createElement('div');
-    dot.className = 'attn-dot';
-    dot.style.background = item.col;
-    var txt = document.createElement('div');
-    txt.style.flex = '1';
-    var msg = document.createElement('div');
-    msg.style.cssText = 'font-weight:600;color:var(--text);';
-    msg.textContent = item.msg;
-    var sub = document.createElement('div');
-    sub.style.cssText = 'color:var(--muted);font-size:10px;margin-top:2px;';
-    sub.textContent = item.sub;
-    txt.appendChild(msg); txt.appendChild(sub);
-    row.appendChild(dot); row.appendChild(txt);
-    el.appendChild(row);
-  });
-}
+// attention list removed v47
 
 function recordSnapshot() {
   var fc = calcForecast();
@@ -4637,7 +4571,6 @@ window.addEventListener('DOMContentLoaded', () => {
   // Mobile: add 'scroll to attention' hint on narrow screens
   try {
     if (window.innerWidth <= 768) {
-      var attnCard = document.getElementById('attention-list');
       var scrollHint = document.createElement('div');
       scrollHint.style.cssText = 'position:fixed;bottom:76px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:11px;color:var(--muted);z-index:800;white-space:nowrap;pointer-events:none;';
       scrollHint.id = 'mobile-hint';
@@ -4686,7 +4619,7 @@ window.addEventListener('DOMContentLoaded', () => {
   try { buildEOTPanel(); }         catch(e) {}
   try { buildVariationRegister(); } catch(e) {}
   try { buildMilestones(); }      catch(e) {}
-  try { buildAttentionList(); }   catch(e) {}
+  // buildAttentionList removed
 });
 
 // ═══════════════════════ ALERTS ═══════════════════════
