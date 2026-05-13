@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v64</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v65</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -871,6 +871,7 @@ function clearForm() {
   <button class="admin-only" onclick="showTab('variations',this)">Variations</button>
   <button onclick="showTab('report',this)">Weekly Report</button>
   <button class="active" onclick="showTab('dashboard',this)">Dashboard</button>
+  <button onclick="buildFortnightlyReport()" style="margin-left:auto;background:#f59e0b;color:#0f1117;border:none;font-weight:800;border-radius:6px;padding:5px 13px;font-size:11px;cursor:pointer;letter-spacing:.03em;" title="Generate printable fortnightly progress report">&#128438; Fortnightly Report</button>
 </div>
 
 <div class="main">
@@ -5113,6 +5114,305 @@ window.addEventListener('DOMContentLoaded', () => {
     if (master && preview) preview.src = master.src;
   })();
 });
+
+// ═══════════════════════ FORTNIGHTLY REPORT GENERATOR ═══════════════════════
+function buildFortnightlyReport() {
+  // ── Dates ─────────────────────────────────────────────────────────────────
+  var today = TODAY;
+  function fmt(d, short) {
+    if (!d) return '—';
+    return d.toLocaleDateString('en-GB', short
+      ? {day:'numeric',month:'short'}
+      : {day:'numeric',month:'long',year:'numeric'});
+  }
+  var periodEnd   = today;
+  var periodStart = new Date(today); periodStart.setDate(periodStart.getDate() - 14);
+  var fwdEnd      = new Date(today); fwdEnd.setDate(fwdEnd.getDate() + 14);
+  var periodStr   = fmt(periodStart,true) + ' – ' + fmt(periodEnd,false);
+  var reportDate  = fmt(today, false);
+
+  // ── Programme ──────────────────────────────────────────────────────────────
+  var actualPct  = getOverallProgress ? Math.round(getOverallProgress()) : 0;
+  var plannedPct = getPlannedProgress ? Math.round(getPlannedProgress()) : 0;
+  var gapPct     = actualPct - plannedPct;
+  var overallStatus = gapPct >= 2  ? 'Ahead of Programme'
+                    : gapPct <= -5 ? 'Behind Programme'
+                    : 'On Programme';
+  var overallCol = gapPct >= 2 ? '#16a34a' : gapPct <= -5 ? '#dc2626' : '#d97706';
+  var overallBg  = gapPct >= 2 ? '#f0fdf4' : gapPct <= -5 ? '#fef2f2' : '#fffbeb';
+
+  // ── Zone table ─────────────────────────────────────────────────────────────
+  var zoneRows = '';
+  var totalBudget = 0, totalSpent = 0;
+  ZONES.forEach(function(z) {
+    var bud    = z.budget || 0;
+    var act    = getZoneProgress(z.id);
+    var pln    = Math.round(getZonePlannedPct ? getZonePlannedPct(z.id) : 0);
+    var gap    = act - pln;
+    var rag    = gap >= 2 ? '#16a34a' : gap <= -5 ? '#dc2626' : '#d97706';
+    var ragBg  = gap >= 2 ? '#f0fdf4' : gap <= -5 ? '#fef2f2' : '#fffbeb';
+    var ragLbl = gap >= 2 ? 'Ahead'   : gap <= -5 ? 'Behind'  : 'On Track';
+    var gapStr = (gap >= 0 ? '+' : '') + gap + 'pp';
+    var val    = bud > 0 ? '£' + Math.round(bud/1000) + 'k' : '—';
+    totalBudget += bud;
+    totalSpent  += bud * act / 100;
+    zoneRows += '<tr>'
+      + '<td style="font-weight:600;white-space:nowrap;">Z' + z.id + ' ' + (z.shortName||z.name) + '</td>'
+      + '<td style="color:#64748b;">' + val + '</td>'
+      + '<td style="text-align:right;">' + pln + '%</td>'
+      + '<td style="text-align:right;font-weight:700;">' + act + '%</td>'
+      + '<td style="text-align:right;color:' + (gap>=0?'#16a34a':'#dc2626') + ';font-weight:600;">' + gapStr + '</td>'
+      + '<td style="text-align:center;background:' + ragBg + ';color:' + rag + ';font-weight:700;border-radius:4px;padding:1px 6px;">' + ragLbl + '</td>'
+      + '</tr>';
+  });
+  // Totals row
+  var totAct = totalBudget > 0 ? Math.round(totalSpent/totalBudget*100) : 0;
+  zoneRows += '<tr style="border-top:2px solid #1e3a5f;font-weight:800;background:#f8fafc;">'
+    + '<td colspan="2">OVERALL</td>'
+    + '<td style="text-align:right;">' + plannedPct + '%</td>'
+    + '<td style="text-align:right;">' + actualPct + '%</td>'
+    + '<td style="text-align:right;color:' + overallCol + ';">' + (gapPct>=0?'+':'') + gapPct + 'pp</td>'
+    + '<td style="text-align:center;background:' + overallBg + ';color:' + overallCol + ';font-weight:800;border-radius:4px;">' + overallStatus + '</td>'
+    + '</tr>';
+
+  // ── Works completed (last 14 days, tasks ending in period with progress) ───
+  var completedRows = '';
+  var completedCount = 0;
+  var src = (typeof TASKS_EMBEDDED !== 'undefined' ? TASKS_EMBEDDED : TASKS);
+  src.forEach(function(t) {
+    var e = parseDate(t.end);
+    if (!e || e < periodStart || e > periodEnd || t.progress <= 0) return;
+    var zone = ZONES.find(function(z){return z.id===t.zone;});
+    var pct  = t.progress === 100 ? '<span style="color:#16a34a;font-weight:700;">&#10003; Complete</span>'
+             : '<span style="color:#d97706;">' + t.progress + '% done</span>';
+    completedRows += '<tr><td style="color:#64748b;white-space:nowrap;">' + (zone?zone.shortName||zone.name:'') + '</td>'
+      + '<td>' + t.name + '</td><td style="text-align:right;">' + pct + '</td></tr>';
+    completedCount++;
+  });
+  if (completedCount === 0)
+    completedRows = '<tr><td colspan="3" style="color:#94a3b8;font-style:italic;">No tasks ending in this period</td></tr>';
+
+  // ── Planned next fortnight (tasks starting within next 14 days, not done) ──
+  var plannedRows = '';
+  var plannedCount = 0;
+  src.forEach(function(t) {
+    var s = parseDate(t.start), e = parseDate(t.end);
+    if (!s || !e || s > fwdEnd || e < today || t.progress >= 100) return;
+    var zone = ZONES.find(function(z){return z.id===t.zone;});
+    var dueStr = fmt(e, true);
+    var critical = e <= fwdEnd
+      ? '<span style="color:#dc2626;font-weight:700;">&#9650; Due ' + dueStr + '</span>'
+      : '<span style="color:#64748b;">Due ' + dueStr + '</span>';
+    plannedRows += '<tr><td style="color:#64748b;white-space:nowrap;">' + (zone?zone.shortName||zone.name:'') + '</td>'
+      + '<td>' + t.name + '</td><td style="text-align:right;">' + critical + '</td></tr>';
+    plannedCount++;
+    if (plannedCount >= 18) return; // cap to keep report tight
+  });
+  if (plannedCount === 0)
+    plannedRows = '<tr><td colspan="3" style="color:#94a3b8;font-style:italic;">No tasks due in this period</td></tr>';
+
+  // ── Financial ──────────────────────────────────────────────────────────────
+  var contractSum   = (typeof CONTRACT_SUM !== 'undefined') ? CONTRACT_SUM : 450142;
+  var afp2Net       = 156739;          // AFP1 + AFP2 certified net to date
+  var certPct       = Math.round(afp2Net / contractSum * 100);
+  var forecastFAC   = contractSum;     // variations TBC
+  var retentionHeld = Math.round(afp2Net * 0.05);
+  var nextAFPDate   = '22 May 2026 (est.)';
+  var nextAFPValue  = 'TBC — to be confirmed by QS';
+
+  // ── EOT ───────────────────────────────────────────────────────────────────
+  var eotDays = (typeof EOT_WORKING_DAYS !== 'undefined') ? EOT_WORKING_DAYS : 5;
+
+  // ── Build HTML ─────────────────────────────────────────────────────────────
+  var h = [];
+  h.push('<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">');
+  h.push('<title>Fortnightly Report — Ballasalla Phase 4</title>');
+  h.push('<style>');
+  h.push('*{box-sizing:border-box;margin:0;padding:0;}');
+  h.push('body{font:9.5pt/1.45 Arial,sans-serif;color:#1e293b;background:#fff;}');
+  h.push('.wrap{max-width:780px;margin:0 auto;padding:16px 20px;}');
+  // Header
+  h.push('.rpt-header{background:#0f172a;color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #f59e0b;}');
+  h.push('.rpt-header .co{font-size:18pt;font-weight:800;letter-spacing:-.02em;color:#f59e0b;}');
+  h.push('.rpt-header .meta{text-align:right;font-size:8pt;color:#94a3b8;line-height:1.6;}');
+  h.push('.rpt-header .meta strong{color:#e2e8f0;font-size:9.5pt;}');
+  // Section labels
+  h.push('.sec-label{font-size:7.5pt;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#64748b;border-bottom:1px solid #e2e8f0;padding-bottom:2px;margin:14px 0 6px;}');
+  // Status banner
+  h.push('.status-banner{padding:8px 14px;border-radius:6px;display:flex;align-items:center;gap:14px;margin-bottom:8px;}');
+  h.push('.status-banner .big{font-size:22pt;font-weight:900;line-height:1;}');
+  h.push('.status-banner .lbl{font-size:7.5pt;text-transform:uppercase;letter-spacing:.08em;}');
+  h.push('.status-banner .tag{font-size:12pt;font-weight:800;padding:3px 10px;border-radius:4px;}');
+  // Tables
+  h.push('table{border-collapse:collapse;width:100%;font-size:8.5pt;}');
+  h.push('th{background:#1e3a5f;color:#fff;padding:4px 8px;text-align:left;font-size:7.5pt;text-transform:uppercase;letter-spacing:.06em;}');
+  h.push('td{padding:3px 8px;border-bottom:1px solid #f1f5f9;}');
+  h.push('tr:hover td{background:#f8fafc;}');
+  // Two-col layout
+  h.push('.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:0;}');
+  h.push('.panel{padding:0;}');
+  // Risk table
+  h.push('.rag-r{background:#fef2f2;color:#dc2626;font-weight:700;border-radius:3px;padding:1px 6px;font-size:8pt;}');
+  h.push('.rag-a{background:#fffbeb;color:#d97706;font-weight:700;border-radius:3px;padding:1px 6px;font-size:8pt;}');
+  h.push('.rag-g{background:#f0fdf4;color:#16a34a;font-weight:700;border-radius:3px;padding:1px 6px;font-size:8pt;}');
+  // Print button
+  h.push('.print-btn{position:fixed;top:12px;right:16px;background:#f59e0b;color:#0f1117;border:none;padding:7px 18px;font-weight:800;font-size:10pt;border-radius:6px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2);}');
+  h.push('.print-btn:hover{background:#d97706;}');
+  // Print media
+  h.push('@media print{');
+  h.push('  @page{size:A4;margin:12mm 14mm;}');
+  h.push('  .print-btn,.no-print{display:none!important;}');
+  h.push('  body{font-size:8.5pt;}');
+  h.push('  .wrap{max-width:none;padding:0;}');
+  h.push('  .rpt-header{-webkit-print-color-adjust:exact;print-color-adjust:exact;}');
+  h.push('  th{-webkit-print-color-adjust:exact;print-color-adjust:exact;}');
+  h.push('  .status-banner{-webkit-print-color-adjust:exact;print-color-adjust:exact;}');
+  h.push('  tr:hover td{background:none;}');
+  h.push('  .page-break{page-break-before:always;}');
+  h.push('}');
+  h.push('</style></head><body>');
+
+  // Print button (no-print so it hides when printing)
+  h.push('<button class="print-btn no-print" onclick="window.print()">&#128438; Print / Save PDF</button>');
+
+  h.push('<div class="wrap">');
+
+  // ── REPORT HEADER ─────────────────────────────────────────────────────────
+  h.push('<div class="rpt-header">');
+  h.push('<div><div class="co">DGC</div><div style="font-size:9pt;color:#cbd5e1;margin-top:1px;">Drainage &amp; Groundwork Contractors Ltd</div></div>');
+  h.push('<div class="meta">');
+  h.push('<strong>FORTNIGHTLY PROGRESS REPORT</strong><br>');
+  h.push('Contract: Ballasalla Phase 4 &mdash; Dandara Homes<br>');
+  h.push('Report Period: ' + periodStr + '<br>');
+  h.push('Report Date: ' + reportDate);
+  h.push('</div></div>');
+
+  // ── STATUS BANNER ─────────────────────────────────────────────────────────
+  h.push('<div class="status-banner" style="background:' + overallBg + ';border:1px solid ' + overallCol + '33;margin-top:12px;">');
+  h.push('<div style="color:' + overallCol + '"><div class="lbl">Overall Progress</div><div class="big">' + actualPct + '%</div><div style="font-size:7.5pt;color:#64748b;">actual complete</div></div>');
+  h.push('<div style="width:1px;background:#e2e8f0;align-self:stretch;"></div>');
+  h.push('<div style="color:#1e293b"><div class="lbl">Programme Target</div><div class="big" style="color:#0f172a;">' + plannedPct + '%</div><div style="font-size:7.5pt;color:#64748b;">should be complete</div></div>');
+  h.push('<div style="width:1px;background:#e2e8f0;align-self:stretch;"></div>');
+  h.push('<div><div class="lbl">Variance</div><div style="font-size:16pt;font-weight:800;color:' + overallCol + ';">' + (gapPct>=0?'+':'') + gapPct + 'pp</div></div>');
+  h.push('<div style="flex:1;text-align:right;"><span class="tag" style="background:' + overallCol + ';color:#fff;">' + overallStatus + '</span><br><span style="font-size:7.5pt;color:#64748b;display:block;margin-top:4px;">Revised completion: 26 Jun 2026</span></div>');
+  h.push('</div>');
+
+  // ── TWO COL: ZONE TABLE + FINANCIAL ───────────────────────────────────────
+  h.push('<div class="two-col" style="margin-top:4px;">');
+
+  // Left: Zone status
+  h.push('<div class="panel">');
+  h.push('<div class="sec-label">Programme Status by Zone</div>');
+  h.push('<table><tr><th>Zone</th><th>Budget</th><th style="text-align:right;">Plan%</th><th style="text-align:right;">Actual%</th><th style="text-align:right;">Gap</th><th style="text-align:center;">Status</th></tr>');
+  h.push(zoneRows);
+  h.push('</table>');
+  h.push('</div>');
+
+  // Right: Financial + EOT
+  h.push('<div class="panel">');
+  h.push('<div class="sec-label">Financial Position</div>');
+  h.push('<table>');
+  h.push('<tr><td style="font-weight:600;">Contract Sum</td><td style="text-align:right;font-weight:800;">£' + contractSum.toLocaleString() + '</td></tr>');
+  h.push('<tr><td>Certified to Date (AFP1+2 net)</td><td style="text-align:right;font-weight:700;color:#0369a1;">£' + afp2Net.toLocaleString() + '</td></tr>');
+  h.push('<tr><td>% of Contract Certified</td><td style="text-align:right;">' + certPct + '%</td></tr>');
+  h.push('<tr><td>Retention Held (est. 5%)</td><td style="text-align:right;color:#dc2626;">£' + retentionHeld.toLocaleString() + '</td></tr>');
+  h.push('<tr><td style="font-weight:600;">Forecast Final Account</td><td style="text-align:right;font-weight:700;color:#16a34a;">£' + forecastFAC.toLocaleString() + ' +vars</td></tr>');
+  h.push('</table>');
+
+  h.push('<div class="sec-label" style="margin-top:10px;">AFP Schedule</div>');
+  h.push('<table>');
+  h.push('<tr><th>AFP</th><th>Description</th><th style="text-align:right;">Net Value</th></tr>');
+  h.push('<tr><td>AFP 1</td><td>Drainage works to end April</td><td style="text-align:right;">£(prev. certified)</td></tr>');
+  h.push('<tr><td style="font-weight:700;">AFP 2</td><td style="font-weight:700;">Certified</td><td style="text-align:right;font-weight:700;">£156,739</td></tr>');
+  h.push('<tr style="background:#fffbeb;"><td style="font-weight:700;color:#d97706;">AFP 3</td><td style="color:#d97706;">Submit ~22 May, forecast to 29 May</td><td style="text-align:right;color:#d97706;font-weight:700;">' + nextAFPValue + '</td></tr>');
+  h.push('<tr><td>AFP 4</td><td>Final account &amp; retention release</td><td style="text-align:right;color:#94a3b8;">TBC</td></tr>');
+  h.push('</table>');
+
+  h.push('<div class="sec-label" style="margin-top:10px;">Extension of Time</div>');
+  h.push('<table>');
+  h.push('<tr><th>Event</th><th style="text-align:right;">WDs Added</th><th style="text-align:right;">Completion</th></tr>');
+  h.push('<tr><td>Original programme</td><td style="text-align:right;">—</td><td style="text-align:right;">12 Jun 2026</td></tr>');
+  h.push('<tr style="background:#f0fdf4;"><td style="font-weight:700;color:#16a34a;">Agreed EOT 1</td><td style="text-align:right;font-weight:700;color:#16a34a;">+' + eotDays + ' WDs</td><td style="text-align:right;font-weight:700;color:#16a34a;">26 Jun 2026</td></tr>');
+  h.push('</table>');
+  h.push('</div>'); // end right panel
+  h.push('</div>'); // end two-col
+
+  // ── TWO COL: WORKS COMPLETED + PLANNED ────────────────────────────────────
+  h.push('<div class="two-col" style="margin-top:14px;">');
+
+  h.push('<div class="panel">');
+  h.push('<div class="sec-label">Works Completed This Period (' + fmt(periodStart,true) + ' – ' + fmt(periodEnd,true) + ')</div>');
+  h.push('<table><tr><th>Zone</th><th>Activity</th><th style="text-align:right;">Status</th></tr>');
+  h.push(completedRows);
+  h.push('</table></div>');
+
+  h.push('<div class="panel">');
+  h.push('<div class="sec-label">Critical Works — Next Fortnight (' + fmt(today,true) + ' – ' + fmt(fwdEnd,true) + ')</div>');
+  h.push('<table><tr><th>Zone</th><th>Activity</th><th style="text-align:right;">Due</th></tr>');
+  h.push(plannedRows);
+  h.push('</table></div>');
+
+  h.push('</div>'); // end two-col
+
+  // ── RISKS & ISSUES ────────────────────────────────────────────────────────
+  h.push('<div class="sec-label" style="margin-top:14px;">Risk Register &amp; Key Issues</div>');
+  h.push('<table>');
+  h.push('<tr><th style="width:50px;">RAG</th><th>Risk / Issue</th><th style="width:140px;">Impact</th><th>Mitigation / Action</th><th style="width:90px;">Owner</th></tr>');
+  // Auto-generate key risks from zone data
+  var zones5Act = getZoneProgress(7);  // Section F
+  var zones6Act = getZoneProgress(9);  // Section H
+  h.push('<tr>');
+  h.push('<td><span class="' + (zones6Act < 5 ? 'rag-r' : 'rag-a') + '">' + (zones6Act < 5 ? 'RED' : 'AMB') + '</span></td>');
+  h.push('<td>Zones H/I/J drainage runs not started. Programme end now tracking to 3 Jul</td>');
+  h.push('<td>Programme overrun beyond EOT (26 Jun)</td>');
+  h.push('<td>Confirm resource plan &amp; start date; consider second EOT claim if required</td>');
+  h.push('<td>SM + QS</td></tr>');
+
+  h.push('<tr>');
+  h.push('<td><span class="rag-a">AMB</span></td>');
+  h.push('<td>Sections F/G surface works (kerbs, tarmac) pushed to late June. Tarmac pavement due 25 Jun</td>');
+  h.push('<td>Critical path risk to 26 Jun completion</td>');
+  h.push('<td>Maintain drainage progress; pre-order tarmac; coordinate gang resource</td>');
+  h.push('<td>Site Manager</td></tr>');
+
+  h.push('<tr>');
+  h.push('<td><span class="rag-a">AMB</span></td>');
+  h.push('<td>AFP3 submission (22 May) relative to Dandara TT shutdown period</td>');
+  h.push('<td>Cash flow risk if payment delayed by holiday</td>');
+  h.push('<td>Submit AFP3 no later than 22 May. Confirm Dandara TT closure dates</td>');
+  h.push('<td>QS</td></tr>');
+
+  h.push('<tr>');
+  h.push('<td><span class="rag-g">GRN</span></td>');
+  h.push('<td>Sections A–E ahead of programme. Subbase, compaction, terram all complete</td>');
+  h.push('<td>Buffer available if F/G slips further</td>');
+  h.push('<td>Maintain pace; release kerbing gangs to F/G as soon as A–E kerbs complete</td>');
+  h.push('<td>Site Manager</td></tr>');
+
+  h.push('<tr>');
+  h.push('<td><span class="rag-a">AMB</span></td>');
+  h.push('<td>Variations outstanding — verbal instructions not yet formalised</td>');
+  h.push('<td>Final account dispute risk</td>');
+  h.push('<td>QS to issue formal variation instructions with agreed values before end of May</td>');
+  h.push('<td>QS</td></tr>');
+  h.push('</table>');
+
+  // ── FOOTER ────────────────────────────────────────────────────────────────
+  h.push('<div style="margin-top:18px;padding-top:8px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:7.5pt;color:#94a3b8;">');
+  h.push('<span>Drainage &amp; Groundwork Contractors Ltd &mdash; 23 Circular Road, Douglas, IM1 1AF</span>');
+  h.push('<span>Report generated: ' + reportDate + ' &mdash; Ballasalla Phase 4 Control Panel v65</span>');
+  h.push('</div>');
+
+  h.push('</div>'); // .wrap
+  h.push('</body></html>');
+
+  var w = window.open('', '_blank');
+  if (!w) { alert('Please allow pop-ups to open the report.'); return; }
+  w.document.write(h.join('\n'));
+  w.document.close();
+}
+// ══════════════════════════════════════════════════════════════════════════════
+
 
 // ═══════════════════════ ALERTS ═══════════════════════
 // ── Alert state helpers ──
