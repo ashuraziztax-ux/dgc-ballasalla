@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v73</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v74</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -5406,30 +5406,10 @@ function buildFortnightlyReport() {
     + '</div>');
   h.push('</div>');
 
-  // ── TWO COL: ZONE TABLE + FINANCIAL ───────────────────────────────────────
+  // ── TWO COL: FINANCIAL + AFP/EOT ─────────────────────────────────────────
   h.push('<div class="two-col" style="margin-top:4px;">');
 
-  // Left: Programme summary (OVERALL only — zone detail on dashboard)
-  h.push('<div class="panel">');
-  h.push('<div class="sec-label">Programme Summary</div>');
-  h.push('<table>'
-    + '<tr><th colspan="2">Contract</th>'
-    + '<th style="text-align:right;">Rev. Plan%</th>'
-    + '<th style="text-align:right;">Actual%</th>'
-    + '<th style="text-align:right;">Gap</th>'
-    + '<th style="text-align:center;">Status</th></tr>'
-    + '<tr style="font-weight:800;background:#f8fafc;">'
-    + '<td colspan="2">Ballasalla Phase 4'
-    + ' <span style="font-size:7pt;font-weight:400;color:#64748b;">'
-    + '(budget-weighted \u00b7 revised plan 26 Jun)</span></td>'
-    + '<td style="text-align:right;">' + plannedPct + '%</td>'
-    + '<td style="text-align:right;font-weight:800;">' + actualPct + '%</td>'
-    + '<td style="text-align:right;color:' + overallCol + ';font-weight:800;">' + (gapPct>=0?'+':'') + gapPct + '%</td>'
-    + '<td style="text-align:center;background:' + overallBg + ';color:' + overallCol + ';font-weight:800;border-radius:4px;">' + overallStatus + '</td>'
-    + '</tr></table>');
-  h.push('</div>');
-
-  // Right: Financial + EOT
+  // Left: Financial Position (incl. Billing vs Progress)
   h.push('<div class="panel">');
   h.push('<div class="sec-label">Financial Position</div>');
   h.push('<table>');
@@ -5464,8 +5444,11 @@ function buildFortnightlyReport() {
     + _billingLbl + '</span></td></tr>');
   h.push('<tr><td style="font-weight:600;">Forecast Final Account</td><td style="text-align:right;font-weight:700;color:#16a34a;">£' + forecastFAC.toLocaleString() + ' +vars</td></tr>');
   h.push('</table>');
+  h.push('</div>');
 
-  h.push('<div class="sec-label" style="margin-top:10px;">AFP Schedule</div>');
+  // Right: AFP Schedule (top) + Extension of Time
+  h.push('<div class="panel">');
+  h.push('<div class="sec-label">AFP Schedule</div>');
   h.push('<table>');
   h.push('<tr><th>AFP</th><th>Description</th><th style="text-align:right;">Net Value</th></tr>');
   h.push('<tr><td>AFP 1</td><td>Drainage works to end April</td><td style="text-align:right;">£(prev. certified)</td></tr>');
