@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v66</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v67</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -5131,7 +5131,7 @@ function buildFortnightlyReport() {
 
   // ── Programme ──────────────────────────────────────────────────────────────
   var actualPct  = getOverallProgress ? Math.round(getOverallProgress()) : 0;
-  var plannedPct = getPlannedProgress ? Math.round(getPlannedProgress()) : 0;
+  var plannedPct = getRevisedPlanProgress ? Math.round(getRevisedPlanProgress()) : 0;
   var gapPct     = actualPct - plannedPct;
   var overallStatus = gapPct >= 2  ? 'Ahead of Programme'
                     : gapPct <= -5 ? 'Behind Programme'
@@ -5166,7 +5166,7 @@ function buildFortnightlyReport() {
   // Totals row
   var totAct = totalBudget > 0 ? Math.round(totalSpent/totalBudget*100) : 0;
   zoneRows += '<tr style="border-top:2px solid #1e3a5f;font-weight:800;background:#f8fafc;">'
-    + '<td colspan="2">OVERALL</td>'
+    + '<td colspan="2">OVERALL <span style="font-size:7pt;font-weight:400;color:#64748b;">(rev. plan)</span></td>'
     + '<td style="text-align:right;">' + plannedPct + '%</td>'
     + '<td style="text-align:right;">' + actualPct + '%</td>'
     + '<td style="text-align:right;color:' + overallCol + ';">' + (gapPct>=0?'+':'') + gapPct + 'pp</td>'
@@ -5289,7 +5289,7 @@ function buildFortnightlyReport() {
   h.push('<div class="status-banner" style="background:' + overallBg + ';border:1px solid ' + overallCol + '33;margin-top:12px;">');
   h.push('<div style="color:' + overallCol + '"><div class="lbl">Overall Progress</div><div class="big">' + actualPct + '%</div><div style="font-size:7.5pt;color:#64748b;">actual complete</div></div>');
   h.push('<div style="width:1px;background:#e2e8f0;align-self:stretch;"></div>');
-  h.push('<div style="color:#1e293b"><div class="lbl">Programme Target</div><div class="big" style="color:#0f172a;">' + plannedPct + '%</div><div style="font-size:7.5pt;color:#64748b;">should be complete</div></div>');
+  h.push('<div style="color:#1e293b"><div class="lbl">Revised Plan Target</div><div class="big" style="color:#0f172a;">' + plannedPct + '%</div><div style="font-size:7.5pt;color:#64748b;">26 Jun 2026 (incl. EOT)</div></div>');
   h.push('<div style="width:1px;background:#e2e8f0;align-self:stretch;"></div>');
   h.push('<div><div class="lbl">Variance</div><div style="font-size:16pt;font-weight:800;color:' + overallCol + ';">' + (gapPct>=0?'+':'') + gapPct + 'pp</div></div>');
   h.push('<div style="flex:1;text-align:right;"><span class="tag" style="background:' + overallCol + ';color:#fff;">' + overallStatus + '</span><br><span style="font-size:7.5pt;color:#64748b;display:block;margin-top:4px;">Revised completion: 26 Jun 2026</span></div>');
