@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v72</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v73</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -3916,14 +3916,15 @@ var FORTNIGHTLY_PLAN_DATA = {
 // ── Next 14 days planned work (updated each fortnight via apply script) ─────
 var FORTNIGHTLY_NEXT_PLAN = {
   period: '14 May – 27 May 2026',
+  // cf:true = carried forward from previous period (task name must match FORTNIGHTLY_PLAN_DATA exactly)
   items: [
-    {team:'A', task:'F4.4 → F4.6 road crossing',           planned:'14 May'},
-    {team:'A', task:'S4.4 → S4.6 sewer — completion',      planned:'14–15 May'},
-    {team:'B', task:'F4.6 dug + base in',                   planned:'14 May'},
-    {team:'B', task:'F4.4 → F4.6 laterals + backfill',      planned:'15 May'},
-    {team:'B', task:'Laterals + gullies — Zones 5/6',       planned:'15–16 May'},
-    {team:'C', task:'Gully 1+2 — completion',               planned:'14 May'},
-    {team:'C', task:'Kerb log work — 50% target',           planned:'14–21 May'},
+    {team:'A', task:'F4.4 → F4.6 road crossing',                   planned:'14 May',    cf:true},
+    {team:'A', task:'S4.4 → S4.6 sewer',                           planned:'14–15 May', cf:true, note:'completion target'},
+    {team:'B', task:'F4.6 dug + base in',                           planned:'14 May',    cf:true},
+    {team:'B', task:'F4.4 → F4.6 laterals + backfill',              planned:'15 May',    cf:true},
+    {team:'B', task:'Laterals + gullies (supporting Team A)',        planned:'15–16 May', cf:true, note:'Zones 5/6'},
+    {team:'C', task:'Gully 1+2',                                     planned:'14 May',    cf:true, note:'completion target'},
+    {team:'C', task:'Kerb log work — 50% target',                   planned:'14–21 May', cf:true},
   ]
 };
 
@@ -3936,7 +3937,7 @@ var FORTNIGHTLY_EXTRAS = [
 
 // ── Cumulative hit-rate log — appended each fortnight via apply script ────
 var FORTNIGHTLY_HISTORY = [
-  {period:'29 Apr – 13 May 2026', done:8, total:15, extras:0},
+  {period:'29 Apr – 13 May 2026', done:8, total:15, extras:0, cf:7, real_misses:0},
 ];
 
 // ── Embedded baseline: immutable deep copy before any override or drag-edit ──
@@ -5490,15 +5491,32 @@ function buildFortnightlyReport() {
     var _hist= (typeof FORTNIGHTLY_HISTORY  !== 'undefined') ? FORTNIGHTLY_HISTORY  : [];
 
     // ── Metrics ────────────────────────────────────────────────────────────
-    var _done    = _pd ? _pd.items.filter(function(i){return i.status==='done';}).length : 0;
-    var _total   = _pd ? _pd.items.filter(function(i){return i.status!=='cancelled';}).length : 0;
-    var _extras  = _ext.length;
-    var _planRate = _total > 0 ? Math.round(_done/_total*100) : 0;
-    var _adjRate  = (_total+_extras) > 0 ? Math.round((_done+_extras)/(_total+_extras)*100) : 0;
-    var _histAvgDone=0, _histAvgTotal=0;
-    _hist.forEach(function(h){_histAvgDone+=h.done+(h.extras||0); _histAvgTotal+=h.total+(h.extras||0);});
-    var _avgRate  = _histAvgTotal > 0 ? Math.round(_histAvgDone/_histAvgTotal*100) : _planRate;
-    var _rateCol  = function(r){ return r>=75?'#16a34a':r>=50?'#d97706':'#dc2626'; };
+    // Build cf lookup: team:task keys for items marked cf:true in next plan
+    var _cfKeys = {};
+    if (_np && _np.items) {
+      _np.items.forEach(function(i){ if(i.cf) _cfKeys[i.team+':'+i.task] = true; });
+    }
+    var _done       = _pd ? _pd.items.filter(function(i){return i.status==='done';}).length : 0;
+    var _cfCount    = _pd ? _pd.items.filter(function(i){
+      return (i.status==='not_done'||i.status==='partial') && _cfKeys[i.team+':'+i.task];
+    }).length : 0;
+    var _realMisses = _pd ? _pd.items.filter(function(i){
+      return (i.status==='not_done'||i.status==='partial') && !_cfKeys[i.team+':'+i.task];
+    }).length : 0;
+    var _extras     = _ext.length;
+    // Rate = done / (done + real_misses) — CF items are managed, not failures
+    var _planRate   = (_done+_realMisses) > 0 ? Math.round(_done/(_done+_realMisses)*100) : 100;
+    var _adjRate    = (_done+_realMisses+_extras) > 0
+                    ? Math.round((_done+_extras)/(_done+_realMisses+_extras)*100) : 100;
+    // Running average uses real_misses field if available, else falls back to total
+    var _histDone=0, _histPool=0;
+    _hist.forEach(function(h){
+      var hm = (h.real_misses !== undefined) ? h.real_misses : (h.total - h.done - (h.cf||0));
+      _histDone  += h.done + (h.extras||0);
+      _histPool  += h.done + hm + (h.extras||0);
+    });
+    var _avgRate    = _histPool > 0 ? Math.round(_histDone/_histPool*100) : _planRate;
+    var _rateCol    = function(r){ return r>=75?'#16a34a':r>=50?'#d97706':'#dc2626'; };
 
     // ── Section header ──────────────────────────────────────────────────────
     h.push('<div class="sec-label" style="margin-top:14px;">14-Day Site Plan</div>');
@@ -5517,15 +5535,21 @@ function buildFortnightlyReport() {
         + '<th style="width:38px;text-align:center;">&#10003;/&#10007;</th></tr>');
       var _pt = null;
       _pd.items.forEach(function(item) {
-        var icon = item.status==='done'     ? '<span style="color:#16a34a;font-size:12pt;font-weight:800;">&#10003;</span>'
+        var isCF = (item.status==='not_done'||item.status==='partial') && _cfKeys[item.team+':'+item.task];
+        var icon = item.status==='done' ? '<span style="color:#16a34a;font-size:12pt;font-weight:800;">&#10003;</span>'
+                 : isCF               ? '<span style="color:#d97706;font-size:11pt;font-weight:800;">&#10132;</span>'
                  : item.status==='not_done' ? '<span style="color:#dc2626;font-size:12pt;font-weight:800;">&#10007;</span>'
                  : item.status==='partial'  ? '<span style="color:#d97706;font-size:10pt;font-weight:800;">~</span>'
                  :                           '<span style="color:#94a3b8;">&mdash;</span>';
-        var rowBg = item.status==='not_done'?'background:#fff8f8;':item.status==='partial'?'background:#fffcf0;':'';
+        var rowBg = isCF ? 'background:#fffbeb;'
+                  : item.status==='not_done' ? 'background:#fff8f8;'
+                  : item.status==='partial'  ? 'background:#fffcf0;' : '';
         var tl = item.team!==_pt ? '<b>Tm'+item.team+'</b>' : '';
         if(item.team!==_pt) _pt=item.team;
         h.push('<tr style="'+rowBg+'"><td style="font-size:8pt;color:#1e3a5f;">'+tl+'</td>'
-          + '<td style="font-size:8pt;">'+item.task+(item.note?'<br><span style="font-size:7pt;color:#94a3b8;">'+item.note+'</span>':'')+'</td>'
+          + '<td style="font-size:8pt;">'+item.task
+          + (isCF ? ' <span style="font-size:7pt;color:#d97706;font-weight:700;">CF</span>' : '')
+          + (item.note?'<br><span style="font-size:7pt;color:#94a3b8;">'+item.note+'</span>':'')+'</td>'
           + '<td style="text-align:center;">'+icon+'</td></tr>');
       });
       h.push('</table>');
@@ -5585,9 +5609,9 @@ function buildFortnightlyReport() {
     h.push('<div style="margin-top:10px;padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;">');
     h.push('<div style="font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;">Success Rate</div>');
     h.push('<div style="text-align:center;">'
-      + '<div style="font-size:7pt;color:#64748b;margin-bottom:1px;">This period (planned)</div>'
+      + '<div style="font-size:7pt;color:#64748b;margin-bottom:1px;">This period</div>'
       + '<div style="font-size:18pt;font-weight:800;color:'+_rateCol(_planRate)+';line-height:1;">'+_planRate+'%</div>'
-      + '<div style="font-size:7pt;color:#94a3b8;">'+_done+'/'+_total+' activities</div>'
+      + '<div style="font-size:7pt;color:#94a3b8;">'+_done+' done · '+_realMisses+' missed · '+_cfCount+' CF</div>'
       + '</div>');
     if (_extras > 0) {
       h.push('<div style="text-align:center;">'
