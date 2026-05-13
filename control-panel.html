@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v68</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v69</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -5326,12 +5326,24 @@ function buildFortnightlyReport() {
   // ── TWO COL: ZONE TABLE + FINANCIAL ───────────────────────────────────────
   h.push('<div class="two-col" style="margin-top:4px;">');
 
-  // Left: Zone status
+  // Left: Programme summary (OVERALL only — zone detail on dashboard)
   h.push('<div class="panel">');
-  h.push('<div class="sec-label">Programme Status by Zone</div>');
-  h.push('<table><tr><th>Zone</th><th>Budget</th><th style="text-align:right;">Plan%</th><th style="text-align:right;">Actual%</th><th style="text-align:right;">Gap</th><th style="text-align:center;">Status</th></tr>');
-  h.push(zoneRows);
-  h.push('</table>');
+  h.push('<div class="sec-label">Programme Summary</div>');
+  h.push('<table>'
+    + '<tr><th colspan="2">Contract</th>'
+    + '<th style="text-align:right;">Rev. Plan%</th>'
+    + '<th style="text-align:right;">Actual%</th>'
+    + '<th style="text-align:right;">Gap</th>'
+    + '<th style="text-align:center;">Status</th></tr>'
+    + '<tr style="font-weight:800;background:#f8fafc;">'
+    + '<td colspan="2">Ballasalla Phase 4'
+    + ' <span style="font-size:7pt;font-weight:400;color:#64748b;">'
+    + '(budget-weighted \u00b7 revised plan 26 Jun)</span></td>'
+    + '<td style="text-align:right;">' + plannedPct + '%</td>'
+    + '<td style="text-align:right;font-weight:800;">' + actualPct + '%</td>'
+    + '<td style="text-align:right;color:' + overallCol + ';font-weight:800;">' + (gapPct>=0?'+':'') + gapPct + 'pp</td>'
+    + '<td style="text-align:center;background:' + overallBg + ';color:' + overallCol + ';font-weight:800;border-radius:4px;">' + overallStatus + '</td>'
+    + '</tr></table>');
   h.push('</div>');
 
   // Right: Financial + EOT
@@ -5413,9 +5425,25 @@ function buildFortnightlyReport() {
   h.push('<div class="two-col" style="margin-top:14px;">');
 
   h.push('<div class="panel">');
-  h.push('<div class="sec-label">Works Completed This Period (' + fmt(periodStart,true) + ' – ' + fmt(periodEnd,true) + ')</div>');
-  h.push('<table><tr><th>Zone</th><th>Activity</th><th style="text-align:right;">Status</th></tr>');
-  h.push(completedRows);
+  h.push('<div class="sec-label">Carry Forward — Outstanding Items</div>');
+  var _cfRows = '';
+  if (typeof FORTNIGHTLY_PLAN_DATA !== 'undefined' && FORTNIGHTLY_PLAN_DATA.items) {
+    FORTNIGHTLY_PLAN_DATA.items
+      .filter(function(i){ return i.status === 'not_done' || i.status === 'partial'; })
+      .forEach(function(item) {
+        var icon = item.status === 'partial' ? '~' : '&#10007;';
+        var col  = item.status === 'partial' ? '#d97706' : '#dc2626';
+        var rowBg = item.status === 'not_done' ? 'background:#fff8f8;' : 'background:#fffcf0;';
+        _cfRows += '<tr style="' + rowBg + '">'
+          + '<td style="font-weight:700;color:#1e3a5f;white-space:nowrap;">Team ' + item.team + '</td>'
+          + '<td>' + item.task + '</td>'
+          + '<td style="text-align:center;font-size:11pt;font-weight:800;color:' + col + ';">' + icon + '</td>'
+          + '</tr>';
+      });
+  }
+  if (!_cfRows) _cfRows = '<tr><td colspan="3" style="color:#16a34a;font-style:italic;">All planned items completed &#10003;</td></tr>';
+  h.push('<table><tr><th>Team</th><th>Outstanding Activity</th><th style="text-align:center;">Status</th></tr>');
+  h.push(_cfRows);
   h.push('</table></div>');
 
   h.push('<div class="panel">');
