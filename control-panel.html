@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v70</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v71</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -1347,6 +1347,26 @@ function clearForm() {
       <div class="kpi-label">Net AFP 2 Payment</div>
       <div class="kpi-value">£156,739</div>
       <div class="kpi-sub">Ian Barnes certified — due 28 May</div>
+    </div>
+    <div class="kpi-card" id="billing-progress-card" style="grid-column:span 2;">
+      <div class="kpi-label">Billing vs Progress</div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin:6px 0 4px;">
+        <div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:2px;">Certified</div>
+          <div style="font-size:22px;font-weight:800;color:#34d399;" id="bvp-cert-pct">35%</div>
+        </div>
+        <div style="font-size:18px;color:var(--muted);">vs</div>
+        <div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:2px;">Work Done</div>
+          <div style="font-size:22px;font-weight:800;color:#f59e0b;" id="bvp-work-pct">—%</div>
+        </div>
+        <div style="margin-left:auto;text-align:right;">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:2px;">Balance</div>
+          <div style="font-size:18px;font-weight:800;" id="bvp-gap">—</div>
+          <div style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;margin-top:2px;display:inline-block;" id="bvp-label">—</div>
+        </div>
+      </div>
+      <div style="font-size:9px;color:var(--muted);">The closer these are, the safer it is for everyone</div>
     </div>
     <div class="kpi-card" id="afp-overdue-card" style="display:none;">
       <div class="kpi-label" style="color:#ef4444;">&#9888; Payment Overdue</div>
@@ -4992,6 +5012,27 @@ window.addEventListener('DOMContentLoaded', () => {
   // Hero bar: GanttPro physical fill (green), gap to revised (red), revised marker
   const gapPct = Math.max(0, revisedPct - progress);
   set('kpi-gap-pct', gapPct + '%');
+
+  // ── Billing vs Progress (Financial tab tile) ──────────────────────────
+  var _afpCertPct  = Math.round(156739 / (typeof CONTRACT_SUM!=='undefined'?CONTRACT_SUM:450142) * 100);
+  var _workPct     = Math.round(progress);
+  var _bvpGap      = _afpCertPct - _workPct;
+  var _bvpLbl      = Math.abs(_bvpGap) <= 5  ? 'Balanced'
+                   : _bvpGap < -20            ? 'Significantly Underclaimed'
+                   : _bvpGap < 0              ? 'Underclaimed'
+                   :                            'Overclaimed';
+  var _bvpCol      = Math.abs(_bvpGap) <= 5  ? '#16a34a'
+                   : _bvpGap > 0              ? '#dc2626'
+                   : _bvpGap < -20            ? '#dc2626'
+                   :                            '#d97706';
+  set('bvp-cert-pct', _afpCertPct + '%');
+  set('bvp-work-pct', _workPct + '%');
+  set('bvp-gap',      (_bvpGap >= 0 ? '+' : '') + _bvpGap + '%');
+  set('bvp-label',    _bvpLbl);
+  var _bvpGapEl  = document.getElementById('bvp-gap');
+  var _bvpLblEl  = document.getElementById('bvp-label');
+  if (_bvpGapEl)  _bvpGapEl.style.color = _bvpCol;
+  if (_bvpLblEl) { _bvpLblEl.style.color = _bvpCol; _bvpLblEl.style.background = _bvpCol + '18'; }
   try {
     const barC = document.getElementById('bar-certified');
     const barG = document.getElementById('bar-gap');
@@ -5369,6 +5410,31 @@ function buildFortnightlyReport() {
   h.push('<tr><td>Certified to Date (AFP1+2 net)</td><td style="text-align:right;font-weight:700;color:#0369a1;">£' + afp2Net.toLocaleString() + '</td></tr>');
   h.push('<tr><td>% of Contract Certified</td><td style="text-align:right;">' + certPct + '%</td></tr>');
   h.push('<tr><td>Retention Held (est. 5%)</td><td style="text-align:right;color:#dc2626;">£' + retentionHeld.toLocaleString() + '</td></tr>');
+  // ── Billing vs Progress ────────────────────────────────────────────────
+  var _billingGap = certPct - actualPct;
+  var _billingLbl = Math.abs(_billingGap) <= 5 ? 'Balanced'
+                  : _billingGap < -20           ? 'Significantly Underclaimed'
+                  : _billingGap < 0             ? 'Underclaimed'
+                  :                               'Overclaimed';
+  var _billingCol = Math.abs(_billingGap) <= 5  ? '#16a34a'
+                  : _billingGap > 0              ? '#dc2626'
+                  : _billingGap < -20            ? '#dc2626'
+                  :                               '#d97706';
+  h.push('<tr style="border-top:2px solid #e2e8f0;">'
+    + '<td colspan="2" style="font-size:7pt;font-weight:700;text-transform:uppercase;'
+    + 'letter-spacing:.08em;color:#64748b;padding-top:7px;padding-bottom:2px;">'
+    + 'Billing vs Progress</td></tr>');
+  h.push('<tr><td>Certified (money claimed)</td>'
+    + '<td style="text-align:right;">' + certPct + '%</td></tr>');
+  h.push('<tr><td>Work Complete (physical progress)</td>'
+    + '<td style="text-align:right;font-weight:700;">' + actualPct + '%</td></tr>');
+  h.push('<tr><td style="font-weight:700;">Balance</td>'
+    + '<td style="text-align:right;">'
+    + '<span style="font-weight:800;color:' + _billingCol + ';margin-right:6px;">'
+    + (_billingGap >= 0 ? '+' : '') + _billingGap + '%</span>'
+    + '<span style="background:' + _billingCol + '18;color:' + _billingCol + ';'
+    + 'padding:1px 6px;border-radius:3px;font-size:7.5pt;font-weight:700;">'
+    + _billingLbl + '</span></td></tr>');
   h.push('<tr><td style="font-weight:600;">Forecast Final Account</td><td style="text-align:right;font-weight:700;color:#16a34a;">£' + forecastFAC.toLocaleString() + ' +vars</td></tr>');
   h.push('</table>');
 
