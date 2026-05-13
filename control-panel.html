@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v69</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v70</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -5178,7 +5178,7 @@ function buildFortnightlyReport() {
     var rag    = gap >= 2 ? '#16a34a' : gap <= -5 ? '#dc2626' : '#d97706';
     var ragBg  = gap >= 2 ? '#f0fdf4' : gap <= -5 ? '#fef2f2' : '#fffbeb';
     var ragLbl = gap >= 2 ? 'Ahead'   : gap <= -5 ? 'Behind'  : 'On Track';
-    var gapStr = (gap >= 0 ? '+' : '') + gap + 'pp';
+    var gapStr = (gap >= 0 ? '+' : '') + gap + '%';
     var val    = bud > 0 ? '£' + Math.round(bud/1000) + 'k' : '—';
     totalBudget += bud;
     totalSpent  += bud * act / 100;
@@ -5197,7 +5197,7 @@ function buildFortnightlyReport() {
     + '<td colspan="2">OVERALL <span style="font-size:7pt;font-weight:400;color:#64748b;">(rev. plan)</span></td>'
     + '<td style="text-align:right;">' + plannedPct + '%</td>'
     + '<td style="text-align:right;">' + actualPct + '%</td>'
-    + '<td style="text-align:right;color:' + overallCol + ';">' + (gapPct>=0?'+':'') + gapPct + 'pp</td>'
+    + '<td style="text-align:right;color:' + overallCol + ';">' + (gapPct>=0?'+':'') + gapPct + '%</td>'
     + '<td style="text-align:center;background:' + overallBg + ';color:' + overallCol + ';font-weight:800;border-radius:4px;">' + overallStatus + '</td>'
     + '</tr>';
 
@@ -5305,7 +5305,18 @@ function buildFortnightlyReport() {
 
   // ── REPORT HEADER ─────────────────────────────────────────────────────────
   h.push('<div class="rpt-header">');
-  h.push('<div><div class="co">DGC</div><div style="font-size:9pt;color:#cbd5e1;margin-top:1px;">Drainage &amp; Groundwork Contractors Ltd</div></div>');
+  h.push('<div style="display:flex;align-items:center;gap:12px;">'
+    + '<svg width="46" height="46" viewBox="0 0 46 46" style="flex-shrink:0;">'
+    + '<circle cx="23" cy="23" r="22" fill="#f59e0b"/>'
+    + '<circle cx="23" cy="23" r="16" fill="#0f172a"/>'
+    + '<text x="23" y="28" text-anchor="middle" fill="#f59e0b"'
+    + ' font-family="Arial,sans-serif" font-size="10" font-weight="900" letter-spacing="1">DGC</text>'
+    + '</svg>'
+    + '<div>'
+    + '<div class="co">DGC</div>'
+    + '<div style="font-size:9pt;color:#cbd5e1;margin-top:1px;">Drainage &amp; Groundwork Contractors Ltd</div>'
+    + '</div>'
+    + '</div>');
   h.push('<div class="meta">');
   h.push('<strong>FORTNIGHTLY PROGRESS REPORT</strong><br>');
   h.push('Contract: Ballasalla Phase 4 &mdash; Dandara Homes<br>');
@@ -5319,8 +5330,12 @@ function buildFortnightlyReport() {
   h.push('<div style="width:1px;background:#e2e8f0;align-self:stretch;"></div>');
   h.push('<div style="color:#1e293b"><div class="lbl">Revised Plan Target</div><div class="big" style="color:#0f172a;">' + plannedPct + '%</div><div style="font-size:7.5pt;color:#64748b;">26 Jun 2026 (incl. EOT)</div></div>');
   h.push('<div style="width:1px;background:#e2e8f0;align-self:stretch;"></div>');
-  h.push('<div><div class="lbl">Variance</div><div style="font-size:16pt;font-weight:800;color:' + overallCol + ';">' + (gapPct>=0?'+':'') + gapPct + 'pp</div></div>');
-  h.push('<div style="flex:1;text-align:right;"><span class="tag" style="background:' + overallCol + ';color:#fff;">' + overallStatus + '</span><br><span style="font-size:7.5pt;color:#64748b;display:block;margin-top:4px;">Revised completion: 26 Jun 2026</span></div>');
+  h.push('<div><div class="lbl">Variance</div><div style="font-size:16pt;font-weight:800;color:' + overallCol + ';">' + (gapPct>=0?'+':'') + gapPct + '%</div></div>');
+  h.push('<div style="flex:1;text-align:right;">'
+    + '<span class="tag" style="background:' + overallCol + ';color:#fff;">' + overallStatus + '</span>'
+    + '<br><span style="font-size:7.5pt;color:#64748b;display:block;margin-top:4px;">Revised completion: 26 Jun 2026</span>'
+    + '<br><span style="font-size:7pt;color:#94a3b8;display:block;margin-top:2px;">Last updated: ' + reportDate + '</span>'
+    + '</div>');
   h.push('</div>');
 
   // ── TWO COL: ZONE TABLE + FINANCIAL ───────────────────────────────────────
@@ -5341,7 +5356,7 @@ function buildFortnightlyReport() {
     + '(budget-weighted \u00b7 revised plan 26 Jun)</span></td>'
     + '<td style="text-align:right;">' + plannedPct + '%</td>'
     + '<td style="text-align:right;font-weight:800;">' + actualPct + '%</td>'
-    + '<td style="text-align:right;color:' + overallCol + ';font-weight:800;">' + (gapPct>=0?'+':'') + gapPct + 'pp</td>'
+    + '<td style="text-align:right;color:' + overallCol + ';font-weight:800;">' + (gapPct>=0?'+':'') + gapPct + '%</td>'
     + '<td style="text-align:center;background:' + overallBg + ';color:' + overallCol + ';font-weight:800;border-radius:4px;">' + overallStatus + '</td>'
     + '</tr></table>');
   h.push('</div>');
