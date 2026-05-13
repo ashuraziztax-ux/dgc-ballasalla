@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v71</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v72</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -3913,6 +3913,32 @@ var FORTNIGHTLY_PLAN_DATA = {
   ]
 };
 
+// ── Next 14 days planned work (updated each fortnight via apply script) ─────
+var FORTNIGHTLY_NEXT_PLAN = {
+  period: '14 May – 27 May 2026',
+  items: [
+    {team:'A', task:'F4.4 → F4.6 road crossing',           planned:'14 May'},
+    {team:'A', task:'S4.4 → S4.6 sewer — completion',      planned:'14–15 May'},
+    {team:'B', task:'F4.6 dug + base in',                   planned:'14 May'},
+    {team:'B', task:'F4.4 → F4.6 laterals + backfill',      planned:'15 May'},
+    {team:'B', task:'Laterals + gullies — Zones 5/6',       planned:'15–16 May'},
+    {team:'C', task:'Gully 1+2 — completion',               planned:'14 May'},
+    {team:'C', task:'Kerb log work — 50% target',           planned:'14–21 May'},
+  ]
+};
+
+// ── Extra work done this period — not in the 14-day plan ─────────────────
+// Add items here when work was completed outside the plan
+// {team, task, note} — these explain why planned items may have been missed
+var FORTNIGHTLY_EXTRAS = [
+  // Example: {team:'A', task:'Emergency drainage repair — Z5', note:'Instructed by site manager'}
+];
+
+// ── Cumulative hit-rate log — appended each fortnight via apply script ────
+var FORTNIGHTLY_HISTORY = [
+  {period:'29 Apr – 13 May 2026', done:8, total:15, extras:0},
+];
+
 // ── Embedded baseline: immutable deep copy before any override or drag-edit ──
 // TASKS_EMBEDDED is captured here and NEVER overwritten:
 //   · Gantt 'Last Agreed' mode shows this (the signed-off programme)
@@ -5456,84 +5482,130 @@ function buildFortnightlyReport() {
   h.push('</div>'); // end right panel
   h.push('</div>'); // end two-col
 
-  // ── PLAN vs ACHIEVED ──────────────────────────────────────────────────────
-  if (typeof FORTNIGHTLY_PLAN_DATA !== 'undefined' && FORTNIGHTLY_PLAN_DATA.items && FORTNIGHTLY_PLAN_DATA.items.length) {
-    var _fpDone  = FORTNIGHTLY_PLAN_DATA.items.filter(function(i){ return i.status === 'done'; }).length;
-    var _fpTotal = FORTNIGHTLY_PLAN_DATA.items.filter(function(i){ return i.status !== 'cancelled'; }).length;
-    var _fpRate  = _fpTotal > 0 ? Math.round(_fpDone / _fpTotal * 100) : 0;
-    var _fpCol   = _fpRate >= 75 ? '#16a34a' : _fpRate >= 50 ? '#d97706' : '#dc2626';
-    h.push('<div class="sec-label" style="margin-top:14px;">14-Day Site Plan: Planned vs Achieved'
-      + ' &nbsp;<span style="font-weight:400;color:#64748b;">'
-      + FORTNIGHTLY_PLAN_DATA.period
-      + ' &nbsp;&middot;&nbsp; <span style="color:' + _fpCol + ';font-weight:700;">'
-      + _fpRate + '% hit rate</span> (' + _fpDone + '/' + _fpTotal + ' activities)'
-      + '</span></div>');
-    h.push('<table><tr>'
-      + '<th style="width:46px;">Team</th>'
-      + '<th>Planned Activity</th>'
-      + '<th style="width:80px;text-align:right;">When</th>'
-      + '<th style="width:56px;text-align:center;">Result</th>'
-      + '<th style="width:180px;">Notes</th>'
-      + '</tr>');
-    var _prevTeam = null;
-    FORTNIGHTLY_PLAN_DATA.items.forEach(function(item) {
-      var icon = item.status === 'done'      ? '&#10003;'
-               : item.status === 'not_done'  ? '&#10007;'
-               : item.status === 'partial'   ? '~'
-               : '&#8212;';
-      var col  = item.status === 'done'      ? '#16a34a'
-               : item.status === 'not_done'  ? '#dc2626'
-               : item.status === 'partial'   ? '#d97706'
-               : '#94a3b8';
-      var rowBg = item.status === 'not_done' ? 'background:#fff8f8;'
-                : item.status === 'partial'  ? 'background:#fffcf0;'
-                : item.status === 'cancelled'? 'background:#f8fafc;'
-                : '';
-      var teamLabel = item.team !== _prevTeam ? 'Team&nbsp;' + item.team : '';
-      if (item.team !== _prevTeam) _prevTeam = item.team;
-      h.push('<tr style="' + rowBg + '">'
-        + '<td style="font-weight:700;color:#1e3a5f;white-space:nowrap;">' + teamLabel + '</td>'
-        + '<td>' + item.task + '</td>'
-        + '<td style="text-align:right;color:#64748b;font-size:8pt;">' + (item.planned||'') + '</td>'
-        + '<td style="text-align:center;font-size:13pt;font-weight:800;color:' + col + ';">' + icon + '</td>'
-        + '<td style="font-size:8pt;color:#64748b;">' + (item.note||'') + '</td>'
-        + '</tr>');
-    });
-    h.push('</table>');
-  }
+  // ── 14-DAY PLAN: LAST PERIOD vs NEXT PERIOD (side by side) ─────────────
+  (function() {
+    var _pd  = (typeof FORTNIGHTLY_PLAN_DATA !== 'undefined') ? FORTNIGHTLY_PLAN_DATA : null;
+    var _np  = (typeof FORTNIGHTLY_NEXT_PLAN !== 'undefined') ? FORTNIGHTLY_NEXT_PLAN : null;
+    var _ext = (typeof FORTNIGHTLY_EXTRAS   !== 'undefined') ? FORTNIGHTLY_EXTRAS   : [];
+    var _hist= (typeof FORTNIGHTLY_HISTORY  !== 'undefined') ? FORTNIGHTLY_HISTORY  : [];
 
-  // ── TWO COL: WORKS COMPLETED + PLANNED ────────────────────────────────────
-  h.push('<div class="two-col" style="margin-top:14px;">');
+    // ── Metrics ────────────────────────────────────────────────────────────
+    var _done    = _pd ? _pd.items.filter(function(i){return i.status==='done';}).length : 0;
+    var _total   = _pd ? _pd.items.filter(function(i){return i.status!=='cancelled';}).length : 0;
+    var _extras  = _ext.length;
+    var _planRate = _total > 0 ? Math.round(_done/_total*100) : 0;
+    var _adjRate  = (_total+_extras) > 0 ? Math.round((_done+_extras)/(_total+_extras)*100) : 0;
+    var _histAvgDone=0, _histAvgTotal=0;
+    _hist.forEach(function(h){_histAvgDone+=h.done+(h.extras||0); _histAvgTotal+=h.total+(h.extras||0);});
+    var _avgRate  = _histAvgTotal > 0 ? Math.round(_histAvgDone/_histAvgTotal*100) : _planRate;
+    var _rateCol  = function(r){ return r>=75?'#16a34a':r>=50?'#d97706':'#dc2626'; };
 
-  h.push('<div class="panel">');
-  h.push('<div class="sec-label">Carry Forward — Outstanding Items</div>');
-  var _cfRows = '';
-  if (typeof FORTNIGHTLY_PLAN_DATA !== 'undefined' && FORTNIGHTLY_PLAN_DATA.items) {
-    FORTNIGHTLY_PLAN_DATA.items
-      .filter(function(i){ return i.status === 'not_done' || i.status === 'partial'; })
-      .forEach(function(item) {
-        var icon = item.status === 'partial' ? '~' : '&#10007;';
-        var col  = item.status === 'partial' ? '#d97706' : '#dc2626';
-        var rowBg = item.status === 'not_done' ? 'background:#fff8f8;' : 'background:#fffcf0;';
-        _cfRows += '<tr style="' + rowBg + '">'
-          + '<td style="font-weight:700;color:#1e3a5f;white-space:nowrap;">Team ' + item.team + '</td>'
-          + '<td>' + item.task + '</td>'
-          + '<td style="text-align:center;font-size:11pt;font-weight:800;color:' + col + ';">' + icon + '</td>'
-          + '</tr>';
+    // ── Section header ──────────────────────────────────────────────────────
+    h.push('<div class="sec-label" style="margin-top:14px;">14-Day Site Plan</div>');
+
+    // ── Two-column grid: last period | next period ─────────────────────────
+    h.push('<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:0;">');
+
+    // ── LEFT: Last 14 Days ─────────────────────────────────────────────────
+    h.push('<div>');
+    h.push('<div style="font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.07em;'
+      + 'color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:3px;margin-bottom:6px;">'
+      + 'Last 14 Days &nbsp;<span style="font-weight:400;color:#64748b;font-size:7.5pt;">'
+      + (_pd?_pd.period:'') + '</span></div>');
+    if (_pd && _pd.items.length) {
+      h.push('<table><tr><th style="width:40px;">Team</th><th>Activity</th>'
+        + '<th style="width:38px;text-align:center;">&#10003;/&#10007;</th></tr>');
+      var _pt = null;
+      _pd.items.forEach(function(item) {
+        var icon = item.status==='done'     ? '<span style="color:#16a34a;font-size:12pt;font-weight:800;">&#10003;</span>'
+                 : item.status==='not_done' ? '<span style="color:#dc2626;font-size:12pt;font-weight:800;">&#10007;</span>'
+                 : item.status==='partial'  ? '<span style="color:#d97706;font-size:10pt;font-weight:800;">~</span>'
+                 :                           '<span style="color:#94a3b8;">&mdash;</span>';
+        var rowBg = item.status==='not_done'?'background:#fff8f8;':item.status==='partial'?'background:#fffcf0;':'';
+        var tl = item.team!==_pt ? '<b>Tm'+item.team+'</b>' : '';
+        if(item.team!==_pt) _pt=item.team;
+        h.push('<tr style="'+rowBg+'"><td style="font-size:8pt;color:#1e3a5f;">'+tl+'</td>'
+          + '<td style="font-size:8pt;">'+item.task+(item.note?'<br><span style="font-size:7pt;color:#94a3b8;">'+item.note+'</span>':'')+'</td>'
+          + '<td style="text-align:center;">'+icon+'</td></tr>');
       });
-  }
-  if (!_cfRows) _cfRows = '<tr><td colspan="3" style="color:#16a34a;font-style:italic;">All planned items completed &#10003;</td></tr>';
-  h.push('<table><tr><th>Team</th><th>Outstanding Activity</th><th style="text-align:center;">Status</th></tr>');
-  h.push(_cfRows);
-  h.push('</table></div>');
+      h.push('</table>');
+    }
+    h.push('</div>');
 
-  h.push('<div class="panel">');
-  h.push('<div class="sec-label">Critical Works — Next Fortnight (' + fmt(today,true) + ' – ' + fmt(fwdEnd,true) + ')</div>');
-  h.push('<table><tr><th>Zone</th><th>Activity</th><th style="text-align:right;">Due</th></tr>');
-  h.push(plannedRows);
-  h.push('</table></div>');
+    // ── RIGHT: Next 14 Days ────────────────────────────────────────────────
+    h.push('<div>');
+    h.push('<div style="font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.07em;'
+      + 'color:#0f172a;border-bottom:2px solid #f59e0b;padding-bottom:3px;margin-bottom:6px;">'
+      + 'Next 14 Days &nbsp;<span style="font-weight:400;color:#64748b;font-size:7.5pt;">'
+      + (_np?_np.period:'') + '</span></div>');
+    if (_np && _np.items.length) {
+      h.push('<table><tr><th style="width:40px;">Team</th><th>Planned Activity</th>'
+        + '<th style="width:60px;text-align:right;">When</th></tr>');
+      var _nt = null;
+      _np.items.forEach(function(item) {
+        var tl = item.team!==_nt ? '<b>Tm'+item.team+'</b>' : '';
+        if(item.team!==_nt) _nt=item.team;
+        h.push('<tr><td style="font-size:8pt;color:#1e3a5f;">'+tl+'</td>'
+          + '<td style="font-size:8pt;">'
+          + '<span style="color:#94a3b8;margin-right:4px;font-size:9pt;">&#9633;</span>'
+          + item.task+'</td>'
+          + '<td style="text-align:right;font-size:7.5pt;color:#64748b;">'+(item.planned||'')+'</td>'
+          + '</tr>');
+      });
+      h.push('</table>');
+    } else {
+      h.push('<p style="font-size:8pt;color:#94a3b8;font-style:italic;">Next plan not yet set</p>');
+    }
+    h.push('</div>');
+    h.push('</div>'); // end two-col grid
 
-  h.push('</div>'); // end two-col
+    // ── EXTRAS: work done outside the plan ────────────────────────────────
+    h.push('<div style="margin-top:10px;">');
+    h.push('<div style="font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.07em;'
+      + 'color:#64748b;border-bottom:1px solid #e2e8f0;padding-bottom:2px;margin-bottom:4px;">'
+      + 'Additional Work Completed (not in plan)';
+    if(_extras > 0) h.push(' &nbsp;<span style="color:#0369a1;font-weight:400;">'+_extras+' item'+('+extras!==1?'s':'')+' — counted in adjusted rate</span>');
+    h.push('</div>');
+    if (_extras > 0) {
+      h.push('<table><tr><th style="width:40px;">Team</th><th>Task</th><th>Note</th></tr>');
+      _ext.forEach(function(item) {
+        h.push('<tr>'
+          + '<td style="font-size:8pt;font-weight:700;color:#0369a1;">Tm'+item.team+'</td>'
+          + '<td style="font-size:8pt;">'+item.task+'</td>'
+          + '<td style="font-size:7.5pt;color:#64748b;">'+(item.note||'')+'</td>'
+          + '</tr>');
+      });
+      h.push('</table>');
+    } else {
+      h.push('<p style="font-size:8pt;color:#94a3b8;margin:0;">No unplanned work recorded this period.</p>');
+    }
+    h.push('</div>');
+
+    // ── SUCCESS RATE ──────────────────────────────────────────────────────
+    h.push('<div style="margin-top:10px;padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;">');
+    h.push('<div style="font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;">Success Rate</div>');
+    h.push('<div style="text-align:center;">'
+      + '<div style="font-size:7pt;color:#64748b;margin-bottom:1px;">This period (planned)</div>'
+      + '<div style="font-size:18pt;font-weight:800;color:'+_rateCol(_planRate)+';line-height:1;">'+_planRate+'%</div>'
+      + '<div style="font-size:7pt;color:#94a3b8;">'+_done+'/'+_total+' activities</div>'
+      + '</div>');
+    if (_extras > 0) {
+      h.push('<div style="text-align:center;">'
+        + '<div style="font-size:7pt;color:#64748b;margin-bottom:1px;">Adjusted (incl. extras)</div>'
+        + '<div style="font-size:18pt;font-weight:800;color:'+_rateCol(_adjRate)+';line-height:1;">'+_adjRate+'%</div>'
+        + '<div style="font-size:7pt;color:#94a3b8;">'+(_done+_extras)+'/'+(_total+_extras)+' total</div>'
+        + '</div>');
+    }
+    h.push('<div style="text-align:center;">'
+      + '<div style="font-size:7pt;color:#64748b;margin-bottom:1px;">Running average</div>'
+      + '<div style="font-size:18pt;font-weight:800;color:'+_rateCol(_avgRate)+';line-height:1;">'+_avgRate+'%</div>'
+      + '<div style="font-size:7pt;color:#94a3b8;">over '+_hist.length+' report'+('+_hist.length!==1?'s':'')+' to date</div>'
+      + '</div>');
+    h.push('<div style="flex:1;font-size:8pt;color:#64748b;font-style:italic;text-align:right;">'
+      + 'Extra work done outside plan is listed above and counted in adjusted rate.</div>');
+    h.push('</div>');
+
+  })();
 
   // ── RISKS & ISSUES ────────────────────────────────────────────────────────
   h.push('<div class="sec-label" style="margin-top:14px;">Risk Register &amp; Key Issues</div>');
