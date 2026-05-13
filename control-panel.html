@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v74</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v76</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -1305,11 +1305,13 @@ function clearForm() {
     </button>
     <button id="gantt-btn-uploaded"
       onclick="window.ganttMode='uploaded';buildGantt();"
+      title="Upload a revised GanttPro Excel from the Programme tab to enable this"
       style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;opacity:0.4;" disabled>
       &#11014; Last Uploaded
     </button>
     <button id="gantt-btn-compare"
       onclick="window.ganttMode='compare';buildGantt();"
+      title="Upload a revised GanttPro Excel from the Programme tab to enable comparison"
       style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;opacity:0.4;" disabled>
       &#8853; Overlay Compare
     </button>
@@ -4977,7 +4979,7 @@ function showTab(name, btn) {
   document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   if(btn) btn.classList.add('active');
-  if(name === 'gantt')    buildGantt();
+  if(name === 'gantt')    { try { buildGantt(); } catch(e) { console.error('buildGantt error:', e); var gb=document.getElementById('gantt-body'); if(gb) gb.innerHTML='<tr><td colspan="4" style="padding:20px;color:#ef4444;font-size:12px;">&#9888; Chart error: '+e.message+' — check console for details.</td></tr>'; } }
   if(name === 'financial'){ try { buildFinancialChart(); } catch(e){} }
   if(name === 'report')   buildReport();
   if(name === 'sitemap')  buildSiteMap();
@@ -5394,9 +5396,9 @@ function buildFortnightlyReport() {
 
   // ── STATUS BANNER ─────────────────────────────────────────────────────────
   h.push('<div class="status-banner" style="background:' + overallBg + ';border:1px solid ' + overallCol + '33;margin-top:12px;">');
-  h.push('<div style="color:' + overallCol + '"><div class="lbl">Overall Progress</div><div class="big">' + actualPct + '%</div><div style="font-size:7.5pt;color:#64748b;">actual complete</div></div>');
+  h.push('<div style="color:' + overallCol + '"><div class="lbl">Current Progress</div><div class="big">' + actualPct + '%</div><div style="font-size:7.5pt;color:#64748b;">actual complete</div></div>');
   h.push('<div style="width:1px;background:#e2e8f0;align-self:stretch;"></div>');
-  h.push('<div style="color:#1e293b"><div class="lbl">Revised Plan Target</div><div class="big" style="color:#0f172a;">' + plannedPct + '%</div><div style="font-size:7.5pt;color:#64748b;">26 Jun 2026 (incl. EOT)</div></div>');
+  h.push('<div style="color:#1e293b"><div class="lbl">Revised Target</div><div class="big" style="color:#0f172a;">' + plannedPct + '%</div><div style="font-size:7.5pt;color:#64748b;">26 Jun 2026 (incl. EOT)</div></div>');
   h.push('<div style="width:1px;background:#e2e8f0;align-self:stretch;"></div>');
   h.push('<div><div class="lbl">Variance</div><div style="font-size:16pt;font-weight:800;color:' + overallCol + ';">' + (gapPct>=0?'+':'') + gapPct + '%</div></div>');
   h.push('<div style="flex:1;text-align:right;">'
@@ -6154,8 +6156,12 @@ function buildReport() {
 function buildGantt() {
   const head = document.getElementById('gantt-head');
   const body = document.getElementById('gantt-body');
-  if(!head || !body) return;
+  if(!head || !body) { console.warn('buildGantt: gantt-head or gantt-body not found'); return; }
+  try {
 
+  console.log('[buildGantt] called — mode:', window.ganttMode||'agreed',
+    '| TASKS_EMBEDDED:', typeof TASKS_EMBEDDED !== 'undefined' ? TASKS_EMBEDDED.length : 'UNDEFINED',
+    '| ZONES:', typeof ZONES !== 'undefined' ? ZONES.length : 'UNDEFINED');
   // ── Mode: agreed=embedded baseline, uploaded=last GanttPro upload, compare=both ─
   var gMode     = window.ganttMode || 'agreed';
   var override  = (function(){ try{ return JSON.parse(localStorage.getItem('dgc_programme_override')||'null'); }catch(e){return null;} })();
@@ -6205,7 +6211,14 @@ function buildGantt() {
     ? TASKS_EMBEDDED.concat(TASKS)
     : tasks;
   const allDates = axisTasks.flatMap(function(t){ return [parseDate(t.start), parseDate(t.end)]; }).filter(Boolean);
-  if (!allDates.length) return;
+  if (!allDates.length) {
+    console.error('[buildGantt] allDates is empty — tasks:', axisTasks.length, 'zones:', typeof ZONES!=='undefined'?ZONES.length:'UNDEF');
+    body.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;">' +
+      '<div style="color:#ef4444;font-size:13px;font-weight:700;">&#9888; Gantt: no task dates found</div>' +
+      '<div style="color:#94a3b8;font-size:11px;margin-top:6px;">Tasks loaded: ' + axisTasks.length +
+      ' — check console (F12) for details.</div></td></tr>';
+    return;
+  }
   const minDate   = new Date(Math.min.apply(null, allDates));
   const maxDate   = new Date(Math.max.apply(null, allDates));
   const totalDays = daysBetween(minDate, maxDate) + 5;
@@ -6269,6 +6282,16 @@ function buildGantt() {
     });
   });
   body.innerHTML = html;
+
+  } catch(e) {
+    console.error('buildGantt runtime error:', e);
+    if(body) body.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;">'
+      + '<div style="color:#ef4444;font-size:13px;font-weight:700;">&#9888; Gantt chart failed to render</div>'
+      + '<div style="color:#94a3b8;font-size:11px;margin-top:6px;">Error: ' + e.message + '</div>'
+      + '<div style="color:#64748b;font-size:10px;margin-top:4px;">Check browser console (F12) for details.</div>'
+      + '</td></tr>';
+    if(head) head.innerHTML = '<tr><th>WBS</th><th>Task</th><th>Assigned</th><th>Timeline</th></tr>';
+  }
 }
 // ═══════════════════════ FINANCIAL CHART ═══════════════════════
 function buildFinancialChart() {
