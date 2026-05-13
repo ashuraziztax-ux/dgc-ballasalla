@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v67</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v68</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -3865,6 +3865,34 @@ function updateSectionProgress(id, val, lbl) {
 
 let ZONE_DEFAULTS = {1:32,2:75,3:82,4:82,5:72,6:72,7:22,8:22,9:5,10:5,11:0,12:0}; // QS confirmed 12 May 2026: ~55% actual, slightly ahead of revised programme (~53% planned)
 
+// ── Fortnightly plan vs achieved (updated each fortnight via apply script) ─────
+// status: 'done' | 'partial' | 'not_done' | 'cancelled'
+var FORTNIGHTLY_PLAN_DATA = {
+  period: '29 Apr – 13 May 2026',
+  items: [
+    // ── Team A ──────────────────────────────────────────────────────────────
+    {team:'A', task:'F4.3 → F4.4 drainage — piped',                    planned:'29–30 Apr', status:'done',     note:''},
+    {team:'A', task:'S4.2 → S4.4 sewer + base in',                         planned:'1–5 May',  status:'done',     note:''},
+    {team:'A', task:'F4.4 → F4.6 road crossing',                           planned:'6 May',     status:'not_done', note:'Not completed'},
+    {team:'A', task:'S4.3 → S4.4 sewer + base (80% then complete)',         planned:'7–8 May',  status:'done',     note:''},
+    {team:'A', task:'S4.3 → S4.4 concrete copings',                        planned:'11 May',    status:'done',     note:''},
+    {team:'A', task:'S4.4 → S4.6 sewer',                                   planned:'12–13 May', status:'partial',  note:'50% achieved, completion outstanding'},
+    // ── Team B ──────────────────────────────────────────────────────────────
+    {team:'B', task:'S4.2 + F4.4 concrete / bench',                             planned:'29–30 Apr', status:'cancelled',note:'Plan revised on the day'},
+    {team:'B', task:'F4.2–F4.4 / F4.3–F4.4 inspection + sign-off + backfill', planned:'1 May',     status:'done',     note:''},
+    {team:'B', task:'F4.4 → F4.6 drainage cut (to 752)',                   planned:'5 May',     status:'done',     note:''},
+    {team:'B', task:'F4.6 dug + base in',                                       planned:'6 May',     status:'not_done', note:'Not completed'},
+    {team:'B', task:'Laterals + gullies (supporting Team A)',                    planned:'7–8 May',  status:'not_done', note:'2 days — not completed'},
+    {team:'B', task:'F4.4 → F4.6 completed',                               planned:'11 May',    status:'done',     note:''},
+    {team:'B', task:'F4.4 → F4.6 laterals + backfill',                     planned:'12 May',    status:'not_done', note:'Not completed'},
+    {team:'B', task:'S4.6 base + gullies',                                      planned:'13 May',    status:'done',     note:''},
+    // ── Team C ──────────────────────────────────────────────────────────────
+    {team:'C', task:'Gully 1+2',                                                 planned:'5–6 May',  status:'partial',  note:'50% achieved — completion outstanding'},
+    {team:'C', task:'Kerb log work — 15% sections',                         planned:'7–8 May',  status:'done',     note:'In progress as planned'},
+    {team:'C', task:'Kerb log work — 50% target',                           planned:'11–13 May', status:'not_done', note:'50% target not reached'},
+  ]
+};
+
 // ── Embedded baseline: immutable deep copy before any override or drag-edit ──
 // TASKS_EMBEDDED is captured here and NEVER overwritten:
 //   · Gantt 'Last Agreed' mode shows this (the signed-off programme)
@@ -5334,6 +5362,52 @@ function buildFortnightlyReport() {
   h.push('</table>');
   h.push('</div>'); // end right panel
   h.push('</div>'); // end two-col
+
+  // ── PLAN vs ACHIEVED ──────────────────────────────────────────────────────
+  if (typeof FORTNIGHTLY_PLAN_DATA !== 'undefined' && FORTNIGHTLY_PLAN_DATA.items && FORTNIGHTLY_PLAN_DATA.items.length) {
+    var _fpDone  = FORTNIGHTLY_PLAN_DATA.items.filter(function(i){ return i.status === 'done'; }).length;
+    var _fpTotal = FORTNIGHTLY_PLAN_DATA.items.filter(function(i){ return i.status !== 'cancelled'; }).length;
+    var _fpRate  = _fpTotal > 0 ? Math.round(_fpDone / _fpTotal * 100) : 0;
+    var _fpCol   = _fpRate >= 75 ? '#16a34a' : _fpRate >= 50 ? '#d97706' : '#dc2626';
+    h.push('<div class="sec-label" style="margin-top:14px;">14-Day Site Plan: Planned vs Achieved'
+      + ' &nbsp;<span style="font-weight:400;color:#64748b;">'
+      + FORTNIGHTLY_PLAN_DATA.period
+      + ' &nbsp;&middot;&nbsp; <span style="color:' + _fpCol + ';font-weight:700;">'
+      + _fpRate + '% hit rate</span> (' + _fpDone + '/' + _fpTotal + ' activities)'
+      + '</span></div>');
+    h.push('<table><tr>'
+      + '<th style="width:46px;">Team</th>'
+      + '<th>Planned Activity</th>'
+      + '<th style="width:80px;text-align:right;">When</th>'
+      + '<th style="width:56px;text-align:center;">Result</th>'
+      + '<th style="width:180px;">Notes</th>'
+      + '</tr>');
+    var _prevTeam = null;
+    FORTNIGHTLY_PLAN_DATA.items.forEach(function(item) {
+      var icon = item.status === 'done'      ? '&#10003;'
+               : item.status === 'not_done'  ? '&#10007;'
+               : item.status === 'partial'   ? '~'
+               : '&#8212;';
+      var col  = item.status === 'done'      ? '#16a34a'
+               : item.status === 'not_done'  ? '#dc2626'
+               : item.status === 'partial'   ? '#d97706'
+               : '#94a3b8';
+      var rowBg = item.status === 'not_done' ? 'background:#fff8f8;'
+                : item.status === 'partial'  ? 'background:#fffcf0;'
+                : item.status === 'cancelled'? 'background:#f8fafc;'
+                : '';
+      var teamLabel = item.team !== _prevTeam ? 'Team&nbsp;' + item.team : '';
+      if (item.team !== _prevTeam) _prevTeam = item.team;
+      h.push('<tr style="' + rowBg + '">'
+        + '<td style="font-weight:700;color:#1e3a5f;white-space:nowrap;">' + teamLabel + '</td>'
+        + '<td>' + item.task + '</td>'
+        + '<td style="text-align:right;color:#64748b;font-size:8pt;">' + (item.planned||'') + '</td>'
+        + '<td style="text-align:center;font-size:13pt;font-weight:800;color:' + col + ';">' + icon + '</td>'
+        + '<td style="font-size:8pt;color:#64748b;">' + (item.note||'') + '</td>'
+        + '</tr>');
+    });
+    h.push('</table>');
+  }
 
   // ── TWO COL: WORKS COMPLETED + PLANNED ────────────────────────────────────
   h.push('<div class="two-col" style="margin-top:14px;">');
