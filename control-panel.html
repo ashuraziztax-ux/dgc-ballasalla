@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v63</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v64</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -3863,7 +3863,7 @@ function updateSectionProgress(id, val, lbl) {
   if(document.getElementById('tab-sitemap').classList.contains('active')) buildSiteMap();
 }
 
-let ZONE_DEFAULTS = {1:24,2:45,3:74,4:74,5:64,6:64,7:7,8:7,9:0,10:0,11:0,12:0}; // GanttPro export 11 May 2026: 42.8% budget-weighted actual (corrected from verbal 55%)
+let ZONE_DEFAULTS = {1:32,2:75,3:82,4:82,5:72,6:72,7:22,8:22,9:5,10:5,11:0,12:0}; // QS confirmed 12 May 2026: ~55% actual, slightly ahead of revised programme (~53% planned)
 
 // ── Embedded baseline: immutable deep copy before any override or drag-edit ──
 // TASKS_EMBEDDED is captured here and NEVER overwritten:
@@ -3876,15 +3876,6 @@ var TASKS_EMBEDDED = JSON.parse(JSON.stringify(TASKS));
 // ── Programme override: load uploaded GanttPro schedule from localStorage ──
 (function(){
   try {
-    // Pre-seed from Ansophie's 11 May 2026 GanttPro export on first load.
-    // A fresh upload via the Programme tab will overwrite this entry.
-    if (!localStorage.getItem('dgc_programme_override')) {
-      localStorage.setItem('dgc_programme_override', JSON.stringify({
-        tasks:      TASKS_EMBEDDED.map(function(t){ return Object.assign({},t); }),
-        uploadDate: '2026-05-11',
-        fileName:   'Ballasalla Phase 4 - Latest 11.05.2026 (GanttPRO)',
-      }));
-    }
     var _ov = JSON.parse(localStorage.getItem('dgc_programme_override') || 'null');
     if (_ov && _ov.tasks && Array.isArray(_ov.tasks) && _ov.tasks.length) {
       TASKS = _ov.tasks;
