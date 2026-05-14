@@ -1313,14 +1313,14 @@ function clearForm() {
     </button>
     <button id="gantt-btn-uploaded"
       onclick="window.ganttMode='uploaded';buildGantt();"
-      title="Upload a revised GanttPro Excel from the Programme tab to enable this"
-      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;opacity:0.4;" disabled>
+      title="Upload a revised GanttPro Excel from the Programme tab"
+      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;">
       &#11014; Last Uploaded
     </button>
     <button id="gantt-btn-compare"
       onclick="window.ganttMode='compare';buildGantt();"
-      title="Upload a revised GanttPro Excel from the Programme tab to enable comparison"
-      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;opacity:0.4;" disabled>
+      title="Shows agreed baseline vs uploaded programme side by side"
+      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;">
       &#8853; Overlay Compare
     </button>
     <span id="gantt-upload-label" style="font-size:10px;color:var(--muted);"></span>
@@ -2123,7 +2123,7 @@ function clearForm() {
            style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;">
 
         <!-- Section A — Zone 1 -->
-        <g id="sm-sect-A" transform="translate(1365,340)" style="pointer-events:all;cursor:pointer;"
+        <g id="sm-sect-A" transform="translate(1445,360)" style="pointer-events:all;cursor:pointer;"
            onclick="smFocusZone('A')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
           <circle r="34" fill="#ca8a04" stroke="white" stroke-width="2.5" id="sm-ring-A"/>
@@ -2133,7 +2133,7 @@ function clearForm() {
         </g>
 
         <!-- Section B — Zone 2 -->
-        <g id="sm-sect-B" transform="translate(1075,490)" style="pointer-events:all;cursor:pointer;"
+        <g id="sm-sect-B" transform="translate(1185,430)" style="pointer-events:all;cursor:pointer;"
            onclick="smFocusZone('B')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
           <circle r="34" fill="#d97706" stroke="white" stroke-width="2.5" id="sm-ring-B"/>
@@ -2143,7 +2143,7 @@ function clearForm() {
         </g>
 
         <!-- Section C — Zone 2 -->
-        <g id="sm-sect-C" transform="translate(855,515)" style="pointer-events:all;cursor:pointer;"
+        <g id="sm-sect-C" transform="translate(975,520)" style="pointer-events:all;cursor:pointer;"
            onclick="smFocusZone('C')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
           <circle r="34" fill="#f59e0b" stroke="white" stroke-width="2.5" id="sm-ring-C"/>
@@ -2153,7 +2153,7 @@ function clearForm() {
         </g>
 
         <!-- Section D — Zone 3 -->
-        <g id="sm-sect-D" transform="translate(900,785)" style="pointer-events:all;cursor:pointer;"
+        <g id="sm-sect-D" transform="translate(1005,835)" style="pointer-events:all;cursor:pointer;"
            onclick="smFocusZone('D')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
           <circle r="34" fill="#2563eb" stroke="white" stroke-width="2.5" id="sm-ring-D"/>
@@ -2163,7 +2163,7 @@ function clearForm() {
         </g>
 
         <!-- Section E — Zone 3 -->
-        <g id="sm-sect-E" transform="translate(625,650)" style="pointer-events:all;cursor:pointer;"
+        <g id="sm-sect-E" transform="translate(800,670)" style="pointer-events:all;cursor:pointer;"
            onclick="smFocusZone('E')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
           <circle r="34" fill="#3b82f6" stroke="white" stroke-width="2.5" id="sm-ring-E"/>
@@ -2173,7 +2173,7 @@ function clearForm() {
         </g>
 
         <!-- Section F — Zone 4 -->
-        <g id="sm-sect-F" transform="translate(425,780)" style="pointer-events:all;cursor:pointer;"
+        <g id="sm-sect-F" transform="translate(570,825)" style="pointer-events:all;cursor:pointer;"
            onclick="smFocusZone('F')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
           <circle r="34" fill="#9333ea" stroke="white" stroke-width="2.5" id="sm-ring-F"/>
@@ -2183,7 +2183,7 @@ function clearForm() {
         </g>
 
         <!-- Section G — Zone 4 -->
-        <g id="sm-sect-G" transform="translate(265,805)" style="pointer-events:all;cursor:pointer;"
+        <g id="sm-sect-G" transform="translate(430,990)" style="pointer-events:all;cursor:pointer;"
            onclick="smFocusZone('G')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
           <circle r="34" fill="#a855f7" stroke="white" stroke-width="2.5" id="sm-ring-G"/>
@@ -2193,7 +2193,7 @@ function clearForm() {
         </g>
 
         <!-- Section H — Zone 5 -->
-        <g id="sm-sect-H" transform="translate(225,1005)" style="pointer-events:all;cursor:pointer;"
+        <g id="sm-sect-H" transform="translate(258,1130)" style="pointer-events:all;cursor:pointer;"
            onclick="smFocusZone('H')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
           <circle r="34" fill="#db2777" stroke="white" stroke-width="2.5" id="sm-ring-H"/>
@@ -2203,7 +2203,7 @@ function clearForm() {
         </g>
 
         <!-- Section I — Zone 5 -->
-        <g id="sm-sect-I" transform="translate(148,988)" style="pointer-events:all;cursor:pointer;"
+        <g id="sm-sect-I" transform="translate(125,1100)" style="pointer-events:all;cursor:pointer;"
            onclick="smFocusZone('I')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
           <circle r="34" fill="#ec4899" stroke="white" stroke-width="2.5" id="sm-ring-I"/>
@@ -2213,7 +2213,7 @@ function clearForm() {
         </g>
 
         <!-- Section J — Zone 5 -->
-        <g id="sm-sect-J" transform="translate(78,895)" style="pointer-events:all;cursor:pointer;"
+        <g id="sm-sect-J" transform="translate(47,1020)" style="pointer-events:all;cursor:pointer;"
            onclick="smFocusZone('J')">
           <circle r="34" fill="rgba(0,0,0,0.45)" transform="translate(2,2)"/>
           <circle r="34" fill="#f43f5e" stroke="white" stroke-width="2.5" id="sm-ring-J"/>
@@ -6239,22 +6239,14 @@ function buildGantt() {
   const head = document.getElementById('gantt-head');
   const body = document.getElementById('gantt-body');
   if(!head || !body) { console.warn('buildGantt: gantt-head or gantt-body not found'); return; }
-  function setBtn(btn, active, enabled) {
+  function setBtn(btn, active) {
     if (!btn) return;
     var BLU = '#0ea5e9', SURF = 'var(--surface2)', BDR = 'var(--border)', TXT = 'var(--text)';
-    if (enabled) {
-      btn.removeAttribute('disabled');
-      btn.style.opacity     = '1';
-      btn.style.background  = active ? BLU : SURF;
-      btn.style.borderColor = active ? BLU : BDR;
-      btn.style.color       = active ? '#fff' : TXT;
-    } else {
-      btn.setAttribute('disabled','true');
-      btn.style.opacity     = '0.4';
-      btn.style.background  = SURF;
-      btn.style.borderColor = BDR;
-      btn.style.color       = 'var(--muted)';
-    }
+    btn.removeAttribute('disabled');
+    btn.style.opacity     = '1';
+    btn.style.background  = active ? BLU : SURF;
+    btn.style.borderColor = active ? BLU : BDR;
+    btn.style.color       = active ? '#fff' : TXT;
   }
   try {
 
@@ -6274,13 +6266,36 @@ function buildGantt() {
   var btnU   = document.getElementById('gantt-btn-uploaded');
   var btnCmp = document.getElementById('gantt-btn-compare');
   var uploadLbl = document.getElementById('gantt-upload-label');
-  setBtn(btnA,   gMode === 'agreed',   true);
-  setBtn(btnU,   gMode === 'uploaded', hasUpload);
-  setBtn(btnCmp, gMode === 'compare',  hasUpload);
-  if (btnU   && hasUpload) btnU.title   = 'Uploaded: '    + (override.fileName||'?') + '  ·  ' + (override.uploadDate||'?');
-  if (btnCmp && hasUpload) btnCmp.title = 'Overlay agreed vs uploaded: ' + (override.fileName||'?');
+  setBtn(btnA,   gMode === 'agreed');
+  setBtn(btnU,   gMode === 'uploaded');
+  setBtn(btnCmp, gMode === 'compare');
+  if (btnU)   btnU.title   = hasUpload
+    ? '&#11014; Uploaded: ' + (override.fileName||'?') + '  ·  ' + (override.uploadDate||'?')
+    : 'Upload a revised GanttPro Excel from the Programme tab to populate this view';
+  if (btnCmp) btnCmp.title = hasUpload
+    ? 'Overlay agreed baseline vs uploaded programme'
+    : 'Upload a revised GanttPro Excel from the Programme tab to enable comparison';
   if (uploadLbl) uploadLbl.textContent =
     (gMode !== 'agreed' && hasUpload) ? (override.fileName||'') + ' · ' + (override.uploadDate||'') : '';
+
+  // ── No-upload empty state for uploaded/compare modes ─────────────────────
+  if ((gMode === 'uploaded' || gMode === 'compare') && !hasUpload) {
+    var modeLabel = gMode === 'uploaded' ? '&#11014; Last Uploaded' : '&#8853; Overlay Compare';
+    body.innerHTML = '<tr><td colspan="4" style="padding:40px 20px;text-align:center;">'
+      + '<div style="font-size:24px;margin-bottom:12px;">&#128190;</div>'
+      + '<div style="color:var(--text);font-size:13px;font-weight:700;margin-bottom:8px;">'
+      + modeLabel + ' — no programme uploaded yet</div>'
+      + '<div style="color:var(--muted);font-size:11px;line-height:1.8;max-width:420px;margin:0 auto;">'
+      + 'Go to the <strong style="color:var(--text);">Programme</strong> tab and upload '
+      + 'a revised GanttPro Excel export.<br>'
+      + (gMode === 'compare'
+          ? 'The upload will appear as an amber overlay against the agreed blue baseline.'
+          : 'The upload will replace the agreed baseline with the latest planned dates.')
+      + '</div>'
+      + '</td></tr>';
+    head.innerHTML = '<tr><th>WBS</th><th>Task</th><th>Assigned</th><th>Timeline</th></tr>';
+    return;
+  }
 
   // ── Uploaded task lookup (for compare overlay) ───────────────────────────
   var uploadedMap = {};
