@@ -523,8 +523,8 @@ function checkPw(){
 }
 
 // ── 3-STATE MODE: user / admin / client ──────────────────────────────────────
-var VIEW_MODE = 'admin';
-var isAdmin = true; // legacy compatibility
+var VIEW_MODE = 'client';
+var isAdmin = false; // legacy compatibility
 
 function setMode(m) {
   VIEW_MODE = m;
@@ -571,13 +571,13 @@ function setMode(m) {
 // Early restore — set body class before render to avoid FOUC
 (function(){
   try {
-    var saved = sessionStorage.getItem('dgc_mode') || 'admin';
+    var saved = sessionStorage.getItem('dgc_mode') || 'client';
     VIEW_MODE = saved;
     isAdmin   = (saved === 'admin');
     document.body.classList.remove('admin-mode','client-mode');
     if (saved === 'admin')  document.body.classList.add('admin-mode');
     if (saved === 'client') document.body.classList.add('client-mode');
-  } catch(e) { document.body.classList.add('admin-mode'); }
+  } catch(e) { document.body.classList.remove('admin-mode'); }
 })();
 // ══════════════════════════════════════════════════════
 // VOICE DIARY — recording, AI cleanup, save/load
@@ -881,6 +881,16 @@ function clearForm() {
 
 <!-- ═══════════════════════════════ DASHBOARD ═══════════════════════════════ -->
 <div id="tab-dashboard" class="tab-content active admin-only">
+  <!-- ── Data-freeze notice ─────────────────────────────────────────────── -->
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
+              margin-bottom:14px;border-radius:8px;
+              background:#f59e0b14;border:1px solid #f59e0b44;">
+    <span style="font-size:15px;">📋</span>
+    <div style="font-size:11px;color:#f59e0b;line-height:1.5;">
+      <strong>Data frozen as of 14 May 2026</strong> — no figures will change until the next fortnightly update (~28 May 2026).
+      All progress, KPIs and charts show the last recorded state.
+    </div>
+  </div>
   <div id="alerts-area" style="margin-bottom:14px;"></div>
 
   <div class="kpi-grid">
@@ -988,21 +998,6 @@ function clearForm() {
       </div>
         </div><!-- /pc-content -->
 
-        <!-- ── Site plan thumbnail (v63) ─────────────────────── -->
-        <div style="width:300px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;
-                      letter-spacing:0.1em;color:var(--muted);">Site Plan</div>
-          <div style="border-radius:8px;overflow:hidden;
-                      background:#06080f;border:1px solid var(--border);
-                      height:240px;display:flex;align-items:center;justify-content:center;">
-            <img id="sm-dash-preview" alt="Site Plan"
-                 style="width:100%;max-height:240px;object-fit:contain;display:block;
-                        filter:invert(1) brightness(0.92);" />
-          </div>
-          <div style="font-size:9px;color:var(--muted);text-align:center;
-                      letter-spacing:.04em;">Phase 4 Zone Layout</div>
-        </div><!-- /site-plan-preview -->
-
       </div><!-- /pc-flex -->
     </div>
     <!-- Days Remaining + Working Days Left combined -->
@@ -1107,6 +1102,16 @@ function clearForm() {
       <div class="card-title">Programme — Zones vs Today</div>
       <div class="chart-wrap-lg">
         <canvas id="chart-progress"></canvas>
+      </div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;">
+      <div class="card-title">Phase 4 Zone Layout</div>
+      <div style="flex:1;border-radius:6px;overflow:hidden;background:#06080f;
+                  border:1px solid var(--border);display:flex;align-items:center;
+                  justify-content:center;min-height:200px;">
+        <img id="sm-dash-preview" alt="Site Plan"
+             style="width:100%;height:100%;object-fit:contain;display:block;
+                    filter:invert(1) brightness(0.92);" />
       </div>
     </div>
   </div>
@@ -1421,8 +1426,13 @@ function clearForm() {
             <td>~22 May 2026</td>
             <td>~29 May 2026</td>
             <td class="upcoming">~26 Jun 2026</td>
-            <td class="upcoming">TBC</td>
-            <td><span class="chip pending">Pending</span></td>
+            <td class="upcoming">£128,109 net est.</td>
+            <td><span class="chip pending">Draft</span></td>
+          </tr>
+          <tr style="background:#1e2130;">
+            <td colspan="2" style="font-size:11px;color:var(--muted);">AFP 3 estimate (QS draft)</td>
+            <td colspan="2" style="font-size:11px;color:var(--muted);">Gross cumulative claim: £293,658 (65.2% of contract) | Less 3% retention: &minus;£8,810 | Less AFP 1&amp;2: &minus;£156,739 | = <strong style="color:#f59e0b;">£128,109 net to DGC</strong> | Forecast to 29 May — not yet submitted</td>
+            <td></td><td></td>
           </tr>
           <tr>
             <td>AFP 4 / Final Account</td>
@@ -1450,6 +1460,69 @@ function clearForm() {
         </thead>
         <tbody id="budget-zone-table"></tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- AFP 3 Predicted Breakdown -->
+  <div class="card admin-only" style="margin-top:16px;">
+    <div class="card-title" style="display:flex;align-items:center;gap:10px;">
+      Predicted AFP 3
+      <span style="font-size:10px;font-weight:500;color:#f59e0b;background:#f59e0b18;border:1px solid #f59e0b44;
+                   padding:2px 8px;border-radius:10px;text-transform:none;letter-spacing:0;">
+        QS Draft — not yet submitted
+      </span>
+      <span style="font-size:10px;font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:auto;">
+        Work to 29 May 2026
+      </span>
+    </div>
+
+    <!-- Hero figures -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">Gross Cumulative Claim</div>
+        <div style="font-size:22px;font-weight:800;color:var(--text);line-height:1;">£293,658</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px;">65.2% of contract</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">Less 3% Retention</div>
+        <div style="font-size:22px;font-weight:800;color:#f97316;line-height:1;">&minus;£8,810</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px;">held by Dandara</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;">Less AFP 1 &amp; 2 Paid</div>
+        <div style="font-size:22px;font-weight:800;color:#f97316;line-height:1;">&minus;£156,739</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px;">previously received</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:#f59e0b18;border-radius:8px;border:1px solid #f59e0b55;">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#f59e0b;margin-bottom:4px;">Net New Payment</div>
+        <div style="font-size:28px;font-weight:800;color:#f59e0b;line-height:1;">£128,109</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px;">due ~26 Jun 2026</div>
+      </div>
+    </div>
+
+    <!-- Bill breakdown -->
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px;">Bill Breakdown</div>
+    <table class="payment-table">
+      <thead>
+        <tr><th>Bill</th><th>Description</th><th>Contract Value</th><th>% Claimed</th><th>AFP 3 Claimed</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>External Works</td><td>£245,688</td><td style="color:#f59e0b;">28.3%</td><td>£69,617</td><td style="font-size:10px;color:var(--muted);">Road build mainly ahead — tarmac is bulk of remaining value</td></tr>
+        <tr><td>2</td><td>Drainage</td><td>£156,421</td><td style="color:#22c55e;">96.2%</td><td>£150,485</td><td style="font-size:10px;color:var(--muted);">Substantially complete</td></tr>
+        <tr><td>3</td><td>Services</td><td>£12,236</td><td style="color:#22c55e;">100%</td><td>£12,236</td><td style="font-size:10px;color:var(--muted);">Complete</td></tr>
+        <tr><td>4</td><td>Street Lighting</td><td>£12,109</td><td style="color:#22c55e;">100%</td><td>£12,109</td><td style="font-size:10px;color:var(--muted);">Complete</td></tr>
+        <tr><td>5</td><td>DGC Prelims</td><td>£34,490</td><td style="color:#22c55e;">91.6%</td><td>£31,582</td><td style="font-size:10px;color:var(--muted);"></td></tr>
+        <tr><td>—</td><td>Main Contractors Discount</td><td style="color:#f97316;">&minus;£10,801</td><td>83%</td><td style="color:#f97316;">&minus;£8,965</td><td></td></tr>
+        <tr style="background:var(--surface2);"><td colspan="2"><strong>Contract Sub-Total</strong></td><td><strong>£450,142</strong></td><td></td><td><strong>£267,063</strong></td><td></td></tr>
+        <tr><td>6</td><td>Prov Sums / Remeasures</td><td>£2,100</td><td style="color:#22c55e;">100%</td><td>£2,100</td><td></td></tr>
+        <tr><td>7</td><td>Variations</td><td>£15,013</td><td style="color:#22c55e;">94.2%</td><td>£14,148</td><td style="font-size:10px;color:var(--muted);">EoT delay claims (£22,501) held back — to final account</td></tr>
+        <tr><td>8</td><td>Materials on Site</td><td>£10,347</td><td style="color:#22c55e;">100%</td><td>£10,347</td><td></td></tr>
+        <tr style="background:var(--surface2);font-weight:700;"><td colspan="2">Total Gross Claimed</td><td></td><td>65.2%</td><td>£293,658</td><td></td></tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:10px;padding:8px 12px;background:#3b82f618;border:1px solid #3b82f644;border-radius:6px;font-size:11px;color:#93c5fd;line-height:1.6;">
+      <strong>Why does it feel short?</strong> External Works (Bill 1) is 54% of the contract value but only 28% claimed — because the tarmac roadbase (£104k) and kerbing are still largely ahead. Once the road build completes, AFP 4 / Final Account will recover the bulk of the remaining £157k. Also, £22,501 of EoT delay prelims are excluded from AFP 3 and carried to final account.
     </div>
   </div>
 
