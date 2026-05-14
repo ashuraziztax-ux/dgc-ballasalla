@@ -2252,6 +2252,10 @@ function clearForm() {
 <script>
 // ═══════════════ DATA ═══════════════
 const TODAY = new Date();
+// DATA_AS_OF: date of the most recent data upload — updated each fortnight.
+// calcForecast() uses this (not live TODAY) so the projected end date stays
+// stable between updates rather than drifting every calendar day.
+const DATA_AS_OF = new Date('2026-05-14T00:00:00');
 
 const ZONES = [
   { id:1,  wbs:'1',  name:'Site Setup',               shortName:'Setup',  budget:23807.29, start:'2026-03-23', end:'2026-06-12', color:'#64748b', type:'prelims' },
@@ -4043,11 +4047,14 @@ function calcForecast() {
     ZONES.forEach(function(z){ completedVal += (z.budget||0)*(getZoneProgress(z.id)/100); });
     var pct = totalBudget > 0 ? completedVal/totalBudget*100 : 0;
     var start = new Date('2026-03-23T00:00:00');
-    var elapsed = Math.max(1, Math.round((TODAY-start)/86400000));
+    // Use DATA_AS_OF (not live TODAY) so the rate and forecast anchor are
+    // frozen between data uploads — prevents the date drifting every morning.
+    var asOf   = (typeof DATA_AS_OF !== 'undefined' && DATA_AS_OF <= TODAY) ? DATA_AS_OF : TODAY;
+    var elapsed = Math.max(1, Math.round((asOf-start)/86400000));
     var rate = pct/elapsed;
     var remaining = 100-pct;
     var daysNeeded = rate > 0 ? Math.round(remaining/rate) : 9999;
-    var fc = new Date(TODAY.getTime());
+    var fc = new Date(asOf.getTime());
     fc.setDate(fc.getDate()+daysNeeded);
     var target = new Date('2026-06-26T00:00:00');
     return { date:fc, pct:pct, rate:rate, late: fc>target,
