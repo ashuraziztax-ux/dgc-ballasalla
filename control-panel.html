@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v77</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v78</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -5575,8 +5575,8 @@ function buildFortnightlyReport() {
     h.push('<div style="margin-top:10px;">');
     h.push('<div style="font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.07em;'
       + 'color:#64748b;border-bottom:1px solid #e2e8f0;padding-bottom:2px;margin-bottom:4px;">'
-      + 'Additional Work Completed (not in plan)';
-    if(_extras > 0) h.push(' &nbsp;<span style="color:#0369a1;font-weight:400;">'+_extras+' item'+('+extras!==1?'s':'')+' — counted in adjusted rate</span>');
+      + 'Additional Work Completed (not in plan)');
+    if(_extras > 0) h.push(' &nbsp;<span style="color:#0369a1;font-weight:400;">'+_extras+' item'+(_extras!==1?'s':'')+' — counted in adjusted rate</span>');
     h.push('</div>');
     if (_extras > 0) {
       h.push('<table><tr><th style="width:40px;">Team</th><th>Task</th><th>Note</th></tr>');
@@ -5611,7 +5611,7 @@ function buildFortnightlyReport() {
     h.push('<div style="text-align:center;">'
       + '<div style="font-size:7pt;color:#64748b;margin-bottom:1px;">Running average</div>'
       + '<div style="font-size:18pt;font-weight:800;color:'+_rateCol(_avgRate)+';line-height:1;">'+_avgRate+'%</div>'
-      + '<div style="font-size:7pt;color:#94a3b8;">over '+_hist.length+' report'+('+_hist.length!==1?'s':'')+' to date</div>'
+      + '<div style="font-size:7pt;color:#94a3b8;">over '+_hist.length+' report'+(_hist.length!==1?'s':'')+' to date</div>'
       + '</div>');
     h.push('<div style="flex:1;font-size:8pt;color:#64748b;font-style:italic;text-align:right;">'
       + 'Extra work done outside plan is listed above and counted in adjusted rate.</div>');
@@ -6166,6 +6166,23 @@ function buildGantt() {
   const head = document.getElementById('gantt-head');
   const body = document.getElementById('gantt-body');
   if(!head || !body) { console.warn('buildGantt: gantt-head or gantt-body not found'); return; }
+  function setBtn(btn, active, enabled) {
+    if (!btn) return;
+    var BLU = '#0ea5e9', SURF = 'var(--surface2)', BDR = 'var(--border)', TXT = 'var(--text)';
+    if (enabled) {
+      btn.removeAttribute('disabled');
+      btn.style.opacity     = '1';
+      btn.style.background  = active ? BLU : SURF;
+      btn.style.borderColor = active ? BLU : BDR;
+      btn.style.color       = active ? '#fff' : TXT;
+    } else {
+      btn.setAttribute('disabled','true');
+      btn.style.opacity     = '0.4';
+      btn.style.background  = SURF;
+      btn.style.borderColor = BDR;
+      btn.style.color       = 'var(--muted)';
+    }
+  }
   try {
 
   console.log('[buildGantt] called — mode:', window.ganttMode||'agreed',
@@ -6184,23 +6201,6 @@ function buildGantt() {
   var btnU   = document.getElementById('gantt-btn-uploaded');
   var btnCmp = document.getElementById('gantt-btn-compare');
   var uploadLbl = document.getElementById('gantt-upload-label');
-  var BLU = '#0ea5e9', SURF = 'var(--surface2)', BDR = 'var(--border)', TXT = 'var(--text)';
-  function setBtn(btn, active, enabled) {
-    if (!btn) return;
-    if (enabled) {
-      btn.removeAttribute('disabled');
-      btn.style.opacity     = '1';
-      btn.style.background  = active ? BLU : SURF;
-      btn.style.borderColor = active ? BLU : BDR;
-      btn.style.color       = active ? '#fff' : TXT;
-    } else {
-      btn.setAttribute('disabled','true');
-      btn.style.opacity     = '0.4';
-      btn.style.background  = SURF;
-      btn.style.borderColor = BDR;
-      btn.style.color       = 'var(--muted)';
-    }
-  }
   setBtn(btnA,   gMode === 'agreed',   true);
   setBtn(btnU,   gMode === 'uploaded', hasUpload);
   setBtn(btnCmp, gMode === 'compare',  hasUpload);
