@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v92</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v93</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -3685,16 +3685,31 @@ var FORTNIGHTLY_PLAN_DATA = {
 
 // ── Next 14 days planned work (updated each fortnight via apply script) ─────
 var FORTNIGHTLY_NEXT_PLAN = {
-  period: '14 May – 27 May 2026',
-  // cf:true = carried forward from previous period (task name must match FORTNIGHTLY_PLAN_DATA exactly)
+  // DGC-PRG-14 · Rev 02 · Issued 13/05/2026 · PM: David Smith
+  // 11 working days · Bank holiday Mon 25 May · 16 cal. days
+  period: '14 May – 29 May 2026',
   items: [
-    {team:'A', task:'F4.4 → F4.6 road crossing',                   planned:'14 May',    cf:true},
-    {team:'A', task:'S4.4 → S4.6 sewer',                           planned:'14–15 May', cf:true, note:'completion target'},
-    {team:'B', task:'F4.6 dug + base in',                           planned:'14 May',    cf:true},
-    {team:'B', task:'F4.4 → F4.6 laterals + backfill',              planned:'15 May',    cf:true},
-    {team:'B', task:'Laterals + gullies (supporting Team A)',        planned:'15–16 May', cf:true, note:'Zones 5/6'},
-    {team:'C', task:'Gully 1+2',                                     planned:'14 May',    cf:true, note:'completion target'},
-    {team:'C', task:'Kerb log work — 50% target',                   planned:'14–21 May', cf:true},
+    // ── Team A ──────────────────────────────────────────
+    {team:'A', task:'Backfill & pull tails F4.4–F4.6',              planned:'14 May',    cf:true},
+    {team:'A', task:'S4.4–S4.6 reduce dig & start trenching',       planned:'15 May'},
+    {team:'A', task:'S4.4–S4.6 trench to bush line',                planned:'18 May'},
+    {team:'A', task:'Backfill & tails S4.4–S4.6',                   planned:'19 May'},
+    {team:'A', task:'Road crossings F4.4–F4.6 & S4.4–S4.6',   planned:'20 May'},
+    {team:'A', task:'F4.4–F4.6 finish trench & dig F4.6 base',      planned:'21 May'},
+    {team:'A', task:'VC channel & concrete',                              planned:'22 May'},
+    {team:'A', task:'S4.4–S4.6 finish trench & dig S4.6 base',      planned:'26 May'},
+    {team:'A', task:'S4.6 VC channel & concrete',                         planned:'27 May'},
+    {team:'A', task:'F4.6 & S4.6 ring & bench',                           planned:'28 May'},
+    {team:'A', task:'Backfill F4.6 & S4.6',                               planned:'29 May'},
+    // ── Team B ──────────────────────────────────────────
+    {team:'B', task:'Kerb log — to completion',                      planned:'14–22 May', cf:true, note:'Wk1 & 2 · 7 working days'},
+    {team:'B', task:'Kerb log — to completion',                      planned:'26–29 May', note:'Wk3 · 4 days (BH Mon 25)'},
+    // ── Team C ──────────────────────────────────────────
+    {team:'C', task:'Road crossings & gullies',                            planned:'14–19 May', cf:true},
+    {team:'C', task:'S4.4–S4.6 concrete capping preparation',        planned:'20 May'},
+    {team:'C', task:'S4.4–S4.6 concrete capping & road crossings',   planned:'21 May'},
+    {team:'C', task:'Road crossings & gullies — complete',           planned:'22 May'},
+    {team:'C', task:'Stood down — no work',                          planned:'26–29 May', note:'Team C stood down Wk3'},
   ]
 };
 
