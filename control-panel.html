@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v91</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v92</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -914,26 +914,27 @@ function clearForm() {
   </div>
   <div id="alerts-area" style="margin-bottom:14px;"></div>
 
-  <div class="kpi-grid">
-    <div class="kpi-card accent" style="grid-column:span 3;">
-
+  <!-- ── Row 1: Physical Progress (left) + Days & Financials (right) ── -->
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px;align-items:stretch;">
+    <div class="kpi-card accent" style="height:100%;">
+    
       <!-- ── HERO: Certified vs Revised ── -->
       <div class="prog-hero-grid" style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-bottom:14px;">
-
+    
         <!-- Certified Work Completed -->
         <div style="text-align:center;">
           <div id="hero-source-label" style="font-size:10px;font-weight:700;color:#34d399;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">Physical Progress (GanttPro)</div>
           <div style="font-size:52px;font-weight:800;color:#34d399;line-height:1;" id="kpi-certified-pct">—%</div>
           <div style="font-size:10px;color:var(--muted);margin-top:4px;">Budget-weighted zone progress</div>
         </div>
-
+    
         <!-- Behind indicator (centre) -->
         <div class="prog-behind-box" style="text-align:center;padding:10px 16px;background:#ef444418;border:1px solid #ef444433;border-radius:10px;min-width:90px;">
           <div style="font-size:9px;color:#ef4444;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">Behind by</div>
           <div style="font-size:30px;font-weight:800;color:#ef4444;line-height:1;" id="kpi-gap-pct">—%</div>
           <div style="font-size:9px;color:var(--muted);margin-top:2px;">vs revised plan</div>
         </div>
-
+    
         <!-- Current Revised Plan -->
         <div style="text-align:center;">
           <div style="font-size:10px;font-weight:700;color:#f59e0b;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">Current Revised Plan</div>
@@ -941,7 +942,7 @@ function clearForm() {
           <div id="hero-source-label-right" style="font-size:10px;color:var(--muted);margin-top:4px;">Current Revised Plan</div>
         </div>
       </div>
-
+    
       <!-- ── Comparison bar ── -->
       <div style="position:relative;height:14px;background:#1e293b;border-radius:7px;margin-bottom:6px;overflow:visible;">
         <!-- Green fill = certified work -->
@@ -956,7 +957,7 @@ function clearForm() {
         <span><span style="color:rgba(239,68,68,0.7);">█</span> Behind</span>
         <span><span style="color:#f59e0b;">│</span> Revised plan target</span>
       </div>
-
+    
       <!-- ── Secondary row ── -->
       <div class="prog-secondary" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;border-top:1px solid #2e3347;padding-top:12px;">
         <div style="text-align:center;">
@@ -985,138 +986,92 @@ function clearForm() {
         </div>
       </div>
     </div>
-    <!-- Programme Clock — 5-number summary (v63) -->
-    <div class="kpi-card" style="grid-column:1/-1;padding:14px 18px;">
-      <div style="display:flex;gap:20px;align-items:stretch;">
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:12px;">Programme Clock</div>
-      <div id="pc-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;text-align:center;">
-        <div>
-          <div style="font-size:26px;font-weight:800;color:var(--accent);" id="pc-total-weeks">—</div>
-          <div style="font-size:10px;font-weight:700;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">Total duration</div>
-          <div style="font-size:9px;color:var(--muted);margin-top:3px;">23 Mar → 26 Jun agreed</div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <!-- Days Remaining + Working Days Left combined -->
+      <div class="kpi-card blue">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+          <span id="job-status-pill" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;padding:2px 8px;border-radius:10px;background:#22c55e20;color:#22c55e;border:1px solid #22c55e40;">Active</span>
+          <div id="prog-status-badge" style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;background:#f9731620;color:#f97316;border:1px solid #f9731640;display:inline-block;">Behind Programme</div>
         </div>
-        <div>
-          <div style="font-size:26px;font-weight:800;color:#60a5fa;" id="pc-elapsed-weeks">—</div>
-          <div style="font-size:10px;font-weight:700;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">Elapsed</div>
-          <div style="font-size:9px;color:var(--muted);margin-top:3px;" id="pc-week-of">Week — of —</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div>
+            <div class="kpi-label">Days Remaining</div>
+            <div class="kpi-value" id="kpi-days">—</div>
+            <div class="kpi-sub" id="kpi-days-sub">to agreed completion 26 Jun</div>
+          </div>
+          <div>
+            <div class="kpi-label">Working Days Left</div>
+            <div class="kpi-value" id="kpi-working-days">—</div>
+            <div class="kpi-sub" id="kpi-working-hrs">IoM bank hols applied</div>
+          </div>
         </div>
-        <div>
-          <div style="font-size:26px;font-weight:800;color:#f59e0b;" id="pc-cal-weeks-left">—</div>
-          <div style="font-size:10px;font-weight:700;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">Left to deadline</div>
-          <div style="font-size:9px;color:var(--muted);margin-top:3px;">calendar weeks to 26 Jun</div>
-        </div>
-        <div style="border-left:1px solid var(--border);padding-left:12px;">
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">Speed needed — 26 Jun</div>
-          <div style="font-size:20px;font-weight:800;line-height:1.2;" id="pc-forecast-plan">—</div>
-          <div style="font-size:9px;color:var(--muted);margin-top:4px;">of plan speed needed<br><span id="pc-plan-rem" style="color:var(--muted);"></span></div>
-        </div>
-        <div style="border-left:1px solid var(--border);padding-left:12px;">
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">Honest forecast (current pace)</div>
-          <div style="font-size:20px;font-weight:800;line-height:1.2;" id="pc-forecast-pace">—</div>
-          <div style="font-size:9px;color:var(--muted);margin-top:4px;">if nothing changes<br><span id="pc-pace-velocity" style="color:#a78bfa;"></span></div>
+        <div id="kpi-forecast-row" style="padding-top:8px;border-top:1px solid var(--border);">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:3px;">No-intervention finish</div>
+          <div id="kpi-forecast-date" style="font-size:18px;font-weight:800;color:#ef4444;">—</div>
+          <div id="kpi-forecast-off" style="font-size:10px;color:#ef4444;font-weight:600;margin-top:1px;">—</div>
         </div>
       </div>
-        </div><!-- /pc-content -->
-
-      </div><!-- /pc-flex -->
-    </div>
-    <!-- Days Remaining + Working Days Left combined -->
-    <div class="kpi-card blue">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
-        <span id="job-status-pill" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;padding:2px 8px;border-radius:10px;background:#22c55e20;color:#22c55e;border:1px solid #22c55e40;">Active</span>
-        <div id="prog-status-badge" style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;background:#f9731620;color:#f97316;border:1px solid #f9731640;display:inline-block;">Behind Programme</div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-        <div>
-          <div class="kpi-label">Days Remaining</div>
-          <div class="kpi-value" id="kpi-days">—</div>
-          <div class="kpi-sub" id="kpi-days-sub">to agreed completion 26 Jun</div>
+      <!-- Contract Value + Next Payment + Programme Budget combined -->
+      <div class="kpi-card green admin-only" style="flex:1;">
+        <div class="kpi-label" style="margin-bottom:10px;">Financials</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">Contract Value</div>
+            <div style="font-size:20px;font-weight:800;color:#4ade80;line-height:1;">£450k</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px;">AFP2 contract sum</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">Next Payment</div>
+            <div style="font-size:20px;font-weight:800;color:var(--accent);line-height:1;" id="kpi-next-payment">—</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px;" id="kpi-next-payment-date">—</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">Programme Budget</div>
+            <div style="font-size:20px;font-weight:800;color:#60a5fa;line-height:1;">£367k</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px;">total cost plan</div>
+          </div>
         </div>
-        <div>
-          <div class="kpi-label">Working Days Left</div>
-          <div class="kpi-value" id="kpi-working-days">—</div>
-          <div class="kpi-sub" id="kpi-working-hrs">IoM bank hols applied</div>
-        </div>
-      </div>
-      <div id="kpi-forecast-row" style="padding-top:8px;border-top:1px solid var(--border);">
-        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:3px;">No-intervention finish</div>
-        <div id="kpi-forecast-date" style="font-size:18px;font-weight:800;color:#ef4444;">—</div>
-        <div id="kpi-forecast-off" style="font-size:10px;color:#ef4444;font-weight:600;margin-top:1px;">—</div>
-      </div>
-    </div>
-    <!-- Contract Value + Next Payment + Programme Budget combined -->
-    <div class="kpi-card green admin-only" style="grid-column:span 2;">
-      <div class="kpi-label" style="margin-bottom:10px;">Financials</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-        <div>
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">Contract Value</div>
-          <div style="font-size:20px;font-weight:800;color:#4ade80;line-height:1;">£450k</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:3px;">AFP2 contract sum</div>
-        </div>
-        <div>
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">Next Payment</div>
-          <div style="font-size:20px;font-weight:800;color:var(--accent);line-height:1;" id="kpi-next-payment">—</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:3px;" id="kpi-next-payment-date">—</div>
-        </div>
-        <div>
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">Programme Budget</div>
-          <div style="font-size:20px;font-weight:800;color:#60a5fa;line-height:1;">£367k</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:3px;">total cost plan</div>
-        </div>
-      </div>
-    </div>
-    <!-- Zones Open -->
-    <div class="kpi-card orange">
-      <div class="kpi-label">Zones Open</div>
-      <div class="kpi-value" id="kpi-active-zones">—</div>
-      <div class="kpi-sub">running concurrently</div>
-    </div>
-  </div>
-
-  <!-- ═══ PROGRAMME TIMELINE ═══ -->
-  <div class="card" style="margin-bottom:16px;">
-    <div class="card-title">Programme Timeline</div>
-    <div id="prog-timeline-wrap" style="padding:8px 0 4px;">
-
-      <!-- Date labels row -->
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:6px;flex-wrap:wrap;gap:4px;">
-        <span><strong style="color:#22c55e;">Start</strong> 23 Mar 2026</span>
-        <span id="tl-today-label" style="color:var(--accent2);font-weight:600;"></span>
-        <span><strong style="color:#f59e0b;">Agreed end</strong> 26 Jun 2026</span>
-        <span id="tl-projected-label" class="admin-only" style="color:#f97316;font-weight:600;"></span>
-      </div>
-
-      <!-- Timeline bar -->
-      <div style="position:relative;height:28px;background:#1e293b;border-radius:8px;overflow:visible;margin-bottom:10px;">
-        <!-- Actual done (green) -->
-        <div id="tl-done-bar" style="position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:8px 0 0 8px;min-width:4px;transition:width 0.6s;"></div>
-        <!-- Gap to revised plan (amber/translucent) -->
-        <div id="tl-gap-bar" style="position:absolute;top:0;height:100%;background:rgba(245,158,11,0.25);transition:all 0.6s;"></div>
-        <!-- Today marker -->
-        <div id="tl-today-marker" style="position:absolute;top:-5px;height:38px;width:2px;background:#3b82f6;border-radius:2px;box-shadow:0 0 6px #3b82f688;transition:left 0.6s;">
-          <div style="position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:9px;color:#3b82f6;white-space:nowrap;font-weight:700;">TODAY</div>
-        </div>
-        <!-- Agreed end marker (amber) — always at far right of bar -->
-        <div style="position:absolute;top:-5px;right:0;height:38px;width:2px;background:#f59e0b;border-radius:2px;opacity:0.7;"></div>
-        <!-- Projected end marker (orange) — may extend past bar -->
-        <div id="tl-projected-marker" class="admin-only" style="position:absolute;top:-5px;height:38px;width:2px;background:#f97316;border-radius:2px;box-shadow:0 0 6px #f9731688;transition:left 0.6s;display:none;">
-          <div id="tl-proj-label" style="position:absolute;top:-16px;left:4px;font-size:9px;color:#f97316;white-space:nowrap;font-weight:700;"></div>
-        </div>
-      </div>
-
-      <!-- Legend + summary row -->
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
-        <div style="display:flex;gap:12px;font-size:10px;color:var(--muted);flex-wrap:wrap;">
-          <span><span style="color:#22c55e;">█</span> Actual done</span>
-          <span><span style="color:rgba(245,158,11,0.6);">█</span> Time elapsed vs target</span>
-          <span><span style="color:#3b82f6;">│</span> Today</span>
-          <span><span style="color:#f59e0b;">│</span> Agreed end</span>
-        </div>
-        <div id="tl-summary" style="font-size:11px;color:var(--muted);text-align:right;"></div>
       </div>
     </div>
   </div>
+
+  <!-- ── Row 2: Programme Clock ── -->
+  <div class="kpi-card" style="grid-column:1/-1;padding:14px 18px;">
+    <div style="display:flex;gap:20px;align-items:stretch;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:12px;">Programme Clock</div>
+    <div id="pc-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;text-align:center;">
+      <div>
+        <div style="font-size:26px;font-weight:800;color:var(--accent);" id="pc-total-weeks">—</div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">Total duration</div>
+        <div style="font-size:9px;color:var(--muted);margin-top:3px;">23 Mar → 26 Jun agreed</div>
+      </div>
+      <div>
+        <div style="font-size:26px;font-weight:800;color:#60a5fa;" id="pc-elapsed-weeks">—</div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">Elapsed</div>
+        <div style="font-size:9px;color:var(--muted);margin-top:3px;" id="pc-week-of">Week — of —</div>
+      </div>
+      <div>
+        <div style="font-size:26px;font-weight:800;color:#f59e0b;" id="pc-cal-weeks-left">—</div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">Left to deadline</div>
+        <div style="font-size:9px;color:var(--muted);margin-top:3px;">calendar weeks to 26 Jun</div>
+      </div>
+      <div style="border-left:1px solid var(--border);padding-left:12px;">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">Speed needed — 26 Jun</div>
+        <div style="font-size:20px;font-weight:800;line-height:1.2;" id="pc-forecast-plan">—</div>
+        <div style="font-size:9px;color:var(--muted);margin-top:4px;">of plan speed needed<br><span id="pc-plan-rem" style="color:var(--muted);"></span></div>
+      </div>
+      <div style="border-left:1px solid var(--border);padding-left:12px;">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">Honest forecast (current pace)</div>
+        <div style="font-size:20px;font-weight:800;line-height:1.2;" id="pc-forecast-pace">—</div>
+        <div style="font-size:9px;color:var(--muted);margin-top:4px;">if nothing changes<br><span id="pc-pace-velocity" style="color:#a78bfa;"></span></div>
+      </div>
+    </div>
+      </div><!-- /pc-content -->
+  
+    </div><!-- /pc-flex -->
+  </div>
+
 
   <div class="grid-2">
     <div class="card">
@@ -1151,7 +1106,7 @@ function clearForm() {
       <div id="zone-summary-list"></div>
     </div>
     <div class="card">
-      <div class="card-title">Upcoming This Week</div>
+      <div class="card-title">Upcoming Next Two Weeks</div>
       <div id="upcoming-tasks-list"></div>
     </div>
   </div>
@@ -6420,12 +6375,12 @@ function buildZoneSummaryList() {
 // ═══════════════════════ UPCOMING THIS WEEK ═══════════════════════
 function buildUpcomingList() {
   const el = document.getElementById('upcoming-tasks-list');
-  const weekEnd = new Date(TODAY.getTime() + 7*86400000);
+  const weekEnd = new Date(TODAY.getTime() + 14*86400000);
   const upcoming = TASKS.filter(t => {
     const s = parseDate(t.start), e = parseDate(t.end);
     return (s >= TODAY && s <= weekEnd) || (s <= TODAY && e >= TODAY);
-  }).slice(0,8);
-  if(!upcoming.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px;">No tasks this week</div>'; return; }
+  }).slice(0,14);
+  if(!upcoming.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px;">No tasks in next two weeks</div>'; return; }
   const stCol = { complete:'#22c55e', active:'#f59e0b', upcoming:'#64748b' };
   el.innerHTML = upcoming.map(t => {
     const st   = getTaskStatus(t);
@@ -7634,14 +7589,10 @@ function shRenderRosterMgmt() {
   h += '</div>';
   h += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
   roster.forEach(function(name, idx) {
-    var hasNote = !!(notes[name] && notes[name].trim());
     h += '<div class="sh-roster-chip" style="display:inline-flex;align-items:center;gap:4px;';
     h += 'background:var(--bg);border:1px solid var(--border);border-radius:20px;';
     h += 'padding:4px 8px 4px 12px;font-size:12px;white-space:nowrap;">';
     h += '<span style="max-width:160px;overflow:hidden;text-overflow:ellipsis;">' + name + '</span>';
-    h += '<button class="sh-roster-note-btn" data-idx="' + idx + '" title="Member notes" ';
-    h += 'style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 3px;line-height:1;';
-    h += 'color:' + (hasNote ? '#f59e0b' : 'var(--muted)') + ';">&#128221;</button>';
     h += '<button class="sh-roster-remove-btn" data-idx="' + idx + '" title="Remove from roster" ';
     h += 'style="background:none;border:none;cursor:pointer;font-size:16px;line-height:1;padding:0 2px;';
     h += 'color:var(--muted);">&#215;</button>';
@@ -7654,9 +7605,6 @@ function shRenderRosterMgmt() {
   if (addBtn) addBtn.addEventListener('click', shAddStaffUI);
   var inp = el.querySelector('#sh-add-staff-input');
   if (inp) inp.addEventListener('keydown', function(ev) { if (ev.key === 'Enter') shAddStaffUI(); });
-  el.querySelectorAll('.sh-roster-note-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() { shOpenNote(roster[parseInt(btn.dataset.idx)]); });
-  });
   el.querySelectorAll('.sh-roster-remove-btn').forEach(function(btn) {
     btn.addEventListener('click', function() { shRemoveStaffUI(roster[parseInt(btn.dataset.idx)]); });
   });
