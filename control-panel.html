@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v87</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v88</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -5273,6 +5273,39 @@ function buildFortnightlyReport() {
     + '</div>');
   h.push('</div>');
 
+  // ── Pre-compute completion-outlook values (used in left panel) ────────────
+  var _cfo = null;
+  try { _cfo = calcForecast(); } catch(_e2) {}
+  // Historical plan-completion rate from FORTNIGHTLY_HISTORY
+  var _histArr2 = (typeof FORTNIGHTLY_HISTORY !== 'undefined') ? FORTNIGHTLY_HISTORY : [];
+  var _pd2  = (typeof FORTNIGHTLY_PLAN_DATA !== 'undefined') ? FORTNIGHTLY_PLAN_DATA : null;
+  var _np2  = (typeof FORTNIGHTLY_NEXT_PLAN  !== 'undefined') ? FORTNIGHTLY_NEXT_PLAN  : null;
+  var _ext2 = (typeof FORTNIGHTLY_EXTRAS     !== 'undefined') ? FORTNIGHTLY_EXTRAS     : [];
+  var _cfK2 = {};
+  if (_np2 && _np2.items) { _np2.items.forEach(function(it){ if(it.cf) _cfK2[it.team+':'+it.task]=true; }); }
+  var _dn2 = _pd2 ? _pd2.items.filter(function(i){return i.status==='done';}).length : 0;
+  var _rm2 = _pd2 ? _pd2.items.filter(function(i){
+    return (i.status==='not_done'||i.status==='partial') && !_cfK2[i.team+':'+i.task];
+  }).length : 0;
+  var _pr2 = (_dn2+_rm2) > 0 ? Math.round(_dn2/(_dn2+_rm2)*100) : 100;
+  var _hd2=0, _hp2=0;
+  _histArr2.forEach(function(entry){
+    var hm=(entry.real_misses!==undefined)?entry.real_misses:(entry.total-entry.done-(entry.cf||0));
+    _hd2 += entry.done+(entry.extras||0);
+    _hp2 += entry.done+hm+(entry.extras||0);
+  });
+  var _avgRate2 = _hp2 > 0 ? Math.round(_hd2/_hp2*100) : _pr2;
+  // Efficiency-adjusted finish date
+  var _effStr2='—', _effLate2=false;
+  if (_cfo && _cfo.rate > 0 && _avgRate2 > 0) {
+    var _asO2 = (typeof DATA_AS_OF!=='undefined' && DATA_AS_OF<=new Date()) ? DATA_AS_OF : new Date();
+    var _rawD2 = Math.round((100-_cfo.pct)/_cfo.rate);
+    var _effD2 = Math.round(_rawD2*(100/Math.max(_avgRate2,30)));
+    var _effDt2 = new Date(_asO2.getTime()); _effDt2.setDate(_effDt2.getDate()+_effD2);
+    _effStr2 = _effDt2.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    _effLate2 = _effDt2 > new Date('2026-06-26T00:00:00');
+  }
+
   // ── TWO COL: FINANCIAL + AFP/EOT ─────────────────────────────────────────
   h.push('<div class="two-col" style="margin-top:4px;">');
 
@@ -5310,6 +5343,25 @@ function buildFortnightlyReport() {
     + 'padding:1px 6px;border-radius:3px;font-size:7.5pt;font-weight:700;">'
     + _billingLbl + '</span></td></tr>');
   h.push('<tr><td style="font-weight:600;">Forecast Final Account</td><td style="text-align:right;font-weight:700;color:#16a34a;">£' + forecastFAC.toLocaleString() + ' +vars</td></tr>');
+  h.push('<tr style="border-top:2px solid #e2e8f0;">'
+    + '<td colspan="2" style="font-size:7pt;font-weight:700;text-transform:uppercase;'
+    + 'letter-spacing:.08em;color:#1e3a5f;padding-top:8px;padding-bottom:2px;'
+    + 'border-bottom:2px solid #1e3a5f;">Completion Outlook</td></tr>');
+  h.push('<tr>'
+    + '<td>Agreed completion date</td>'
+    + '<td style="text-align:right;font-weight:700;color:#16a34a;">26 Jun 2026</td></tr>');
+  h.push('<tr>'
+    + '<td>Current programme forecast</td>'
+    + '<td style="text-align:right;font-weight:700;color:' + (_cfo&&_cfo.late?'#dc2626':'#16a34a') + ';">'
+    + (_cfo ? _cfo.str : '&mdash;') + '</td></tr>');
+  h.push('<tr style="background:#fffbeb;">'
+    + '<td style="font-size:7.5pt;">'
+    + '<span style="color:#92400e;font-weight:600;">&#9432;&nbsp;Efficiency-adjusted estimate</span>'
+    + '<div style="font-size:6.5pt;color:#9ca3af;margin-top:2px;line-height:1.3;">'
+    + '&#9888; Indicative only &mdash; applies ' + _avgRate2 + '% plan-completion rate'
+    + '</div></td>'
+    + '<td style="text-align:right;font-weight:700;font-size:8.5pt;color:' + (_effLate2?'#dc2626':'#16a34a') + ';vertical-align:top;padding-top:4px;">'
+    + _effStr2 + '</td></tr>');
   h.push('</table>');
   h.push('</div>');
 
