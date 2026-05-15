@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v93</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v94</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -5456,11 +5456,13 @@ function buildTwoWeekReport() {
       + '<div style="font-size:7pt;color:#94a3b8;">'+(_done+_extras)+'/'+(_total+_extras)+' total</div>'
       + '</div>');
   }
+  if (_hist.length >= 5) {
   h.push('<div style="text-align:center;">'
     + '<div style="font-size:7pt;color:#64748b;margin-bottom:1px;">Running average</div>'
     + '<div style="font-size:18pt;font-weight:800;color:'+_rateCol(_avgRate)+';line-height:1;">'+_avgRate+'%</div>'
     + '<div style="font-size:7pt;color:#94a3b8;">over '+_hist.length+' report'+(_hist.length!==1?'s':'')+' to date</div>'
     + '</div>');
+  }
   h.push('<div style="flex:1;font-size:8pt;color:#64748b;font-style:italic;text-align:right;">Extra work done outside plan listed above &mdash; counted in adjusted rate.</div>');
   h.push('</div>');
 
@@ -5940,11 +5942,13 @@ function buildFortnightlyReport() {
         + '<div style="font-size:7pt;color:#94a3b8;">'+(_done+_extras)+'/'+(_total+_extras)+' total</div>'
         + '</div>');
     }
+    if (_hist.length >= 5) {
     h.push('<div style="text-align:center;">'
       + '<div style="font-size:7pt;color:#64748b;margin-bottom:1px;">Running average</div>'
       + '<div style="font-size:18pt;font-weight:800;color:'+_rateCol(_avgRate)+';line-height:1;">'+_avgRate+'%</div>'
       + '<div style="font-size:7pt;color:#94a3b8;">over '+_hist.length+' report'+(_hist.length!==1?'s':'')+' to date</div>'
       + '</div>');
+    }
     h.push('<div style="flex:1;font-size:8pt;color:#64748b;font-style:italic;text-align:right;">'
       + 'Extra work done outside plan is listed above and counted in adjusted rate.</div>');
     h.push('</div>');
