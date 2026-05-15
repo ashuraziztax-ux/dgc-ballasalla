@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v88</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v89</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -1258,16 +1258,6 @@ function clearForm() {
   <!-- Impact KPIs -->
   <div class="sh-kpi-row" id="sh-impact-kpis"></div>
 
-  <!-- Weekly Log -->
-  <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
-      <div class="card-title" style="margin-bottom:0;">&#128197; Weekly Hours Log</div>
-      <div style="font-size:11px;color:var(--muted);">Enter actual site hours each Friday. Includes all operatives on site.</div>
-    </div>
-    <div style="overflow-x:auto;">
-      <table class="sh-week-table" id="sh-week-table-el"></table>
-    </div>
-  </div>
 
   <!-- Staff Daily Hours Tracker (v87) -->
   <div class="card" id="staff-tracker-card" style="margin-top:12px;">
@@ -1280,7 +1270,30 @@ function clearForm() {
       </div>
     </div>
     <div style="font-size:10px;color:var(--muted);margin-bottom:10px;">Pre-populated with expected hours from the agreed pattern. Edit any cell to record actual hours &mdash; changes flag automatically. Data saved in browser.</div>
+    <div id="sh-roster-mgmt-wrap" style="margin-bottom:12px;"></div>
     <div id="sh-tracker-wrap" style="overflow-x:auto;"></div>
+  </div>
+
+  <!-- Staff Hours History Card (v89) -->
+  <div class="card" id="sh-history-card" style="margin-top:12px;">
+    <div class="card-title" style="margin-bottom:10px;">&#128194; Staff Hours History</div>
+    <div id="sh-history-wrap"></div>
+  </div>
+
+  <!-- Member Notes Modal (v89) -->
+  <div id="sh-note-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:2000;background:rgba(0,0,0,.55);align-items:center;justify-content:center;">
+    <div style="background:var(--surface);border-radius:10px;padding:22px;max-width:480px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,.45);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div id="sh-note-modal-title" style="font-weight:700;font-size:14px;color:var(--text);"></div>
+        <button onclick="document.getElementById('sh-note-modal').style.display='none';" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1;">&#215;</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Pay rate, certifications, special arrangements, anything useful about this person.</div>
+      <textarea id="sh-note-modal-text" rows="6" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;padding:8px;resize:vertical;" placeholder="e.g. CSCS card expires Jun 2026, first aider, agreed rate £22/hr&#8230;"></textarea>
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
+        <button onclick="shNoteSave()" style="background:#1e3a5f;color:#fff;border:none;border-radius:6px;padding:7px 18px;font-size:13px;font-weight:600;cursor:pointer;">Save</button>
+        <button onclick="document.getElementById('sh-note-modal').style.display='none';" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:7px 14px;font-size:13px;cursor:pointer;">Cancel</button>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -6567,31 +6580,6 @@ function shSavePattern() {
   lsSet('dgc_staff_pattern', pat);
 }
 
-// Load/save weekly hours log { 'YYYY-MM-DD': actualHours }
-function shLoadLog() { return lsGet('dgc_weekly_log', null) || {}; }
-function shSaveLog(log) { lsSet('dgc_weekly_log', log); }
-
-// Generate project weeks: [{key, monDate, friDate, isSatWeek}]
-function shProjectWeeks() {
-  var weeks = [];
-  var d = new Date(SH_PROJ_START);
-  var satWeek = false; // week 1: 23-27 Mar — assume no Saturday (first week)
-  while (d <= SH_PROJ_END) {
-    var mon = new Date(d);
-    var fri = new Date(d); fri.setDate(fri.getDate() + 4);
-    var sat = new Date(d); sat.setDate(sat.getDate() + 5);
-    weeks.push({
-      key:     mon.toISOString().slice(0,10),
-      monDate: mon,
-      friDate: fri,
-      satDate: sat,
-      isSatWeek: satWeek
-    });
-    d.setDate(d.getDate() + 7);
-    satWeek = !satWeek;
-  }
-  return weeks;
-}
 
 function shFmtDate(d) {
   var dd = d.getDate(), mm = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
@@ -6601,7 +6589,6 @@ function shFmtDate(d) {
 // ─── Main builder ─────────────────────────────────────────────────────────
 function buildStaffHours() {
   var pat = shLoadPattern();
-  var log = shLoadLog();
 
   // Restore form values
   try {
@@ -6626,7 +6613,9 @@ function buildStaffHours() {
     if (me) me.value = gc.menPerGang;
   } catch(e) {}
   shRebuild();
-  try { buildStaffTracker(); } catch(e) {}
+  try { buildStaffTracker();   } catch(e) {}
+  try { shRenderRosterMgmt(); } catch(e) {}
+  try { shRenderHistory();    } catch(e) {}
 }
 
 function shLoadGangConfig() {
@@ -6640,14 +6629,11 @@ function shSaveGangConfig() {
 }
 
 function shRebuild() {
-  var pat   = shLoadPattern();
-  var log   = shLoadLog();
-  var weeks = shProjectWeeks();
-  var today = TODAY;
+  var pat = shLoadPattern();
 
   // Gang config
-  var gangCfg    = shLoadGangConfig();
-  var totalMen   = gangCfg.gangs * gangCfg.menPerGang;
+  var gangCfg  = shLoadGangConfig();
+  var totalMen = gangCfg.gangs * gangCfg.menPerGang;
 
   // Restore gang inputs
   try {
@@ -6657,193 +6643,111 @@ function shRebuild() {
     if (mpgEl   && !mpgEl._set)   { mpgEl.value   = gangCfg.menPerGang; mpgEl._set   = true; }
   } catch(e) {}
 
-  // Per-man weekly averages
+  // Per-man weekly averages (productive = gross minus 60 min; cost = gross minus 30 min)
   function prodWeeklyHours(p, hasSat) {
-    // Productive = gross - 60 min break
-    function prodDay(start, end) { return Math.max(0, shTimeToHours(end) - shTimeToHours(start) - 1.0); }
+    function prodDay(s, e) { return Math.max(0, shTimeToHours(e) - shTimeToHours(s) - 1.0); }
     var h = prodDay(p.monThu.start, p.monThu.end) * 4
           + prodDay(p.friday.start,  p.friday.end);
     if (hasSat && p.saturday.freq !== 'none')
       h += Math.max(0, shTimeToHours(p.saturday.end) - shTimeToHours(p.saturday.start));
     return Math.round(h * 10) / 10;
   }
-  function costWeeklyHours(p, hasSat) {
-    // Cost = gross - 30 min (DGC pays half break)
-    return shWeeklyHours(p, hasSat); // existing function already uses unpaidMins=30
-  }
-
   function prodAvg(p) {
-    if (p.saturday.freq === 'every')    return prodWeeklyHours(p, true);
-    if (p.saturday.freq === 'none')     return prodWeeklyHours(p, false);
-    return Math.round((prodWeeklyHours(p,true)+prodWeeklyHours(p,false))/2*10)/10;
+    if (p.saturday.freq === 'every') return prodWeeklyHours(p, true);
+    if (p.saturday.freq === 'none')  return prodWeeklyHours(p, false);
+    return Math.round((prodWeeklyHours(p, true) + prodWeeklyHours(p, false)) / 2 * 10) / 10;
   }
-  function costAvg(p) { return shAvgWeekHours(p); }
 
   var prodPerMan = prodAvg(pat);
-  var costPerMan = costAvg(pat);
+  var costPerMan = shAvgWeekHours(pat);
 
   // Update actual avg display
   var avgEl = document.getElementById('sh-actual-avg');
   if (avgEl) avgEl.textContent = costPerMan + ' h/week (cost)';
 
   // Show/hide saturday times row
-  var satRow   = document.getElementById('sh-sat-times-row');
+  var satRow    = document.getElementById('sh-sat-times-row');
   var satFreqEl = document.getElementById('sh-sat-freq');
   if (satRow && satFreqEl) satRow.style.display = satFreqEl.value === 'none' ? 'none' : '';
 
   // Update gang summary tiles
-  var totalMenEl = document.getElementById('sh-total-men');
-  if (totalMenEl) totalMenEl.textContent = totalMen + ' men';
+  var totalMenEl  = document.getElementById('sh-total-men');
   var totalCostEl = document.getElementById('sh-total-cost-hrs');
-  if (totalCostEl) totalCostEl.textContent = Math.round(costPerMan * totalMen * 10)/10 + 'h';
   var totalProdEl = document.getElementById('sh-total-prod-hrs');
-  if (totalProdEl) totalProdEl.textContent = Math.round(prodPerMan * totalMen * 10)/10 + 'h';
+  if (totalMenEl)  totalMenEl.textContent  = totalMen + ' men';
+  if (totalCostEl) totalCostEl.textContent = Math.round(costPerMan * totalMen * 10) / 10 + 'h';
+  if (totalProdEl) totalProdEl.textContent = Math.round(prodPerMan * totalMen * 10) / 10 + 'h';
 
-  // Reference priced cost (contract): 45.5h/man/week cost hours
-  var contractCostPerMan = 45.5;
-  var contractProdPerMan = 43.0;
-
-  // Cumulative totals
-  var targetTotal = 0, actualTotal = 0, weeksLogged = 0;
-  weeks.forEach(function(w) {
-    if (w.friDate < today) {
-      var wkCost = costWeeklyHours(pat, w.isSatWeek) * totalMen;
-      targetTotal += wkCost;
-      var actual = log[w.key] !== undefined ? parseFloat(log[w.key]) : null;
-      if (actual !== null && !isNaN(actual)) { actualTotal += actual; weeksLogged++; }
-    }
-  });
-
-  var deficit   = Math.round((targetTotal - actualTotal) * 10) / 10;
-  var dayHrsCost = costWeeklyHours(pat, false) / 5; // approx hrs per man day
-  var extraDays = dayHrsCost * totalMen > 0 ? Math.round(deficit / (dayHrsCost * totalMen) * 10) / 10 : 0;
-  var efficiency = targetTotal > 0 && actualTotal > 0 ? Math.round(actualTotal / targetTotal * 1000) / 10 : 0;
-
-  var weeksLeft = weeks.filter(function(w) { return w.monDate >= today; }).length;
-
-  // KPI tiles
+  // KPI tiles — hours model + completion outlook
   var kpiEl = document.getElementById('sh-impact-kpis');
   if (kpiEl) {
-    var effCol = efficiency >= 95 ? '#22c55e' : efficiency >= 80 ? '#f59e0b' : '#ef4444';
-    var defCol = deficit > 0 ? '#ef4444' : '#22c55e';
-
-    // Date KPIs — agreed / current expected / manipulated (hours-adjusted)
     var _fc = calcForecast();
-    var currentExpStr  = _fc ? _fc.str  : '—';
+    var currentExpStr  = _fc ? _fc.str  : '\u2014';
     var currentExpLate = _fc ? _fc.late : false;
-
-    // Manipulated finish: if test hours > contract hours → finish sooner, and vice-versa
-    var manipStr = '—', manipLate = false;
+    var manipStr = '\u2014', manipLate = false;
     if (_fc && prodPerMan > 0 && _fc.rate > 0) {
-      var _contractProd = 43.0; // fixed contract productive h/man/wk
+      var _contractProd = 43.0; // agreed productive h/man/wk
       var _asOf = (typeof DATA_AS_OF !== 'undefined' && DATA_AS_OF <= TODAY) ? DATA_AS_OF : TODAY;
       var _manipDays = Math.round((100 - _fc.pct) / _fc.rate * (_contractProd / prodPerMan));
       var _manipDate = new Date(_asOf.getTime());
       _manipDate.setDate(_manipDate.getDate() + _manipDays);
       manipLate = _manipDate > new Date('2026-06-26T00:00:00');
-      manipStr = _manipDate.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
+      manipStr  = _manipDate.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
     }
     var _agrCol = '#22c55e';
     var _curCol = currentExpLate ? '#ef4444' : '#22c55e';
     var _manCol = manipLate      ? '#ef4444' : '#22c55e';
-
     kpiEl.innerHTML =
-      '<div class="sh-kpi"><div class="val" style="color:#60a5fa;">' + prodPerMan + 'h</div><div class="lbl">Test productive h/man/wk<br><span style="font-size:9px;color:var(--muted);">gross − 60 min</span></div></div>' +
-      '<div class="sh-kpi"><div class="val" style="color:#4ade80;">' + costPerMan + 'h</div><div class="lbl">Test cost h/man/wk<br><span style="font-size:9px;color:var(--muted);">DGC pays gross − 30 min</span></div></div>' +
-      '<div class="sh-kpi"><div class="val" style="color:' + _agrCol + ';font-size:18px;">26 Jun 2026</div><div class="lbl">Agreed completion date</div></div>' +
-      '<div class="sh-kpi"><div class="val" style="color:' + _curCol + ';font-size:18px;">' + currentExpStr + '</div><div class="lbl">Current expected completion<br><span style="font-size:9px;color:var(--muted);">at current rate &amp; hours</span></div></div>' +
-      '<div class="sh-kpi"><div class="val" style="color:' + _manCol + ';font-size:18px;">' + manipStr + '</div><div class="lbl">Manipulated finish date<br><span style="font-size:9px;color:var(--muted);">if test hours maintained</span></div></div>' +
-      (weeksLogged > 0
-        ? '<div class="sh-kpi"><div class="val" style="color:' + effCol + ';">' + efficiency + '%</div><div class="lbl">Hours efficiency</div></div>' +
-          '<div class="sh-kpi"><div class="val" style="color:' + defCol + ';">' + (deficit > 0 ? '−' : '+') + Math.abs(deficit) + 'h</div><div class="lbl">Hours ' + (deficit > 0 ? 'deficit' : 'surplus') + '<br><span style="font-size:9px;color:var(--muted);">' + Math.abs(extraDays) + ' programme days</span></div></div>'
-        : '');
+      '<div class="sh-kpi"><div class="val" style="color:#60a5fa;">' + prodPerMan +
+      'h</div><div class="lbl">Test productive h/man/wk<br><span style="font-size:9px;color:var(--muted);">gross &minus; 60 min</span></div></div>' +
+      '<div class="sh-kpi"><div class="val" style="color:#4ade80;">' + costPerMan +
+      'h</div><div class="lbl">Test cost h/man/wk<br><span style="font-size:9px;color:var(--muted);">DGC pays gross &minus; 30 min</span></div></div>' +
+      '<div class="sh-kpi"><div class="val" style="color:' + _agrCol + ';font-size:18px;">26 Jun 2026</div>' +
+      '<div class="lbl">Agreed completion date</div></div>' +
+      '<div class="sh-kpi"><div class="val" style="color:' + _curCol + ';font-size:18px;">' + currentExpStr +
+      '</div><div class="lbl">Current expected completion<br><span style="font-size:9px;color:var(--muted);">at current rate &amp; hours</span></div></div>' +
+      '<div class="sh-kpi"><div class="val" style="color:' + _manCol + ';font-size:18px;">' + manipStr +
+      '</div><div class="lbl">Manipulated finish date<br><span style="font-size:9px;color:var(--muted);">if test hours maintained</span></div></div>';
   }
-
-  // Weekly table
-  var tbl = document.getElementById('sh-week-table-el');
-  if (!tbl) return;
-
-  var thead = '<thead><tr>' +
-    '<th>Week</th>' +
-    '<th>Dates</th>' +
-    '<th>Prod h/man</th>' +
-    '<th>Cost h/man</th>' +
-    '<th>Total cost hrs<br><span style="font-size:9px;font-weight:400;color:var(--muted);">(' + totalMen + ' men)</span></th>' +
-    '<th>Actual hrs logged</th>' +
-    '<th>Difference</th>' +
-    '<th>Running</th>' +
-    '</tr></thead>';
-
-  var running = 0;
-  var tbody = '<tbody>';
-  weeks.forEach(function(w) {
-    var isPast    = w.friDate < today;
-    var isCurrent = (w.monDate <= today && w.friDate >= today) || (!isPast && w.monDate <= today);
-    var wkNum     = weeks.indexOf(w) + 1;
-    var prodH     = prodWeeklyHours(pat, w.isSatWeek);
-    var costH     = costWeeklyHours(pat, w.isSatWeek);
-    var totalCostH = Math.round(costH * totalMen * 10) / 10;
-    var actual    = log[w.key] !== undefined ? parseFloat(log[w.key]) : null;
-
-    if (isPast && actual !== null && !isNaN(actual)) running += actual - totalCostH;
-
-    var diffVal  = (actual !== null && !isNaN(actual)) ? Math.round((actual - totalCostH)*10)/10 : null;
-    var diffHtml = diffVal === null ? '<span style="color:var(--muted);">—</span>' :
-                   diffVal > 0  ? '<span class="sh-diff-pos">+' + diffVal + 'h</span>' :
-                   diffVal < 0  ? '<span class="sh-diff-neg">' + diffVal + 'h</span>' :
-                                  '<span class="sh-diff-zero">0h</span>';
-
-    var runHtml = (isPast && actual !== null) ?
-      '<span style="color:' + (running < 0 ? '#ef4444' : '#22c55e') + ';font-weight:700;">' +
-      (running > 0 ? '+' : '') + Math.round(running*10)/10 + 'h</span>' : '—';
-
-    var rowStyle = isCurrent ? 'background:#f59e0b10;' : '';
-    var badge    = w.isSatWeek ? '<span class="sh-sat-tag">Sat</span>' : '';
-
-    tbody += '<tr style="' + rowStyle + '">' +
-      '<td style="color:var(--muted);font-weight:600;">Wk ' + wkNum + badge + '</td>' +
-      '<td>' + shFmtDate(w.monDate) + ' – ' + shFmtDate(w.friDate) +
-        (w.isSatWeek && pat.saturday.freq !== 'none' ? ' + Sat ' + shFmtDate(w.satDate) : '') +
-      '</td>' +
-      '<td style="color:#60a5fa;font-weight:600;">' + prodH + 'h</td>' +
-      '<td style="color:#4ade80;font-weight:600;">' + costH + 'h</td>' +
-      '<td style="color:var(--accent);font-weight:700;">' + totalCostH + 'h</td>' +
-      '<td>' +
-        '<input type="number" min="0" max="9999" step="0.5" ' +
-        'value="' + (actual !== null && !isNaN(actual) ? actual : '') + '" ' +
-        'placeholder="' + totalCostH + '" ' +
-        'onchange="shLogHours(\'' + w.key + '\',this.value)" ' +
-        'style="' + (isPast ? '' : 'opacity:0.5;') + '">' +
-      '</td>' +
-      '<td>' + diffHtml + '</td>' +
-      '<td>' + runHtml + '</td>' +
-      '</tr>';
-  });
-  tbody += '</tbody>';
-  tbl.innerHTML = thead + tbody;
-}
-function shLogHours(weekKey, value) {
-  var log = shLoadLog();
-  var v = parseFloat(value);
-  if (!isNaN(v) && v >= 0) {
-    log[weekKey] = v;
-  } else {
-    delete log[weekKey];
-  }
-  shSaveLog(log);
-  shRebuild();
 }
 
 // ═════════════════════════════════════════════════════════════════════════
-// STAFF DAILY HOURS TRACKER (v87)
+// STAFF DAILY HOURS TRACKER (v87) + ROSTER MANAGEMENT (v89)
 // ═════════════════════════════════════════════════════════════════════════
 
-// Current staff roster (May 2026)
-var SH_STAFF_ROSTER = [
+// Staff roster — persisted to localStorage 'dgc_staff_roster'; 12-person default (May 2026)
+var SH_ROSTER_DEFAULTS = [
   'Liam Smith', 'David Smith', 'Dean Garrett', 'Lee Clinton',
   'Jake Whetnall', 'James Cosgrove', 'Bradley McKevitt', 'Stephen Lamb',
   'James Shannon', 'Stephen Smithies', 'Robert Urquhart', 'Lewis Peck'
 ];
+function shLoadRoster()  { return lsGet('dgc_staff_roster', null) || SH_ROSTER_DEFAULTS.slice(); }
+function shSaveRoster(r) { lsSet('dgc_staff_roster', r); }
+var SH_STAFF_ROSTER = shLoadRoster();
+
+function shAddStaff(name) {
+  name = name.trim();
+  if (!name || SH_STAFF_ROSTER.indexOf(name) >= 0) return false;
+  SH_STAFF_ROSTER.push(name);
+  shSaveRoster(SH_STAFF_ROSTER);
+  return true;
+}
+function shRemoveStaff(name) {
+  var idx = SH_STAFF_ROSTER.indexOf(name);
+  if (idx < 0) return false;
+  SH_STAFF_ROSTER.splice(idx, 1);
+  shSaveRoster(SH_STAFF_ROSTER);
+  return true;
+}
+
+// Member biographical notes (stored separately from per-period tracker notes)
+function shLoadMemberNotes()          { return lsGet('dgc_staff_member_notes', null) || {}; }
+function shSaveMemberNote(name, text) {
+  var notes = shLoadMemberNotes();
+  if ((text || '').trim()) notes[name] = text.trim();
+  else delete notes[name];
+  lsSet('dgc_staff_member_notes', notes);
+}
 
 // 14-day pay periods (Sat→Fri), starting Sat 28 Mar 2026
 function shPayPeriods() {
@@ -7091,6 +6995,179 @@ function buildStaffTracker() {
 
   // Expose tracker average for external use (e.g. future KPI forecasts)
   window._shTrackerAvgPerManPerWk = avgPerWk;
+  // Refresh history panel so saved hours show immediately
+  try { shRenderHistory(); } catch(e) {}
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// STAFF MANAGEMENT — Roster / Notes / History (v89)
+// ═════════════════════════════════════════════════════════════════════════
+
+var _shNoteTarget = null;
+
+function shRenderRosterMgmt() {
+  var el = document.getElementById('sh-roster-mgmt-wrap');
+  if (!el) return;
+  SH_STAFF_ROSTER = shLoadRoster();
+  var roster = SH_STAFF_ROSTER;
+  var notes  = shLoadMemberNotes();
+  var h = '<div style="background:var(--surface2);border-radius:8px;padding:12px 14px;border:1px solid var(--border);">';
+  h += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;';
+  h += 'color:var(--muted);margin-bottom:10px;">Manage Roster &mdash; ' + roster.length + ' staff</div>';
+  h += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">';
+  h += '<input id="sh-add-staff-input" type="text" placeholder="Full name&#8230;" ';
+  h += 'style="flex:1;min-width:140px;max-width:260px;background:var(--bg);';
+  h += 'border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:12px;padding:5px 9px;">';
+  h += '<button class="sh-roster-add-btn" style="font-size:12px;padding:5px 14px;border-radius:5px;';
+  h += 'border:none;background:#1e3a5f;color:#fff;cursor:pointer;font-weight:600;white-space:nowrap;">+ Add</button>';
+  h += '</div>';
+  h += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+  roster.forEach(function(name, idx) {
+    var hasNote = !!(notes[name] && notes[name].trim());
+    h += '<div class="sh-roster-chip" style="display:inline-flex;align-items:center;gap:4px;';
+    h += 'background:var(--bg);border:1px solid var(--border);border-radius:20px;';
+    h += 'padding:4px 8px 4px 12px;font-size:12px;white-space:nowrap;">';
+    h += '<span style="max-width:160px;overflow:hidden;text-overflow:ellipsis;">' + name + '</span>';
+    h += '<button class="sh-roster-note-btn" data-idx="' + idx + '" title="Member notes" ';
+    h += 'style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 3px;line-height:1;';
+    h += 'color:' + (hasNote ? '#f59e0b' : 'var(--muted)') + ';">&#128221;</button>';
+    h += '<button class="sh-roster-remove-btn" data-idx="' + idx + '" title="Remove from roster" ';
+    h += 'style="background:none;border:none;cursor:pointer;font-size:16px;line-height:1;padding:0 2px;';
+    h += 'color:var(--muted);">&#215;</button>';
+    h += '</div>';
+  });
+  h += '</div></div>';
+  el.innerHTML = h;
+  // Wire listeners (data-idx avoids name-escaping issues)
+  var addBtn = el.querySelector('.sh-roster-add-btn');
+  if (addBtn) addBtn.addEventListener('click', shAddStaffUI);
+  var inp = el.querySelector('#sh-add-staff-input');
+  if (inp) inp.addEventListener('keydown', function(ev) { if (ev.key === 'Enter') shAddStaffUI(); });
+  el.querySelectorAll('.sh-roster-note-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() { shOpenNote(roster[parseInt(btn.dataset.idx)]); });
+  });
+  el.querySelectorAll('.sh-roster-remove-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() { shRemoveStaffUI(roster[parseInt(btn.dataset.idx)]); });
+  });
+}
+
+function shOpenNote(name) {
+  _shNoteTarget = name;
+  var notes   = shLoadMemberNotes();
+  var titleEl = document.getElementById('sh-note-modal-title');
+  var textEl  = document.getElementById('sh-note-modal-text');
+  var modal   = document.getElementById('sh-note-modal');
+  if (titleEl) titleEl.textContent = '\u270f\ufe0f Notes \u2014 ' + name;
+  if (textEl)  textEl.value = notes[name] || '';
+  if (modal)   modal.style.display = 'flex';
+  if (textEl)  textEl.focus();
+}
+
+function shNoteSave() {
+  if (!_shNoteTarget) return;
+  var textEl = document.getElementById('sh-note-modal-text');
+  shSaveMemberNote(_shNoteTarget, textEl ? textEl.value : '');
+  var modal = document.getElementById('sh-note-modal');
+  if (modal) modal.style.display = 'none';
+  _shNoteTarget = null;
+  try { shRenderRosterMgmt(); } catch(e) {}
+}
+
+function shAddStaffUI() {
+  var inp  = document.getElementById('sh-add-staff-input');
+  var name = (inp ? inp.value : '').trim();
+  if (!name) { if (inp) inp.focus(); return; }
+  if (!shAddStaff(name)) { alert(name + ' is already on the roster.'); return; }
+  if (inp) inp.value = '';
+  buildStaffTracker();
+  shRenderRosterMgmt();
+}
+
+function shRemoveStaffUI(name) {
+  if (!confirm('Remove ' + name + ' from the roster?\nTheir hours data is kept in history.')) return;
+  shRemoveStaff(name);
+  buildStaffTracker();
+  shRenderRosterMgmt();
+  try { shRenderHistory(); } catch(e) {}
+}
+
+function shRenderHistory() {
+  var el = document.getElementById('sh-history-wrap');
+  if (!el) return;
+  var data    = shLoadTrackerData();
+  var periods = shPayPeriods();
+  var MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var entries = [];
+  periods.forEach(function(p, pIdx) {
+    var pk = p.start.toISOString().slice(0, 10);
+    if (!data[pk]) return;
+    var pd = data[pk];
+    // Exclude _note and other meta keys
+    var staffNames = Object.keys(pd).filter(function(k) { return k.charAt(0) !== '_'; });
+    if (!staffNames.length) return;
+    // 14 dates in this period
+    var dates14 = [];
+    for (var di = 0; di < 14; di++) {
+      var dd = new Date(p.start); dd.setDate(dd.getDate() + di); dates14.push(dd);
+    }
+    var totalHrs = 0;
+    staffNames.forEach(function(nm) {
+      var sd = pd[nm] || {};
+      dates14.forEach(function(d) {
+        var dk  = d.toISOString().slice(0, 10);
+        var exp = shExpectedHoursForDay(d);
+        totalHrs += (sd[dk] !== undefined) ? parseFloat(sd[dk]) : exp;
+      });
+    });
+    totalHrs = Math.round(totalHrs * 10) / 10;
+    entries.push({
+      pIdx: pIdx,
+      start: p.start, end: p.end,
+      staffCount:   staffNames.length,
+      totalHrs:     totalHrs,
+      avgPerPerson: staffNames.length > 0 ? Math.round(totalHrs / staffNames.length * 10) / 10 : 0
+    });
+  });
+  if (!entries.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">' +
+      'No history yet &mdash; recorded hours will appear here each period.</div>';
+    return;
+  }
+  var h = '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+  h += '<thead><tr style="border-bottom:2px solid var(--border);">';
+  var hdrs = ['Period', 'Dates', 'Staff', 'Total h', 'Avg h/person', ''];
+  hdrs.forEach(function(hdr) {
+    var right = (hdr === 'Staff' || hdr === 'Total h' || hdr === 'Avg h/person') ? ';text-align:right' : '';
+    h += '<th style="padding:6px 10px;color:var(--muted);font-size:10px;';
+    h += 'text-transform:uppercase;font-weight:700;white-space:nowrap' + right + ';';
+    h += 'border-bottom:2px solid var(--border);">' + hdr + '</th>';
+  });
+  h += '</tr></thead><tbody>';
+  entries.forEach(function(e) {
+    var ds = e.start.getDate() + ' ' + MO[e.start.getMonth()];
+    var de = e.end.getDate()   + ' ' + MO[e.end.getMonth()] + ' ' + e.end.getFullYear();
+    h += '<tr style="border-bottom:1px solid var(--border);">';
+    h += '<td style="padding:7px 10px;font-weight:700;color:var(--accent);">Period ' + (e.pIdx + 1) + '</td>';
+    h += '<td style="padding:7px 10px;color:var(--muted);white-space:nowrap;">' + ds + ' &ndash; ' + de + '</td>';
+    h += '<td style="padding:7px 10px;text-align:right;">' + e.staffCount + '</td>';
+    h += '<td style="padding:7px 10px;text-align:right;font-weight:600;">' + e.totalHrs + 'h</td>';
+    h += '<td style="padding:7px 10px;text-align:right;">' + e.avgPerPerson + 'h</td>';
+    h += '<td style="padding:7px 10px;text-align:right;">';
+    h += '<button onclick="_shJumpToPeriod(' + e.pIdx + ')" ';
+    h += 'style="font-size:11px;padding:3px 10px;border-radius:5px;';
+    h += 'border:1px solid var(--border);background:var(--surface2);';
+    h += 'color:var(--text);cursor:pointer;">View &rarr;</button></td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+  el.innerHTML = h;
+}
+
+function _shJumpToPeriod(idx) {
+  _shTrackerPeriodIdx = idx;
+  buildStaffTracker();
+  var el = document.getElementById('staff-tracker-card');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ═══════════════════════ ZONE HEALTH MODAL (v27) ═══════════════════════
