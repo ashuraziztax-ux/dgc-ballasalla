@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v90</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v91</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -181,7 +181,13 @@ a { color: var(--accent); text-decoration: none; }
 
 @media print {
   .header, .nav, .main > *:not(#tab-report):not(#tab-daily) { display: none !important; }
-  #tab-report { display: block !important; }
+  #tab-report { display: block !important; padding: 0 !important; }
+  .no-print { display: none !important; }
+  #report-body { box-shadow: none !important; border-radius: 0 !important; max-width: none !important; }
+  .rpt-hdr { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .rpt-tbl th { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .rpt-banner { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .rpt-tbl tr:hover td { background:none !important; }
   body { background: white; color: black; }
   .card { border: 1px solid #ccc; box-shadow:none; }
   .report-logo { color: #d97706; }
@@ -887,9 +893,9 @@ function clearForm() {
   <button class="no-client" onclick="showTab('daily',this)">Daily Log</button>
   <button class="admin-only" onclick="showTab('delays',this)">Delays</button>
   <button class="admin-only" onclick="showTab('variations',this)">Variations</button>
-  <button onclick="showTab('report',this)">Weekly Report</button>
+  <button onclick="showTab('report',this)">Two-week breakdown</button>
+  <button onclick="showTab('risks',this)">Risk Tickets</button>
   <button class="active admin-only" onclick="showTab('dashboard',this)">Dashboard</button>
-  <button onclick="buildFortnightlyReport()" style="margin-left:auto;background:#f59e0b;color:#0f1117;border:none;font-weight:800;border-radius:6px;padding:5px 13px;font-size:11px;cursor:pointer;letter-spacing:.03em;" title="Generate printable fortnightly progress report">&#128438; Fortnightly Report</button>
 </div>
 
 <div class="main">
@@ -2060,88 +2066,18 @@ function clearForm() {
 
 <!-- ═══════════════════════════════ WEEKLY REPORT ═══════════════════════════════ -->
 <div id="tab-report" class="tab-content">
-  <div style="margin-bottom:14px; display:flex; gap:10px;">
-    <button class="btn btn-primary" onclick="window.print()">Print / Save PDF</button>
-    <select class="btn btn-secondary" style="padding:8px 12px;" id="report-type">
-      <option value="client">Client Report</option>
-      <option value="director">Director Report</option>
-    </select>
+  <div class="no-print" style="margin-bottom:14px;display:flex;align-items:center;gap:12px;">
+    <button class="btn btn-primary" onclick="window.print()">&#128438; Print / Save PDF</button>
+    <span style="font-size:11px;color:var(--muted);">Two-Week Progress Report &mdash; Ballasalla Phase 4</span>
   </div>
-
-  <div class="card" id="report-content">
-    <div class="report-header">
-      <div class="report-logo">DGC</div>
-      <div>
-        <div class="report-title">Ballasalla Phase 4 — Two-Weekly Progress Report</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Dandara Sub-Contract S&amp;FSC-16 | Isle of Man</div>
-      </div>
-      <div class="report-meta" id="report-meta"></div>
-    </div>
-
-    <div class="report-section">
-      <div class="report-section-title">Key Performance Indicators</div>
-      <div class="report-grid">
-        <div class="report-kpi"><div class="val" id="rpt-progress">—</div><div class="lbl">Overall Progress</div></div>
-        <div class="report-kpi"><div class="val" id="rpt-days">—</div><div class="lbl">Days to Completion</div></div>
-        <div class="report-kpi"><div class="val admin-only" id="rpt-contract">£450,142</div><div class="lbl">Contract Value</div></div>
-      </div>
-    </div>
-
-    <div class="report-section">
-      <div class="report-section-title">Zone Progress This Week</div>
-      <table class="delay-table">
-        <thead>
-          <tr>
-            <th>Zone</th>
-            <th>Planned</th>
-            <th>Actual</th>
-            <th>Variance</th>
-            <th>Notes</th>
-          </tr>
-        </thead>
-        <tbody id="rpt-zones-table"></tbody>
-      </table>
-    </div>
-
-    <div class="report-section">
-      <div class="report-section-title">Programme Position</div>
-      <div style="font-size:12px; line-height:1.8; color:var(--text);" id="rpt-programme-narrative">
-        Loading...
-      </div>
-    </div>
-
-    <div class="report-section" id="rpt-delays-section">
-      <div class="report-section-title">Delays & Issues</div>
-      <table class="delay-table">
-        <thead>
-          <tr><th>Date</th><th>Description</th><th>Impact</th><th>Responsibility</th><th>Action</th></tr>
-        </thead>
-        <tbody id="rpt-delays-table">
-          <tr><td colspan="5" style="color:var(--muted); text-align:center; padding:16px;">No delays recorded this week</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="report-section admin-only" id="rpt-financial-section">
-      <div class="report-section-title">Financial Summary</div>
-      <div class="report-grid">
-        <div class="report-kpi"><div class="val">£167,134</div><div class="lbl">Gross Certified (AFP 2)</div></div>
-        <div class="report-kpi"><div class="val">£156,739</div><div class="lbl">AFP 2 Net — Due 28 May</div></div>
-        <div class="report-kpi"><div class="val">£283,008</div><div class="lbl">Remaining (contract sum)</div></div>
-      </div>
-    </div>
-
-    <div class="report-section">
-      <div class="report-section-title">Two Week Lookahead</div>
-      <div id="rpt-upcoming"></div>
-    </div>
-
-    <div style="margin-top:30px; padding-top:16px; border-top:1px solid var(--border); font-size:11px; color:var(--muted); display:flex; justify-content:space-between;">
-      <span>DGC — Drainage & Groundworks Contractor</span>
-      <span>Ballasalla Phase 4 | Dandara</span>
-      <span id="rpt-footer-date"></span>
-    </div>
+  <div id="report-body" style="background:#fff;color:#1e293b;border-radius:8px;box-shadow:0 4px 32px rgba(0,0,0,.4);max-width:820px;margin:0 auto;overflow:hidden;">
+    <div style="padding:32px;font-family:Arial,sans-serif;font-size:9.5pt;"><p style="color:#94a3b8;text-align:center;padding:40px 0;font-style:italic;">Loading…</p></div>
   </div>
+</div>
+
+<!-- ═══════════════════════════════ RISK TICKETS ═══════════════════════════════ -->
+<div id="tab-risks" class="tab-content">
+  <div id="risks-body"><p style="padding:20px;color:var(--muted);font-size:12px;">Loading…</p></div>
 </div>
 
 <!-- ═══════════════════════════════ SITE MAP ═══════════════════════════════ -->
@@ -4959,7 +4895,8 @@ function showTab(name, btn) {
   if(btn) btn.classList.add('active');
   if(name === 'gantt')    { try { buildGantt(); } catch(e) { console.error('buildGantt error:', e); var gb=document.getElementById('gantt-body'); if(gb) gb.innerHTML='<tr><td colspan="4" style="padding:20px;color:#ef4444;font-size:12px;">&#9888; Chart error: '+e.message+' — check console for details.</td></tr>'; } }
   if(name === 'financial'){ try { buildFinancialChart(); } catch(e){} }
-  if(name === 'report')   buildReport();
+  if(name === 'report')   buildTwoWeekReport();
+  if(name === 'risks')    buildRiskTickets();
   if(name === 'sitemap')  buildSiteMap();
   if(name === 'staffhours') buildStaffHours();
   if(name === 'forecast')   buildForecastTab();
@@ -5188,6 +5125,404 @@ window.addEventListener('DOMContentLoaded', () => {
   })();
   try { initGanttDropZone(); } catch(e) {}
 });
+
+// ═══════════════════════ TWO-WEEK BREAKDOWN REPORT ═══════════════════════
+function buildTwoWeekReport() {
+  var container = document.getElementById('report-body');
+  if (!container) return;
+
+  // ── Dates ──────────────────────────────────────────────────────────────────
+  var today = TODAY;
+  function fmt(d, short) {
+    if (!d) return '—';
+    return d.toLocaleDateString('en-GB', short
+      ? {day:'numeric',month:'short'}
+      : {day:'numeric',month:'long',year:'numeric'});
+  }
+  var periodEnd   = today;
+  var periodStart = new Date(today); periodStart.setDate(periodStart.getDate() - 14);
+  var fwdEnd      = new Date(today); fwdEnd.setDate(fwdEnd.getDate() + 14);
+  var periodStr   = fmt(periodStart,true) + ' – ' + fmt(periodEnd,false);
+  var reportDate  = fmt(today, false);
+
+  // ── Programme ──────────────────────────────────────────────────────────────
+  var actualPct  = getOverallProgress ? Math.round(getOverallProgress()) : 0;
+  var plannedPct = getRevisedPlanProgress ? Math.round(getRevisedPlanProgress()) : 0;
+  var gapPct     = actualPct - plannedPct;
+  var overallStatus = gapPct >= 2  ? 'Ahead of Programme'
+                    : gapPct <= -5 ? 'Behind Programme'
+                    : 'On Programme';
+  var overallCol = gapPct >= 2 ? '#16a34a' : gapPct <= -5 ? '#dc2626' : '#d97706';
+  var overallBg  = gapPct >= 2 ? '#f0fdf4' : gapPct <= -5 ? '#fef2f2' : '#fffbeb';
+
+  // ── Zone rows ──────────────────────────────────────────────────────────────
+  var zoneRows = '';
+  ZONES.forEach(function(z) {
+    var act = getZoneProgress(z.id);
+    var pln = Math.round(getZonePlannedPct ? getZonePlannedPct(z.id) : 0);
+    var gap = act - pln;
+    var rag   = gap >= 2 ? '#16a34a' : gap <= -5 ? '#dc2626' : '#d97706';
+    var ragBg = gap >= 2 ? '#f0fdf4' : gap <= -5 ? '#fef2f2' : '#fffbeb';
+    var ragLbl= gap >= 2 ? 'Ahead'   : gap <= -5 ? 'Behind'  : 'On Track';
+    var bud = z.budget || 0;
+    var val = bud > 0 ? '£' + Math.round(bud/1000) + 'k' : '—';
+    zoneRows += '<tr>'
+      + '<td style="font-weight:600;white-space:nowrap;">Z' + z.id + ' ' + (z.shortName||z.name) + '</td>'
+      + '<td style="color:#64748b;">' + val + '</td>'
+      + '<td style="text-align:right;">' + pln + '%</td>'
+      + '<td style="text-align:right;font-weight:700;">' + act + '%</td>'
+      + '<td style="text-align:right;color:' + (gap>=0?'#16a34a':'#dc2626') + ';font-weight:600;">'
+        + (gap>=0?'+':'') + gap + '%</td>'
+      + '<td style="text-align:center;background:' + ragBg + ';color:' + rag
+        + ';font-weight:700;border-radius:4px;padding:1px 6px;">' + ragLbl + '</td>'
+      + '</tr>';
+  });
+  zoneRows += '<tr style="border-top:2px solid #1e3a5f;font-weight:800;background:#f8fafc;">'
+    + '<td colspan="2">OVERALL <span style="font-size:7pt;font-weight:400;color:#64748b;">(rev. plan)</span></td>'
+    + '<td style="text-align:right;">' + plannedPct + '%</td>'
+    + '<td style="text-align:right;">' + actualPct + '%</td>'
+    + '<td style="text-align:right;color:' + overallCol + ';">' + (gapPct>=0?'+':'') + gapPct + '%</td>'
+    + '<td style="text-align:center;background:' + overallBg + ';color:' + overallCol
+      + ';font-weight:800;border-radius:4px;">' + overallStatus + '</td>'
+    + '</tr>';
+
+  // ── Financial ──────────────────────────────────────────────────────────────
+  var contractSum   = (typeof CONTRACT_SUM !== 'undefined') ? CONTRACT_SUM : 450142;
+  var afp2Net       = 156739;
+  var certPct       = Math.round(afp2Net / contractSum * 100);
+  var forecastFAC   = contractSum;
+  var retentionHeld = Math.round(afp2Net * 0.05);
+  var eotDays       = (typeof EOT_WORKING_DAYS !== 'undefined') ? EOT_WORKING_DAYS : 5;
+  var _billingGap   = certPct - actualPct;
+  var _billingLbl   = Math.abs(_billingGap) <= 5 ? 'Balanced'
+                    : _billingGap < -20 ? 'Significantly Underclaimed'
+                    : _billingGap < 0  ? 'Underclaimed' : 'Overclaimed';
+  var _billingCol   = Math.abs(_billingGap) <= 5 ? '#16a34a'
+                    : _billingGap > 0  ? '#dc2626'
+                    : _billingGap < -20 ? '#dc2626' : '#d97706';
+
+  // ── Completion outlook ─────────────────────────────────────────────────────
+  var _cfo = null;
+  try { _cfo = calcForecast(); } catch(_e2) {}
+  var _histArr2 = (typeof FORTNIGHTLY_HISTORY !== 'undefined') ? FORTNIGHTLY_HISTORY : [];
+  var _np2      = (typeof FORTNIGHTLY_NEXT_PLAN !== 'undefined') ? FORTNIGHTLY_NEXT_PLAN : null;
+  var _pd2      = (typeof FORTNIGHTLY_PLAN_DATA !== 'undefined') ? FORTNIGHTLY_PLAN_DATA : null;
+  var _cfK2 = {};
+  if (_np2 && _np2.items) { _np2.items.forEach(function(it){ if(it.cf) _cfK2[it.team+':'+it.task]=true; }); }
+  var _dn2 = _pd2 ? _pd2.items.filter(function(i){return i.status==='done';}).length : 0;
+  var _rm2 = _pd2 ? _pd2.items.filter(function(i){
+    return (i.status==='not_done'||i.status==='partial') && !_cfK2[i.team+':'+i.task];
+  }).length : 0;
+  var _hd2=0, _hp2=0;
+  _histArr2.forEach(function(entry){
+    var hm=(entry.real_misses!==undefined)?entry.real_misses:(entry.total-entry.done-(entry.cf||0));
+    _hd2 += entry.done+(entry.extras||0);
+    _hp2 += entry.done+hm+(entry.extras||0);
+  });
+  var _avgRate2  = _hp2 > 0 ? Math.round(_hd2/_hp2*100) : 100;
+  var _effStr2='—', _effLate2=false;
+  if (_cfo && _cfo.rate > 0 && _avgRate2 > 0) {
+    var _asO2  = (typeof DATA_AS_OF!=='undefined' && DATA_AS_OF<=new Date()) ? DATA_AS_OF : new Date();
+    var _rawD2 = Math.round((100-_cfo.pct)/_cfo.rate);
+    var _effD2 = Math.round(_rawD2*(100/Math.max(_avgRate2,30)));
+    var _effDt2 = new Date(_asO2.getTime()); _effDt2.setDate(_effDt2.getDate()+_effD2);
+    _effStr2  = _effDt2.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    _effLate2 = _effDt2 > new Date('2026-06-26T00:00:00');
+  }
+
+  // ── 14-day plan data ───────────────────────────────────────────────────────
+  var _pd   = (typeof FORTNIGHTLY_PLAN_DATA !== 'undefined') ? FORTNIGHTLY_PLAN_DATA : null;
+  var _np   = (typeof FORTNIGHTLY_NEXT_PLAN !== 'undefined') ? FORTNIGHTLY_NEXT_PLAN : null;
+  var _ext  = (typeof FORTNIGHTLY_EXTRAS    !== 'undefined') ? FORTNIGHTLY_EXTRAS    : [];
+  var _hist = (typeof FORTNIGHTLY_HISTORY   !== 'undefined') ? FORTNIGHTLY_HISTORY   : [];
+  var _cfKeys = {};
+  if (_np && _np.items) { _np.items.forEach(function(i){ if(i.cf) _cfKeys[i.team+':'+i.task]=true; }); }
+  var _done       = _pd ? _pd.items.filter(function(i){return i.status==='done';}).length : 0;
+  var _cfCount    = _pd ? _pd.items.filter(function(i){
+    return (i.status==='not_done'||i.status==='partial') && _cfKeys[i.team+':'+i.task];
+  }).length : 0;
+  var _realMisses = _pd ? _pd.items.filter(function(i){
+    return (i.status==='not_done'||i.status==='partial') && !_cfKeys[i.team+':'+i.task];
+  }).length : 0;
+  var _total      = _done + _realMisses;
+  var _extras     = _ext.length;
+  var _planRate   = (_done+_realMisses) > 0 ? Math.round(_done/(_done+_realMisses)*100) : 100;
+  var _adjRate    = (_done+_realMisses+_extras) > 0
+                  ? Math.round((_done+_extras)/(_done+_realMisses+_extras)*100) : 100;
+  var _histDone=0, _histPool=0;
+  _hist.forEach(function(entry){
+    var hm = (entry.real_misses !== undefined) ? entry.real_misses : (entry.total - entry.done - (entry.cf||0));
+    _histDone += entry.done + (entry.extras||0);
+    _histPool += entry.done + hm + (entry.extras||0);
+  });
+  var _avgRate  = _histPool > 0 ? Math.round(_histDone/_histPool*100) : _planRate;
+  var _rateCol  = function(r){ return r>=75?'#16a34a':r>=50?'#d97706':'#dc2626'; };
+
+  // ── Build HTML ─────────────────────────────────────────────────────────────
+  var h = [];
+
+  // Scoped CSS (injected once into DOM via innerHTML — browsers apply it globally)
+  h.push('<style>');
+  h.push('.rpt-hdr{background:#0f172a;color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #f59e0b;}');
+  h.push('.rpt-co{font-size:18pt;font-weight:800;letter-spacing:-.02em;color:#f59e0b;}');
+  h.push('.rpt-meta{text-align:right;font-size:8pt;color:#94a3b8;line-height:1.6;}');
+  h.push('.rpt-meta strong{color:#e2e8f0;font-size:9.5pt;}');
+  h.push('.rpt-sec{font-size:7.5pt;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#64748b;border-bottom:1px solid #e2e8f0;padding-bottom:2px;margin:14px 0 6px;}');
+  h.push('.rpt-banner{padding:8px 14px;border-radius:6px;display:flex;align-items:center;gap:14px;margin-bottom:8px;}');
+  h.push('.rpt-tbl{border-collapse:collapse;width:100%;font-size:8.5pt;}');
+  h.push('.rpt-tbl th{background:#1e3a5f;color:#fff;padding:4px 8px;text-align:left;font-size:7.5pt;text-transform:uppercase;letter-spacing:.06em;}');
+  h.push('.rpt-tbl td{padding:3px 8px;border-bottom:1px solid #f1f5f9;color:#1e293b;}');
+  h.push('.rpt-tbl tr:hover td{background:#f8fafc;}');
+  h.push('.rpt-two{display:grid;grid-template-columns:1fr 1fr;gap:16px;}');
+  h.push('.rpt-body{padding:20px 24px;font-family:Arial,sans-serif;font-size:9.5pt;color:#1e293b;}');
+  h.push('@media print{.rpt-hdr,.rpt-tbl th,.rpt-banner{-webkit-print-color-adjust:exact;print-color-adjust:exact;}.rpt-tbl tr:hover td{background:none!important;}}');
+  h.push('</style>');
+
+  // ── Header ─────────────────────────────────────────────────────────────────
+  h.push('<div class="rpt-hdr">');
+  h.push('<div style="display:flex;align-items:center;gap:12px;">'
+    + '<svg width="42" height="42" viewBox="0 0 46 46">'
+    + '<circle cx="23" cy="23" r="22" fill="#f59e0b"/>'
+    + '<circle cx="23" cy="23" r="16" fill="#0f172a"/>'
+    + '<text x="23" y="28" text-anchor="middle" fill="#f59e0b" font-family="Arial,sans-serif"'
+    + ' font-size="10" font-weight="900" letter-spacing="1">DGC</text></svg>'
+    + '<div><div class="rpt-co">DGC</div>'
+    + '<div style="font-size:9pt;color:#cbd5e1;margin-top:1px;">Drainage &amp; Groundwork Contractors Ltd</div>'
+    + '</div></div>');
+  h.push('<div class="rpt-meta"><strong>TWO-WEEK PROGRESS REPORT</strong><br>'
+    + 'Contract: Ballasalla Phase 4 &mdash; Dandara Homes<br>'
+    + 'Report Period: ' + periodStr + '<br>'
+    + 'Report Date: ' + reportDate + '</div>');
+  h.push('</div>');
+
+  h.push('<div class="rpt-body">');
+
+  // ── Status banner ──────────────────────────────────────────────────────────
+  h.push('<div class="rpt-banner" style="background:' + overallBg + ';border:1px solid ' + overallCol + '33;margin-top:4px;">');
+  h.push('<div style="color:' + overallCol + '">'
+    + '<div style="font-size:7.5pt;text-transform:uppercase;letter-spacing:.08em;">Current Progress</div>'
+    + '<div style="font-size:22pt;font-weight:900;line-height:1;">' + actualPct + '%</div>'
+    + '<div style="font-size:7.5pt;color:#64748b;">actual complete</div></div>');
+  h.push('<div style="width:1px;background:#e2e8f0;align-self:stretch;"></div>');
+  h.push('<div style="color:#1e293b">'
+    + '<div style="font-size:7.5pt;text-transform:uppercase;letter-spacing:.08em;">Revised Target</div>'
+    + '<div style="font-size:22pt;font-weight:900;line-height:1;color:#0f172a;">' + plannedPct + '%</div>'
+    + '<div style="font-size:7.5pt;color:#64748b;">26 Jun 2026 (incl. EOT)</div></div>');
+  h.push('<div style="width:1px;background:#e2e8f0;align-self:stretch;"></div>');
+  h.push('<div>'
+    + '<div style="font-size:7.5pt;text-transform:uppercase;letter-spacing:.08em;">Variance</div>'
+    + '<div style="font-size:16pt;font-weight:800;color:' + overallCol + ';">' + (gapPct>=0?'+':'') + gapPct + '%</div>'
+    + '</div>');
+  h.push('<div style="flex:1;text-align:right;">'
+    + '<span style="font-size:12pt;font-weight:800;padding:3px 10px;border-radius:4px;background:' + overallCol + ';color:#fff;">' + overallStatus + '</span>'
+    + '<br><span style="font-size:7.5pt;color:#64748b;display:block;margin-top:4px;">Revised completion: 26 Jun 2026</span>'
+    + '<br><span style="font-size:7pt;color:#94a3b8;display:block;margin-top:2px;">Last updated: ' + reportDate + '</span>'
+    + '</div>');
+  h.push('</div>');
+
+  // ── Two-col: Financial + AFP/EOT ───────────────────────────────────────────
+  h.push('<div class="rpt-two" style="margin-top:4px;">');
+
+  // Left: Financial
+  h.push('<div>');
+  h.push('<div class="rpt-sec">Financial Position</div>');
+  h.push('<table class="rpt-tbl">');
+  h.push('<tr><td style="font-weight:600;">Contract Sum</td><td style="text-align:right;font-weight:800;">£' + contractSum.toLocaleString() + '</td></tr>');
+  h.push('<tr><td>Certified to Date (AFP1+2 net)</td><td style="text-align:right;font-weight:700;color:#0369a1;">£' + afp2Net.toLocaleString() + '</td></tr>');
+  h.push('<tr><td>% of Contract Certified</td><td style="text-align:right;">' + certPct + '%</td></tr>');
+  h.push('<tr><td>Retention Held (est. 5%)</td><td style="text-align:right;color:#dc2626;">£' + retentionHeld.toLocaleString() + '</td></tr>');
+  h.push('<tr style="border-top:2px solid #e2e8f0;"><td colspan="2" style="font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;padding-top:7px;padding-bottom:2px;">Billing vs Progress</td></tr>');
+  h.push('<tr><td>Certified (money claimed)</td><td style="text-align:right;">' + certPct + '%</td></tr>');
+  h.push('<tr><td>Work Complete (physical progress)</td><td style="text-align:right;font-weight:700;">' + actualPct + '%</td></tr>');
+  h.push('<tr><td style="font-weight:700;">Balance</td>'
+    + '<td style="text-align:right;">'
+    + '<span style="font-weight:800;color:' + _billingCol + ';margin-right:6px;">' + (_billingGap>=0?'+':'') + _billingGap + '%</span>'
+    + '<span style="background:' + _billingCol + '18;color:' + _billingCol + ';padding:1px 6px;border-radius:3px;font-size:7.5pt;font-weight:700;">' + _billingLbl + '</span>'
+    + '</td></tr>');
+  h.push('<tr><td style="font-weight:600;">Forecast Final Account</td><td style="text-align:right;font-weight:700;color:#16a34a;">£' + forecastFAC.toLocaleString() + ' +vars</td></tr>');
+  // Completion outlook
+  h.push('<tr style="border-top:2px solid #e2e8f0;"><td colspan="2" style="font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#1e3a5f;padding-top:8px;padding-bottom:2px;border-bottom:2px solid #1e3a5f;">Completion Outlook</td></tr>');
+  h.push('<tr><td>Agreed completion date</td><td style="text-align:right;font-weight:700;color:#16a34a;">26 Jun 2026</td></tr>');
+  h.push('<tr><td>Current programme forecast</td>'
+    + '<td style="text-align:right;font-weight:700;color:' + (_cfo&&_cfo.late?'#dc2626':'#16a34a') + ';">'
+    + (_cfo ? _cfo.str : '&mdash;') + '</td></tr>');
+  h.push('<tr style="background:#fffbeb;">'
+    + '<td style="font-size:7.5pt;"><span style="color:#92400e;font-weight:600;">&#9432;&nbsp;Efficiency-adjusted estimate</span>'
+    + '<div style="font-size:6.5pt;color:#9ca3af;margin-top:2px;line-height:1.3;">&#9888; Indicative only &mdash; applies ' + _avgRate2 + '% plan-completion rate</div></td>'
+    + '<td style="text-align:right;font-weight:700;font-size:8.5pt;color:' + (_effLate2?'#dc2626':'#16a34a') + ';vertical-align:top;padding-top:4px;">' + _effStr2 + '</td></tr>');
+  h.push('</table>');
+  h.push('</div>');
+
+  // Right: AFP + EOT
+  h.push('<div>');
+  h.push('<div class="rpt-sec">AFP Schedule</div>');
+  h.push('<table class="rpt-tbl">');
+  h.push('<tr><th>AFP</th><th>Description</th><th style="text-align:right;">Net Value</th></tr>');
+  h.push('<tr><td>AFP 1</td><td>Drainage works to end April</td><td style="text-align:right;">£(prev. certified)</td></tr>');
+  h.push('<tr><td style="font-weight:700;">AFP 2</td><td style="font-weight:700;">Certified</td><td style="text-align:right;font-weight:700;">£156,739</td></tr>');
+  h.push('<tr style="background:#fffbeb;"><td style="font-weight:700;color:#d97706;">AFP 3</td><td style="color:#d97706;">Submit ~22 May, forecast to 29 May</td><td style="text-align:right;color:#d97706;font-weight:700;">TBC &mdash; confirm with QS</td></tr>');
+  h.push('<tr><td>AFP 4</td><td>Final account &amp; retention release</td><td style="text-align:right;color:#94a3b8;">TBC</td></tr>');
+  h.push('</table>');
+  h.push('<div class="rpt-sec" style="margin-top:10px;">Extension of Time</div>');
+  h.push('<table class="rpt-tbl">');
+  h.push('<tr><th>Event</th><th style="text-align:right;">WDs Added</th><th style="text-align:right;">Completion</th></tr>');
+  h.push('<tr><td>Original programme</td><td style="text-align:right;">—</td><td style="text-align:right;">12 Jun 2026</td></tr>');
+  h.push('<tr style="background:#f0fdf4;"><td style="font-weight:700;color:#16a34a;">Agreed EOT 1</td>'
+    + '<td style="text-align:right;font-weight:700;color:#16a34a;">+' + eotDays + ' WDs</td>'
+    + '<td style="text-align:right;font-weight:700;color:#16a34a;">26 Jun 2026</td></tr>');
+  h.push('</table>');
+  h.push('</div>'); // right panel
+  h.push('</div>'); // rpt-two
+
+  // ── Zone table ─────────────────────────────────────────────────────────────
+  h.push('<div class="rpt-sec" style="margin-top:14px;">Zone Programme Status</div>');
+  h.push('<table class="rpt-tbl">');
+  h.push('<tr><th>Zone</th><th>Value</th><th style="text-align:right;">Plan %</th>'
+    + '<th style="text-align:right;">Actual %</th><th style="text-align:right;">Var</th>'
+    + '<th style="text-align:center;">Status</th></tr>');
+  h.push(zoneRows);
+  h.push('</table>');
+
+  // ── 14-Day plan ────────────────────────────────────────────────────────────
+  h.push('<div class="rpt-sec" style="margin-top:14px;">14-Day Site Plan</div>');
+  h.push('<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">');
+
+  // Last 14 days
+  h.push('<div>');
+  h.push('<div style="font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.07em;'
+    + 'color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:3px;margin-bottom:6px;">'
+    + 'Last 14 Days &nbsp;<span style="font-weight:400;color:#64748b;font-size:7.5pt;">'
+    + (_pd?_pd.period:'') + '</span></div>');
+  if (_pd && _pd.items && _pd.items.length) {
+    h.push('<table class="rpt-tbl"><tr><th style="width:40px;">Team</th><th>Activity</th>'
+      + '<th style="width:38px;text-align:center;">&#10003;/&#10007;</th></tr>');
+    var _pt = null;
+    _pd.items.forEach(function(item) {
+      var isCF = (item.status==='not_done'||item.status==='partial') && _cfKeys[item.team+':'+item.task];
+      var icon = item.status==='done'
+               ? '<span style="color:#16a34a;font-size:12pt;font-weight:800;">&#10003;</span>'
+               : isCF
+               ? '<span style="color:#d97706;font-size:11pt;font-weight:800;">&#10132;</span>'
+               : item.status==='not_done'
+               ? '<span style="color:#dc2626;font-size:12pt;font-weight:800;">&#10007;</span>'
+               : item.status==='partial'
+               ? '<span style="color:#d97706;font-size:10pt;font-weight:800;">~</span>'
+               : '<span style="color:#94a3b8;">&mdash;</span>';
+      var rowBg = isCF ? 'background:#fffbeb;'
+                : item.status==='not_done' ? 'background:#fff8f8;'
+                : item.status==='partial'  ? 'background:#fffcf0;' : '';
+      var tl = item.team!==_pt ? '<b>Tm'+item.team+'</b>' : '';
+      if (item.team!==_pt) _pt = item.team;
+      h.push('<tr style="'+rowBg+'"><td style="font-size:8pt;color:#1e3a5f;">'+tl+'</td>'
+        + '<td style="font-size:8pt;">'+item.task
+        + (isCF ? ' <span style="font-size:7pt;color:#d97706;font-weight:700;">CF</span>' : '')
+        + (item.note ? '<br><span style="font-size:7pt;color:#94a3b8;">'+item.note+'</span>' : '')
+        + '</td><td style="text-align:center;">'+icon+'</td></tr>');
+    });
+    h.push('</table>');
+  } else {
+    h.push('<p style="font-size:8pt;color:#94a3b8;font-style:italic;">No plan data for this period</p>');
+  }
+  h.push('</div>');
+
+  // Next 14 days
+  h.push('<div>');
+  h.push('<div style="font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.07em;'
+    + 'color:#0f172a;border-bottom:2px solid #f59e0b;padding-bottom:3px;margin-bottom:6px;">'
+    + 'Next 14 Days &nbsp;<span style="font-weight:400;color:#64748b;font-size:7.5pt;">'
+    + (_np?_np.period:'') + '</span></div>');
+  if (_np && _np.items && _np.items.length) {
+    h.push('<table class="rpt-tbl"><tr><th style="width:40px;">Team</th><th>Planned Activity</th>'
+      + '<th style="width:60px;text-align:right;">When</th></tr>');
+    var _nt = null;
+    _np.items.forEach(function(item) {
+      var tl = item.team!==_nt ? '<b>Tm'+item.team+'</b>' : '';
+      if (item.team!==_nt) _nt = item.team;
+      h.push('<tr><td style="font-size:8pt;color:#1e3a5f;">'+tl+'</td>'
+        + '<td style="font-size:8pt;"><span style="color:#94a3b8;margin-right:4px;font-size:9pt;">&#9633;</span>'
+        + item.task+'</td>'
+        + '<td style="text-align:right;font-size:7.5pt;color:#64748b;">'+(item.planned||'')+'</td></tr>');
+    });
+    h.push('</table>');
+  } else {
+    h.push('<p style="font-size:8pt;color:#94a3b8;font-style:italic;">Next plan not yet set</p>');
+  }
+  h.push('</div>');
+  h.push('</div>'); // end plan grid
+
+  // Extras
+  h.push('<div style="margin-top:10px;">');
+  h.push('<div style="font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.07em;'
+    + 'color:#64748b;border-bottom:1px solid #e2e8f0;padding-bottom:2px;margin-bottom:4px;">'
+    + 'Additional Work Completed (not in plan)');
+  if (_extras > 0) h.push(' &nbsp;<span style="color:#0369a1;font-weight:400;">' + _extras
+    + ' item' + (_extras!==1?'s':'') + ' &mdash; counted in adjusted rate</span>');
+  h.push('</div>');
+  if (_extras > 0) {
+    h.push('<table class="rpt-tbl"><tr><th style="width:40px;">Team</th><th>Task</th><th>Note</th></tr>');
+    _ext.forEach(function(item) {
+      h.push('<tr><td style="font-size:8pt;font-weight:700;color:#0369a1;">Tm'+item.team+'</td>'
+        + '<td style="font-size:8pt;">'+item.task+'</td>'
+        + '<td style="font-size:7.5pt;color:#64748b;">'+(item.note||'')+'</td></tr>');
+    });
+    h.push('</table>');
+  } else {
+    h.push('<p style="font-size:8pt;color:#94a3b8;margin:0;">No unplanned work recorded this period.</p>');
+  }
+  h.push('</div>');
+
+  // Success rate
+  h.push('<div style="margin-top:10px;padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;">');
+  h.push('<div style="font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;">Success Rate</div>');
+  h.push('<div style="text-align:center;">'
+    + '<div style="font-size:7pt;color:#64748b;margin-bottom:1px;">This period</div>'
+    + '<div style="font-size:18pt;font-weight:800;color:'+_rateCol(_planRate)+';line-height:1;">'+_planRate+'%</div>'
+    + '<div style="font-size:7pt;color:#94a3b8;">'+_done+' done &middot; '+_realMisses+' missed &middot; '+_cfCount+' CF</div>'
+    + '</div>');
+  if (_extras > 0) {
+    h.push('<div style="text-align:center;">'
+      + '<div style="font-size:7pt;color:#64748b;margin-bottom:1px;">Adjusted (incl. extras)</div>'
+      + '<div style="font-size:18pt;font-weight:800;color:'+_rateCol(_adjRate)+';line-height:1;">'+_adjRate+'%</div>'
+      + '<div style="font-size:7pt;color:#94a3b8;">'+(_done+_extras)+'/'+(_total+_extras)+' total</div>'
+      + '</div>');
+  }
+  h.push('<div style="text-align:center;">'
+    + '<div style="font-size:7pt;color:#64748b;margin-bottom:1px;">Running average</div>'
+    + '<div style="font-size:18pt;font-weight:800;color:'+_rateCol(_avgRate)+';line-height:1;">'+_avgRate+'%</div>'
+    + '<div style="font-size:7pt;color:#94a3b8;">over '+_hist.length+' report'+(_hist.length!==1?'s':'')+' to date</div>'
+    + '</div>');
+  h.push('<div style="flex:1;font-size:8pt;color:#64748b;font-style:italic;text-align:right;">Extra work done outside plan listed above &mdash; counted in adjusted rate.</div>');
+  h.push('</div>');
+
+  // ── Notes & Comments ──────────────────────────────────────────────────────
+  h.push('<div style="margin-top:18px;padding:12px 14px;border:1px solid #e2e8f0;border-radius:6px;page-break-inside:avoid;">');
+  h.push('<div style="font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:8px;">Notes &amp; Comments</div>');
+  h.push('<div id="rpt-notes-box" contenteditable="true" style="min-height:80px;font-size:9pt;color:#1e293b;line-height:1.6;outline:none;white-space:pre-wrap;" placeholder="Type notes here before printing…"></div>');
+  h.push('</div>');
+
+  // ── Footer ─────────────────────────────────────────────────────────────────
+  h.push('<div style="margin-top:18px;padding-top:8px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:7.5pt;color:#94a3b8;">');
+  h.push('<span>Drainage &amp; Groundwork Contractors Ltd &mdash; 23 Circular Road, Douglas, IM1 1AF</span>');
+  h.push('<span>Two-Week Progress Report &mdash; Ballasalla Phase 4 v91</span>');
+  h.push('</div>');
+
+  h.push('</div>'); // rpt-body
+
+  // ── Inject into DOM ────────────────────────────────────────────────────────
+  container.innerHTML = h.join('\n');
+
+  // Restore persisted notes
+  try {
+    var noteEl = document.getElementById('rpt-notes-box');
+    if (noteEl) {
+      var saved = localStorage.getItem('dgc_report_notes');
+      if (saved) noteEl.innerHTML = saved;
+      noteEl.addEventListener('input', function() {
+        try { localStorage.setItem('dgc_report_notes', noteEl.innerHTML); } catch(e2) {}
+      });
+    }
+  } catch(e) {}
+}
 
 // ═══════════════════════ FORTNIGHTLY REPORT GENERATOR ═══════════════════════
 function buildFortnightlyReport() {
@@ -5711,6 +6046,182 @@ function buildFortnightlyReport() {
 }
 // ══════════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════ RISK TICKETS ═══════════════════════
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function buildRiskTickets() {
+  var body = document.getElementById('risks-body');
+  if (!body) return;
+
+  var tickets = [];
+  try { tickets = JSON.parse(localStorage.getItem('dgc_risk_tickets') || '[]'); } catch(e) {}
+  var seq = 101001;
+  try { seq = parseInt(localStorage.getItem('dgc_rt_seq') || '101001', 10); } catch(e) {}
+  var rtNum   = 'RT-' + seq;
+  var todayVal = TODAY.toISOString().slice(0,10);
+
+  var h = [];
+  var inp = 'width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:11px;box-sizing:border-box;';
+  var lbl = 'font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:3px;';
+
+  // ── Form ──────────────────────────────────────────────────────────────────
+  h.push('<div class="card" style="max-width:700px;margin:0 auto 16px;">');
+  h.push('<div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">'
+    + '<span>&#127905; Raise a Risk / Concern Ticket</span>'
+    + '<span style="font-size:11px;font-weight:700;background:var(--surface2);border:1px solid var(--border);'
+    + 'color:var(--accent);border-radius:4px;padding:2px 10px;letter-spacing:.03em;">' + rtNum + '</span>'
+    + '</div>');
+
+  // Project + Date
+  h.push('<div style="display:grid;grid-template-columns:1fr 160px;gap:10px;margin-bottom:10px;">');
+  h.push('<div><label style="'+lbl+'">Project / Site</label>'
+    + '<input id="rt-project" type="text" value="Ballasalla Phase 4" style="'+inp+'"></div>');
+  h.push('<div><label style="'+lbl+'">Date</label>'
+    + '<input id="rt-date" type="date" value="'+todayVal+'" style="'+inp+'"></div>');
+  h.push('</div>');
+
+  // Raised by + Role
+  h.push('<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">');
+  h.push('<div><label style="'+lbl+'">Raised By</label>'
+    + '<input id="rt-raised-by" type="text" placeholder="Full name" style="'+inp+'"></div>');
+  h.push('<div><label style="'+lbl+'">Role / Company</label>'
+    + '<input id="rt-role" type="text" placeholder="e.g. Site Manager &mdash; DGC" style="'+inp+'"></div>');
+  h.push('</div>');
+
+  // Categories
+  h.push('<div style="margin-bottom:12px;">');
+  h.push('<div style="'+lbl+'margin-bottom:6px;">Category (tick all that apply)</div>');
+  h.push('<div style="display:flex;flex-wrap:wrap;gap:6px;">');
+  var cats = ['Health &amp; Safety','Programme / Deadline','Financial','Quality',
+              'Design / Information','Logistics / Material','Temporary Works','Other'];
+  cats.forEach(function(cat, i) {
+    h.push('<label style="display:flex;align-items:center;gap:5px;cursor:pointer;'
+      + 'background:var(--surface2);border:1px solid var(--border);border-radius:4px;'
+      + 'padding:4px 9px;font-size:10px;user-select:none;">'
+      + '<input type="checkbox" id="rt-cat-'+i+'" value="'+cat+'" style="cursor:pointer;accent-color:var(--accent);"> '+cat+'</label>');
+  });
+  h.push('</div></div>');
+
+  // Description
+  h.push('<div style="margin-bottom:10px;">');
+  h.push('<label style="'+lbl+'">Description of Risk or Concern</label>');
+  h.push('<textarea id="rt-description" rows="4" placeholder="Describe the risk or concern in detail…" style="'+inp+'line-height:1.5;resize:vertical;"></textarea>');
+  h.push('</div>');
+
+  // Resolution
+  h.push('<div style="margin-bottom:12px;">');
+  h.push('<label style="'+lbl+'">Suggested Resolution <span style="font-weight:400;font-size:9px;text-transform:none;">(optional)</span></label>');
+  h.push('<textarea id="rt-resolution" rows="3" placeholder="Any suggested actions or resolutions…" style="'+inp+'line-height:1.5;resize:vertical;"></textarea>');
+  h.push('</div>');
+
+  // PM Record
+  h.push('<div style="border:1px solid var(--border);border-radius:6px;padding:12px 14px;margin-bottom:12px;background:var(--surface)20;">');
+  h.push('<div style="'+lbl+'margin-bottom:8px;color:var(--accent);">PM Record</div>');
+  h.push('<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--muted);margin-bottom:5px;">Action Status</div>');
+  h.push('<div style="display:flex;flex-wrap:wrap;gap:12px;">');
+  ['No action required','Action taken','Deferred / monitor'].forEach(function(s, i) {
+    h.push('<label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;">'
+      + '<input type="radio" name="rt-action-status" value="'+s+'"'+(i===0?' checked':'')
+      + ' style="cursor:pointer;accent-color:var(--accent);"> '+s+'</label>');
+  });
+  h.push('</div></div>');
+  h.push('<label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px;">Action / Notes</label>');
+  h.push('<textarea id="rt-pm-notes" rows="2" placeholder="PM action notes…" style="'+inp+'line-height:1.5;resize:vertical;"></textarea>');
+  h.push('</div>');
+
+  // Signed by + Date
+  h.push('<div style="display:grid;grid-template-columns:1fr 160px;gap:10px;margin-bottom:14px;">');
+  h.push('<div><label style="'+lbl+'">Signed By (PM)</label>'
+    + '<input id="rt-signed-by" type="text" placeholder="Name" style="'+inp+'"></div>');
+  h.push('<div><label style="'+lbl+'">Date</label>'
+    + '<input id="rt-sign-date" type="date" value="'+todayVal+'" style="'+inp+'"></div>');
+  h.push('</div>');
+
+  // Save button
+  h.push('<button onclick="saveRiskTicket()" class="btn btn-primary" style="width:100%;padding:10px;font-size:12px;font-weight:700;">'
+    + '&#128190; Save Risk Ticket ' + rtNum + '</button>');
+  h.push('</div>'); // end form card
+
+  // ── Ticket Log ────────────────────────────────────────────────────────────
+  h.push('<div class="card">');
+  h.push('<div class="card-title">Ticket Log (' + tickets.length + ' ticket' + (tickets.length!==1?'s':'') + ')</div>');
+  if (tickets.length === 0) {
+    h.push('<div style="padding:28px;text-align:center;color:var(--muted);font-size:12px;font-style:italic;">No tickets raised yet</div>');
+  } else {
+    h.push('<div style="overflow:auto;">');
+    h.push('<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:600px;">');
+    h.push('<thead><tr style="border-bottom:2px solid var(--border);">'
+      + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap;">RT No.</th>'
+      + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:600;">Date</th>'
+      + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:600;">Raised By</th>'
+      + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:600;">Category</th>'
+      + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:600;">Description</th>'
+      + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:600;">Status</th>'
+      + '</tr></thead><tbody>');
+    var sorted = tickets.slice().sort(function(a,b){ return b.rtNum - a.rtNum; });
+    sorted.forEach(function(t) {
+      var sc = t.pmStatus === 'Action taken' ? '#16a34a'
+             : t.pmStatus === 'Deferred / monitor' ? '#d97706' : 'var(--muted)';
+      var desc = escHtml((t.description||'').slice(0,90)) + ((t.description||'').length>90?'…':'');
+      h.push('<tr style="border-bottom:1px solid var(--border);">'
+        + '<td style="padding:5px 8px;font-weight:700;white-space:nowrap;color:var(--accent);">RT-' + t.rtNum + '</td>'
+        + '<td style="padding:5px 8px;white-space:nowrap;">' + escHtml(t.date||'') + '</td>'
+        + '<td style="padding:5px 8px;white-space:nowrap;">' + escHtml(t.raisedBy||'') + '</td>'
+        + '<td style="padding:5px 8px;max-width:160px;">' + escHtml((t.categories||[]).join(', ')) + '</td>'
+        + '<td style="padding:5px 8px;max-width:220px;">' + desc + '</td>'
+        + '<td style="padding:5px 8px;"><span style="color:'+sc+';font-weight:600;font-size:10px;">'
+          + escHtml(t.pmStatus||'—') + '</span></td>'
+        + '</tr>');
+    });
+    h.push('</tbody></table></div>');
+  }
+  h.push('</div>'); // end log card
+
+  body.innerHTML = h.join('\n');
+}
+
+function saveRiskTicket() {
+  var desc = document.getElementById('rt-description');
+  if (!desc || !desc.value.trim()) {
+    alert('Please enter a description of the risk or concern.');
+    return;
+  }
+  var cats = [];
+  for (var i = 0; i < 8; i++) {
+    var cb = document.getElementById('rt-cat-' + i);
+    if (cb && cb.checked) cats.push(cb.value);
+  }
+  var statusEl = document.querySelector('input[name="rt-action-status"]:checked');
+  var seq = 101001;
+  try { seq = parseInt(localStorage.getItem('dgc_rt_seq') || '101001', 10); } catch(e) {}
+  var ticket = {
+    rtNum:       seq,
+    project:     (document.getElementById('rt-project')   || {}).value || 'Ballasalla Phase 4',
+    date:        (document.getElementById('rt-date')       || {}).value || '',
+    raisedBy:    (document.getElementById('rt-raised-by') || {}).value || '',
+    role:        (document.getElementById('rt-role')       || {}).value || '',
+    categories:  cats,
+    description: desc.value,
+    resolution:  (document.getElementById('rt-resolution') || {}).value || '',
+    pmStatus:    statusEl ? statusEl.value : 'No action required',
+    pmNotes:     (document.getElementById('rt-pm-notes')   || {}).value || '',
+    signedBy:    (document.getElementById('rt-signed-by')  || {}).value || '',
+    signDate:    (document.getElementById('rt-sign-date')  || {}).value || '',
+    savedAt:     new Date().toISOString()
+  };
+  try {
+    var tickets = JSON.parse(localStorage.getItem('dgc_risk_tickets') || '[]');
+    tickets.push(ticket);
+    localStorage.setItem('dgc_risk_tickets', JSON.stringify(tickets));
+    localStorage.setItem('dgc_rt_seq', String(seq + 1));
+    buildRiskTickets();
+    alert('Risk Ticket RT-' + seq + ' saved.');
+  } catch(e) {
+    alert('Error saving ticket: ' + e.message);
+  }
+}
 
 // ═══════════════════════ ALERTS ═══════════════════════
 // ── Alert state helpers ──
