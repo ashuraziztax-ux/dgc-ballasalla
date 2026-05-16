@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v116</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v117</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -4054,7 +4054,7 @@ function getRevisedPlanProgress() {
 }
 
 // ═══════════════════════ HELPERS ═══════════════════════
-function parseDate(s) { return s ? new Date(s + 'T00:00:00') : null; }
+function parseDate(s) { return s ? new Date(s + 'T12:00:00') : null; } // noon = BST-safe (v117)
 function fmt(n) { return '£' + Math.round(n).toLocaleString('en-GB'); }
 function fmtDate(s) { if(!s) return '--'; const d = parseDate(s); return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
 function fmtShortDate(s) { if(!s) return '--'; const d = parseDate(s); return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'}); }
@@ -6062,10 +6062,10 @@ function buildProgrammeHeader() {
   function daysDL(d){ return d ? Math.round((d-agreedDL)/86400000) : null; }
 
   var remainingProgWDs = Math.max(0, totalProgWDs*(1-overallPct/100));
-  var atPaceEnd  = addWD(TODAY, remainingProgWDs);
   // Expected end date: use DS.forecastDate (canonical calendar extrapolation — same as Velocity Panel)
   var dragEnd    = (window.DS && window.DS.forecastDate) || addWD(TODAY, remainingProgWDs * ((plannedPct>0&&overallPct>0) ? plannedPct/overallPct : 1));
-  var dragDiff   = daysDL(dragEnd);
+  // Use DS.daysLateEarly directly — single source, same as state banner (v117 fix)
+  var dragDiff   = (window.DS && typeof window.DS.daysLateEarly === 'number') ? window.DS.daysLateEarly : daysDL(dragEnd);
   var effPct     = plannedPct>0 ? Math.round(overallPct/plannedPct*100) : 100;
 
   var diffTxt = function(d){ return d===0?'On time':(d>0?'+'+d+' days':d+' days'); };
@@ -6114,12 +6114,19 @@ function buildProgrammeHeader() {
     +     '<div style="font-size:16px;font-weight:900;color:' + diffCol(dragDiff) + ';">' + fd(dragEnd) + '</div>'
     +     '<div style="font-size:9px;color:' + diffCol(dragDiff) + ';font-weight:700;margin-top:3px;">' + diffTxt(dragDiff) + ' vs 26 Jun</div>'
     +   '</div>'
-    // At-programme-pace end
-    +   '<div style="background:var(--surface2);border-radius:8px;padding:13px;text-align:center;">'
-    +     '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">At Programme Pace</div>'
-    +     '<div style="font-size:16px;font-weight:900;color:var(--text);">' + fd(atPaceEnd) + '</div>'
-    +     '<div style="font-size:9px;color:var(--muted);margin-top:3px;">if 100% efficiency from today</div>'
-    +   '</div>'
+    // Contract Deadline countdown (replaces old WD-pace tile which gave contradictory date v117)
+    +   (function(){
+          var _dl = agreedDL;
+          var _dlDays = Math.round((_dl - TODAY) / 86400000);
+          var _dlCol  = _dlDays <= 0 ? '#f87171' : _dlDays <= 14 ? '#f59e0b' : 'var(--text)';
+          var _dlLbl  = _dlDays <= 0 ? Math.abs(_dlDays) + ' days overrun'
+                        : _dlDays + ' calendar days left';
+          return '<div style="background:var(--surface2);border-radius:8px;padding:13px;text-align:center;">'
+            + '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">Contract Deadline</div>'
+            + '<div style="font-size:16px;font-weight:900;color:' + _dlCol + ';">26 Jun 2026</div>'
+            + '<div style="font-size:9px;color:' + _dlCol + ';font-weight:700;margin-top:3px;">' + _dlLbl + '</div>'
+            + '</div>';
+        })()
     // Efficiency
     +   '<div style="background:var(--surface2);border-radius:8px;padding:13px;text-align:center;">'
     +     '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">Current Efficiency</div>'
