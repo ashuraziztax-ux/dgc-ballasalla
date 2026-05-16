@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v114</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v115</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -6359,7 +6359,205 @@ function showTab(name, btn) {
   if(name === 'programme')  buildProgrammeHeader();
   if(name === 'data')       buildDataTab();
   if(name === 'setup')      buildSetupTab();
+  if(name === 'plant')      { try { buildOwnedPlant(); } catch(e){} }
 }
+// ═══════════════════ OWNED PLANT ROI CALCULATOR ════════════════════
+(function() {
+  var PLANT_DEFAULTS = [
+    { id:'p1', name:'Honda Generator 6.5kVA',  purchaseCost:950,  hireDayRate:48, totalDaysUsed:72, thisJobDays:20, maintenanceCost:85  },
+    { id:'p2', name:'Submersible Water Pump',   purchaseCost:380,  hireDayRate:28, totalDaysUsed:110, thisJobDays:38, maintenanceCost:40  },
+    { id:'p3', name:'Concrete Poker Vibrator',  purchaseCost:290,  hireDayRate:20, totalDaysUsed:55, thisJobDays:12, maintenanceCost:0   },
+    { id:'p4', name:'Laser Level Kit (Leica)',  purchaseCost:1350, hireDayRate:38, totalDaysUsed:125, thisJobDays:45, maintenanceCost:0   }
+  ];
+
+  function loadOP() {
+    try { var s = localStorage.getItem('dgc_owned_plant'); return s ? JSON.parse(s) : PLANT_DEFAULTS; }
+    catch(e) { return PLANT_DEFAULTS; }
+  }
+  function saveOP(items) {
+    try { localStorage.setItem('dgc_owned_plant', JSON.stringify(items)); } catch(e) {}
+  }
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function fmtGBP(n) { return '£' + Math.round(n).toLocaleString('en-GB'); }
+
+  window.buildOwnedPlant = function() {
+    var el = document.getElementById('owned-plant-section');
+    if (!el) return;
+    var items = loadOP();
+
+    // ── Totals ────────────────────────────────────────────────────
+    var totSaved = 0, totSpent = 0, totThisJob = 0;
+    items.forEach(function(it) {
+      totSaved   += it.totalDaysUsed * it.hireDayRate;
+      totSpent   += it.purchaseCost + (it.maintenanceCost || 0);
+      totThisJob += it.thisJobDays  * it.hireDayRate;
+    });
+    var netGain = totSaved - totSpent;
+    var netCol  = netGain >= 0 ? '#4ade80' : '#f87171';
+    var netLbl  = netGain >= 0 ? 'Net Gain vs Hiring' : 'Still to Break Even (all items)';
+
+    // ── KPI strip ─────────────────────────────────────────────────
+    var h = [];
+    h.push('<div class="ph-card" style="margin-bottom:14px;">');
+    h.push('<div class="ph-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">');
+    h.push('<span>Owned Plant — Break-Even Calculator</span>');
+    h.push('<button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="ownedPlantAdd()">+ Add Item</button>');
+    h.push('</div>');
+
+    h.push('<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">');
+    var kpis = [
+      { val: fmtGBP(totSaved),   lbl: 'Total Hire Value Saved',      col: '#4ade80' },
+      { val: fmtGBP(totSpent),   lbl: 'Total Spent (Buy + Maint.)',   col: 'var(--muted)' },
+      { val: fmtGBP(Math.abs(netGain)), lbl: netLbl,                  col: netCol },
+      { val: fmtGBP(totThisJob), lbl: 'Value Generated This Job',     col: '#60a5fa' }
+    ];
+    kpis.forEach(function(k) {
+      h.push('<div style="flex:1;min-width:130px;background:var(--surface2);border-radius:8px;padding:10px 12px;text-align:center;">');
+      h.push('<div style="font-size:20px;font-weight:800;color:' + k.col + ';">' + k.val + '</div>');
+      h.push('<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;">' + k.lbl + '</div>');
+      h.push('</div>');
+    });
+    h.push('</div>');
+
+    // ── Item rows ─────────────────────────────────────────────────
+    h.push('<div style="overflow-x:auto;">');
+    h.push('<table class="ph-table" style="min-width:680px;">');
+    h.push('<tr style="font-size:10px;">');
+    h.push('<th style="min-width:140px;">Item</th>');
+    h.push('<th>Buy Cost</th>');
+    h.push('<th>Hire Rate/day</th>');
+    h.push('<th>Maint. Cost</th>');
+    h.push('<th>Total Days<br>(all jobs)</th>');
+    h.push('<th>Days This Job</th>');
+    h.push('<th>Break-Even</th>');
+    h.push('<th style="min-width:140px;">% Cost Recovered</th>');
+    h.push('<th></th>');
+    h.push('</tr>');
+
+    items.forEach(function(it, idx) {
+      var totalCost   = it.purchaseCost + (it.maintenanceCost || 0);
+      var valueGen    = it.totalDaysUsed * it.hireDayRate;
+      var pct         = totalCost > 0 ? Math.min(100, Math.round(valueGen / totalCost * 100)) : 0;
+      var bedays      = it.hireDayRate > 0 ? Math.ceil(it.purchaseCost / it.hireDayRate) : null;
+      var daysLeft    = it.hireDayRate > 0 ? Math.max(0, Math.ceil(totalCost / it.hireDayRate) - it.totalDaysUsed) : 0;
+      var thisJobVal  = it.thisJobDays * it.hireDayRate;
+      var barCol      = pct >= 100 ? '#4ade80' : pct >= 60 ? '#f59e0b' : '#f87171';
+
+      function editable(field, val, prefix, suffix) {
+        prefix = prefix || ''; suffix = suffix || '';
+        return prefix + '<span contenteditable="true" class="op-ed" data-idx="' + idx
+          + '" data-field="' + field + '" style="cursor:text;outline:none;border-bottom:1px dashed var(--border);padding:0 2px;">'
+          + esc(String(val)) + '</span>' + suffix;
+      }
+
+      h.push('<tr>');
+      h.push('<td>' + editable('name', it.name) + '</td>');
+      h.push('<td>' + editable('purchaseCost', it.purchaseCost, '£') + '</td>');
+      h.push('<td>' + editable('hireDayRate', it.hireDayRate, '£', '/day') + '</td>');
+      h.push('<td>' + editable('maintenanceCost', it.maintenanceCost || 0, '£') + '</td>');
+      h.push('<td>' + editable('totalDaysUsed', it.totalDaysUsed, '', ' days') + '</td>');
+      h.push('<td>'
+        + editable('thisJobDays', it.thisJobDays, '', ' days')
+        + '<div style="font-size:9px;color:#60a5fa;margin-top:2px;">≈ ' + fmtGBP(thisJobVal) + ' saved</div>'
+        + '</td>');
+
+      // Break-even cell
+      if (bedays !== null) {
+        h.push('<td><strong>' + bedays + ' days</strong>');
+        if (daysLeft > 0) {
+          h.push('<div style="font-size:9px;color:var(--muted);margin-top:2px;">' + daysLeft + ' more days to go</div>');
+        } else {
+          h.push('<div style="font-size:9px;color:#4ade80;margin-top:2px;">✓ Fully paid off</div>');
+        }
+        h.push('</td>');
+      } else {
+        h.push('<td style="color:var(--muted);">—</td>');
+      }
+
+      // Recovery bar
+      h.push('<td>');
+      h.push('<div style="display:flex;align-items:center;gap:6px;">');
+      h.push('<div style="flex:1;background:var(--border);border-radius:4px;height:9px;overflow:hidden;">');
+      h.push('<div style="width:' + pct + '%;background:' + barCol + ';height:100%;border-radius:4px;transition:width 0.4s;"></div>');
+      h.push('</div>');
+      h.push('<span style="font-size:10px;font-weight:800;color:' + barCol + ';min-width:34px;">' + pct + '%</span>');
+      h.push('</div>');
+      h.push('<div style="font-size:9px;color:var(--muted);margin-top:2px;">'
+        + fmtGBP(valueGen) + ' of ' + fmtGBP(totalCost) + '</div>');
+      h.push('</td>');
+
+      // Delete
+      h.push('<td><span onclick="ownedPlantRemove(' + idx + ')" title="Remove item"'
+        + ' style="cursor:pointer;color:var(--muted);font-size:13px;padding:2px 6px;border-radius:4px;" '
+        + ' onmouseover="this.style.color=\'#f87171\'" onmouseout="this.style.color=\'var(--muted)\'">&#10005;</span></td>');
+      h.push('</tr>');
+    });
+
+    if (!items.length) {
+      h.push('<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">No items yet — click &ldquo;+ Add Item&rdquo; to get started</td></tr>');
+    }
+
+    h.push('</table>');
+    h.push('</div>');
+    h.push('<div style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.6;">'
+      + '<strong>How to use:</strong> Click any value to edit it. '
+      + '<em>Buy Cost</em> = what you paid. '
+      + '<em>Hire Rate/day</em> = what you\'d pay to hire the same item. '
+      + '<em>Total Days</em> = lifetime use across all jobs. '
+      + 'The bar fills as the item earns back its cost through use. Once 100% — it\'s making you money.</div>');
+    h.push('</div>'); // close ph-card
+
+    el.innerHTML = h.join('');
+
+    // ── Wire up editable spans ───────────────────────────────────
+    el.querySelectorAll('.op-ed').forEach(function(span) {
+      span.addEventListener('blur', function() {
+        var its = loadOP();
+        var i   = parseInt(this.dataset.idx, 10);
+        var fld = this.dataset.field;
+        var raw = this.textContent.trim();
+        if (!its[i]) return;
+        if (fld === 'name') {
+          its[i][fld] = raw || 'Item';
+        } else {
+          var n = parseFloat(raw.replace(/[^0-9.]/g, ''));
+          if (!isNaN(n) && n >= 0) its[i][fld] = n;
+        }
+        saveOP(its);
+        window.buildOwnedPlant();
+      });
+      span.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); this.blur(); }
+        if (e.key === 'Escape') { window.buildOwnedPlant(); }
+      });
+    });
+  };
+
+  window.ownedPlantAdd = function() {
+    var its = loadOP();
+    its.push({ id: 'p' + Date.now(), name: 'New Item', purchaseCost: 0, hireDayRate: 0,
+                totalDaysUsed: 0, thisJobDays: 0, maintenanceCost: 0 });
+    saveOP(its);
+    window.buildOwnedPlant();
+    setTimeout(function() {
+      var spans = document.querySelectorAll('#owned-plant-section .op-ed[data-field="name"]');
+      if (spans.length) { var s = spans[spans.length - 1]; s.focus(); document.execCommand('selectAll', false, null); }
+    }, 80);
+  };
+
+  window.ownedPlantRemove = function(idx) {
+    var its = loadOP();
+    var name = (its[idx] && its[idx].name) || 'this item';
+    if (!confirm('Remove “' + name + '” from your owned plant list?')) return;
+    its.splice(idx, 1);
+    saveOP(its);
+    window.buildOwnedPlant();
+  };
+})();
+// ═══════════════════════════════════════════════════════════════════
+
 
 // ═══════════════════════ INIT ═══════════════════════
 window.addEventListener('DOMContentLoaded', () => {
@@ -9862,6 +10060,9 @@ function closeZoneHealth() {
 <!-- ═══════════ PLANT TAB β ═══════════ -->
 <div id="tab-plant" class="tab-content admin-only">
   <div class="ph-notice">β Preview — placeholder hire records. Edit these to match your actual plant schedule.</div>
+
+  <!-- Owned Plant Calculator -->
+  <div id="owned-plant-section"></div>
 
   <!-- Plant KPIs -->
   <div class="ph-kpi-row">
