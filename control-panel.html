@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v111</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v112</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -35,6 +35,10 @@ a { color: var(--accent); text-decoration: none; }
 .header-status { display: flex; gap: 12px; align-items: center; }
 #state-banner { display: none; font-size: 12px; line-height: 1.5; }
 #state-banner.sb-visible { display: block; }
+/* Client (Overview) mode simplifications */
+body.client-mode #velocity-card { display: none !important; }
+body.client-mode .prog-secondary .hide-client { display: none !important; }
+body.client-mode .dashboard-secondary-row { display: none !important; }
 .status-pill { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 .status-pill.active { background: #22c55e20; color: var(--green); border: 1px solid #22c55e40; }
 .status-pill.warning { background: #f9731620; color: var(--orange); border: 1px solid #f9731640; }
@@ -569,7 +573,7 @@ function setMode(m) {
   var active = document.querySelector('.nav button.active');
   var activeTxt = active ? active.textContent.trim() : '';
   var hiddenInUser   = ['Financials','Variations','Staff Hours','Delays','Dashboard'];
-  var hiddenInClient = ['Staff Hours','Financials','Daily Log','Variations'];
+  var hiddenInClient = ['Staff Hours','Financials','Daily Log','Variations','Efficiency','Gantt Chart'];
   var hidden = m === 'admin' ? [] : m === 'user' ? hiddenInUser : hiddenInClient;
 
   if (m === 'client') {
@@ -881,11 +885,10 @@ function clearForm() {
       <span style="font-size:9px;color:var(--muted);padding:2px 8px;white-space:nowrap;flex-shrink:0;">View as:</span>
       <span id="mode-btn-admin"  onclick="setMode('admin')"  style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Admin</span>
       <span id="mode-btn-user"   onclick="setMode('user')"   style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Site Team</span>
-      <span id="mode-btn-client" onclick="setMode('client')" style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Client</span>
+      <span id="mode-btn-client" onclick="setMode('client')" style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Overview</span>
     </div>
   </div>
   <div class="header-status">
-    <span id="hdr-datadate" style="font-size:10px;color:var(--muted);white-space:nowrap;border:1px solid var(--border);border-radius:5px;padding:3px 8px;background:var(--surface2);display:none;"></span>
     <span class="today-badge" id="today-label"></span>
   </div>
 </div>
@@ -896,8 +899,8 @@ function clearForm() {
   <button onclick="showTab('forecast',this)">Forecast</button>
   <button onclick="showTab('report',this)">Progress Report</button>
   <button onclick="showTab('risks',this)">Risk Tickets</button>
-  <button onclick="showTab('efficiency',this)">Efficiency</button>
-  <button onclick="showTab('gantt',this)">Gantt Chart</button>
+  <button class="no-client" onclick="showTab('efficiency',this)">Efficiency</button>
+  <button class="no-client" onclick="showTab('gantt',this)">Gantt Chart</button>
   <button class="no-client" onclick="showTab('daily',this)">Daily Log</button>
   <button class="admin-only" onclick="showTab('staffhours',this)">Staff Hours</button>
   <button class="admin-only" onclick="showTab('financial',this)">Financials</button>
@@ -934,23 +937,23 @@ function clearForm() {
     
         <!-- Certified Work Completed -->
         <div style="text-align:center;">
-          <div id="hero-source-label" style="font-size:10px;font-weight:700;color:#34d399;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">Physical Progress (GanttPro)</div>
+          <div id="hero-source-label" style="font-size:10px;font-weight:700;color:#34d399;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">Work Completed</div>
           <div style="font-size:52px;font-weight:800;color:#34d399;line-height:1;" id="kpi-certified-pct">—%</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:4px;">Budget-weighted zone progress</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;">Overall % complete (by value)</div>
         </div>
     
         <!-- Behind indicator (centre) -->
         <div class="prog-behind-box" style="text-align:center;padding:10px 16px;background:#ef444418;border:1px solid #ef444433;border-radius:10px;min-width:90px;">
-          <div style="font-size:9px;color:#ef4444;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">Behind by</div>
+          <div id="gap-label" style="font-size:9px;color:#ef4444;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">Gap</div>
           <div style="font-size:30px;font-weight:800;color:#ef4444;line-height:1;" id="kpi-gap-pct">—%</div>
           <div style="font-size:9px;color:var(--muted);margin-top:2px;">vs revised plan</div>
         </div>
     
         <!-- Current Revised Plan -->
         <div style="text-align:center;">
-          <div style="font-size:10px;font-weight:700;color:#f59e0b;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">Current Revised Plan</div>
+          <div style="font-size:10px;font-weight:700;color:#f59e0b;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">Planned Today</div>
           <div style="font-size:52px;font-weight:800;color:#f59e0b;line-height:1;" id="kpi-revised-pct">—%</div>
-          <div id="hero-source-label-right" style="font-size:10px;color:var(--muted);margin-top:4px;">Current Revised Plan</div>
+          <div id="hero-source-label-right" style="font-size:10px;color:var(--muted);margin-top:4px;">Planned today</div>
         </div>
       </div>
     
@@ -977,16 +980,16 @@ function clearForm() {
           <div style="font-size:8px;color:var(--muted);margin-bottom:4px;">23 Mar → 26 Jun</div>
           <div style="height:3px;background:#1e293b;border-radius:2px;"><div id="bar-time" style="height:3px;background:#60a5fa;border-radius:2px;width:0%;"></div></div>
         </div>
-        <div style="text-align:center;">
+        <div style="text-align:center;" class="hide-client">
           <div style="font-size:9px;color:var(--muted);letter-spacing:.06em;margin-bottom:3px;text-transform:uppercase;">Original Plan</div>
           <div style="font-size:20px;font-weight:700;color:#a78bfa;" id="kpi-planned-pct">—%</div>
           <div style="font-size:8px;color:var(--muted);margin-bottom:4px;">no delays applied</div>
           <div style="height:3px;background:#1e293b;border-radius:2px;"><div id="bar-planned" style="height:3px;background:#a78bfa;border-radius:2px;width:0%;"></div></div>
         </div>
         <div style="text-align:center;">
-          <div style="font-size:9px;color:var(--muted);letter-spacing:.06em;margin-bottom:3px;text-transform:uppercase;">AFP Certified</div>
+          <div style="font-size:9px;color:var(--muted);letter-spacing:.06em;margin-bottom:3px;text-transform:uppercase;">Certified</div>
           <div style="font-size:20px;font-weight:700;color:var(--accent);" id="kpi-progress">—%</div>
-          <div style="font-size:8px;color:var(--muted);margin-bottom:4px;">invoiced &amp; certified to date</div>
+          <div style="font-size:8px;color:var(--muted);margin-bottom:4px;">invoiced &amp; certified by client</div>
           <div style="height:3px;background:#1e293b;border-radius:2px;"><div id="bar-actual" style="height:3px;background:var(--accent);border-radius:2px;width:0%;"></div></div>
         </div>
         <div class="admin-only" style="text-align:center;">
@@ -1275,6 +1278,7 @@ function clearForm() {
   <div class="card" style="margin-bottom:12px;" id="programme-master-header">
     <div id="programme-header-panel"></div>
   </div>
+  <div class="card no-client" style="margin-bottom:12px;font-size:11px;color:var(--muted);padding:10px 14px;">Detailed velocity metrics available in the Forecast tab.</div>
   <div class="card" style="margin-bottom:12px;" id="velocity-card">
     <div id="velocity-panel"></div>
     <div id="velocity-trend-wrap" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:none;">
@@ -1294,7 +1298,7 @@ function clearForm() {
     <table class="prog-table" id="prog-table">
       <thead>
         <tr>
-          <th>WBS</th>
+          <th>Ref</th>
           <th style="min-width:280px">Task</th>
           <th>Assigned</th>
           <th>Start</th>
@@ -4129,17 +4133,7 @@ function updateHeaderDropdown() {
          + name + '</option>';
   });
   sel.innerHTML = html;
-  // Data-as-of chip
-  var dEl = document.getElementById('hdr-datadate');
-  if (dEl) {
-    var dd = window.DS && window.DS.dataDate;
-    if (dd instanceof Date && !isNaN(dd)) {
-      dEl.textContent = 'Data: ' + dd.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
-      dEl.style.display = 'inline-block';
-    } else {
-      dEl.style.display = 'none';
-    }
-  }
+  // Data-as-of shown in state banner (hdr-datadate chip removed in v112)
 }
 
 // ── Plain-English state banner — shown on every tab, always current ──────
