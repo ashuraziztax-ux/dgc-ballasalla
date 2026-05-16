@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v113</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v114</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -35,7 +35,7 @@ a { color: var(--accent); text-decoration: none; }
 .header-status { display: flex; gap: 12px; align-items: center; }
 #state-banner { display: none; font-size: 12px; line-height: 1.5; }
 .nav button.preview-tab { opacity: 0.75; }
-.nav button.preview-tab::after { content: "β"; font-size: 8px; vertical-align: super; margin-left: 3px; color: #f59e0b; font-weight: 900; }
+.nav button.preview-tab::after { content: "preview"; font-size: 8px; vertical-align: super; margin-left: 3px; color: #f59e0b; font-weight: 900; letter-spacing: 0.02em; }
 .ph-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 14px; }
 .ph-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 12px; }
 .ph-table { width:100%; border-collapse:collapse; font-size:11px; }
@@ -9879,7 +9879,7 @@ function closeZoneHealth() {
       <tr><td>13T Excavator</td><td>JCB JS131</td><td>Manx Plant</td><td>23 Mar</td><td>£580</td><td>40</td><td>£23,200</td><td><span class="ph-badge ph-green">On Site</span></td></tr>
       <tr><td>6T Dumper</td><td>Terex TA6</td><td>Manx Plant</td><td>23 Mar</td><td>£120</td><td>40</td><td>£4,800</td><td><span class="ph-badge ph-green">On Site</span></td></tr>
       <tr><td>Road Saw</td><td>Stihl TS410</td><td>Hire It IoM</td><td>12 May</td><td>£45</td><td>4</td><td>£180</td><td><span class="ph-badge ph-green">On Site</span></td></tr>
-      <tr><td>Compactor Plate</td><td>Wacker WP1550A</td><td>DGC Owned</td><td>23 Mar</td><td>£0</td><td>—</td><td>£0</td><td><span class="ph-badge ph-blue">Owned</span></td></tr>
+      <tr><td style="color:var(--muted);font-style:italic;" colspan="8">+ Add your plant items — click button below</td></tr>
     </table>
     <div style="margin-top:10px;"><button class="btn btn-secondary" onclick="alert('Coming soon')">+ Add Plant Item</button></div>
   </div>
