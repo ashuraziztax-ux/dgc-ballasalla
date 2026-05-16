@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v118</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v119</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -948,6 +948,7 @@ function clearForm() {
   <button class="admin-only preview-tab" onclick="showTab('plant',this)">Plant</button>
   <button class="admin-only preview-tab" onclick="showTab('documents',this)">Documents</button>
   <button class="admin-only preview-tab" onclick="showTab('cashflow',this)">Cash Flow</button>
+  <button class="admin-only preview-tab" onclick="showTab('finalac',this)">Final A/c</button>
   <button class="admin-only preview-tab" onclick="showTab('field',this)">Field</button>
   <button class="admin-only preview-tab" onclick="showTab('portfolio',this)">Portfolio</button>
   <button class="admin-only preview-tab" onclick="showTab('waste',this)">Waste &amp; Spoil</button>
@@ -6388,6 +6389,7 @@ function showTab(name, btn) {
   if(name === 'setup')      buildSetupTab();
   if(name === 'plant')      { try { buildOwnedPlant();    } catch(e){} }
   if(name === 'cashflow')   { try { buildCashFlowTab();   } catch(e){} }
+  if(name === 'finalac')    { try { buildFinalAcTab();    } catch(e){} }
 }
 // ═══════════════════ OWNED PLANT ROI CALCULATOR ════════════════════
 (function() {
@@ -6821,7 +6823,8 @@ function showTab(name, btn) {
         '<div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">' + fmtGBP(totalExpected) + '</div><div class="k-lbl">AFP Submitted (pending)</div></div>' +
         '<div class="ph-kpi"><div class="k-val" style="color:#f87171;">' + fmtGBP(totalPaid) + '</div><div class="k-lbl">Orders Paid Out</div></div>' +
         '<div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">' + fmtGBP(totalInvoiced) + '</div><div class="k-lbl">Invoices Due</div></div>' +
-        '<div class="ph-kpi"><div class="k-val">' + fmtGBP(totalOrdered) + '</div><div class="k-lbl">Ordered (not yet invoiced)</div></div>';
+        '<div class="ph-kpi"><div class="k-val">' + fmtGBP(totalOrdered) + '</div><div class="k-lbl">Ordered (not yet invoiced)</div></div>' +
+        '<div class="ph-kpi"><div class="k-val" style="color:#818cf8;">' + fmtGBP(Math.max(0, 456142.76 - totalReceived)) + '</div><div class="k-lbl">Still to Come (EFA net)</div></div>';
     }
 
     // ── Main body ────────────────────────────────────────────────
@@ -7058,6 +7061,176 @@ function showTab(name, btn) {
 })();
 // ═══════════════════════════════════════════════════════════════════
 
+// ═══════════════════ FINAL ACCOUNT TAB v119 ═══════════════════════
+(function() {
+
+  // ── EFA constants from BA4 - DGC Estimated Final Account.xlsx ──────
+  var EFA = {
+    contractSum:        450142.39,
+    provsums:             2100.00,
+    variationsCert:      10846.71,
+    efaGross:           463089.10,
+    retPct:                  1.5,
+    retAmt:              6946.34,
+    efaNet:            456142.76,
+    received:          156739.46,   // App 1 received 12/05/26
+    eotUnclaimed:       16166.89    // EoT D–I not yet submitted
+  };
+
+  // ── Variations data from spreadsheet ──────────────────────────────
+  // status: 'certified' | 'estimated' | 'omit-fa' | 'goodwill' | 'not-claimed'
+  var VARS = [
+    { nr:'1',  ref:'CCE 101221',             desc:'Hand dig around services (excl. backfill)',                      amt:1405.50,   status:'certified',   notes:'', eot:'' },
+    { nr:'2',  ref:'CCE 101223',             desc:'Site Compound set-up',                                           amt:7004.05,   status:'certified',   notes:'50/50 split on plumbers connection work agreed', eot:'' },
+    { nr:'3',  ref:'RT 101004 / CCE 101224', desc:'Utility scanning training + special PPE/tools around services',  amt:1552.00,   status:'certified',   notes:'4.5 days delay — will be calculated at programme end', eot:'' },
+    { nr:'—',  ref:'RT 101005 / CCE 101225', desc:'Unmarked cable at MHS4.1 (omitted as goodwill)',                amt:0,         status:'goodwill',    notes:'2 men × 1 hr — removed as gesture of goodwill', eot:'' },
+    { nr:'4',  ref:'RT 101007 / CCE 101227', desc:'Fuel cost increase 30% since tender pricing',                   amt:2609.00,   status:'certified',   notes:'', eot:'' },
+    { nr:'5',  ref:'RT 101008 / CCE 101228', desc:'300mm scanning every excavation — 08.04 to 21.04',              amt:963.10,    status:'certified',   notes:'Dandara had 11 service strikes in 12 months', eot:'' },
+    { nr:'6',  ref:'RT 101012 / CCE 101229', desc:'Land drain found — concrete wagon turned away, 1 day lost (goodwill)', amt:0,  status:'goodwill',    notes:'Cost omitted as goodwill — time claim still to be made (1 day)', eot:'' },
+    { nr:'7',  ref:'RT 101014 / CCE 101230', desc:'Cold tar in trench F4.1 to F4.2',                               amt:1331.13,   status:'certified',   notes:'', eot:'' },
+    { nr:'8',  ref:'CCE 101231',             desc:'Omit MH S4.5 & F4.5; add 225/150mm pipes + bedding',           amt:-7155.19,  status:'omit-fa',     notes:'To be omitted at Final Account', eot:'' },
+    { nr:'9',  ref:'CCE 101232',             desc:'Omit sand blinding — BoQ 4.01',                                  amt:-1176.70,  status:'omit-fa',     notes:'To be omitted at Final Account', eot:'' },
+    { nr:'10', ref:'RT 101308 / CCE 101233', desc:'Concrete found at Plot 10 & MH F4.2 — breaking required',       amt:1513.86,   status:'certified',   notes:'', eot:'' },
+    { nr:'11', ref:'RT 101310 / CCE 101234', desc:'Asbestos found — double bagged, sealed, to DC skips',           amt:341.88,    status:'certified',   notes:'', eot:'' },
+    { nr:'12', ref:'RT 101008 / CCE 101228', desc:'300mm scanning — 22.04 to 30.04 (7 days)',                      amt:1508.70,   status:'certified',   notes:'Follow-on from Var 5', eot:'' },
+    { nr:'13', ref:'RT 101008 / CCE 101228', desc:'300mm scanning — 01.05 to end of excavation (estimated)',       amt:3017.40,   status:'estimated',   notes:'Ongoing — period and final total TBC', eot:'' },
+    { nr:'14', ref:'RT 101313',              desc:'Tote bags over services/laterals for next contractor',           amt:921.79,    status:'estimated',   notes:'H&S officer instruction — estimated', eot:'' },
+    { nr:'15', ref:'—',                      desc:'Omit edgings (top road only) — est. 294m @ £18.93',             amt:-5565.42,  status:'estimated',   notes:'Estimated — top road section only', eot:'' },
+    { nr:'16', ref:'—',                      desc:'Omit footpath (top road only) — est. 221m² @ £66.47',           amt:-14689.87, status:'estimated',   notes:'Estimated — top road section only', eot:'' },
+    { nr:'17', ref:'—',                      desc:'EO diverting & breaking into existing manhole',                  amt:1500.00,   status:'estimated',   notes:'Estimated — if manholes to be replaced', eot:'' },
+    { nr:'18', ref:'—',                      desc:'Drainage remeasure — S4.4 to S4.6 (foul + surface)',            amt:4997.06,   status:'certified',   notes:'S4.6→Ex MH S12.5A + F4.6→Ex MH F12.5A', eot:'' },
+    // Extension of Time variations
+    { nr:'A',  ref:'EoT-1', desc:'EoT 1 — 1 week additional prelims (24.03–30.03.2026)',                           amt:4506.05,   status:'certified',   notes:'Revised completion: 19 Jun 2026', eot:'5 days' },
+    { nr:'B',  ref:'EoT-2', desc:'EoT 2 — 4.5 days additional prelims (31.03–08.04.2026)',                         amt:5576.90,   status:'certified',   notes:'Revised completion: 26 Jun 2026', eot:'4.5 days' },
+    { nr:'C',  ref:'EoT-3', desc:'EoT 3 — 0.5 days (09.04–21.04.2026)',                                            amt:685.47,    status:'certified',   notes:'Revised completion: 26 Jun 2026', eot:'0.5 days' },
+    { nr:'D',  ref:'EoT-4', desc:'EoT 4 — 1 day (13.04.2026) — NOT YET SUBMITTED',                                amt:2955.40,   status:'not-claimed', notes:'Entitlement to be reconciled at completion', eot:'1 day' },
+    { nr:'E',  ref:'EoT-5', desc:'EoT 5 — 1 day (14–15.04.2026) — NOT YET SUBMITTED',                             amt:4433.10,   status:'not-claimed', notes:'Entitlement to be reconciled at completion', eot:'1 day' },
+    { nr:'F',  ref:'EoT-6', desc:'EoT 6 — 0.5 days (23.04.2026) — NOT YET SUBMITTED',                             amt:771.72,    status:'not-claimed', notes:'Entitlement to be reconciled at completion', eot:'0.5 days' },
+    { nr:'G',  ref:'EoT-7', desc:'EoT 7 — 2 days (22.04–01.05.2026) — NOT YET SUBMITTED',                         amt:2440.40,   status:'not-claimed', notes:'Entitlement to be reconciled at completion', eot:'2 days' },
+    { nr:'H',  ref:'EoT-8', desc:'EoT 8 — 4 days (01.05–ongoing) — NOT YET SUBMITTED',                            amt:4880.80,   status:'not-claimed', notes:'Entitlement to be reconciled at completion', eot:'4 days' },
+    { nr:'I',  ref:'EoT-9', desc:'EoT 9 — 0.5 days (02.05.2026) — NOT YET SUBMITTED',                             amt:685.47,    status:'not-claimed', notes:'Entitlement to be reconciled at completion', eot:'0.5 days' }
+  ];
+
+  var STATUS_CFG = {
+    'certified':   { col:'#4ade80', label:'Certified' },
+    'estimated':   { col:'#f59e0b', label:'Estimated' },
+    'omit-fa':     { col:'var(--muted)', label:'Omit at FA' },
+    'goodwill':    { col:'var(--muted)', label:'Goodwill' },
+    'not-claimed': { col:'#818cf8', label:'Not yet submitted' }
+  };
+
+  function fmtGBP(n) {
+    if (n === 0) return '—';
+    var neg = n < 0;
+    return (neg ? '−£' : '£') + Math.abs(n).toLocaleString('en-GB', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  }
+  function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  window.buildFinalAcTab = function() {
+    var faKpi  = document.getElementById('fa-kpi-row');
+    var faBody = document.getElementById('fa-body');
+    if (!faKpi || !faBody) return;
+
+    var stillToCome = EFA.efaNet - EFA.received;
+    var receivedPct = Math.round(EFA.received / EFA.efaNet * 100);
+    var eotPotential = EFA.efaGross + EFA.eotUnclaimed;
+
+    // ── KPI strip ────────────────────────────────────────────────────
+    faKpi.className = 'ph-kpi-row';
+    faKpi.innerHTML =
+      '<div class="ph-kpi"><div class="k-val">£450,142</div><div class="k-lbl">Contract Sum</div></div>' +
+      '<div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">£10,847</div><div class="k-lbl">Variations Certified</div></div>' +
+      '<div class="ph-kpi"><div class="k-val">£463,089</div><div class="k-lbl">EFA Gross</div></div>' +
+      '<div class="ph-kpi"><div class="k-val" style="color:var(--muted);">−£6,946</div><div class="k-lbl">Retention (1.5%)</div></div>' +
+      '<div class="ph-kpi"><div class="k-val" style="color:#4ade80;">£456,143</div><div class="k-lbl">EFA Net (after retention)</div></div>' +
+      '<div class="ph-kpi"><div class="k-val" style="color:#4ade80;">£156,739</div><div class="k-lbl">Received to Date</div></div>' +
+      '<div class="ph-kpi"><div class="k-val" style="color:#818cf8;">£' + Math.round(stillToCome).toLocaleString('en-GB') + '</div><div class="k-lbl">Still to Come</div></div>';
+
+    var h = [];
+
+    // ── Progress bar ─────────────────────────────────────────────────
+    h.push('<div class="ph-card" style="margin-bottom:14px;">');
+    h.push('<div class="ph-title">Cash Collection Progress</div>');
+    h.push('<div style="margin-bottom:6px;display:flex;justify-content:space-between;font-size:11px;color:var(--muted);">');
+    h.push('<span>£156,739 received</span>');
+    h.push('<span>' + receivedPct + '% of EFA net</span>');
+    h.push('<span>£456,143 EFA net total</span>');
+    h.push('</div>');
+    h.push('<div style="background:var(--border);border-radius:6px;height:14px;overflow:hidden;position:relative;">');
+    h.push('<div style="width:' + receivedPct + '%;background:#4ade80;height:100%;border-radius:6px;transition:width 0.5s;"></div>');
+    h.push('</div>');
+    h.push('<div style="margin-top:8px;font-size:10px;color:var(--muted);">');
+    h.push('<strong style="color:#818cf8;">£' + Math.round(EFA.eotUnclaimed).toLocaleString('en-GB') + '</strong>');
+    h.push(' in Extension of Time prelims (EoT D–I) not yet submitted — if accepted this would bring EFA gross to ');
+    h.push('<strong style="color:#f59e0b;">£' + Math.round(eotPotential).toLocaleString('en-GB') + '</strong>.');
+    h.push('</div>');
+    h.push('</div>');
+
+    // ── Variations table ─────────────────────────────────────────────
+    h.push('<div class="ph-card">');
+    h.push('<div class="ph-title" style="margin-bottom:10px;">Variations Register</div>');
+
+    // Summary row
+    var certTotal     = VARS.filter(function(v){ return v.status==='certified'; }).reduce(function(s,v){ return s+v.amt; }, 0);
+    var estTotal      = VARS.filter(function(v){ return v.status==='estimated'; }).reduce(function(s,v){ return s+v.amt; }, 0);
+    var notClaimedTot = VARS.filter(function(v){ return v.status==='not-claimed'; }).reduce(function(s,v){ return s+v.amt; }, 0);
+    h.push('<div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">');
+    [
+      { val:'£'+Math.round(certTotal).toLocaleString('en-GB'),       lbl:'Certified / In EFA',       col:'#4ade80' },
+      { val:'£'+Math.round(Math.abs(estTotal)).toLocaleString('en-GB'), lbl:'Estimated (net)',         col:'#f59e0b' },
+      { val:'£'+Math.round(notClaimedTot).toLocaleString('en-GB'),   lbl:'EoT Not Yet Submitted',    col:'#818cf8' }
+    ].forEach(function(k) {
+      h.push('<div style="flex:1;min-width:130px;background:var(--surface2);border-radius:8px;padding:10px 12px;text-align:center;">');
+      h.push('<div style="font-size:18px;font-weight:800;color:' + k.col + ';">' + k.val + '</div>');
+      h.push('<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;">' + k.lbl + '</div>');
+      h.push('</div>');
+    });
+    h.push('</div>');
+
+    h.push('<div style="overflow-x:auto;">');
+    h.push('<table class="ph-table" style="min-width:700px;font-size:11px;">');
+    h.push('<tr style="font-size:10px;"><th style="width:32px;">Nr</th><th style="min-width:130px;">Reference</th><th>Description</th><th style="width:90px;text-align:right;">Amount</th><th style="width:110px;">Status</th><th style="min-width:80px;">EoT</th><th>Notes</th></tr>');
+
+    VARS.forEach(function(v) {
+      var cfg = STATUS_CFG[v.status] || { col:'var(--muted)', label:v.status };
+      var amtStr, amtCol;
+      if (v.amt === 0) {
+        amtStr = '£0'; amtCol = 'var(--muted)';
+      } else if (v.amt < 0) {
+        amtStr = '−£' + Math.abs(v.amt).toLocaleString('en-GB', {minimumFractionDigits:2,maximumFractionDigits:2});
+        amtCol = '#f87171';
+      } else {
+        amtStr = '£' + v.amt.toLocaleString('en-GB', {minimumFractionDigits:2,maximumFractionDigits:2});
+        amtCol = v.status === 'not-claimed' ? '#818cf8' : v.status === 'estimated' ? '#f59e0b' : '#4ade80';
+      }
+      var rowBg = v.status === 'not-claimed' ? 'background:rgba(129,140,248,0.06);' : v.status === 'omit-fa' || v.status === 'goodwill' ? 'opacity:0.6;' : '';
+      h.push('<tr style="' + rowBg + '">');
+      h.push('<td style="text-align:center;font-weight:700;">' + esc(v.nr) + '</td>');
+      h.push('<td style="font-size:9px;color:var(--muted);">' + esc(v.ref) + '</td>');
+      h.push('<td>' + esc(v.desc) + '</td>');
+      h.push('<td style="text-align:right;font-weight:700;color:' + amtCol + ';">' + amtStr + '</td>');
+      h.push('<td><span style="font-size:9px;font-weight:700;color:' + cfg.col + ';">' + cfg.label + '</span></td>');
+      h.push('<td style="font-size:9px;color:var(--muted);">' + esc(v.eot) + '</td>');
+      h.push('<td style="font-size:9px;color:var(--muted);">' + esc(v.notes) + '</td>');
+      h.push('</tr>');
+    });
+
+    h.push('</table></div>');
+    h.push('<div style="margin-top:10px;font-size:10px;color:var(--muted);line-height:1.6;">');
+    h.push('<strong>Source:</strong> BA4 – DGC Estimated Final Account.xlsx (Application No. 5 — work done to completion). ');
+    h.push('EoT variations D–I are assessed on an interim basis; final entitlement and costs to be reconciled at completion. ');
+    h.push('Items 8 &amp; 9 (negative) to be formally omitted at Final Account. ');
+    h.push('Main Contractors Discount of £10,800.75 already deducted from Contract Sum.');
+    h.push('</div>');
+    h.push('</div>'); // ph-card
+
+    faBody.innerHTML = h.join('');
+  };
+
+})();
+// ════════════════════════════════════════════════════════════════════
 
 // ═══════════════════════ INIT ═══════════════════════
 window.addEventListener('DOMContentLoaded', () => {
@@ -10651,6 +10824,12 @@ function closeZoneHealth() {
 <div id="tab-cashflow" class="tab-content admin-only">
   <div id="cf-kpi-row"></div>
   <div id="cf-body"></div>
+</div>
+
+<!-- ═══════════ FINAL ACCOUNT TAB v119 ═══════════ -->
+<div id="tab-finalac" class="tab-content admin-only">
+  <div id="fa-kpi-row"></div>
+  <div id="fa-body"></div>
 </div>
 
 <!-- ═══════════ FIELD TAB β ═══════════ -->
