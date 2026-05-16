@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v98</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v99</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -3994,7 +3994,8 @@ function daysBetween(a,b) { return Math.round((b-a)/86400000); }
 
 function getZoneStatus(zone) {
   const s = parseDate(zone.start), e = parseDate(zone.end);
-  if(TODAY > e) return 'complete';
+  // Only mark complete if physical progress is 100% — avoids "complete" badge on EOT-overrun zones
+  if(TODAY > e) return (getZoneProgress(zone.id) >= 100) ? 'complete' : 'late';
   if(TODAY < s) return 'upcoming';
   // Task-schedule planned% (consistent with KPI tiles, QS methodology)
   const planned = getZonePlannedPct(zone.id) / 100;
@@ -4900,6 +4901,22 @@ window.addEventListener('DOMContentLoaded', () => {
     if(logDate) logDate.value = TODAY.toISOString().slice(0,10);
   } catch(e) {}
 
+  // Job status pill — auto-advance past completion date
+  try {
+    var _pill = document.getElementById('job-status-pill');
+    if (_pill) {
+      var _comp = parseDate('2026-06-26');
+      if (TODAY > _comp) {
+        _pill.textContent = 'Complete';
+        _pill.style.background = '#22c55e20'; _pill.style.color = '#16a34a'; _pill.style.borderColor = '#16a34a40';
+      } else if (TODAY >= parseDate('2026-06-20')) {
+        _pill.textContent = 'Closing Out';
+        _pill.style.background = '#a78bfa20'; _pill.style.color = '#7c3aed'; _pill.style.borderColor = '#7c3aed40';
+      }
+      // else: HTML default "Active" is correct
+    }
+  } catch(e) {}
+
   // Each KPI calculated independently — one failure won't stop the others
   const progress     = (function(){ try{ return getOverallProgress(); }catch(e){ return 0; } })();
   const timePct      = (function(){ try{ return getTimeProgress(); }catch(e){ return 0; } })();
@@ -5009,8 +5026,13 @@ window.addEventListener('DOMContentLoaded', () => {
     } catch(e8){}
   } catch(e) {}
 
-  set('kpi-next-payment',      '£156,739');
-  set('kpi-next-payment-date', 'Due 28 May (AFP 2 net)');
+  if (TODAY > parseDate('2026-05-28')) {
+    set('kpi-next-payment',      'AFP 3 est. £128,109');
+    set('kpi-next-payment-date', 'Submit ~22 May · Due 29 May');
+  } else {
+    set('kpi-next-payment',      '£156,739');
+    set('kpi-next-payment-date', 'Due 28 May (AFP 2 net)');
+  }
 
   try {
     const IOM_BH = ['2026-04-03','2026-04-06','2026-05-04','2026-05-25','2026-06-12'];
@@ -5332,10 +5354,12 @@ function buildTwoWeekReport() {
   h.push('<tr><td>Current programme forecast</td>'
     + '<td style="text-align:right;font-weight:700;color:' + (_cfo&&_cfo.late?'#dc2626':'#16a34a') + ';">'
     + (_cfo ? _cfo.str : '&mdash;') + '</td></tr>');
-  h.push('<tr style="background:#fffbeb;">'
-    + '<td style="font-size:7.5pt;"><span style="color:#92400e;font-weight:600;">&#9432;&nbsp;Efficiency-adjusted estimate</span>'
-    + '<div style="font-size:6.5pt;color:#9ca3af;margin-top:2px;line-height:1.3;">&#9888; Indicative only &mdash; applies ' + _avgRate2 + '% plan-completion rate</div></td>'
-    + '<td style="text-align:right;font-weight:700;font-size:8.5pt;color:' + (_effLate2?'#dc2626':'#16a34a') + ';vertical-align:top;padding-top:4px;">' + _effStr2 + '</td></tr>');
+  if (_histArr2.length >= 3) {
+    h.push('<tr style="background:#fffbeb;">'
+      + '<td style="font-size:7.5pt;"><span style="color:#92400e;font-weight:600;">&#9432;&nbsp;Efficiency-adjusted estimate</span>'
+      + '<div style="font-size:6.5pt;color:#9ca3af;margin-top:2px;line-height:1.3;">&#9888; Indicative only &mdash; applies ' + _avgRate2 + '% plan-completion rate (' + _histArr2.length + ' reports)</div></td>'
+      + '<td style="text-align:right;font-weight:700;font-size:8.5pt;color:' + (_effLate2?'#dc2626':'#16a34a') + ';vertical-align:top;padding-top:4px;">' + _effStr2 + '</td></tr>');
+  }
   h.push('</table>');
   h.push('</div>');
 
@@ -5344,7 +5368,7 @@ function buildTwoWeekReport() {
   h.push('<div class="rpt-sec">AFP Schedule</div>');
   h.push('<table class="rpt-tbl">');
   h.push('<tr><th>AFP</th><th>Description</th><th style="text-align:right;">Net Value</th></tr>');
-  h.push('<tr><td>AFP 1</td><td>Drainage works to end April</td><td style="text-align:right;">£(prev. certified)</td></tr>');
+  h.push('<tr><td>AFP 1</td><td>Drainage works to end April</td><td style="text-align:right;">£' + (22984.59).toLocaleString('en-GB',{minimumFractionDigits:2}) + '</td></tr>');
   h.push('<tr><td style="font-weight:700;">AFP 2</td><td style="font-weight:700;">Certified</td><td style="text-align:right;font-weight:700;">£156,739</td></tr>');
   h.push('<tr style="background:#fffbeb;"><td style="font-weight:700;color:#d97706;">AFP 3</td><td style="color:#d97706;">Submit ~22 May, forecast to 29 May</td><td style="text-align:right;color:#d97706;font-weight:700;">TBC &mdash; confirm with QS</td></tr>');
   h.push('<tr><td>AFP 4</td><td>Final account &amp; retention release</td><td style="text-align:right;color:#94a3b8;">TBC</td></tr>');
@@ -5491,7 +5515,7 @@ function buildTwoWeekReport() {
   // ── Footer ─────────────────────────────────────────────────────────────────
   h.push('<div style="margin-top:18px;padding-top:8px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:7.5pt;color:#94a3b8;">');
   h.push('<span>Drainage &amp; Groundwork Contractors Ltd &mdash; 23 Circular Road, Douglas, IM1 1AF</span>');
-  h.push('<span>Two-Week Progress Report &mdash; Ballasalla Phase 4 v97</span>');
+  h.push('<span>Two-Week Progress Report &mdash; Ballasalla Phase 4 v99</span>');
   h.push('</div>');
 
   h.push('</div>'); // rpt-body
@@ -5793,14 +5817,16 @@ function buildFortnightlyReport() {
     + '<td>Current programme forecast</td>'
     + '<td style="text-align:right;font-weight:700;color:' + (_cfo&&_cfo.late?'#dc2626':'#16a34a') + ';">'
     + (_cfo ? _cfo.str : '&mdash;') + '</td></tr>');
-  h.push('<tr style="background:#fffbeb;">'
-    + '<td style="font-size:7.5pt;">'
-    + '<span style="color:#92400e;font-weight:600;">&#9432;&nbsp;Efficiency-adjusted estimate</span>'
-    + '<div style="font-size:6.5pt;color:#9ca3af;margin-top:2px;line-height:1.3;">'
-    + '&#9888; Indicative only &mdash; applies ' + _avgRate2 + '% plan-completion rate'
-    + '</div></td>'
-    + '<td style="text-align:right;font-weight:700;font-size:8.5pt;color:' + (_effLate2?'#dc2626':'#16a34a') + ';vertical-align:top;padding-top:4px;">'
-    + _effStr2 + '</td></tr>');
+  if (_histArr2.length >= 3) {
+    h.push('<tr style="background:#fffbeb;">'
+      + '<td style="font-size:7.5pt;">'
+      + '<span style="color:#92400e;font-weight:600;">&#9432;&nbsp;Efficiency-adjusted estimate</span>'
+      + '<div style="font-size:6.5pt;color:#9ca3af;margin-top:2px;line-height:1.3;">'
+      + '&#9888; Indicative only &mdash; applies ' + _avgRate2 + '% plan-completion rate (' + _histArr2.length + ' reports)'
+      + '</div></td>'
+      + '<td style="text-align:right;font-weight:700;font-size:8.5pt;color:' + (_effLate2?'#dc2626':'#16a34a') + ';vertical-align:top;padding-top:4px;">'
+      + _effStr2 + '</td></tr>');
+  }
   h.push('</table>');
   h.push('</div>');
 
@@ -5809,7 +5835,7 @@ function buildFortnightlyReport() {
   h.push('<div class="sec-label">AFP Schedule</div>');
   h.push('<table>');
   h.push('<tr><th>AFP</th><th>Description</th><th style="text-align:right;">Net Value</th></tr>');
-  h.push('<tr><td>AFP 1</td><td>Drainage works to end April</td><td style="text-align:right;">£(prev. certified)</td></tr>');
+  h.push('<tr><td>AFP 1</td><td>Drainage works to end April</td><td style="text-align:right;">£' + (22984.59).toLocaleString('en-GB',{minimumFractionDigits:2}) + '</td></tr>');
   h.push('<tr><td style="font-weight:700;">AFP 2</td><td style="font-weight:700;">Certified</td><td style="text-align:right;font-weight:700;">£156,739</td></tr>');
   h.push('<tr style="background:#fffbeb;"><td style="font-weight:700;color:#d97706;">AFP 3</td><td style="color:#d97706;">Submit ~22 May, forecast to 29 May</td><td style="text-align:right;color:#d97706;font-weight:700;">' + nextAFPValue + '</td></tr>');
   h.push('<tr><td>AFP 4</td><td>Final account &amp; retention release</td><td style="text-align:right;color:#94a3b8;">TBC</td></tr>');
