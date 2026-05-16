@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v108</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v109</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -5921,16 +5921,8 @@ function buildProgrammeHeader() {
   ZONES.forEach(function(z){ completedValue += (z.budget||0)*(getZoneProgress(z.id)/100); });
   var overallPct = totalBudget > 0 ? completedValue/totalBudget*100 : 0;
 
-  // Task-schedule planned % (same as getZonePlannedPct methodology but global)
-  var _td = 0, _dd = 0;
-  TASKS.filter(function(t){return t.start&&t.end;}).forEach(function(t){
-    var s = parseDate(t.start), e = parseDate(t.end);
-    var dur = Math.max(1, Math.round((e-s)/86400000)+1);
-    _td += dur;
-    if (TODAY >= e)     { _dd += dur; }
-    else if (TODAY > s) { _dd += Math.round((TODAY-s)/86400000); }
-  });
-  var plannedPct = _td > 0 ? _dd/_td*100 : 0;
+  // Calendar-day planned% — canonical DS value, same as Velocity Panel + Forecast tab
+  var plannedPct = (window.DS && window.DS.plannedPct) || 0;
 
   var agreedDL   = parseDate('2026-06-26');
   var totalProgWDs = (window.DS && window.DS.totalProgWDs) || 65;
@@ -5955,8 +5947,8 @@ function buildProgrammeHeader() {
 
   var remainingProgWDs = Math.max(0, totalProgWDs*(1-overallPct/100));
   var atPaceEnd  = addWD(TODAY, remainingProgWDs);
-  var ef         = (plannedPct>0 && overallPct>0) ? plannedPct/overallPct : 1;
-  var dragEnd    = addWD(TODAY, remainingProgWDs*ef);
+  // Expected end date: use DS.forecastDate (canonical calendar extrapolation — same as Velocity Panel)
+  var dragEnd    = (window.DS && window.DS.forecastDate) || addWD(TODAY, remainingProgWDs * ((plannedPct>0&&overallPct>0) ? plannedPct/overallPct : 1));
   var dragDiff   = daysDL(dragEnd);
   var effPct     = plannedPct>0 ? Math.round(overallPct/plannedPct*100) : 100;
 
