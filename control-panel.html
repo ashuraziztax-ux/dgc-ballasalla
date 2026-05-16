@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v99</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v100</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -895,6 +895,7 @@ function clearForm() {
   <button class="admin-only" onclick="showTab('variations',this)">Variations</button>
   <button onclick="showTab('report',this)">Two-week breakdown</button>
   <button onclick="showTab('risks',this)">Risk Tickets</button>
+  <button class="admin-only" onclick="showTab('data',this)">&#128202; Data</button>
   <button class="active admin-only" onclick="showTab('dashboard',this)">Dashboard</button>
 </div>
 
@@ -2031,6 +2032,10 @@ function clearForm() {
 </div>
 
 <!-- ═══════════════════════════════ RISK TICKETS ═══════════════════════════════ -->
+<div id="tab-data" class="tab-content admin-only">
+  <p style="padding:20px;color:var(--muted);font-size:12px;">Loading data layer…</p>
+</div>
+
 <div id="tab-risks" class="tab-content">
   <div id="risks-body"><p style="padding:20px;color:var(--muted);font-size:12px;">Loading…</p></div>
 </div>
@@ -2521,27 +2526,19 @@ function buildVelocityPanel() {
   hdr.appendChild(tgl);
   el.appendChild(hdr);
 
-  // ── Calculations ──────────────────────────────────────────────────────────
-  var totalBudget = ZONES.reduce(function(s,z){ return s + (z.budget||0); }, 0);
-  var completedValue = 0;
-  ZONES.forEach(function(z) {
-    completedValue += (z.budget||0) * (getZoneProgress(z.id)/100);
-  });
-  var overallPct = totalBudget > 0 ? completedValue / totalBudget * 100 : 0;
-  var projStart  = new Date('2026-03-23T00:00:00');
-  // Use DATA_AS_OF (frozen data date) so forecast doesn't drift between uploads
-  var today      = (typeof DATA_AS_OF !== 'undefined' && DATA_AS_OF <= new Date()) ? DATA_AS_OF : new Date();
-  var daysElapsed = Math.max(1, Math.round((today - projStart) / 86400000));
-  var targetEnd  = new Date('2026-06-26T00:00:00');
-  var totalCalDays = Math.round((targetEnd - projStart) / 86400000);
-  var plannedPct = Math.min(100, daysElapsed / totalCalDays * 100);
-  var variance   = overallPct - plannedPct;
-  var ratePerDay = overallPct / daysElapsed;
-  var ratePerWeek = ratePerDay * 7;
-  var remaining  = 100 - overallPct;
-  var daysNeeded = ratePerDay > 0 ? Math.round(remaining / ratePerDay) : 9999;
-  var fcDate     = new Date(today.getTime());
-  fcDate.setDate(fcDate.getDate() + daysNeeded);
+  // ── All calculations read from the single source of truth ────────────────
+  var _DS        = window.DS || {};
+  var today      = _DS.dataDate || ((typeof DATA_AS_OF!=='undefined'&&DATA_AS_OF<=new Date()) ? DATA_AS_OF : new Date());
+  var overallPct = _DS.actualPct    || 0;
+  var daysElapsed= _DS.elapsedCalDays || Math.max(1, daysBetween(new Date('2026-03-23T00:00:00'), today));
+  var totalCalDays = _DS.totalCalDays || 95;
+  var plannedPct = _DS.plannedPct   || Math.min(100, daysElapsed / totalCalDays * 100);
+  var variance   = _DS.variance     || (overallPct - plannedPct);
+  var ratePerDay = _DS.ratePerDay   || (overallPct / Math.max(1, daysElapsed));
+  var ratePerWeek= _DS.ratePerWeek  || (ratePerDay * 7);
+  var remaining  = _DS.remainPct    || Math.max(0, 100 - overallPct);
+  var daysNeeded = _DS.daysToComplete || (ratePerDay > 0 ? Math.round(remaining / ratePerDay) : 9999);
+  var fcDate     = _DS.forecastDate || new Date(today.getTime() + daysNeeded * 86400000);
   var fcStr      = fcDate.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
   var fcLate     = fcDate > targetEnd;
   var daysOff    = Math.round(Math.abs(fcDate - targetEnd) / 86400000);
@@ -2609,8 +2606,8 @@ function buildVelocityPanel() {
     return d.status === 'open' ? s + (d.days || 0) : s;
   }, 0);
 
-  // Programme ≈ 65 working days (98 cal days − 28 weekends − 5 IoM bank hols)
-  var totalProgWDs = 65;
+  // Programme working days — computed dynamically via DS (no more hardcoded 65)
+  var totalProgWDs = (window.DS && window.DS.totalProgWDs) || 65;
   // Express agreed delays as % of total programme working time
   var delayCreditPct = Math.min(100 - overallPct, accountedDays / totalProgWDs * 100);
   var accountedForPct = overallPct + delayCreditPct;
@@ -4018,32 +4015,170 @@ function getTaskStatus(task) {
 
 // ═══════════════════════ TAB NAV ═══════════════════════
 
+// ═══════════════════════ SINGLE SOURCE OF TRUTH ═══════════════════════
+// computeDS() runs once at DOMContentLoaded and stores all derived metrics
+// in window.DS. Every rendering function reads from DS instead of
+// recomputing independently — this is what keeps every panel consistent.
+function computeDS() {
+  var PROJECT_START  = parseDate('2026-03-23');
+  var PROJECT_END    = parseDate('2026-06-26');
+  var ORIG_END       = parseDate('2026-06-12');
+  var dataDate       = (typeof DATA_AS_OF !== 'undefined' && DATA_AS_OF <= new Date()) ? DATA_AS_OF : new Date();
+
+  // ── Calendar timeline (anchored to data date, not live today) ────────────
+  var totalCalDays   = daysBetween(PROJECT_START, PROJECT_END);
+  var elapsedCalDays = Math.min(totalCalDays, Math.max(0, daysBetween(PROJECT_START, dataDate)));
+  var remainCalDays  = Math.max(0, daysBetween(dataDate, PROJECT_END));
+
+  // ── Working days (IoM bank holidays) ─────────────────────────────────────
+  var _IOM_BH = {'2026-04-03':1,'2026-04-06':1,'2026-05-04':1,'2026-05-25':1,'2026-06-12':1};
+  function _isWD(d) {
+    var w = d.getDay(); if (w===0||w===6) return false;
+    return !_IOM_BH[d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')];
+  }
+  function _wdCount(a, b) {
+    var d = new Date(a.getTime()), n = 0;
+    while (d <= b) { if (_isWD(d)) n++; d.setDate(d.getDate()+1); }
+    return n;
+  }
+  var totalProgWDs   = _wdCount(PROJECT_START, PROJECT_END);   // 65
+  var elapsedProgWDs = _wdCount(PROJECT_START, dataDate);
+  var remainProgWDs  = Math.max(0, totalProgWDs - elapsedProgWDs);
+
+  // ── Progress ──────────────────────────────────────────────────────────────
+  var actualPct    = Math.round((function(){ try{ return getOverallProgress(); }catch(e){ return 0; } })() * 10) / 10;
+  // Calendar-day planned% — frozen to dataDate so it doesn't drift between uploads
+  var plannedPct   = totalCalDays > 0 ? Math.round(elapsedCalDays / totalCalDays * 1000) / 10 : 0;
+  var plannedPctR  = Math.round(plannedPct);   // rounded integer for display
+  var variance     = Math.round((actualPct - plannedPct) * 10) / 10;
+  var efficiencyPct = plannedPct > 0 ? Math.round(actualPct / plannedPct * 100) : 100;
+
+  // ── Forecast (calendar extrapolation from data date) ─────────────────────
+  var ratePerDay    = elapsedCalDays > 0 ? actualPct / elapsedCalDays : 0;
+  var ratePerWeek   = Math.round(ratePerDay * 7 * 10) / 10;
+  var remainPct     = Math.max(0, 100 - actualPct);
+  var daysToComplete= ratePerDay > 0 ? Math.round(remainPct / ratePerDay) : 9999;
+  var forecastDate  = new Date(dataDate.getTime() + daysToComplete * 86400000);
+  var daysLateEarly = Math.round((forecastDate - PROJECT_END) / 86400000);
+
+  // ── Status ────────────────────────────────────────────────────────────────
+  var statusLabel = variance >= 2 ? 'Ahead of Programme' : variance <= -5 ? 'Behind Programme' : 'On Programme';
+  var statusColor = variance >= 2 ? '#16a34a' : variance <= -5 ? '#dc2626' : '#d97706';
+
+  // ── Per-zone snapshot ─────────────────────────────────────────────────────
+  var zones = ZONES.map(function(z) {
+    var act = (function(){ try{ return getZoneProgress(z.id); }catch(e){ return 0; } })();
+    var pln = (function(){ try{ return getZonePlannedPct(z.id); }catch(e){ return 0; } })();
+    var rag = (function(){ try{ return getZoneRAG(z.id); }catch(e){ return {lbl:'—',col:'#64748b'}; } })();
+    return { id:z.id, name:z.shortName||z.name, actual:act, planned:pln, rag:rag };
+  });
+
+  return {
+    PROJECT_START, PROJECT_END, ORIG_END, dataDate,
+    totalCalDays, elapsedCalDays, remainCalDays,
+    totalProgWDs, elapsedProgWDs, remainProgWDs,
+    actualPct, plannedPct, plannedPctR, variance, efficiencyPct,
+    ratePerDay, ratePerWeek, remainPct, daysToComplete, forecastDate, daysLateEarly,
+    statusLabel, statusColor,
+    zones,
+    computedAt: new Date()
+  };
+}
+
+// ── Data tab renderer — shows all DS values so every figure is auditable ──
+function buildDataTab() {
+  var el = document.getElementById('tab-data');
+  if (!el) return;
+  var DS = window.DS;
+  if (!DS) { el.innerHTML = '<p style="padding:20px;color:var(--muted);">Data not yet computed.</p>'; return; }
+  function fmt2(n) { return typeof n === 'number' ? (Math.round(n*100)/100).toFixed(1) : '—'; }
+  function fmtD(d) { return d instanceof Date ? d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '—'; }
+  function row(label, value, note) {
+    return '<tr><td style="padding:6px 10px;color:var(--muted);font-size:11px;white-space:nowrap;">' + label + '</td>'
+      + '<td style="padding:6px 10px;font-weight:700;font-size:12px;color:var(--text);">' + value + '</td>'
+      + '<td style="padding:6px 10px;font-size:10px;color:#64748b;">' + (note||'') + '</td></tr>';
+  }
+  function sec(title) {
+    return '<tr><td colspan="3" style="padding:10px 10px 4px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#38bdf8;border-top:1px solid var(--border);">' + title + '</td></tr>';
+  }
+  var h = [];
+  h.push('<div style="padding:16px;max-width:900px;">');
+  h.push('<div style="display:flex;align-items:baseline;gap:16px;margin-bottom:16px;flex-wrap:wrap;">');
+  h.push('<div style="font-size:18px;font-weight:800;color:var(--text);">&#128202; Live Data Layer</div>');
+  h.push('<div style="font-size:11px;color:var(--muted);">All panels read from here &mdash; one calculation, consistent everywhere</div>');
+  h.push('</div>');
+  h.push('<div style="font-size:10px;color:#64748b;margin-bottom:12px;background:var(--surface2);padding:6px 10px;border-radius:6px;display:inline-block;">');
+  h.push('Computed at ' + DS.computedAt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) + ' &nbsp;·&nbsp; Data as of ' + fmtD(DS.dataDate) + ' &nbsp;·&nbsp; Live date: ' + fmtD(TODAY));
+  h.push('</div>');
+  h.push('<table style="width:100%;border-collapse:collapse;background:var(--surface);border-radius:8px;overflow:hidden;">');
+
+  h.push(sec('Project Dates'));
+  h.push(row('Programme start',      fmtD(DS.PROJECT_START),  'First day on site — prelims & setup'));
+  h.push(row('Agreed completion',    fmtD(DS.PROJECT_END),    'Post-EOT agreed date with Dandara'));
+  h.push(row('Original completion',  fmtD(DS.ORIG_END),       'Pre-EOT baseline'));
+  h.push(row('Data as of',           fmtD(DS.dataDate),       'All frozen calculations anchored here'));
+
+  h.push(sec('Calendar Timeline'));
+  h.push(row('Total calendar days',  DS.totalCalDays + ' days',      'Start → agreed completion'));
+  h.push(row('Elapsed calendar days',DS.elapsedCalDays + ' days',    'Start → data date'));
+  h.push(row('Remaining calendar',   DS.remainCalDays + ' days',     'Data date → agreed completion'));
+
+  h.push(sec('Working Days (IoM bank holidays excluded)'));
+  h.push(row('Total programme WDs',  DS.totalProgWDs + ' WDs',       'Replaces all hardcoded "65" in the codebase'));
+  h.push(row('Elapsed WDs',          DS.elapsedProgWDs + ' WDs',     'Start → data date'));
+  h.push(row('Remaining WDs',        DS.remainProgWDs + ' WDs',      'Data date → agreed completion'));
+
+  h.push(sec('Progress'));
+  h.push(row('Actual % complete',    fmt2(DS.actualPct) + '%',        'Budget-weighted zone progress (ZONE_DEFAULTS, QS confirmed)'));
+  h.push(row('Planned % (canonical)',fmt2(DS.plannedPct) + '%',       'elapsedCalDays / totalCalDays — anchored to data date, used by ALL panels'));
+  h.push(row('Variance',             (DS.variance >= 0 ? '+' : '') + fmt2(DS.variance) + '%', DS.statusLabel));
+  h.push(row('Efficiency',           DS.efficiencyPct + '%',          'actual ÷ planned'));
+
+  h.push(sec('Forecast'));
+  h.push(row('Rate (per day)',       fmt2(DS.ratePerDay) + '%/day',   'Based on elapsed since programme start'));
+  h.push(row('Rate (per week)',      fmt2(DS.ratePerWeek) + '%/wk',   ''));
+  h.push(row('Remaining work',       fmt2(DS.remainPct) + '%',        '100 − actual'));
+  h.push(row('Days to complete',     DS.daysToComplete + ' days',     'At current rate'));
+  h.push(row('Forecast completion',  fmtD(DS.forecastDate),           DS.daysLateEarly === 0 ? 'On time' : DS.daysLateEarly > 0 ? DS.daysLateEarly + ' days late' : Math.abs(DS.daysLateEarly) + ' days early'));
+
+  h.push(sec('Zone Snapshot'));
+  DS.zones.forEach(function(z) {
+    var eot = (z.planned >= 100 && z.actual < 100) ? ' ⚠ EOT carry-over' : '';
+    h.push(row(z.name, z.actual + '% actual &nbsp;·&nbsp; ' + z.planned + '% planned', z.rag.lbl + eot));
+  });
+
+  h.push(sec('What Reads From DS (replaces independent recalculations)'));
+  h.push(row('Programme Clock',      'plannedPct, elapsedCalDays, totalCalDays, status badge', ''));
+  h.push(row('Velocity Panel',       'plannedPct, ratePerDay, forecastDate',                   ''));
+  h.push(row('Forecast Tab',         'plannedPct, elapsedCalDays, totalCalDays, totalProgWDs', ''));
+  h.push(row('initDashboard()',       'totalProgWDs (was hardcoded 65 × 3 places)',              ''));
+  h.push(row('Status badge',          'statusLabel, statusColor',                               ''));
+
+  h.push('</table>');
+  h.push('<div style="font-size:10px;color:#64748b;margin-top:12px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;">');
+  h.push('&#9888; To update figures: change <code>DATA_AS_OF</code> and <code>ZONE_DEFAULTS</code> — reloading recomputes everything automatically.');
+  h.push('</div>');
+  h.push('</div>');
+  el.innerHTML = h.join('');
+}
+
 // ═══════════════════════ PROGRAMME CLOCK (v30) ═══════════════════════
 function buildProgrammeClock() {
   try {
     var start    = parseDate('2026-03-23');
     var deadline = parseDate('2026-06-26');
-    var totalDays  = daysBetween(start, deadline);          // e.g. 98
+    // ── Read core metrics from single source of truth ─────────────────────
+    var _DS = window.DS || {};
+    var totalDays  = _DS.totalCalDays  || daysBetween(start, deadline);
+    var elapsedDays= _DS.elapsedCalDays|| Math.max(0, daysBetween(start, TODAY));
+    var actualPct  = _DS.actualPct     || 0;
+    var plannedPct = _DS.plannedPct    || Math.min(100, elapsedDays / totalDays * 100);
     var totalWeeks = Math.round(totalDays / 7 * 10) / 10;
-
-    var elapsedDays  = Math.max(0, daysBetween(start, TODAY));
     var elapsedWeeks = Math.round(elapsedDays / 7 * 10) / 10;
     var weekNum      = Math.max(1, Math.ceil(elapsedDays / 7));
-
+    // Countdown uses live TODAY (not data date) — it's a live clock
     var calDaysLeft  = Math.max(0, daysBetween(TODAY, deadline));
     var calWeeksLeft = Math.round(calDaysLeft / 7 * 10) / 10;
-
-    // ── Actual% (zone-budget-weighted) and planned% (task-schedule, matches QS) ─
-    var totBud = 0, totActDone = 0;
-    ZONES.forEach(function(z) {
-      var bud = z.budget || 0;
-      if (bud <= 0) return;
-      totBud += bud;
-      totActDone += bud * (getZoneProgress(z.id) / 100);
-    });
-    var actualPct  = totBud > 0 ? totActDone / totBud * 100 : 0;
-    // Planned: calendar-day method — matches Velocity Panel (user-trusted, consistent)
-    var plannedPct = Math.min(100, elapsedDays / totalDays * 100);
     var remWorkPct = Math.max(0, 100 - actualPct);
     // Update Dashboard status badge dynamically
     try {
@@ -4135,20 +4270,18 @@ function buildForecastTab() {
   if (!el) return;
   el.innerHTML = '';
 
-  // ── Core progress ─────────────────────────────────────────────────────────
-  var totalBudget = ZONES.reduce(function(s,z){ return s + (z.budget||0); }, 0);
-  var completedValue = 0;
-  ZONES.forEach(function(z){ completedValue += (z.budget||0) * (getZoneProgress(z.id)/100); });
-  var overallPct   = totalBudget > 0 ? completedValue / totalBudget * 100 : 0;
-  var projStart    = parseDate('2026-03-23');
-  var agreedDL     = parseDate('2026-06-26');
-  var daysElapsed  = Math.max(1, daysBetween(projStart, TODAY));
-  var totalCalDays = daysBetween(projStart, agreedDL);
-  var calDaysLeft  = Math.max(0, daysBetween(TODAY, agreedDL));
-  var plannedPct   = Math.min(100, daysElapsed / totalCalDays * 100);
-  var ratePerDay   = overallPct / daysElapsed;
-  var remaining    = Math.max(0, 100 - overallPct);
-  var totalProgWDs = 65;
+  // ── Core progress — read from single source of truth ─────────────────────
+  var _DS        = window.DS || {};
+  var projStart  = _DS.PROJECT_START || parseDate('2026-03-23');
+  var agreedDL   = _DS.PROJECT_END   || parseDate('2026-06-26');
+  var overallPct = _DS.actualPct     || 0;
+  var daysElapsed= _DS.elapsedCalDays|| Math.max(1, daysBetween(projStart, TODAY));
+  var totalCalDays=_DS.totalCalDays  || daysBetween(projStart, agreedDL);
+  var calDaysLeft = Math.max(0, daysBetween(TODAY, agreedDL));   // live countdown
+  var plannedPct = _DS.plannedPct    || Math.min(100, daysElapsed / totalCalDays * 100);
+  var ratePerDay = _DS.ratePerDay    || (overallPct / Math.max(1, daysElapsed));
+  var remaining  = _DS.remainPct     || Math.max(0, 100 - overallPct);
+  var totalProgWDs = _DS.totalProgWDs || 65;
 
   // ── IoM working-day helpers ───────────────────────────────────────────────
   var IOM_BH_2026 = {'2026-04-03':1,'2026-04-06':1,'2026-05-04':1,'2026-05-25':1,'2026-06-12':1};
@@ -4550,7 +4683,7 @@ function buildProgrammeHeader() {
   var plannedPct = _td > 0 ? _dd/_td*100 : 0;
 
   var agreedDL   = parseDate('2026-06-26');
-  var totalProgWDs = 65;
+  var totalProgWDs = (window.DS && window.DS.totalProgWDs) || 65;
 
   // Working-day helpers (IoM 2026 bank holidays)
   var IOM_BH = {'2026-04-03':1,'2026-04-06':1,'2026-05-04':1,'2026-05-25':1,'2026-06-12':1};
@@ -4886,10 +5019,14 @@ function showTab(name, btn) {
   if(name === 'forecast')   buildForecastTab();
   if(name === 'efficiency') buildEfficiencyTab();
   if(name === 'programme')  buildProgrammeHeader();
+  if(name === 'data')       buildDataTab();
 }
 
 // ═══════════════════════ INIT ═══════════════════════
 window.addEventListener('DOMContentLoaded', () => {
+  // ── Compute the single source of truth first — everything reads from this ──
+  try { window.DS = computeDS(); } catch(e) { console.error('computeDS failed:', e); window.DS = null; }
+
   // Safe setter — never throws, silently skips missing elements
   function set(id, val) { try { const el = document.getElementById(id); if(el) el.textContent = val; } catch(e){} }
   function setW(id, pct) { try { const el = document.getElementById(id); if(el) el.style.width = Math.min(pct,100) + '%'; } catch(e){} }
