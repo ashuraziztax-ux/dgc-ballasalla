@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v110</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v111</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -33,6 +33,8 @@ a { color: var(--accent); text-decoration: none; }
 .project-title { font-size: 13px; color: var(--muted); }
 .project-title strong { color: var(--text); }
 .header-status { display: flex; gap: 12px; align-items: center; }
+#state-banner { display: none; font-size: 12px; line-height: 1.5; }
+#state-banner.sb-visible { display: block; }
 .status-pill { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 .status-pill.active { background: #22c55e20; color: var(--green); border: 1px solid #22c55e40; }
 .status-pill.warning { background: #f9731620; color: var(--orange); border: 1px solid #f9731640; }
@@ -571,19 +573,19 @@ function setMode(m) {
   var hidden = m === 'admin' ? [] : m === 'user' ? hiddenInUser : hiddenInClient;
 
   if (m === 'client') {
-    // Client default first page = Forecast
+    // Client default first page = Programme
     var fcBtn = null;
     document.querySelectorAll('.nav button').forEach(function(b){
-      if (b.textContent.trim() === 'Forecast') fcBtn = b;
+      if (b.textContent.trim() === 'Programme') fcBtn = b;
     });
-    if (fcBtn) { try { showTab('forecast', fcBtn); } catch(e){} }
+    if (fcBtn) { try { showTab('programme', fcBtn); } catch(e){} }
   } else if (hidden.indexOf(activeTxt) >= 0) {
-    // Currently on a hidden tab — go to Forecast (always visible)
+    // Currently on a hidden tab — go to Programme (always visible)
     var fcFallBtn = null;
     document.querySelectorAll('.nav button').forEach(function(b){
-      if (!fcFallBtn && b.textContent.trim() === 'Forecast') fcFallBtn = b;
+      if (!fcFallBtn && b.textContent.trim() === 'Programme') fcFallBtn = b;
     });
-    if (fcFallBtn) { try { showTab('forecast', fcFallBtn); } catch(e){} }
+    if (fcFallBtn) { try { showTab('programme', fcFallBtn); } catch(e){} }
   }
 
   try { sessionStorage.setItem('dgc_mode', m); } catch(e) {}
@@ -876,9 +878,10 @@ function clearForm() {
     </select>
     
     <div id="mode-toggle" style="display:flex;align-items:center;gap:2px;background:var(--surface2);border-radius:8px;padding:3px;">
-      <span id="mode-btn-user"   onclick="setMode('user')"   style="padding:4px 11px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:all 0.15s;color:var(--muted);">USER</span>
-      <span id="mode-btn-admin"  onclick="setMode('admin')"  style="padding:4px 11px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:all 0.15s;color:var(--muted);">ADMIN</span>
-      <span id="mode-btn-client" onclick="setMode('client')" style="padding:4px 11px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:all 0.15s;color:var(--muted);">CLIENT</span>
+      <span style="font-size:9px;color:var(--muted);padding:2px 8px;white-space:nowrap;flex-shrink:0;">View as:</span>
+      <span id="mode-btn-admin"  onclick="setMode('admin')"  style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Admin</span>
+      <span id="mode-btn-user"   onclick="setMode('user')"   style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Site Team</span>
+      <span id="mode-btn-client" onclick="setMode('client')" style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Client</span>
     </div>
   </div>
   <div class="header-status">
@@ -888,23 +891,24 @@ function clearForm() {
 </div>
 
 <div class="nav">
-  <button onclick="showTab('forecast',this)">Forecast</button>
-  <button onclick="showTab('sitemap',this)">Site Map</button>
-  <button class="admin-only" onclick="showTab('staffhours',this)">Staff Hours</button>
   <button onclick="showTab('programme',this)">Programme</button>
+  <button onclick="showTab('sitemap',this)">Site Map</button>
+  <button onclick="showTab('forecast',this)">Forecast</button>
+  <button onclick="showTab('report',this)">Progress Report</button>
+  <button onclick="showTab('risks',this)">Risk Tickets</button>
   <button onclick="showTab('efficiency',this)">Efficiency</button>
   <button onclick="showTab('gantt',this)">Gantt Chart</button>
-  <button class="admin-only" onclick="showTab('financial',this)">Financials</button>
   <button class="no-client" onclick="showTab('daily',this)">Daily Log</button>
+  <button class="admin-only" onclick="showTab('staffhours',this)">Staff Hours</button>
+  <button class="admin-only" onclick="showTab('financial',this)">Financials</button>
   <button class="admin-only" onclick="showTab('delays',this)">Delays</button>
   <button class="admin-only" onclick="showTab('variations',this)">Variations</button>
-  <button onclick="showTab('report',this)">Two-week breakdown</button>
-  <button onclick="showTab('risks',this)">Risk Tickets</button>
+  <button class="active admin-only" onclick="showTab('dashboard',this)">Dashboard</button>
   <button class="admin-only" onclick="showTab('data',this)">&#128202; Data</button>
   <button class="admin-only" onclick="showTab('setup',this)">&#9881; Setup</button>
-  <button class="active admin-only" onclick="showTab('dashboard',this)">Dashboard</button>
 </div>
 
+<div id="state-banner"></div>
 <div class="main">
 
 <!-- ═══════════════════════════════ DASHBOARD ═══════════════════════════════ -->
@@ -1336,14 +1340,16 @@ function clearForm() {
     <span id="gantt-upload-label" style="font-size:10px;color:var(--muted);"></span>
   </div>
 
-  <!-- GanttPro drag-and-drop / click upload zone (v90) -->
+  <!-- GanttPro upload zone — admin only; chart visible to all -->
+  <div class="admin-only">
   <div id="gantt-drop-zone"
-    style="border:2px dashed var(--border);border-radius:8px;padding:28px 20px;text-align:center;
+    style="border:2px dashed var(--border);border-radius:8px;padding:18px 20px;text-align:center;
            margin-bottom:10px;cursor:pointer;color:var(--muted);transition:border-color .2s,background .2s;">
     <input id="gantt-file-input" type="file" accept=".xlsx,.xls" style="display:none;">
-    <div style="font-size:36px;margin-bottom:10px;">&#128202;</div>
-    <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px;">Drop a GanttPro Excel file here to upload a revised programme</div>
-    <div style="font-size:11px;">or click anywhere in this box to browse &mdash; .xlsx export from GanttPro</div>
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:6px;">Admin — Update Programme</div>
+    <div style="font-weight:700;font-size:12px;color:var(--text);margin-bottom:3px;">Drop a GanttPro Excel file here to upload a revised programme</div>
+    <div style="font-size:10px;">or click anywhere in this box to browse &mdash; .xlsx export from GanttPro</div>
+  </div>
   </div>
 
   <div class="card" style="overflow:auto;">
@@ -4135,6 +4141,34 @@ function updateHeaderDropdown() {
     }
   }
 }
+
+// ── Plain-English state banner — shown on every tab, always current ──────
+function buildStateBanner() {
+  var el = document.getElementById('state-banner');
+  if (!el) return;
+  var DS = window.DS;
+  if (!DS) { el.classList.remove('sb-visible'); return; }
+  var proj   = (window.PROJECT_CONFIG && window.PROJECT_CONFIG.project) || {};
+  var name   = proj.name || 'Ballasalla Phase 4';
+  var actual = DS.actualPct || 0;
+  var diff   = DS.daysLateEarly || 0;
+  var dlStr  = DS.PROJECT_END ? DS.PROJECT_END.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}) : '26 June 2026';
+  var ddStr  = DS.dataDate instanceof Date ? DS.dataDate.toLocaleDateString('en-GB',{day:'numeric',month:'long'}) : null;
+  var diffTxt = diff === 0 ? '<span style="color:#4ade80;font-weight:700;">on time</span>'
+    : diff > 0 ? '<span style="color:#f87171;font-weight:700;">' + diff + ' day' + (diff===1?'':'s') + ' behind schedule</span>'
+    : '<span style="color:#4ade80;font-weight:700;">' + Math.abs(diff) + ' day' + (Math.abs(diff)===1?'':'s') + ' ahead of schedule</span>';
+  el.innerHTML =
+    '<div style="background:var(--surface);border-bottom:2px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">'
+    + '<div style="flex:1;min-width:200px;">'
+    + '<span style="font-size:13px;font-weight:700;color:var(--text);">' + name + '</span>'
+    + '<span style="font-size:12px;color:var(--muted);"> &mdash; '
+    + Math.round(actual) + '% complete &nbsp;&middot;&nbsp; Deadline ' + dlStr + ' &nbsp;&middot;&nbsp; ' + diffTxt
+    + '</span>'
+    + '</div>'
+    + (ddStr ? '<div style="font-size:10px;color:var(--muted);white-space:nowrap;flex-shrink:0;">Data as of ' + ddStr + '</div>' : '')
+    + '</div>';
+  el.classList.add('sb-visible');
+}
 // Clone current project under a new name + optional type tag
 // type: 'live' | 'staging' | 'template'
 function projDuplicate(newName, type) {
@@ -4343,6 +4377,7 @@ function applyProjectConfig() {
   try { buildProgrammeClock(); }  catch(e) {}
   // Keep top-bar dropdown + data-date chip in sync
   try { updateHeaderDropdown(); } catch(e) {}
+  try { buildStateBanner();     } catch(e) {}
 }
 
 // ── GanttPro CSV parser ────────────────────────────────────────────────────
@@ -5641,7 +5676,8 @@ function buildForecastTab() {
   // ── Title ─────────────────────────────────────────────────────────────────
   var titEl = document.createElement('div');
   titEl.className = 'card-title'; titEl.style.marginBottom = '14px';
-  titEl.textContent = 'Velocity & Forecast';
+  titEl.textContent = (typeof VIEW_MODE !== 'undefined' && VIEW_MODE === 'client')
+    ? 'When Will The Job Finish?' : 'Velocity & Forecast';
   el.appendChild(titEl);
 
   // ── 3-tile banner ─────────────────────────────────────────────────────────
@@ -5729,16 +5765,19 @@ function buildForecastTab() {
   // ── Section 1: The Programme ──────────────────────────────────────────────
   // Bars show where the plan says we SHOULD be today for each scenario
   // Fill % = plan position; end date = programme's planned completion
-  sectionLabel(el, 'The programme — what should happen');
-
-  addBar(el, 'Original baseline', origPlannedPct, '#475569', 0, '', fmtD(originalDeadline), '#64748b', true);
-  subNote(el, 'First plan when priced — before any client delays or variations');
-
-  addBar(el, 'After client delays', clientPlannedPct, '#b45309', 0, '', fmtD(clientDeadline), '#d97706', false);
-  subNote(el, 'Baseline + client-caused delays before we could start — by the time we could actually begin');
-
-  addBar(el, 'Agreed plan today', plannedPct, '#f59e0b', 0, '', fmtD(agreedDL), '#f59e0b', false);
-  subNote(el, 'QS update 12 May 2026 (Ansophie Kennaugh) &nbsp;·&nbsp; All current variations included &nbsp;·&nbsp; At today: plan <b>'+Math.round(plannedPct)+'%</b> &nbsp;·&nbsp; actual <b>'+Math.round(overallPct)+'%</b>');
+  if (typeof VIEW_MODE === 'undefined' || VIEW_MODE !== 'client') {
+    sectionLabel(el, 'The programme — what should happen');
+    addBar(el, 'Original baseline', origPlannedPct, '#475569', 0, '', fmtD(originalDeadline), '#64748b', true);
+    subNote(el, 'First plan when priced — before any client delays or variations');
+    addBar(el, 'After client delays', clientPlannedPct, '#b45309', 0, '', fmtD(clientDeadline), '#d97706', false);
+    subNote(el, 'Baseline + client-caused delays before we could start — by the time we could actually begin');
+    addBar(el, 'Agreed plan today', plannedPct, '#f59e0b', 0, '', fmtD(agreedDL), '#f59e0b', false);
+    subNote(el, 'QS update 12 May 2026 (Ansophie Kennaugh) &nbsp;·&nbsp; All current variations included &nbsp;·&nbsp; At today: plan <b>'+Math.round(plannedPct)+'%</b> &nbsp;·&nbsp; actual <b>'+Math.round(overallPct)+'%</b>');
+  } else {
+    sectionLabel(el, 'The programme — planned vs actual');
+    addBar(el, 'Agreed plan today', plannedPct, '#f59e0b', 0, '', fmtD(agreedDL), '#f59e0b', false);
+    subNote(el, 'Where the programme says the job should be today &nbsp;·&nbsp; Agreed deadline: ' + fmtD(agreedDL));
+  }
 
   // ── Section 2: Reality ────────────────────────────────────────────────────
   // All bars show actual % complete — same fill, different end dates & colours
@@ -5749,19 +5788,23 @@ function buildForecastTab() {
     fmtD(actualEndDate), diffCol(actualDiff), false);
   subNote(el, "Today's programme upload &nbsp;·&nbsp; Remaining tasks at programmed rates &nbsp;·&nbsp; <b>" + overallPct.toFixed(1) + '%</b> complete');
 
-  addBar(el, 'DGC Proposed', overallPct, '#f97316', 0, '',
-    fmtD(proposedEndDate), diffCol(proposedDiff), false);
-  subNote(el, inDisputeWDs > 0
-    ? 'Actual + <b>' + inDisputeWDs.toFixed(1) + '</b> WDs in dispute / not yet signed off &nbsp;·&nbsp; Becomes Actual when client agrees'
-    : 'No delays in dispute — same as Actual');
+  addBar(el, 'Actual progress', overallPct, '#f59e0b', 0, '',
+    fmtD(actualEndDate), diffCol(actualDiff), false);
+  subNote(el, overallPct.toFixed(1) + '% complete &nbsp;·&nbsp; Forecast completion at current pace: ' + fmtD(actualEndDate));
 
-  addBar(el, 'Absorbed (internal)', overallPct, '#6366f1', 0, '',
-    fmtD(absorbedEndDate), '#a5b4fc', false);
-  subNote(el, '<b>' + absorbedWDs.toFixed(1) + '</b> WDs internal risk tickets — not presented to client &nbsp;·&nbsp; DGC eyes only &nbsp;·&nbsp; Reconcile where time was lost');
-
-  addBar(el, 'Efficiency', overallPct, '#0ea5e9', 0, '',
-    fmtD(dragEndDate), diffCol(dragDiff), false);
-  subNote(el, 'Plan <b>' + Math.round(plannedPct) + '%</b> vs actual <b>' + Math.round(overallPct) + '%</b> &nbsp;·&nbsp; <b>' + efficiencyPct + '%</b> efficiency &nbsp;·&nbsp; remaining ' + remainingProgWDs.toFixed(0) + ' WDs at ' + dragFactor.toFixed(2) + '× programme time');
+  if (typeof VIEW_MODE === 'undefined' || VIEW_MODE !== 'client') {
+    addBar(el, 'DGC Proposed', overallPct, '#f97316', 0, '',
+      fmtD(proposedEndDate), diffCol(proposedDiff), false);
+    subNote(el, inDisputeWDs > 0
+      ? 'Actual + <b>' + inDisputeWDs.toFixed(1) + '</b> working days in dispute / not yet signed off &nbsp;·&nbsp; Becomes Actual when client agrees'
+      : 'No delays in dispute — same as Actual');
+    addBar(el, 'Absorbed (internal)', overallPct, '#6366f1', 0, '',
+      fmtD(absorbedEndDate), '#a5b4fc', false);
+    subNote(el, '<b>' + absorbedWDs.toFixed(1) + '</b> working days internal risk tickets — not presented to client &nbsp;·&nbsp; DGC eyes only');
+    addBar(el, 'Efficiency', overallPct, '#0ea5e9', 0, '',
+      fmtD(dragEndDate), diffCol(dragDiff), false);
+    subNote(el, 'Plan <b>' + Math.round(plannedPct) + '%</b> vs actual <b>' + Math.round(overallPct) + '%</b> &nbsp;·&nbsp; <b>' + efficiencyPct + '%</b> efficiency &nbsp;·&nbsp; remaining ' + remainingProgWDs.toFixed(0) + ' working days at ' + dragFactor.toFixed(2) + '&times; programme time');
+  }
 
   // ── KPI tiles ─────────────────────────────────────────────────────────────
   var actualVsDeadline = daysDiff(actualEndDate);
@@ -5777,14 +5820,15 @@ function buildForecastTab() {
     { lbl:'vs 26 Jun',        val: avdTxt,                     col: avdCol },
     { lbl:'Realistic end',    val: dragDiff === 0 ? 'On time' : (dragDiff > 0 ? '+'+dragDiff+' days' : dragDiff+' days'),
                               col: dragDiff > 0 ? '#f87171' : dragDiff < 0 ? '#4ade80' : 'var(--text)' },
-    { lbl:'In dispute',       val: inDisputeWDs.toFixed(1)+' WDs',    col:'#f97316' },
-    { lbl:'Absorbed',         val: absorbedWDs.toFixed(1)+' WDs',     col:'#6366f1' },
+    { lbl:'In dispute',       val: inDisputeWDs.toFixed(1)+' working days',    col:'#f97316', adminOnly: true },
+    { lbl:'Absorbed',         val: absorbedWDs.toFixed(1)+' working days',     col:'#6366f1', adminOnly: true },
     { lbl:'Days to deadline', val: Math.max(0,Math.round(daysBetween(TODAY,agreedDL)))+' days',
                               col: calDaysLeft < 21 ? 'var(--red)' : 'var(--muted)' },
   ];
   var grid = document.createElement('div');
   grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-top:16px;';
-  kpis.forEach(function(k){
+  var _isClient = typeof VIEW_MODE !== 'undefined' && VIEW_MODE === 'client';
+  kpis.forEach(function(k){ if (_isClient && k.adminOnly) return;
     var c=document.createElement('div'); c.className='vel-kpi';
     var l=document.createElement('div'); l.className='lbl'; l.textContent=k.lbl;
     var v=document.createElement('div'); v.className='val'; v.style.color=k.col; v.textContent=k.val;
@@ -5796,10 +5840,10 @@ function buildForecastTab() {
   var note = document.createElement('div');
   note.style.cssText = 'margin-top:12px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);';
   note.innerHTML =
-    'EOT baked into 26 Jun: <b style="color:var(--text);">'+eotWDs.toFixed(1)+' WDs</b>'
-    +' &nbsp;·&nbsp; Agreed &amp; signed: <b style="color:#f59e0b;">'+agreedSignedWDs.toFixed(1)+' WDs</b>'
-    +' &nbsp;·&nbsp; In dispute: <b style="color:#f97316;">'+inDisputeWDs.toFixed(1)+' WDs</b>'
-    +' &nbsp;·&nbsp; Absorbed: <b style="color:#6366f1;">'+absorbedWDs.toFixed(1)+' WDs</b>'
+    'Extension of Time (EOT) baked into 26 Jun: <b style="color:var(--text);">'+eotWDs.toFixed(1)+' working days</b>'
+    +' &nbsp;·&nbsp; Agreed &amp; signed: <b style="color:#f59e0b;">'+agreedSignedWDs.toFixed(1)+' working days</b>'
+    +' &nbsp;·&nbsp; In dispute: <b style="color:#f97316;">'+inDisputeWDs.toFixed(1)+' working days</b>'
+    +' &nbsp;·&nbsp; Absorbed: <b style="color:#6366f1;">'+absorbedWDs.toFixed(1)+' working days</b>'
     +'<br>Programme bars: fill = where plan says we should be today &nbsp;·&nbsp; Reality bars: fill = actual % done &nbsp;·&nbsp; Dates on right = projected end for each scenario.';
   el.appendChild(note);
 
@@ -6310,6 +6354,7 @@ window.addEventListener('DOMContentLoaded', () => {
   try { window.DS = computeDS(); } catch(e) { console.error('computeDS failed:', e); window.DS = null; }
   // ── Populate top-bar project dropdown + data-date chip ───────────────────
   try { updateHeaderDropdown(); } catch(e) {}
+  try { buildStateBanner();     } catch(e) {}
 
   // Safe setter — never throws, silently skips missing elements
   function set(id, val) { try { const el = document.getElementById(id); if(el) el.textContent = val; } catch(e){} }
