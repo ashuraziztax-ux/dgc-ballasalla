@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v106</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v107</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -7352,33 +7352,302 @@ function escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ── Risk Ticket state ─────────────────────────────────────────────────────
+var _rtExpandedRows = {};
+var _rtFilters = { category:'', status:'', dateFrom:'', dateTo:'' };
+
+// Toggle expanded row in ticket log
+function rtToggleRow(rtNum) {
+  _rtExpandedRows[rtNum] = !_rtExpandedRows[rtNum];
+  var logEl = document.getElementById('rt-log-body');
+  if (logEl) {
+    var tickets = [];
+    try { tickets = JSON.parse(localStorage.getItem('dgc_risk_tickets')||'[]'); } catch(e) {}
+    logEl.innerHTML = buildRTLogHTML(tickets);
+  }
+}
+
+// Re-render log when filters change (without rebuilding the whole form)
+function rtApplyFilters() {
+  _rtFilters.category = (document.getElementById('rt-f-cat')||{}).value||'';
+  _rtFilters.status   = (document.getElementById('rt-f-status')||{}).value||'';
+  _rtFilters.dateFrom = (document.getElementById('rt-f-from')||{}).value||'';
+  _rtFilters.dateTo   = (document.getElementById('rt-f-to')||{}).value||'';
+  var logEl = document.getElementById('rt-log-body');
+  if (logEl) {
+    var tickets = [];
+    try { tickets = JSON.parse(localStorage.getItem('dgc_risk_tickets')||'[]'); } catch(e) {}
+    logEl.innerHTML = buildRTLogHTML(tickets);
+  }
+}
+
+function rtClearFilters() {
+  _rtFilters = { category:'', status:'', dateFrom:'', dateTo:'' };
+  rtApplyFilters();
+}
+
+// Show inline editor for ticket number
+function rtEditNum() {
+  var badge = document.getElementById('rt-num-badge');
+  var edit  = document.getElementById('rt-num-edit');
+  if (!badge || !edit) return;
+  badge.style.display = 'none';
+  edit.style.display  = 'flex';
+  var inp = document.getElementById('rt-num-input');
+  if (inp) { inp.focus(); inp.select(); }
+}
+
+function rtSaveNum() {
+  var inp = document.getElementById('rt-num-input');
+  if (!inp) return;
+  var val = inp.value.trim().replace(/^RT-?/i,'');
+  var n = parseInt(val, 10);
+  if (isNaN(n) || n < 1) { suToast('Invalid ticket number', true); return; }
+  localStorage.setItem('dgc_rt_seq', String(n));
+  // Update badge without full rebuild
+  var badge = document.getElementById('rt-num-badge');
+  var edit  = document.getElementById('rt-num-edit');
+  if (badge) { badge.textContent = 'RT-' + n; badge.style.display = ''; }
+  if (edit)  { edit.style.display = 'none'; }
+  // Update save button label
+  var saveBtn = document.getElementById('rt-save-btn');
+  if (saveBtn) saveBtn.textContent = '💾 Save Risk Ticket RT-' + n;
+  suToast('Next ticket number set to RT-' + n);
+}
+
+// Import tickets from JSON/CSV files
+function rtImportTickets(files) {
+  if (!files || !files.length) return;
+  var existing = [];
+  try { existing = JSON.parse(localStorage.getItem('dgc_risk_tickets')||'[]'); } catch(e) {}
+  var existingNums = {};
+  existing.forEach(function(t){ if (t.rtNum) existingNums[t.rtNum] = true; });
+  var added = 0, skipped = 0, pending = files.length;
+  Array.from(files).forEach(function(file) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var content = e.target.result;
+        var parsed = [];
+        if (/\.json$/i.test(file.name)) {
+          var obj = JSON.parse(content);
+          parsed = Array.isArray(obj) ? obj : [obj];
+        } else if (/\.csv$/i.test(file.name)) {
+          parsed = rtParseCSV(content);
+        }
+        parsed.forEach(function(t) {
+          if (t.rtNum && existingNums[t.rtNum]) { skipped++; }
+          else {
+            t._imported = true; t._importedAt = new Date().toISOString();
+            existing.push(t);
+            if (t.rtNum) existingNums[t.rtNum] = true;
+            added++;
+          }
+        });
+      } catch(ex) { console.error('RT import error', ex); }
+      pending--;
+      if (pending === 0) {
+        localStorage.setItem('dgc_risk_tickets', JSON.stringify(existing));
+        localStorage.setItem('dgc_rt_last_sync', new Date().toISOString());
+        buildRiskTickets();
+        suToast('Imported ' + added + ' ticket' + (added!==1?'s':'') + (skipped ? ' · ' + skipped + ' duplicate' + (skipped!==1?'s':'') + ' skipped' : ''));
+      }
+    };
+    reader.readAsText(file);
+  });
+}
+
+function rtParseCSV(text) {
+  var lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(Boolean);
+  if (lines.length < 2) return [];
+  function splitCSV(line) {
+    var res=[],cur='',inQ=false;
+    for(var i=0;i<line.length;i++){var c=line[i];if(c==='"'){inQ=!inQ;}else if(c===','&&!inQ){res.push(cur.trim().replace(/^"|"$/g,''));cur='';}else{cur+=c;}}
+    res.push(cur.trim().replace(/^"|"$/g,'')); return res;
+  }
+  var headers = splitCSV(lines[0]);
+  var result = [];
+  for (var i = 1; i < lines.length; i++) {
+    var vals = splitCSV(lines[i]);
+    var obj = {};
+    headers.forEach(function(h,idx){ obj[h] = vals[idx]||''; });
+    if (obj.rtNum) obj.rtNum = parseInt(obj.rtNum,10)||obj.rtNum;
+    if (obj.categories && typeof obj.categories === 'string') obj.categories = obj.categories.split(';').map(function(s){return s.trim();});
+    result.push(obj);
+  }
+  return result;
+}
+
+// Build the log HTML (used by buildRiskTickets and rtApplyFilters/rtToggleRow)
+function buildRTLogHTML(tickets) {
+  var h = [];
+  // Sync path settings + import button (admin only)
+  var lastSync = localStorage.getItem('dgc_rt_last_sync');
+  var syncPath = localStorage.getItem('dgc_rt_sync_path') || '';
+  h.push('<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:0 0 12px;border-bottom:1px solid var(--border);margin-bottom:12px;">');
+  h.push('<span style="font-size:10px;color:var(--muted);font-weight:700;flex:1;">IMPORT FROM SHARED FOLDER</span>');
+  h.push('<input id="rt-sync-path" type="text" placeholder="e.g. \\\\server\\Projects\\Tickets  (label only)" value="' + escHtml(syncPath) + '" '
+    + 'onchange="localStorage.setItem(\'dgc_rt_sync_path\',this.value)" '
+    + 'style="flex:2;min-width:160px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--muted);font-size:10px;" '
+    + 'title="Reference path only — browser cannot auto-read filesystem paths. Use Sync button to select folder manually.">');
+  h.push('<label style="padding:5px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--accent);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;">'
+    + '🔄 Sync / Import Tickets'
+    + '<input type="file" accept=".json,.csv" multiple style="display:none;" onchange="rtImportTickets(this.files);this.value=\'\';">'
+    + '</label>');
+  if (lastSync) h.push('<span style="font-size:9px;color:var(--muted);white-space:nowrap;">Last synced: ' + new Date(lastSync).toLocaleString('en-GB') + '</span>');
+  h.push('</div>');
+
+  if (!tickets.length) {
+    h.push('<div style="padding:28px;text-align:center;color:var(--muted);font-size:12px;font-style:italic;">No tickets raised yet</div>');
+    return h.join('');
+  }
+
+  // Filter bar — gather unique categories from tickets
+  var allCats = [];
+  tickets.forEach(function(t){ (t.categories||[]).forEach(function(c){ if(c && allCats.indexOf(c)<0) allCats.push(c); }); });
+  var anyFilter = _rtFilters.category||_rtFilters.status||_rtFilters.dateFrom||_rtFilters.dateTo;
+  h.push('<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:0 0 10px;border-bottom:1px solid var(--border);margin-bottom:10px;">');
+  h.push('<span style="font-size:9px;color:var(--muted);font-weight:700;white-space:nowrap;">FILTER</span>');
+  h.push('<select id="rt-f-cat" onchange="rtApplyFilters()" style="padding:4px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:10px;">');
+  h.push('<option value="">All categories</option>');
+  allCats.sort().forEach(function(c){ h.push('<option value="'+escHtml(c)+'"'+(_rtFilters.category===c?' selected':'')+'>'+escHtml(c)+'</option>'); });
+  h.push('</select>');
+  h.push('<select id="rt-f-status" onchange="rtApplyFilters()" style="padding:4px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:10px;">');
+  h.push('<option value="">All statuses</option>');
+  ['No action required','Action taken','Deferred / monitor'].forEach(function(s){
+    h.push('<option value="'+s+'"'+(_rtFilters.status===s?' selected':'')+'>'+s+'</option>');
+  });
+  h.push('</select>');
+  h.push('<input id="rt-f-from" type="date" value="'+(_rtFilters.dateFrom||'')+'" onchange="rtApplyFilters()" title="From" style="padding:4px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:10px;">');
+  h.push('<input id="rt-f-to"   type="date" value="'+(_rtFilters.dateTo||'')+'"   onchange="rtApplyFilters()" title="To"   style="padding:4px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:10px;">');
+  if (anyFilter) h.push('<button onclick="rtClearFilters()" style="padding:4px 10px;background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);font-size:10px;cursor:pointer;">✕ Clear</button>');
+  h.push('</div>');
+
+  // Apply filters
+  var filtered = tickets.filter(function(t) {
+    if (_rtFilters.category && !(t.categories||[]).some(function(c){ return c===_rtFilters.category; })) return false;
+    if (_rtFilters.status   && t.pmStatus !== _rtFilters.status)  return false;
+    if (_rtFilters.dateFrom && (t.date||'') < _rtFilters.dateFrom) return false;
+    if (_rtFilters.dateTo   && (t.date||'') > _rtFilters.dateTo)   return false;
+    return true;
+  });
+  filtered.sort(function(a,b){ return (b.rtNum||0)-(a.rtNum||0); });
+
+  if (anyFilter) h.push('<div style="font-size:10px;color:var(--muted);margin-bottom:8px;">' + filtered.length + ' of ' + tickets.length + ' tickets</div>');
+
+  if (!filtered.length) {
+    h.push('<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px;">No tickets match the current filters</div>');
+    return h.join('');
+  }
+
+  h.push('<div style="overflow:auto;">');
+  h.push('<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:620px;">');
+  h.push('<thead><tr style="border-bottom:2px solid var(--border);">'
+    + '<th style="padding:6px 4px;width:16px;"></th>'
+    + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap;">RT No.</th>'
+    + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:600;">Date</th>'
+    + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:600;">Raised By</th>'
+    + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:600;">Category</th>'
+    + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:600;">Description</th>'
+    + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:600;">Status</th>'
+    + '</tr></thead><tbody>');
+
+  filtered.forEach(function(t) {
+    var sc = t.pmStatus === 'Action taken' ? '#16a34a'
+           : t.pmStatus === 'Deferred / monitor' ? '#d97706' : 'var(--muted)';
+    var desc = escHtml((t.description||'').slice(0,90)) + ((t.description||'').length>90?'…':'');
+    var isExp = !!_rtExpandedRows[t.rtNum];
+    var importBadge = t._imported
+      ? ' <span style="font-size:8px;background:#6366f120;border:1px solid #6366f140;color:#818cf8;border-radius:3px;padding:1px 5px;vertical-align:middle;">imported</span>'
+      : '';
+    // Main row
+    h.push('<tr style="border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;" '
+      + 'onmouseover="this.style.background=\'var(--surface2)\'" onmouseout="this.style.background=\'\'" '
+      + 'onclick="rtToggleRow(' + t.rtNum + ')">'
+      + '<td style="padding:5px 4px 5px 8px;"><span style="font-size:9px;color:var(--muted);display:inline-block;transition:transform .2s;transform:' + (isExp?'rotate(90deg)':'') + ';">▶</span></td>'
+      + '<td style="padding:5px 8px;font-weight:700;white-space:nowrap;color:var(--accent);">RT-' + t.rtNum + importBadge + '</td>'
+      + '<td style="padding:5px 8px;white-space:nowrap;">' + escHtml(t.date||'') + '</td>'
+      + '<td style="padding:5px 8px;white-space:nowrap;">' + escHtml(t.raisedBy||'') + '</td>'
+      + '<td style="padding:5px 8px;max-width:150px;font-size:10px;">' + escHtml((t.categories||[]).join(', ')) + '</td>'
+      + '<td style="padding:5px 8px;max-width:220px;">' + desc + '</td>'
+      + '<td style="padding:5px 8px;white-space:nowrap;"><span style="color:'+sc+';font-weight:700;font-size:10px;">' + escHtml(t.pmStatus||'—') + '</span></td>'
+      + '</tr>');
+    // Expanded detail row
+    if (isExp) {
+      h.push('<tr style="background:#0f172a;"><td colspan="7" style="padding:16px 20px;border-bottom:2px solid var(--border)40;">');
+      h.push('<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 28px;font-size:11px;">');
+      function detRow(label, val) {
+        if (!val) return '';
+        return '<div><div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">' + label + '</div>'
+          + '<div style="color:var(--text);line-height:1.5;">' + val + '</div></div>';
+      }
+      h.push(detRow('Project / Site', escHtml(t.project||'')));
+      h.push(detRow('Role / Company', escHtml(t.role||'')));
+      h.push('<div style="grid-column:1/-1;">' + detRow('Full Description', '<span style="white-space:pre-wrap;">' + escHtml(t.description||'') + '</span>') + '</div>');
+      if (t.resolution) h.push('<div style="grid-column:1/-1;">' + detRow('Suggested Resolution', '<span style="white-space:pre-wrap;">' + escHtml(t.resolution) + '</span>') + '</div>');
+      h.push(detRow('PM Action Status', '<span style="color:'+sc+';font-weight:700;">' + escHtml(t.pmStatus||'—') + '</span>'));
+      if (t.pmNotes) h.push(detRow('PM Notes', escHtml(t.pmNotes)));
+      h.push(detRow('Signed By (PM)', escHtml(t.signedBy||'—')));
+      h.push(detRow('Sign Date', escHtml(t.signDate||'—')));
+      if (t._imported) h.push(detRow('Imported at', new Date(t._importedAt||'').toLocaleString('en-GB')));
+      h.push('</div></td></tr>');
+    }
+  });
+  h.push('</tbody></table></div>');
+  return h.join('');
+}
+
 function buildRiskTickets() {
   var body = document.getElementById('risks-body');
   if (!body) return;
 
   var tickets = [];
   try { tickets = JSON.parse(localStorage.getItem('dgc_risk_tickets') || '[]'); } catch(e) {}
-  var seq = 101001;
-  try { seq = parseInt(localStorage.getItem('dgc_rt_seq') || '101001', 10); } catch(e) {}
-  var rtNum   = 'RT-' + seq;
-  var todayVal = TODAY.toISOString().slice(0,10);
 
+  // Sequence = max(existing rtNums)+1 OR stored seq, whichever is higher
+  var maxExisting = tickets.reduce(function(m,t){ return Math.max(m, t.rtNum||0); }, 100999);
+  var storedSeq = 101001;
+  try { storedSeq = parseInt(localStorage.getItem('dgc_rt_seq')||'101001',10); } catch(e) {}
+  var seq = Math.max(maxExisting + 1, storedSeq);
+  // Keep stored seq in sync
+  if (seq > storedSeq) localStorage.setItem('dgc_rt_seq', String(seq));
+
+  var todayVal = TODAY.toISOString().slice(0,10);
   var h = [];
   var inp = 'width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:11px;box-sizing:border-box;';
   var lbl = 'font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:3px;';
 
   // ── Form ──────────────────────────────────────────────────────────────────
   h.push('<div class="card" style="max-width:700px;margin:0 auto 16px;">');
-  h.push('<div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">'
-    + '<span>&#127905; Raise a Risk / Concern Ticket</span>'
-    + '<span style="font-size:11px;font-weight:700;background:var(--surface2);border:1px solid var(--border);'
-    + 'color:var(--accent);border-radius:4px;padding:2px 10px;letter-spacing:.03em;">' + rtNum + '</span>'
-    + '</div>');
+
+  // Header with editable ticket number
+  h.push('<div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">');
+  h.push('<span>🎫 Raise a Risk / Concern Ticket</span>');
+  // Badge (normal state)
+  h.push('<div style="display:flex;align-items:center;gap:6px;">');
+  h.push('<span id="rt-num-badge" style="font-size:11px;font-weight:700;background:var(--surface2);border:1px solid var(--border);'
+    + 'color:var(--accent);border-radius:4px;padding:2px 10px;letter-spacing:.03em;">RT-' + seq + '</span>');
+  h.push('<button onclick="rtEditNum()" title="Edit ticket number" '
+    + 'style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:2px 4px;line-height:1;" '
+    + 'onmouseover="this.style.color=\'var(--text)\'" onmouseout="this.style.color=\'var(--muted)\'">✏️</button>');
+  // Inline edit (hidden by default)
+  h.push('<span id="rt-num-edit" style="display:none;align-items:center;gap:4px;">'
+    + '<span style="font-size:10px;color:var(--muted);">RT-</span>'
+    + '<input id="rt-num-input" type="number" value="' + seq + '" min="1" '
+    + 'onkeydown="if(event.key===\'Enter\')rtSaveNum();if(event.key===\'Escape\'){document.getElementById(\'rt-num-edit\').style.display=\'none\';document.getElementById(\'rt-num-badge\').style.display=\'\';}" '
+    + 'style="width:90px;padding:3px 6px;background:var(--surface2);border:1px solid var(--accent);border-radius:4px;color:var(--accent);font-size:11px;font-weight:700;">'
+    + '<button onclick="rtSaveNum()" style="padding:3px 8px;background:var(--accent);border:none;color:#000;border-radius:4px;font-size:10px;font-weight:800;cursor:pointer;">✓</button>'
+    + '<button onclick="document.getElementById(\'rt-num-edit\').style.display=\'none\';document.getElementById(\'rt-num-badge\').style.display=\'\';" '
+    + 'style="padding:3px 6px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:4px;font-size:10px;cursor:pointer;">✕</button>'
+    + '</span>');
+  h.push('</div>');
+  h.push('</div>');
 
   // Project + Date
   h.push('<div style="display:grid;grid-template-columns:1fr 160px;gap:10px;margin-bottom:10px;">');
+  var projName = (typeof PROJECT_CONFIG !== 'undefined' && PROJECT_CONFIG.project && PROJECT_CONFIG.project.name) ? PROJECT_CONFIG.project.name : 'Ballasalla Phase 4';
   h.push('<div><label style="'+lbl+'">Project / Site</label>'
-    + '<input id="rt-project" type="text" value="Ballasalla Phase 4" style="'+inp+'"></div>');
+    + '<input id="rt-project" type="text" value="' + escHtml(projName) + '" style="'+inp+'"></div>');
   h.push('<div><label style="'+lbl+'">Date</label>'
     + '<input id="rt-date" type="date" value="'+todayVal+'" style="'+inp+'"></div>');
   h.push('</div>');
@@ -7418,7 +7687,7 @@ function buildRiskTickets() {
   h.push('</div>');
 
   // PM Record
-  h.push('<div style="border:1px solid var(--border);border-radius:6px;padding:12px 14px;margin-bottom:12px;background:var(--surface)20;">');
+  h.push('<div style="border:1px solid var(--border);border-radius:6px;padding:12px 14px;margin-bottom:12px;background:#0f172a;">');
   h.push('<div style="'+lbl+'margin-bottom:8px;color:var(--accent);">PM Record</div>');
   h.push('<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--muted);margin-bottom:5px;">Action Status</div>');
   h.push('<div style="display:flex;flex-wrap:wrap;gap:12px;">');
@@ -7441,53 +7710,27 @@ function buildRiskTickets() {
   h.push('</div>');
 
   // Save button
-  h.push('<button onclick="saveRiskTicket()" class="btn btn-primary" style="width:100%;padding:10px;font-size:12px;font-weight:700;">'
-    + '&#128190; Save Risk Ticket ' + rtNum + '</button>');
+  h.push('<button id="rt-save-btn" onclick="saveRiskTicket()" class="btn btn-primary" style="width:100%;padding:10px;font-size:12px;font-weight:700;">'
+    + '💾 Save Risk Ticket RT-' + seq + '</button>');
   h.push('</div>'); // end form card
 
   // ── Ticket Log ────────────────────────────────────────────────────────────
-  h.push('<div class="card">');
-  h.push('<div class="card-title">Ticket Log (' + tickets.length + ' ticket' + (tickets.length!==1?'s':'') + ')</div>');
-  if (tickets.length === 0) {
-    h.push('<div style="padding:28px;text-align:center;color:var(--muted);font-size:12px;font-style:italic;">No tickets raised yet</div>');
-  } else {
-    h.push('<div style="overflow:auto;">');
-    h.push('<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:600px;">');
-    h.push('<thead><tr style="border-bottom:2px solid var(--border);">'
-      + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap;">RT No.</th>'
-      + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:600;">Date</th>'
-      + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:600;">Raised By</th>'
-      + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:600;">Category</th>'
-      + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:600;">Description</th>'
-      + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--muted);font-weight:600;">Status</th>'
-      + '</tr></thead><tbody>');
-    var sorted = tickets.slice().sort(function(a,b){ return b.rtNum - a.rtNum; });
-    sorted.forEach(function(t) {
-      var sc = t.pmStatus === 'Action taken' ? '#16a34a'
-             : t.pmStatus === 'Deferred / monitor' ? '#d97706' : 'var(--muted)';
-      var desc = escHtml((t.description||'').slice(0,90)) + ((t.description||'').length>90?'…':'');
-      h.push('<tr style="border-bottom:1px solid var(--border);">'
-        + '<td style="padding:5px 8px;font-weight:700;white-space:nowrap;color:var(--accent);">RT-' + t.rtNum + '</td>'
-        + '<td style="padding:5px 8px;white-space:nowrap;">' + escHtml(t.date||'') + '</td>'
-        + '<td style="padding:5px 8px;white-space:nowrap;">' + escHtml(t.raisedBy||'') + '</td>'
-        + '<td style="padding:5px 8px;max-width:160px;">' + escHtml((t.categories||[]).join(', ')) + '</td>'
-        + '<td style="padding:5px 8px;max-width:220px;">' + desc + '</td>'
-        + '<td style="padding:5px 8px;"><span style="color:'+sc+';font-weight:600;font-size:10px;">'
-          + escHtml(t.pmStatus||'—') + '</span></td>'
-        + '</tr>');
-    });
-    h.push('</tbody></table></div>');
-  }
+  h.push('<div class="card" style="max-width:700px;margin:0 auto;">');
+  h.push('<div class="card-title" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
+    + '<span>Ticket Log (' + tickets.length + ' ticket' + (tickets.length!==1?'s':'') + ')</span>'
+    + '</div>');
+  h.push('<div id="rt-log-body">');
+  h.push(buildRTLogHTML(tickets));
+  h.push('</div>');
   h.push('</div>'); // end log card
 
-  body.innerHTML = h.join('\n');
+  body.innerHTML = h.join('');
 }
 
 function saveRiskTicket() {
   var desc = document.getElementById('rt-description');
   if (!desc || !desc.value.trim()) {
-    alert('Please enter a description of the risk or concern.');
-    return;
+    suToast('Please enter a description of the risk or concern.', true); return;
   }
   var cats = [];
   for (var i = 0; i < 8; i++) {
@@ -7495,32 +7738,42 @@ function saveRiskTicket() {
     if (cb && cb.checked) cats.push(cb.value);
   }
   var statusEl = document.querySelector('input[name="rt-action-status"]:checked');
+  // Use seq from badge/input (in case user edited it inline)
   var seq = 101001;
-  try { seq = parseInt(localStorage.getItem('dgc_rt_seq') || '101001', 10); } catch(e) {}
+  try { seq = parseInt(localStorage.getItem('dgc_rt_seq')||'101001',10); } catch(e) {}
+  var numBadge = document.getElementById('rt-num-badge');
+  if (numBadge) {
+    var parsed = parseInt((numBadge.textContent||'').replace('RT-',''),10);
+    if (!isNaN(parsed)) seq = parsed;
+  }
   var ticket = {
     rtNum:       seq,
-    project:     (document.getElementById('rt-project')   || {}).value || 'Ballasalla Phase 4',
-    date:        (document.getElementById('rt-date')       || {}).value || '',
-    raisedBy:    (document.getElementById('rt-raised-by') || {}).value || '',
-    role:        (document.getElementById('rt-role')       || {}).value || '',
+    project:     (document.getElementById('rt-project')   ||{}).value||'',
+    date:        (document.getElementById('rt-date')       ||{}).value||'',
+    raisedBy:    (document.getElementById('rt-raised-by') ||{}).value||'',
+    role:        (document.getElementById('rt-role')       ||{}).value||'',
     categories:  cats,
-    description: desc.value,
-    resolution:  (document.getElementById('rt-resolution') || {}).value || '',
+    description: desc.value.trim(),
+    resolution:  (document.getElementById('rt-resolution') ||{}).value||'',
     pmStatus:    statusEl ? statusEl.value : 'No action required',
-    pmNotes:     (document.getElementById('rt-pm-notes')   || {}).value || '',
-    signedBy:    (document.getElementById('rt-signed-by')  || {}).value || '',
-    signDate:    (document.getElementById('rt-sign-date')  || {}).value || '',
+    pmNotes:     (document.getElementById('rt-pm-notes')   ||{}).value||'',
+    signedBy:    (document.getElementById('rt-signed-by')  ||{}).value||'',
+    signDate:    (document.getElementById('rt-sign-date')  ||{}).value||'',
     savedAt:     new Date().toISOString()
   };
   try {
-    var tickets = JSON.parse(localStorage.getItem('dgc_risk_tickets') || '[]');
+    var tickets = JSON.parse(localStorage.getItem('dgc_risk_tickets')||'[]');
+    // Check for duplicate RT number
+    if (tickets.some(function(t){ return t.rtNum === seq; })) {
+      suToast('RT-' + seq + ' already exists — edit the ticket number first.', true); return;
+    }
     tickets.push(ticket);
     localStorage.setItem('dgc_risk_tickets', JSON.stringify(tickets));
     localStorage.setItem('dgc_rt_seq', String(seq + 1));
     buildRiskTickets();
-    alert('Risk Ticket RT-' + seq + ' saved.');
+    suToast('✓ Risk Ticket RT-' + seq + ' saved');
   } catch(e) {
-    alert('Error saving ticket: ' + e.message);
+    suToast('Error saving ticket: ' + e.message, true);
   }
 }
 
