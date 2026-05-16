@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v100</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v101</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -896,6 +896,7 @@ function clearForm() {
   <button onclick="showTab('report',this)">Two-week breakdown</button>
   <button onclick="showTab('risks',this)">Risk Tickets</button>
   <button class="admin-only" onclick="showTab('data',this)">&#128202; Data</button>
+  <button class="admin-only" onclick="showTab('setup',this)">&#9881; Setup</button>
   <button class="active admin-only" onclick="showTab('dashboard',this)">Dashboard</button>
 </div>
 
@@ -2032,6 +2033,10 @@ function clearForm() {
 </div>
 
 <!-- ═══════════════════════════════ RISK TICKETS ═══════════════════════════════ -->
+<div id="tab-setup" class="tab-content admin-only">
+  <p style="padding:20px;color:var(--muted);font-size:12px;">Loading setup…</p>
+</div>
+
 <div id="tab-data" class="tab-content admin-only">
   <p style="padding:20px;color:var(--muted);font-size:12px;">Loading data layer…</p>
 </div>
@@ -4015,23 +4020,629 @@ function getTaskStatus(task) {
 
 // ═══════════════════════ TAB NAV ═══════════════════════
 
+// ═══════════════════════ PROJECT CONFIG (SETUP TAB) ═══════════════════════
+// All project-specific data can be overridden via the Setup tab.
+// window.PROJECT_CONFIG is populated from localStorage on load.
+// computeDS() reads from it first, falling back to hardcoded constants.
+
+var _CFG_KEY = 'dgc_project_config_v1';
+
+function cfgSave(cfg) {
+  try { localStorage.setItem(_CFG_KEY, JSON.stringify(cfg)); return true; } catch(e) { return false; }
+}
+function cfgLoad() {
+  try { var s = localStorage.getItem(_CFG_KEY); return s ? JSON.parse(s) : null; } catch(e) { return null; }
+}
+function cfgExport() {
+  var cfg = cfgLoad() || {};
+  var blob = new Blob([JSON.stringify(cfg, null, 2)], {type:'application/json'});
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'project-config-' + ((cfg.project && cfg.project.name) ? cfg.project.name : 'export').replace(/[^a-z0-9]/gi,'-').toLowerCase() + '.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// Apply saved config to the live dashboard — call after any config change
+function applyProjectConfig() {
+  var cfg = cfgLoad();
+  window.PROJECT_CONFIG = cfg || {};
+  var pc = (cfg && cfg.project) || {};
+
+  // Zone progress overrides
+  if (cfg && cfg.zoneProgress) {
+    Object.keys(cfg.zoneProgress).forEach(function(k) {
+      var v = parseInt(cfg.zoneProgress[k]);
+      if (!isNaN(v)) ZONE_DEFAULTS[parseInt(k)] = v;
+    });
+  }
+  // Task list override (from GanttPro import)
+  if (cfg && cfg.tasks && cfg.tasks.length > 0) {
+    try { TASKS = cfg.tasks; } catch(e) {}
+  }
+  // Recompute DS with new data
+  try { window.DS = computeDS(); } catch(e) {}
+  // Refresh any already-rendered panels
+  try { initDashboard(); }   catch(e) {}
+  try { buildZoneCards(); }  catch(e) {}
+  try { buildZoneSummaryList(); } catch(e) {}
+  try { buildVelocityPanel(); }   catch(e) {}
+  try { buildProgrammeClock(); }  catch(e) {}
+}
+
+// ── GanttPro CSV parser ────────────────────────────────────────────────────
+// Accepts a CSV text string, returns an array of task objects compatible with TASKS.
+function parseGanttProCSV(text) {
+  // Normalise line endings
+  var lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+
+  // Detect delimiter
+  var firstLine = lines[0] || '';
+  var delim = firstLine.split(';').length > firstLine.split(',').length ? ';' : ',';
+
+  // CSV-aware split (handles quoted fields)
+  function splitCSV(line) {
+    var result = [], cur = '', inQ = false;
+    for (var i = 0; i < line.length; i++) {
+      var c = line[i];
+      if (c === '"') { inQ = !inQ; }
+      else if (c === delim && !inQ) { result.push(cur.trim()); cur = ''; }
+      else { cur += c; }
+    }
+    result.push(cur.trim());
+    return result;
+  }
+
+  // Find non-empty header row
+  var headers = [], headerIdx = 0;
+  for (var li = 0; li < Math.min(lines.length, 5); li++) {
+    var h = splitCSV(lines[li]);
+    if (h.length > 3 && h.some(function(x){ return /name|task|start/i.test(x); })) {
+      headers = h.map(function(x){ return x.toLowerCase().replace(/[^a-z0-9]/g,''); });
+      headerIdx = li; break;
+    }
+  }
+  if (!headers.length) return { tasks: [], error: 'Could not find header row. Ensure the CSV has columns for Task Name, Start, End.' };
+
+  function col(candidates) {
+    for (var i = 0; i < candidates.length; i++) {
+      var idx = headers.findIndex(function(h){ return h.includes(candidates[i]); });
+      if (idx >= 0) return idx;
+    }
+    return -1;
+  }
+  var iName  = col(['taskname','name','title','task']);
+  var iStart = col(['start','startdate','begin']);
+  var iEnd   = col(['end','finish','enddate','due']);
+  var iDur   = col(['duration','dur']);
+  var iPct   = col(['done','complete','progress','pct']);
+  var iWBS   = col(['wbs','id','no','num']);
+  var iGroup = col(['type','isgroup','milestone','level']);
+
+  if (iName < 0 || iStart < 0 || iEnd < 0) {
+    return { tasks: [], error: 'Missing required columns: Task Name (' + (iName<0?'NOT FOUND':'ok') + '), Start (' + (iStart<0?'NOT FOUND':'ok') + '), End (' + (iEnd<0?'NOT FOUND':'ok') + ')' };
+  }
+
+  // Date parser — handles DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD, D MMM YYYY
+  function parseCSVDate(s) {
+    if (!s || !s.trim()) return null;
+    s = s.trim();
+    // ISO
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+    // DD/MM/YYYY or MM/DD/YYYY
+    var m = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+    if (m) {
+      var a = parseInt(m[1]), b = parseInt(m[2]), y = parseInt(m[3]);
+      if (y < 100) y += 2000;
+      // Heuristic: if first number > 12, it's DD/MM
+      if (a > 12) return y+'-'+String(b).padStart(2,'0')+'-'+String(a).padStart(2,'0');
+      return y+'-'+String(a).padStart(2,'0')+'-'+String(b).padStart(2,'0');
+    }
+    // "14 May 2026" or "14-May-26"
+    var months = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+    var m2 = s.match(/^(\d{1,2})[\s\-]+([a-zA-Z]{3})[\s\-]+(\d{2,4})$/);
+    if (m2) {
+      var mo = months[m2[2].toLowerCase().slice(0,3)];
+      if (mo) {
+        var yr = parseInt(m2[3]); if (yr < 100) yr += 2000;
+        return yr+'-'+String(mo).padStart(2,'0')+'-'+String(parseInt(m2[1])).padStart(2,'0');
+      }
+    }
+    return null;
+  }
+
+  // Infer zone from WBS prefix (first number) or task name
+  function inferZone(wbs, name) {
+    if (wbs) {
+      var m = String(wbs).match(/^(\d+)/);
+      if (m) { var z = parseInt(m[1]); if (z >= 1 && z <= 12) return z; }
+    }
+    // zone keywords in name
+    var nm = (name||'').toLowerCase();
+    if (nm.includes('zone a') || nm.includes('section a')) return 2;
+    if (nm.includes('zone b') || nm.includes('section b')) return 3;
+    if (nm.includes('zone c') || nm.includes('section c')) return 4;
+    if (nm.includes('zone d') || nm.includes('section d')) return 5;
+    if (nm.includes('zone e') || nm.includes('section e')) return 6;
+    if (nm.includes('zone f') || nm.includes('section f')) return 7;
+    if (nm.includes('zone g') || nm.includes('section g')) return 8;
+    if (nm.includes('prelim') || nm.includes('site management')) return 1;
+    return null;
+  }
+
+  var tasks = [], idCounter = 1000;
+  for (var i = headerIdx + 1; i < lines.length; i++) {
+    var line = lines[i];
+    if (!line.trim()) continue;
+    var cells = splitCSV(line);
+    var name = iName >= 0 ? (cells[iName]||'').replace(/^"|"$/g,'') : '';
+    if (!name.trim()) continue;
+    var startStr = iStart >= 0 ? cells[iStart] : '';
+    var endStr   = iEnd   >= 0 ? cells[iEnd]   : '';
+    var start = parseCSVDate(startStr);
+    var end   = parseCSVDate(endStr);
+    if (!start || !end) continue;
+    var wbs  = iWBS >= 0 ? (cells[iWBS]||'').replace(/^"|"$/g,'') : String(idCounter);
+    var pct  = iPct >= 0 ? parseInt(cells[iPct]) || 0 : 0;
+    var isGrp= iGroup >= 0 ? /group|summary|1/i.test(cells[iGroup]||'') : wbs.split('.').length <= 1;
+    tasks.push({
+      id: idCounter++, wbs: wbs, name: name.trim(),
+      start: start, end: end, progress: pct,
+      zone: inferZone(wbs, name),
+      isGroup: isGrp, budget: 0
+    });
+  }
+  return { tasks: tasks, error: null };
+}
+
+// ── Setup tab UI ────────────────────────────────────────────────────────────
+function buildSetupTab() {
+  var el = document.getElementById('tab-setup');
+  if (!el) return;
+  var cfg = cfgLoad() || {};
+  var pc  = cfg.project || {};
+
+  // Helpers
+  function fld(id, label, val, type, ph) {
+    return '<label style="display:block;margin-bottom:10px;">'
+      + '<span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">' + label + '</span>'
+      + '<input id="su-' + id + '" type="' + (type||'text') + '" value="' + (val||'').toString().replace(/"/g,'&quot;') + '" placeholder="' + (ph||'') + '" '
+      + 'style="display:block;width:100%;margin-top:3px;padding:7px 10px;background:#1e293b;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;box-sizing:border-box;">'
+      + '</label>';
+  }
+  function secHead(icon, title, subtitle) {
+    return '<div style="display:flex;align-items:baseline;gap:10px;margin:0 0 12px;">'
+      + '<span style="font-size:20px;">' + icon + '</span>'
+      + '<div><div style="font-size:14px;font-weight:800;color:var(--text);">' + title + '</div>'
+      + (subtitle ? '<div style="font-size:10px;color:var(--muted);margin-top:2px;">' + subtitle + '</div>' : '')
+      + '</div></div>';
+  }
+  function card(content) {
+    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:16px;">' + content + '</div>';
+  }
+  function dropZone(id, accept, label, hint) {
+    return '<div id="dz-' + id + '" ondragover="event.preventDefault();this.style.borderColor=\'#38bdf8\';" '
+      + 'ondragleave="this.style.borderColor=\'\';" '
+      + 'ondrop="event.preventDefault();this.style.borderColor=\'\';handleSetupDrop(\'' + id + '\',event.dataTransfer.files);" '
+      + 'onclick="document.getElementById(\'fi-' + id + '\').click();" '
+      + 'style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:border-color 0.2s;margin-bottom:8px;">'
+      + '<div style="font-size:22px;margin-bottom:6px;">📂</div>'
+      + '<div style="font-size:12px;font-weight:700;color:var(--text);">' + label + '</div>'
+      + '<div style="font-size:10px;color:var(--muted);margin-top:3px;">' + hint + '</div>'
+      + '</div>'
+      + '<input id="fi-' + id + '" type="file" accept="' + accept + '" style="display:none;" '
+      + 'onchange="handleSetupDrop(\'' + id + '\',this.files);" multiple>';
+  }
+  function flocRow(idx, item) {
+    item = item || {};
+    return '<div id="floc-row-' + idx + '" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">'
+      + '<input type="text" placeholder="Label (e.g. Project Folder)" value="' + (item.label||'') + '" data-floc="' + idx + '" data-field="label" '
+      + 'style="flex:1;padding:6px 8px;background:#1e293b;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;">'
+      + '<input type="text" placeholder="Path or URL (read-only reference)" value="' + (item.path||item.url||'') + '" data-floc="' + idx + '" data-field="path" '
+      + 'style="flex:2;padding:6px 8px;background:#1e293b;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;">'
+      + '<select data-floc="' + idx + '" data-field="type" style="padding:6px;background:#1e293b;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:11px;">'
+      + '<option value="local"' + (item.type==='local'?' selected':'') + '>Local</option>'
+      + '<option value="onedrive"' + (item.type==='onedrive'?' selected':'') + '>OneDrive</option>'
+      + '<option value="sharepoint"' + (item.type==='sharepoint'?' selected':'') + '>SharePoint</option>'
+      + '<option value="url"' + (item.type==='url'?' selected':'') + '>URL</option>'
+      + '</select>'
+      + '<button onclick="removeFloc(' + idx + ')" style="background:none;border:none;color:#ef4444;font-size:16px;cursor:pointer;padding:0 4px;">×</button>'
+      + '</div>';
+  }
+
+  // Zone progress rows
+  var zoneRows = (ZONES||[]).map(function(z) {
+    var val = (cfg.zoneProgress && cfg.zoneProgress[z.id] !== undefined) ? cfg.zoneProgress[z.id] : (ZONE_DEFAULTS[z.id]||0);
+    return '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);">'
+      + '<span style="width:80px;font-size:12px;font-weight:600;color:var(--text);">' + (z.shortName||z.name) + '</span>'
+      + '<input type="range" min="0" max="100" value="' + val + '" '
+      + 'oninput="this.nextElementSibling.nextElementSibling.textContent=this.value+\'%\'" '
+      + 'style="flex:1;accent-color:var(--accent);" id="su-zone-' + z.id + '">'
+      + '<span style="font-size:11px;color:var(--muted);">|</span>'
+      + '<input type="number" min="0" max="100" value="' + val + '" id="su-zone-n-' + z.id + '" '
+      + 'oninput="document.getElementById(\'su-zone-' + z.id + '\').value=this.value;" '
+      + 'style="width:54px;padding:4px 6px;background:#1e293b;border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:12px;text-align:right;">'
+      + '<span style="font-size:12px;color:var(--muted);">%</span>'
+      + '</div>';
+  }).join('');
+
+  // Drawings list
+  var drawingRows = (cfg.drawings||[]).map(function(d, idx) {
+    return '<tr style="border-bottom:1px solid var(--border);">'
+      + '<td style="padding:5px 8px;font-size:11px;">' + (d.title||'') + '</td>'
+      + '<td style="padding:5px 8px;font-size:11px;color:var(--muted);">' + (d.rev||'') + '</td>'
+      + '<td style="padding:5px 8px;font-size:11px;color:var(--muted);">' + (d.date||'') + '</td>'
+      + '<td style="padding:5px 8px;font-size:11px;color:var(--muted);">' + (d.discipline||'') + '</td>'
+      + '<td style="padding:5px 8px;font-size:11px;color:#64748b;">' + (d.filename||'') + '</td>'
+      + '<td style="padding:3px;"><button onclick="removeDrawing(' + idx + ')" style="background:none;border:none;color:#ef4444;font-size:13px;cursor:pointer;">×</button></td>'
+      + '</tr>';
+  }).join('');
+
+  // File locations
+  var flocRows = (cfg.fileLocations||[{},{},{}]).map(function(item, idx) { return flocRow(idx, item); }).join('');
+
+  // Documents list
+  var docRows = (cfg.documents||[]).map(function(d, idx) {
+    return '<tr style="border-bottom:1px solid var(--border);">'
+      + '<td style="padding:5px 8px;font-size:11px;color:#38bdf8;">' + (d.category||'') + '</td>'
+      + '<td style="padding:5px 8px;font-size:11px;">' + (d.title||d.filename||'') + '</td>'
+      + '<td style="padding:5px 8px;font-size:11px;color:var(--muted);">' + (d.date||'') + '</td>'
+      + '<td style="padding:3px;"><button onclick="removeDocument(' + idx + ')" style="background:none;border:none;color:#ef4444;font-size:13px;cursor:pointer;">×</button></td>'
+      + '</tr>';
+  }).join('');
+
+  // Imported tasks preview
+  var taskPreview = '';
+  if (cfg.tasks && cfg.tasks.length > 0) {
+    taskPreview = '<div style="font-size:11px;color:#22c55e;margin-top:8px;">✓ ' + cfg.tasks.length + ' tasks loaded'
+      + ' &nbsp;·&nbsp; <button onclick="clearImportedTasks()" style="background:none;border:none;color:#ef4444;font-size:11px;cursor:pointer;text-decoration:underline;">Clear import</button></div>';
+  }
+
+  var h = [];
+  h.push('<div style="max-width:860px;padding:16px;">');
+
+  // Header
+  h.push('<div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap;">');
+  h.push('<div style="font-size:20px;font-weight:800;color:var(--text);">⚙ Project Setup &amp; Import</div>');
+  h.push('<div style="font-size:11px;color:var(--muted);">Configure a new project or update this one. All data is saved locally in your browser and can be exported as JSON.</div>');
+  h.push('</div>');
+
+  // ── 1. Project Details
+  h.push(card(
+    secHead('🏗️', 'Project Details', 'Core identity — used in headers, reports and exports') +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 20px;">' +
+    fld('name',    'Project name',       pc.name||'',          'text', 'Ballasalla Phase 4') +
+    fld('client',  'Client',             pc.client||'',        'text', 'Dandara') +
+    fld('ref',     'Contract reference', pc.ref||'',           'text', 'DGC-2026-001') +
+    fld('address', 'Site address',       pc.address||'',       'text', 'Ballasalla, Isle of Man') +
+    fld('sum',     'Contract sum (£)',   pc.contractSum||'',   'number', '450142') +
+    fld('ret',     'Retention rate (%)', pc.retentionRate||'', 'number', '2.5') +
+    fld('start',   'Programme start',    pc.start||'',         'date') +
+    fld('origend', 'Original completion',pc.originalEnd||'',   'date') +
+    fld('end',     'Agreed completion',  pc.agreedEnd||'',     'date') +
+    fld('eot',     'EOT (working days)', pc.eotWDs||'',        'number', '5') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 20px;">' +
+    fld('qs',      'QS / Certifier',     pc.qs||'',    'text', 'Ian Barnes') +
+    fld('pm',      'Project Manager',    pc.pm||'',    'text', '') +
+    fld('foreman', 'Site Foreman',       pc.foreman||'','text', 'Ash') +
+    '</div>' +
+    fld('desc', 'Scope of work (brief)', pc.description||'', 'text', 'Phase 4 drainage and groundworks...')
+  ));
+
+  // ── 2. Data Date
+  h.push(card(
+    secHead('📅', 'Data Date', 'The date your progress figures are current to — all planned% calculations anchor to this') +
+    '<div style="display:grid;grid-template-columns:1fr 2fr;gap:0 20px;">' +
+    fld('datadate', 'Data as of', cfg.dataDate||'', 'date') +
+    '</div>' +
+    '<div style="font-size:10px;color:#d97706;background:#fffbeb;border:1px solid #fde68a;border-radius:5px;padding:6px 10px;margin-top:4px;">'  +
+    '⚠ This overrides the hardcoded DATA_AS_OF constant. Update whenever you refresh zone progress figures.' +
+    '</div>'
+  ));
+
+  // ── 3. Programme (GanttPro Import)
+  h.push(card(
+    secHead('📋', 'Programme', 'Import your GanttPro CSV — tasks, dates and zones. Read-only: the file is not modified.') +
+    dropZone('programme', '.csv,.xlsx,.xls', 'Drop GanttPro CSV here or click to browse', 'Accepts .csv export from GanttPro. Columns needed: Task Name, Start, End.') +
+    '<div id="su-tasks-preview">' + taskPreview + '</div>' +
+    '<div style="margin-top:12px;">' +
+    '<label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">Programme title / revision</label>' +
+    '<input id="su-prog-title" type="text" value="' + ((cfg.programme&&cfg.programme.title)||'') + '" placeholder="e.g. Revised Programme Rev 2" '  +
+    'style="display:block;width:100%;margin-top:3px;padding:7px 10px;background:#1e293b;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;box-sizing:border-box;">' +
+    '</div>' +
+    '<div style="margin-top:10px;">' +
+    '<label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">Programme notes / write-up</label>' +
+    '<textarea id="su-prog-notes" rows="3" placeholder="Describe the programme revision, key constraints, sequence of works..." '  +
+    'style="display:block;width:100%;margin-top:3px;padding:7px 10px;background:#1e293b;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;box-sizing:border-box;resize:vertical;">' +
+    ((cfg.programme&&cfg.programme.notes)||'') + '</textarea></div>'
+  ));
+
+  // ── 4. Zone Progress
+  h.push(card(
+    secHead('📊', 'Zone Progress', 'QS-confirmed physical complete % per zone. Update each fortnight from your GanttPro / site visit.') +
+    zoneRows
+  ));
+
+  // ── 5. Drawings
+  h.push(card(
+    secHead('📐', 'Drawings', 'Latest drawing register. Files are read — not stored on the server. Metadata saved locally.') +
+    dropZone('drawings', '.pdf,.dwg,.png,.jpg,.jpeg', 'Drop drawing files here or click to browse', 'PDF, DWG or image files. Each file gets a title, revision and discipline tag.') +
+    '<div id="su-drawing-form" style="display:none;background:#1e293b;border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;">' +
+    '<div style="font-size:11px;font-weight:700;color:#38bdf8;margin-bottom:8px;">Add drawing details:</div>' +
+    '<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;">' +
+    '<input id="su-drw-title" type="text" placeholder="Drawing title" style="padding:6px 8px;background:#0f172a;border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;">' +
+    '<input id="su-drw-rev"   type="text" placeholder="Rev (e.g. P3)" style="padding:6px 8px;background:#0f172a;border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;">' +
+    '<input id="su-drw-date"  type="date"  style="padding:6px 8px;background:#0f172a;border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;">' +
+    '<select id="su-drw-disc" style="padding:6px;background:#0f172a;border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;">' +
+    '<option>Civil</option><option>Drainage</option><option>Structural</option><option>Electrical</option><option>M&amp;E</option><option>Survey</option><option>Other</option>' +
+    '</select></div>' +
+    '<button onclick="addDrawingEntry()" style="margin-top:8px;padding:5px 14px;background:#38bdf820;border:1px solid #38bdf8;color:#38bdf8;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;">+ Add</button>' +
+    '<button onclick="document.getElementById(\'su-drawing-form\').style.display=\'none\'" style="margin-top:8px;margin-left:8px;padding:5px 14px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:5px;font-size:11px;cursor:pointer;">Cancel</button>' +
+    '</div>' +
+    '<div id="su-drawings-list">' +
+    (cfg.drawings && cfg.drawings.length > 0
+      ? '<table style="width:100%;border-collapse:collapse;font-size:11px;">'
+        + '<tr style="border-bottom:1px solid var(--border);"><th style="text-align:left;padding:5px 8px;color:var(--muted);">Title</th><th style="padding:5px 8px;color:var(--muted);">Rev</th><th style="padding:5px 8px;color:var(--muted);">Date</th><th style="padding:5px 8px;color:var(--muted);">Discipline</th><th style="padding:5px 8px;color:var(--muted);">File</th><th></th></tr>'
+        + drawingRows + '</table>'
+      : '<div style="font-size:11px;color:var(--muted);text-align:center;padding:10px;">No drawings added yet</div>')
+    + '</div>'
+  ));
+
+  // ── 6. Documents
+  h.push(card(
+    secHead('📄', 'Documents', 'H&S plan, contract, scope, certificates. Stored by reference — original files not modified.') +
+    dropZone('documents', '.pdf,.doc,.docx,.xlsx,.xls', 'Drop documents here or click to browse', 'Select the document category after upload.') +
+    '<div id="su-doc-form" style="display:none;background:#1e293b;border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;">' +
+    '<div style="font-size:11px;font-weight:700;color:#38bdf8;margin-bottom:8px;">Document details:</div>' +
+    '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;">' +
+    '<input id="su-doc-title" type="text" placeholder="Document title" style="padding:6px 8px;background:#0f172a;border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;">' +
+    '<select id="su-doc-cat" style="padding:6px;background:#0f172a;border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;">' +
+    '<option>H&amp;S Plan</option><option>Scope of Works</option><option>Contract</option><option>Programme</option><option>Certificate</option><option>Insurance</option><option>Method Statement</option><option>Risk Assessment</option><option>Other</option>' +
+    '</select>' +
+    '<input id="su-doc-date" type="date" style="padding:6px 8px;background:#0f172a;border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;">' +
+    '</div>' +
+    '<button onclick="addDocumentEntry()" style="margin-top:8px;padding:5px 14px;background:#38bdf820;border:1px solid #38bdf8;color:#38bdf8;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;">+ Add</button>' +
+    '<button onclick="document.getElementById(\'su-doc-form\').style.display=\'none\'" style="margin-top:8px;margin-left:8px;padding:5px 14px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:5px;font-size:11px;cursor:pointer;">Cancel</button>' +
+    '</div>' +
+    '<div id="su-docs-list">' +
+    (cfg.documents && cfg.documents.length > 0
+      ? '<table style="width:100%;border-collapse:collapse;">'
+        + '<tr style="border-bottom:1px solid var(--border);"><th style="text-align:left;padding:5px 8px;font-size:10px;color:var(--muted);">Category</th><th style="text-align:left;padding:5px 8px;font-size:10px;color:var(--muted);">Title</th><th style="padding:5px 8px;font-size:10px;color:var(--muted);">Date</th><th></th></tr>'
+        + docRows + '</table>'
+      : '<div style="font-size:11px;color:var(--muted);text-align:center;padding:10px;">No documents added yet</div>')
+    + '</div>'
+  ));
+
+  // ── 7. File Locations (read-only references)
+  h.push(card(
+    secHead('📁', 'File Locations', 'Read-only path references — paste where your project folders live. Claude will READ these, never modify them.') +
+    '<div style="font-size:10px;color:#d97706;background:#fffbeb;border:1px solid #fde68a;border-radius:5px;padding:6px 10px;margin-bottom:12px;">' +
+    '⚠ These are reference paths only. When you tell Claude a file location, it will read files from here but will not edit, delete or rename anything without explicit instruction.' +
+    '</div>' +
+    '<div id="su-floc-list">' + flocRows + '</div>' +
+    '<button onclick="addFlocRow()" style="margin-top:6px;padding:5px 14px;background:#38bdf820;border:1px solid #38bdf8;color:#38bdf8;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;">+ Add location</button>'
+  ));
+
+  // ── 8. Bank Holidays
+  h.push(card(
+    secHead('🏦', 'Bank Holidays', 'Working-day calculations exclude these dates. Edit the list to match your region.') +
+    '<textarea id="su-bh" rows="3" placeholder="One date per line: YYYY-MM-DD" '  +
+    'style="width:100%;padding:7px 10px;background:#1e293b;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;box-sizing:border-box;resize:vertical;font-family:monospace;">' +
+    ((cfg.bankHolidays || ['2026-04-03','2026-04-06','2026-05-04','2026-05-25','2026-06-12']).join('\n')) + '</textarea>' +
+    '<div style="font-size:10px;color:var(--muted);margin-top:4px;">IoM defaults: Good Friday, Easter Monday, Early May, Late May, TT Friday</div>'
+  ));
+
+  // ── Actions
+  h.push('<div style="display:flex;gap:10px;flex-wrap:wrap;padding:4px 0 20px;">');
+  h.push('<button onclick="saveSetupForm()" style="padding:10px 22px;background:#16a34a;border:1px solid #16a34a;color:#fff;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;">💾 Save &amp; Apply</button>');
+  h.push('<button onclick="cfgExport()" style="padding:10px 22px;background:#1e293b;border:1px solid #38bdf8;color:#38bdf8;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">📤 Export JSON</button>');
+  h.push('<label style="padding:10px 22px;background:#1e293b;border:1px solid #64748b;color:#94a3b8;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">📥 Import JSON<input type="file" accept=".json" style="display:none;" onchange="handleConfigImport(this.files[0])"></label>');
+  h.push('<button onclick="resetProjectConfig()" style="padding:10px 22px;background:none;border:1px solid #ef4444;color:#ef4444;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">⚠ Reset to Blank</button>');
+  h.push('</div>');
+
+  h.push('<div id="su-toast" style="display:none;position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:700;z-index:9999;"></div>');
+  h.push('</div>');
+  el.innerHTML = h.join('');
+}
+
+// ── Setup tab action handlers ───────────────────────────────────────────────
+function saveSetupForm() {
+  var cfg = cfgLoad() || {};
+  var g = function(id){ var el = document.getElementById('su-'+id); return el ? el.value.trim() : ''; };
+
+  cfg.project = {
+    name:        g('name'),       client:       g('client'),
+    ref:         g('ref'),        address:      g('address'),
+    contractSum: parseFloat(g('sum')) || null,
+    retentionRate: parseFloat(g('ret')) || null,
+    start:       g('start'),      originalEnd:  g('origend'),
+    agreedEnd:   g('end'),        eotWDs:       parseInt(g('eot')) || null,
+    qs:          g('qs'),         pm:           g('pm'),
+    foreman:     g('foreman'),    description:  g('desc')
+  };
+  cfg.dataDate = g('datadate') || null;
+  cfg.programme = { title: g('prog-title'), notes: (document.getElementById('su-prog-notes')||{}).value || '' };
+
+  // Zone progress
+  cfg.zoneProgress = {};
+  (ZONES||[]).forEach(function(z) {
+    var sl = document.getElementById('su-zone-'+z.id);
+    if (sl) cfg.zoneProgress[z.id] = parseInt(sl.value) || 0;
+  });
+
+  // Bank holidays
+  var bhEl = document.getElementById('su-bh');
+  if (bhEl) {
+    cfg.bankHolidays = bhEl.value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return /^\d{4}-\d{2}-\d{2}$/.test(s); });
+  }
+
+  // File locations
+  cfg.fileLocations = [];
+  document.querySelectorAll('[data-floc]').forEach(function(el) {
+    var idx = parseInt(el.getAttribute('data-floc'));
+    var field = el.getAttribute('data-field');
+    if (!cfg.fileLocations[idx]) cfg.fileLocations[idx] = {};
+    cfg.fileLocations[idx][field] = el.value;
+  });
+  cfg.fileLocations = cfg.fileLocations.filter(function(f){ return f && (f.label||f.path||f.url); });
+
+  cfgSave(cfg);
+  applyProjectConfig();
+  suToast('✓ Saved and applied to dashboard');
+}
+
+function suToast(msg, isErr) {
+  var t = document.getElementById('su-toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.style.background = isErr ? '#7f1d1d' : '#14532d';
+  t.style.color = isErr ? '#fca5a5' : '#86efac';
+  t.style.border = '1px solid ' + (isErr ? '#dc2626' : '#16a34a');
+  t.style.display = 'block';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function(){ t.style.display = 'none'; }, 3000);
+}
+
+function handleSetupDrop(target, files) {
+  if (!files || !files.length) return;
+  var file = files[0];
+  if (target === 'programme') {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var result = parseGanttProCSV(e.target.result);
+      var cfg = cfgLoad() || {};
+      if (result.error || !result.tasks.length) {
+        suToast('⚠ ' + (result.error || 'No tasks found — check CSV format'), true);
+      } else {
+        cfg.tasks = result.tasks;
+        cfgSave(cfg);
+        var prev = document.getElementById('su-tasks-preview');
+        if (prev) prev.innerHTML = '<div style="font-size:11px;color:#22c55e;margin-top:8px;">✓ ' + result.tasks.length + ' tasks imported from ' + file.name + ' &nbsp;·&nbsp; <button onclick="clearImportedTasks()" style="background:none;border:none;color:#ef4444;font-size:11px;cursor:pointer;text-decoration:underline;">Clear</button></div>';
+        suToast('✓ ' + result.tasks.length + ' tasks imported');
+      }
+    };
+    reader.readAsText(file);
+  } else if (target === 'drawings') {
+    var form = document.getElementById('su-drawing-form');
+    if (form) {
+      form.style.display = 'block';
+      var titleEl = document.getElementById('su-drw-title');
+      if (titleEl) titleEl.value = file.name.replace(/\.[^.]+$/, '');
+      form._pendingFile = file.name;
+    }
+  } else if (target === 'documents') {
+    var form2 = document.getElementById('su-doc-form');
+    if (form2) {
+      form2.style.display = 'block';
+      var titleEl2 = document.getElementById('su-doc-title');
+      if (titleEl2) titleEl2.value = file.name.replace(/\.[^.]+$/, '');
+      form2._pendingFile = file.name;
+    }
+  }
+}
+
+function addDrawingEntry() {
+  var cfg = cfgLoad() || {};
+  if (!cfg.drawings) cfg.drawings = [];
+  var form = document.getElementById('su-drawing-form');
+  cfg.drawings.push({
+    title:     (document.getElementById('su-drw-title')||{}).value || '',
+    rev:       (document.getElementById('su-drw-rev')||{}).value   || '',
+    date:      (document.getElementById('su-drw-date')||{}).value  || '',
+    discipline:(document.getElementById('su-drw-disc')||{}).value  || '',
+    filename:  form ? (form._pendingFile || '') : ''
+  });
+  cfgSave(cfg);
+  buildSetupTab();
+  suToast('✓ Drawing added');
+}
+function removeDrawing(idx) {
+  var cfg = cfgLoad() || {};
+  if (cfg.drawings) { cfg.drawings.splice(idx, 1); cfgSave(cfg); buildSetupTab(); }
+}
+function addDocumentEntry() {
+  var cfg = cfgLoad() || {};
+  if (!cfg.documents) cfg.documents = [];
+  var form2 = document.getElementById('su-doc-form');
+  cfg.documents.push({
+    category: (document.getElementById('su-doc-cat')||{}).value   || '',
+    title:    (document.getElementById('su-doc-title')||{}).value || '',
+    date:     (document.getElementById('su-doc-date')||{}).value  || '',
+    filename: form2 ? (form2._pendingFile || '') : ''
+  });
+  cfgSave(cfg);
+  buildSetupTab();
+  suToast('✓ Document added');
+}
+function removeDocument(idx) {
+  var cfg = cfgLoad() || {};
+  if (cfg.documents) { cfg.documents.splice(idx, 1); cfgSave(cfg); buildSetupTab(); }
+}
+function clearImportedTasks() {
+  var cfg = cfgLoad() || {};
+  delete cfg.tasks;
+  cfgSave(cfg);
+  buildSetupTab();
+  suToast('Programme import cleared');
+}
+function addFlocRow() {
+  var cfg = cfgLoad() || {};
+  if (!cfg.fileLocations) cfg.fileLocations = [];
+  cfg.fileLocations.push({});
+  cfgSave(cfg);
+  buildSetupTab();
+}
+function removeFloc(idx) {
+  var cfg = cfgLoad() || {};
+  if (cfg.fileLocations) { cfg.fileLocations.splice(idx, 1); cfgSave(cfg); buildSetupTab(); }
+}
+function handleConfigImport(file) {
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var cfg = JSON.parse(e.target.result);
+      cfgSave(cfg);
+      applyProjectConfig();
+      buildSetupTab();
+      suToast('✓ Config imported: ' + (cfg.project && cfg.project.name ? cfg.project.name : 'project'));
+    } catch(ex) { suToast('⚠ Invalid JSON file', true); }
+  };
+  reader.readAsText(file);
+}
+function resetProjectConfig() {
+  if (!confirm('Reset all project setup data? This clears all imported data, drawings and file locations from this browser.\n\nThe hardcoded programme data will be restored. This cannot be undone.')) return;
+  localStorage.removeItem(_CFG_KEY);
+  window.PROJECT_CONFIG = {};
+  applyProjectConfig();
+  buildSetupTab();
+  suToast('Reset to defaults');
+}
+
 // ═══════════════════════ SINGLE SOURCE OF TRUTH ═══════════════════════
 // computeDS() runs once at DOMContentLoaded and stores all derived metrics
 // in window.DS. Every rendering function reads from DS instead of
 // recomputing independently — this is what keeps every panel consistent.
 function computeDS() {
-  var PROJECT_START  = parseDate('2026-03-23');
-  var PROJECT_END    = parseDate('2026-06-26');
-  var ORIG_END       = parseDate('2026-06-12');
-  var dataDate       = (typeof DATA_AS_OF !== 'undefined' && DATA_AS_OF <= new Date()) ? DATA_AS_OF : new Date();
+  // Read project config overrides first
+  var _pc = (window.PROJECT_CONFIG && window.PROJECT_CONFIG.project) || {};
+  var PROJECT_START  = parseDate((_pc.start        && _pc.start.trim())      || '2026-03-23');
+  var PROJECT_END    = parseDate((_pc.agreedEnd     && _pc.agreedEnd.trim())  || '2026-06-26');
+  var ORIG_END       = parseDate((_pc.originalEnd   && _pc.originalEnd.trim())|| '2026-06-12');
+  var _cfgDate = window.PROJECT_CONFIG && window.PROJECT_CONFIG.dataDate;
+  var dataDate = _cfgDate
+    ? new Date(_cfgDate + 'T12:00:00')
+    : ((typeof DATA_AS_OF !== 'undefined' && DATA_AS_OF <= new Date()) ? DATA_AS_OF : new Date());
 
   // ── Calendar timeline (anchored to data date, not live today) ────────────
   var totalCalDays   = daysBetween(PROJECT_START, PROJECT_END);
   var elapsedCalDays = Math.min(totalCalDays, Math.max(0, daysBetween(PROJECT_START, dataDate)));
   var remainCalDays  = Math.max(0, daysBetween(dataDate, PROJECT_END));
 
-  // ── Working days (IoM bank holidays) ─────────────────────────────────────
-  var _IOM_BH = {'2026-04-03':1,'2026-04-06':1,'2026-05-04':1,'2026-05-25':1,'2026-06-12':1};
+  // ── Working days (config bank holidays, or IoM defaults) ─────────────────
+  var _bhList = (window.PROJECT_CONFIG && window.PROJECT_CONFIG.bankHolidays)
+    || ['2026-04-03','2026-04-06','2026-05-04','2026-05-25','2026-06-12'];
+  var _IOM_BH = {};
+  _bhList.forEach(function(d){ _IOM_BH[d] = 1; });
   function _isWD(d) {
     var w = d.getDay(); if (w===0||w===6) return false;
     return !_IOM_BH[d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')];
@@ -5020,11 +5631,14 @@ function showTab(name, btn) {
   if(name === 'efficiency') buildEfficiencyTab();
   if(name === 'programme')  buildProgrammeHeader();
   if(name === 'data')       buildDataTab();
+  if(name === 'setup')      buildSetupTab();
 }
 
 // ═══════════════════════ INIT ═══════════════════════
 window.addEventListener('DOMContentLoaded', () => {
-  // ── Compute the single source of truth first — everything reads from this ──
+  // ── Load saved project config and apply overrides before computing DS ──────
+  try { applyProjectConfig(); } catch(e) { console.error('applyProjectConfig failed:', e); }
+  // ── Compute the single source of truth (reads PROJECT_CONFIG overrides) ──
   try { window.DS = computeDS(); } catch(e) { console.error('computeDS failed:', e); window.DS = null; }
 
   // Safe setter — never throws, silently skips missing elements
