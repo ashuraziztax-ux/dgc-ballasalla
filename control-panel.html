@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v104</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v105</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -4032,13 +4032,102 @@ function getTaskStatus(task) {
 // window.PROJECT_CONFIG is populated from localStorage on load.
 // computeDS() reads from it first, falling back to hardcoded constants.
 
-var _CFG_KEY = 'dgc_project_config_v1';
-
+// ══════════════════════════════════════════════════════════════════════════
+// MULTI-PROJECT STORAGE
+// Projects stored as: localStorage['dgc_projects'] = { id: cfg, ... }
+// Active project:     localStorage['dgc_active_project'] = id
+// ══════════════════════════════════════════════════════════════════════════
+function projAll() {
+  try { return JSON.parse(localStorage.getItem('dgc_projects') || '{}'); } catch(e) { return {}; }
+}
+function projSaveAll(all) {
+  try { localStorage.setItem('dgc_projects', JSON.stringify(all)); } catch(e) {}
+}
+function projActive() {
+  return localStorage.getItem('dgc_active_project') || '';
+}
+function projSetActive(id) {
+  localStorage.setItem('dgc_active_project', id);
+}
+function projSlugify(name) {
+  return (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'project-' + Date.now();
+}
+// Migrate legacy single-project config on first load
+function projMigrateLegacy() {
+  var old = localStorage.getItem('dgc_project_config_v1');
+  if (!old) return;
+  try {
+    var cfg = JSON.parse(old);
+    var name = (cfg.project && cfg.project.name) || 'Ballasalla Phase 4';
+    var id   = projSlugify(name);
+    var all  = projAll();
+    if (!all[id]) {
+      cfg._name = name; cfg._id = id;
+      all[id] = cfg;
+      projSaveAll(all);
+    }
+    if (!projActive()) projSetActive(id);
+    localStorage.removeItem('dgc_project_config_v1');
+  } catch(e) {}
+}
 function cfgSave(cfg) {
-  try { localStorage.setItem(_CFG_KEY, JSON.stringify(cfg)); return true; } catch(e) { return false; }
+  var id = projActive();
+  if (!id) return false;
+  var all = projAll();
+  cfg._name = cfg._name || (cfg.project && cfg.project.name) || id;
+  cfg._id   = id;
+  cfg._saved = new Date().toISOString();
+  all[id] = cfg;
+  projSaveAll(all);
+  return true;
 }
 function cfgLoad() {
-  try { var s = localStorage.getItem(_CFG_KEY); return s ? JSON.parse(s) : null; } catch(e) { return null; }
+  var id = projActive();
+  if (!id) { var all = projAll(); var keys = Object.keys(all); if (keys.length) { projSetActive(keys[0]); id = keys[0]; } }
+  if (!id) return null;
+  try { return projAll()[id] || null; } catch(e) { return null; }
+}
+// Create a new blank project slot (does NOT switch to it yet)
+function projCreate(name) {
+  var id  = projSlugify(name);
+  var all = projAll();
+  if (all[id]) { suToast('A project with that name already exists', true); return null; }
+  all[id] = { _name: name, _id: id, project: { name: name } };
+  projSaveAll(all);
+  return id;
+}
+// Switch active project and refresh everything
+function projSwitch(id) {
+  if (!id) return;
+  projSetActive(id);
+  applyProjectConfig();
+  buildSetupTab();
+  suToast('Switched to: ' + ((projAll()[id] && projAll()[id]._name) || id));
+}
+// Duplicate current project under a new name
+function projDuplicate(newName) {
+  var cfg = cfgLoad();
+  if (!cfg) { suToast('No project loaded', true); return; }
+  var id = projCreate(newName);
+  if (!id) return;
+  var copy = JSON.parse(JSON.stringify(cfg));
+  copy._name = newName; copy._id = id; delete copy._saved;
+  var all = projAll(); all[id] = copy; projSaveAll(all);
+  projSwitch(id);
+}
+// Delete a project (will not delete if it's the last one)
+function projDelete(id) {
+  var all = projAll();
+  var keys = Object.keys(all);
+  if (keys.length <= 1) { suToast('Cannot delete the last project', true); return; }
+  var name = (all[id] && all[id]._name) || id;
+  delete all[id];
+  projSaveAll(all);
+  var remaining = Object.keys(projAll());
+  projSetActive(remaining[0] || '');
+  applyProjectConfig();
+  buildSetupTab();
+  suToast('Deleted: ' + name);
 }
 function cfgExport() {
   var cfg = cfgLoad() || {};
@@ -4304,7 +4393,45 @@ function buildSetupTab() {
   }
 
   var h = [];
+  var _allProj  = projAll();
+  var _activeId = projActive();
+  var _projKeys = Object.keys(_allProj);
+
   h.push('<div style="max-width:860px;padding:16px;">');
+
+  // ── Project switcher bar ──────────────────────────────────────────────────
+  h.push('<div style="background:#0f172a;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:20px;">');
+  h.push('<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">');
+  h.push('<span style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap;">Active Project</span>');
+  // Dropdown
+  h.push('<select id="proj-switcher" onchange="projSwitch(this.value)" style="flex:1;min-width:180px;padding:7px 10px;background:#1e293b;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-weight:700;">');
+  if (_projKeys.length === 0) {
+    h.push('<option value="">— no projects saved —</option>');
+  } else {
+    _projKeys.forEach(function(k) {
+      var n = (_allProj[k] && _allProj[k]._name) || k;
+      h.push('<option value="' + k + '"' + (k === _activeId ? ' selected' : '') + '>' + n + '</option>');
+    });
+  }
+  h.push('</select>');
+  // New project inline form
+  h.push('<input id="proj-new-name" type="text" placeholder="New project name…" '
+    + 'style="padding:7px 10px;background:#1e293b;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;width:160px;"'
+    + 'onkeydown="if(event.key===\'Enter\'){var n=this.value.trim();if(n){var id=projCreate(n);if(id){projSwitch(id);}this.value=\'\';}}">');
+  h.push('<button onclick="(function(){var n=document.getElementById(\'proj-new-name\').value.trim();if(!n){suToast(\'Enter a project name first\',true);return;}var id=projCreate(n);if(id){document.getElementById(\'proj-new-name\').value=\'\';projSwitch(id);}})()" '
+    + 'style="padding:7px 14px;background:#16a34a;border:none;color:#fff;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;">+ New</button>');
+  // Duplicate
+  h.push('<button onclick="(function(){var n=prompt(\'Name for duplicate:\',(\'' + (_allProj[_activeId] && _allProj[_activeId]._name ? _allProj[_activeId]._name.replace(/'/g,"\\'") : 'Copy') + ' copy\'));if(n)projDuplicate(n);})()" '
+    + 'style="padding:7px 14px;background:#1e293b;border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap;">Duplicate</button>');
+  // Delete (disabled if only one project)
+  h.push('<button onclick="if(confirm(\'Delete this project? This cannot be undone.\'))projDelete(\'' + _activeId + '\')" '
+    + (_projKeys.length <= 1 ? 'disabled title="Cannot delete the only project" ' : '')
+    + 'style="padding:7px 14px;background:#1e293b;border:1px solid #dc262640;color:#dc2626;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap;' + (_projKeys.length <= 1 ? 'opacity:0.4;cursor:not-allowed;' : '') + '">Delete</button>');
+  h.push('</div>');
+  if (_allProj[_activeId] && _allProj[_activeId]._saved) {
+    h.push('<div style="font-size:9px;color:var(--muted);margin-top:6px;">Last saved: ' + new Date(_allProj[_activeId]._saved).toLocaleString('en-GB') + '</div>');
+  }
+  h.push('</div>');
 
   // Header
   h.push('<div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap;">');
@@ -5977,6 +6104,8 @@ function showTab(name, btn) {
 
 // ═══════════════════════ INIT ═══════════════════════
 window.addEventListener('DOMContentLoaded', () => {
+  // ── Migrate legacy single-project config → multi-project store ─────────────
+  try { projMigrateLegacy(); } catch(e) {}
   // ── Load saved project config and apply overrides before computing DS ──────
   try { applyProjectConfig(); } catch(e) { console.error('applyProjectConfig failed:', e); }
   // ── Compute the single source of truth (reads PROJECT_CONFIG overrides) ──
