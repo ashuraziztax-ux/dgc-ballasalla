@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v120</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v121</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -968,8 +968,8 @@ function clearForm() {
               background:#f59e0b14;border:1px solid #f59e0b44;">
     <span style="font-size:15px;">📋</span>
     <div style="font-size:11px;color:#f59e0b;line-height:1.5;">
-      <strong>Data frozen as of 14 May 2026</strong> — no figures will change until the next fortnightly update (~28 May 2026).
-      All progress, KPIs and charts show the last recorded state.
+      <strong>📸 Snapshot as of 14 May 2026</strong> — figures current at last fortnightly update. Next refresh ~28 May 2026.
+      Progress, KPIs and charts reflect this date.
     </div>
   </div>
   <div id="alerts-area" style="margin-bottom:14px;"></div>
@@ -1481,21 +1481,21 @@ function clearForm() {
             <td>AFP 1</td>
             <td>1 Apr 2026</td>
             <td>7 Apr 2026</td>
-            <td class="paid">5 May 2026</td>
-            <td class="paid">£22,985 gross</td>
-            <td><span class="chip paid">Paid</span></td>
+            <td class="paid" style="font-size:10px;">Combined → App.1</td>
+            <td class="paid" style="font-size:10px;">Rolled into AFP 2</td>
+            <td><span class="chip paid" title="Dandara combined DGC AFP1 and AFP2 into one Self-Billing Invoice SC193064-x17">App. 1</span></td>
           </tr>
           <tr>
-            <td>AFP 2</td>
+            <td>AFP 2 (Dandara App. 1)</td>
             <td>30 Apr 2026</td>
-            <td>30 Apr 2026</td>
-            <td class="due">28 May 2026</td>
-            <td class="due">£156,739.46 net</td>
-            <td><span class="chip due">Due 28 May</span></td>
+            <td>7 May 2026</td>
+            <td class="paid">12 May 2026</td>
+            <td class="paid">£156,739.46 net</td>
+            <td><span class="chip paid">Received 12 May</span></td>
           </tr>
           <tr style="background:#1e2130;">
-            <td colspan="2" style="font-size:11px;color:var(--muted);">AFP 2 breakdown</td>
-            <td colspan="2" style="font-size:11px;color:var(--muted);">Gross certified cumulative: £167,134 | Less 2.5% retention (Ian): &minus;£4,178 | Less AFP1: &minus;£22,985 | = £156,739.46 net certified | DGC gross claim £167,134 &rarr; Ian net £156,739 (£10,395 gap)</td>
+            <td colspan="2" style="font-size:11px;color:var(--muted);">Dandara App. 1 — Self-Billing Invoice SC193064-x17</td>
+            <td colspan="2" style="font-size:11px;color:var(--muted);">Gross certified £164,028.11 (Contract work £116,213 + Materials on site £47,815) | Less Dandara discount &minus;£2,441.04 | Less retention &minus;£4,847.61 | = <strong style="color:#4ade80;">£156,739.46 net received 12 May 2026</strong> | Certified by Ian Barnes. 35% complete at certification.</td>
             <td></td><td></td>
           </tr>
           <tr style="opacity:0.75;font-style:italic;">
@@ -2810,7 +2810,13 @@ var DELAY_DEFAULTS = [
   {id:'D011',date:'2026-04-23',ref:'RT 101307',category:'absorbed',description:'100mm Type 1 substituted for 6F2 on granular bedding — slower to install',days:0.5,status:'absorbed',cost:0},
   {id:'D012',date:'2026-03-24',ref:'EOT-A',category:'eot_claimed',description:'Extended prelims week 1 — site setup and compound beyond original programme (revised completion to 19 Jun)',days:5.0,status:'claimed',cost:4506.05},
   {id:'D013',date:'2026-03-31',ref:'EOT-B',category:'eot_claimed',description:'Extended prelims 4.5 days — MU scanning, mobilisation delays (revised to 26 Jun)',days:4.5,status:'claimed',cost:5576.90},
-  {id:'D014',date:'2026-04-08',ref:'EOT-C/D/E/F/G',category:'eot_claimed',description:'Scanning, concrete, asbestos and design delays — cumulative 5 days (revised to 26 Jun agreed, 3 Jul claimed)',days:5.0,status:'claimed',cost:10764.09}
+  {id:'D014',date:'2026-04-09',ref:'EOT-C',category:'eot_claimed',description:'EoT 3 — 0.5 days 09.04–21.04. 300mm scanning. CERTIFIED by Dandara (EFA App.1). Revised completion: 26 Jun 2026.',days:0.5,status:'claimed',cost:685.47},
+  {id:'D015',date:'2026-04-13',ref:'EOT-D',category:'eot_claimed',description:'EoT 4 — 1 day 13.04. Land drain found; concrete wagon sent away (1 day lost). NOT YET SUBMITTED to Dandara. Potential claim: £2,955.',days:1.0,status:'claimed',cost:2955.40},
+  {id:'D016',date:'2026-04-14',ref:'EOT-E',category:'eot_claimed',description:'EoT 5 — 1 day 14–15.04. Cold tar / asbestos concurrent delays. NOT YET SUBMITTED to Dandara. Potential claim: £4,433.',days:1.0,status:'claimed',cost:4433.10},
+  {id:'D017',date:'2026-04-23',ref:'EOT-F',category:'eot_claimed',description:'EoT 6 — 0.5 days 23.04. Concrete found in excavation (Var 10). NOT YET SUBMITTED. Potential claim: £772.',days:0.5,status:'claimed',cost:771.72},
+  {id:'D018',date:'2026-04-22',ref:'EOT-G',category:'eot_claimed',description:'EoT 7 — 2 days 22.04–01.05. Continued 300mm scanning (Var 12). NOT YET SUBMITTED. Potential claim: £2,440.',days:2.0,status:'claimed',cost:2440.40},
+  {id:'D019',date:'2026-05-01',ref:'EOT-H',category:'eot_claimed',description:'EoT 8 — 4 days 01.05+. Continued scanning + tote bag requirement (Var 13). NOT YET SUBMITTED. Potential claim: £4,881.',days:4.0,status:'claimed',cost:4880.80},
+  {id:'D020',date:'2026-05-02',ref:'EOT-I',category:'eot_claimed',description:'EoT 9 — 0.5 days 02.05. H&S tote bag instruction (Var 14). NOT YET SUBMITTED. Potential claim: £685.',days:0.5,status:'claimed',cost:685.47}
 ];
 
 function loadDelayLog() {
@@ -9076,9 +9082,9 @@ function buildAlerts() {
 
   var ALERTS = [
     { id:'qs-contract-gap', type:'warning', icon:'&#x1F4CB;', msg:'<strong>QS flag:</strong> Signed contract £450,000 vs BoQ total £450,142.39 &mdash; £142 gap to reconcile at final account. BoQ also contains -£10,800.75 Dandara discount &ldquo;to be omitted at FA&rdquo; &mdash; ensure excluded from final settlement.', adminOnly:true, isQuestion:false },
-    { id:'afp1-received',   type:'info',    icon:'&#x1F4B3;', question:'AFP 1 rolled into AFP 2 (&pound;156,739 combined). Confirm payment received from Dandara?', hint:'Ian Barnes certified both as one payment &mdash; due 28 May 2026', adminOnly:true, isQuestion:true },
+    { id:'afp1-received',   type:'info',    icon:'&#x2705;',  msg:'<strong>Payment confirmed:</strong> Dandara App. 1 (DGC AFP1+2 combined) &mdash; &pound;156,739.46 received 12 May 2026. Certified by Ian Barnes (Self-Billing Invoice SC193064-x17). Next: AFP 3 ~22 May.', adminOnly:true, isQuestion:false },
     { id:'programme-warn',  type:'warning', icon:'&#x26A0;&#xFE0F;',  msg:'<strong>Programme position:</strong> Kerbs (0%), Tarmac (0%), Type 1 subbase (0%) not started across any zone per AFP 2. Behind programme &mdash; partly late start (not slippage), partly slower progress in places. Agreed revised completion with Dandara: <strong>26 Jun 2026</strong>. Formal EOT to be raised when closer.', adminOnly:false, isQuestion:false },
-    { id:'afp2-received',   type:'info',    icon:'&#x1F4CB;', question:'AFP 2 (&pound;156,739.46) payment received from Dandara?', hint:'Ian Barnes certified &middot; Due 28 May 2026', adminOnly:true,  isQuestion:true  }
+    { id:'eot-d-to-i',     type:'warning', icon:'&#x23F1;',  msg:'<strong>EoT D&ndash;I not yet submitted:</strong> &pound;16,167 in Extension of Time prelims (6 events, 10 days) are assessed but not formally raised with Dandara. Submit before Final Account. See Final A/c tab for breakdown.', adminOnly:true, isQuestion:false }
   ];
 
   var aColour = { yes:'#22c55e', no:'#ef4444', complicated:'#f97316' };
