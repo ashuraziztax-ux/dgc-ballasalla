@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v119</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v120</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -8557,6 +8557,195 @@ function rtParseCSV(text) {
   return result;
 }
 
+
+// ── DEFAULT_RISK_TICKETS — extracted from real RCT/RT PDFs (v120) ────────────
+// Source: /Ash Yep 2/CONTROL PANEL-ashur's MacBook Air/Risk Tickets/
+// 20 tickets: RCT 101004–101016, RT 101303–101311 (RT 101305 not filed)
+// NB: Near Miss Reports folder was empty at time of extraction.
+var DEFAULT_RISK_TICKETS = [
+  {
+    rtNum:101004, date:'2026-04-01', project:'Ballasalla Phase 4',
+    raisedBy:'Harry', role:'DGC',
+    categories:['Health & Safety','Programme / Deadline'],
+    description:'Attended training with Paul Roberts. Stopped work until site is scanned and noted by MU. Future projects to be fully scanned for known and unknown services prior to work commencing.',
+    resolution:'Future projects to be fully scanned for known and unknown services prior to work commencing.',
+    pmStatus:'No action required', pmNotes:'Will have programme impact. TSC',
+    signedBy:'Harry', signDate:'2026-04-01', linkedCCE:'CCE 101224'
+  },
+  {
+    rtNum:101005, date:'2026-04-08', project:'Ballasalla Phase 4',
+    raisedBy:'Harry', role:'DGC',
+    categories:['Health & Safety','Programme / Deadline'],
+    description:'Unmarked cable identified in S4.1. Not picked up on scanner.',
+    resolution:'Inform site manager (Dandara).',
+    pmStatus:'Deferred / monitor', pmNotes:'Informed Steve @ 8th April @ 1515.',
+    signedBy:'Harry', signDate:'2026-04-08', linkedCCE:'CCE 101225'
+  },
+  {
+    rtNum:101006, date:'2026-04-08', project:'Ballasalla Phase 4',
+    raisedBy:'Shaun O'Boyle', role:'Dandara',
+    categories:['Programme / Deadline','Logistics / Material'],
+    description:'Told topsoil will be moved from site, along with some spoil bunds to allow access to site. Verbal from Shaun to Harry approximately 1500.',
+    resolution:'DGC requested to hire machines to Dandara if needed. DGC happy to help if required.',
+    pmStatus:'Deferred / monitor', pmNotes:'',
+    signedBy:'Harry', signDate:'2026-04-08', linkedCCE:'CCE 101226'
+  },
+  {
+    rtNum:101007, date:'2026-04-08', project:'Ballasalla Phase 4',
+    raisedBy:'Harry', role:'DGC',
+    categories:['Financial'],
+    description:'War is having an impact on fuel costs. Approximately 30% increase since pricing for the work.',
+    resolution:'',
+    pmStatus:'Deferred / monitor', pmNotes:'',
+    signedBy:'Harry', signDate:'2026-04-08', linkedCCE:'CCE 101227'
+  },
+  {
+    rtNum:101008, date:'2026-04-08', project:'Ballasalla Phase 4',
+    raisedBy:'Harry', role:'DGC',
+    categories:['Health & Safety','Programme / Deadline','Financial'],
+    description:'Dandara have had 11x service strikes in the last 12 months. We have been instructed to scan excavations every 300mm to prevent issues. We have developed manhole and trench excavation cards to ensure excavations are performed safely.',
+    resolution:'We have developed manhole and trench excavation cards to ensure that excavations are performed safely.',
+    pmStatus:'Action taken', pmNotes:'Cards now live.',
+    signedBy:'Harry', signDate:'2026-04-08', linkedCCE:'CCE 101228'
+  },
+  {
+    rtNum:101009, date:'2026-04-09', project:'Ballasalla Phase 4',
+    raisedBy:'Harry', role:'DGC',
+    categories:['Health & Safety','Programme / Deadline'],
+    description:'We have ordered full electrical PPE for excavating around services (hand dig). This is not on the Island yet and we need to expose suspected cable in S4.1.',
+    resolution:'Spoken with Paul Fudge at 10am who advised to proceed without the PPE. Rated tools used.',
+    pmStatus:'No action required', pmNotes:'No impact — just logging conversation.',
+    signedBy:'Harry', signDate:'2026-04-09', linkedCCE:''
+  },
+  {
+    rtNum:101010, date:'2026-04-09', project:'Ballasalla Phase 4',
+    raisedBy:'Ash', role:'DGC',
+    categories:['Design / Information','Logistics / Material'],
+    description:'Can a non-licenced concrete supplier be used on this project?',
+    resolution:'Called Graeme Higgins at DOT. Answer: If same spec as plans, all good.',
+    pmStatus:'No action required', pmNotes:'',
+    signedBy:'Ashur Aziz', signDate:'2026-04-09', linkedCCE:''
+  },
+  {
+    rtNum:101011, date:'2026-04-13', project:'Ballasalla Phase 4',
+    raisedBy:'Harry', role:'DGC',
+    categories:['Financial','Other'],
+    description:'We are using diesel to run the site generator, which is reducing the supply on site. War could/is bringing supply issues.',
+    resolution:'Mains supply for site compound. Requested to Steve Friday 10th April.',
+    pmStatus:'Deferred / monitor', pmNotes:'Please advise.',
+    signedBy:'Harry', signDate:'2026-04-13', linkedCCE:''
+  },
+  {
+    rtNum:101012, date:'2026-04-13', project:'Ballasalla Phase 4',
+    raisedBy:'David Smith', role:'DGC',
+    categories:['Programme / Deadline'],
+    description:'1 day push back on concrete pour in S4.1 + F4.1 due to suspected services (1 pour down).',
+    resolution:'',
+    pmStatus:'No action required', pmNotes:'',
+    signedBy:'David Smith', signDate:'2026-04-13', linkedCCE:'CCE 101229'
+  },
+  {
+    rtNum:101013, date:'2026-04-14', project:'Ballasalla Phase 4',
+    raisedBy:'David Smith', role:'DGC',
+    categories:['Programme / Deadline','Financial'],
+    description:'Verbal conversation 10/4/26. Pedro (site exec) — James Coogan (DGC). Pedro informing it's time for James to take skips from the site to reuse.',
+    resolution:'Please confirm in writing. This is OK to do.',
+    pmStatus:'Action taken', pmNotes:'Action required (Dandara).',
+    signedBy:'David Smith', signDate:'2026-04-14', linkedCCE:''
+  },
+  {
+    rtNum:101014, date:'2026-04-14', project:'Ballasalla Phase 4',
+    raisedBy:'David Smith', role:'DGC',
+    categories:['Health & Safety','Financial','Quality'],
+    description:'Cold tar found in the trench run F4.1 to F4.2. Testing will confirm type/depth. Isolated and being tested.',
+    resolution:'Isolate and test.',
+    pmStatus:'Deferred / monitor', pmNotes:'',
+    signedBy:'David Smith', signDate:'2026-04-14', linkedCCE:'CCE 101230'
+  },
+  {
+    rtNum:101016, date:'2026-04-15', project:'Ballasalla Phase 4',
+    raisedBy:'Harry', role:'DGC',
+    categories:['Health & Safety'],
+    description:'All staff requested to attend Lighthouse Mental Health meeting on site.',
+    resolution:'Operatives sent 0850-0900. 2x plant operatives, 2x groundworkers.',
+    pmStatus:'Action taken', pmNotes:'',
+    signedBy:'Harry', signDate:'2026-04-15', linkedCCE:''
+  },
+  {
+    rtNum:101303, date:'2026-04-16', project:'Ballasalla Phase 4',
+    raisedBy:'David Smith', role:'DGC',
+    categories:['Programme / Deadline'],
+    description:'Water infill in dig out area F4.2.',
+    resolution:'Pump out and continue.',
+    pmStatus:'No action required', pmNotes:'',
+    signedBy:'David Smith', signDate:'2026-04-16', linkedCCE:''
+  },
+  {
+    rtNum:101304, date:'2026-04-17', project:'Ballasalla Phase 4',
+    raisedBy:'David Smith', role:'DGC',
+    categories:['Programme / Deadline'],
+    description:'Soil removal in area at F4.6 + S4.6. Spoken with Steve (Dandara). Could affect programme.',
+    resolution:'',
+    pmStatus:'Deferred / monitor', pmNotes:'',
+    signedBy:'David Smith', signDate:'2026-04-17', linkedCCE:''
+  },
+  {
+    rtNum:101306, date:'2026-04-17', project:'Ballasalla Phase 4',
+    raisedBy:'David Smith', role:'DGC',
+    categories:['Design / Information'],
+    description:'Email and verbal request from Pedro (Dandara) to raise invert level at F4.3 to increase the fall between F4.3 and F4.4.',
+    resolution:'',
+    pmStatus:'Deferred / monitor', pmNotes:'',
+    signedBy:'David Smith', signDate:'2026-04-17', linkedCCE:''
+  },
+  {
+    rtNum:101307, date:'2026-04-23', project:'Ballasalla Phase 4',
+    raisedBy:'David Smith', role:'DGC',
+    categories:['Logistics / Material'],
+    description:'100mm Type 1 layer on top of bedding gravel prior to Type 2 back fill. Specification clarification required.',
+    resolution:'',
+    pmStatus:'Deferred / monitor', pmNotes:'',
+    signedBy:'David Smith', signDate:'2026-04-23', linkedCCE:''
+  },
+  {
+    rtNum:101308, date:'2026-04-23', project:'Ballasalla Phase 4',
+    raisedBy:'David Smith', role:'DGC',
+    categories:['Logistics / Material'],
+    description:'P4.1 to Plot 10 tail — large amount of concrete found in the ground.',
+    resolution:'Get breaker and break out additional 4 hrs.',
+    pmStatus:'No action required', pmNotes:'',
+    signedBy:'David Smith', signDate:'2026-04-23', linkedCCE:'CCE 101233'
+  },
+  {
+    rtNum:101309, date:'2026-04-23', project:'Ballasalla Phase 4',
+    raisedBy:'David Smith', role:'DGC',
+    categories:['Health & Safety'],
+    description:'2x Dandara staff walking up the road on phones not paying any attention whilst DGC work was in progress.',
+    resolution:'Spoke to Steve (Dandara) — suggested Toolbox Talk.',
+    pmStatus:'No action required', pmNotes:'.',
+    signedBy:'David Smith', signDate:'2026-04-23', linkedCCE:''
+  },
+  {
+    rtNum:101310, date:'2026-04-24', project:'Ballasalla Phase 4',
+    raisedBy:'David Smith', role:'DGC',
+    categories:['Health & Safety'],
+    description:'Asbestos found on site. Double bagged and stored safely.',
+    resolution:'Double bag, seal and dispose of at DC skips.',
+    pmStatus:'Deferred / monitor', pmNotes:'',
+    signedBy:'David Smith', signDate:'2026-04-24', linkedCCE:'CCE 101234'
+  },
+  {
+    rtNum:101311, date:'2026-04-24', project:'Ballasalla Phase 4',
+    raisedBy:'David Smith', role:'DGC',
+    categories:['Health & Safety'],
+    description:'With dryer weather, the road onto site has become dusty.',
+    resolution:'Ash (DGC) spoke with Paul (Dandara) arranging tractor and bowser to suppress dust.',
+    pmStatus:'Deferred / monitor', pmNotes:'',
+    signedBy:'David Smith', signDate:'2026-04-24', linkedCCE:''
+  }
+];
+// Next RT sequence: 101312
+// ─────────────────────────────────────────────────────────────────────────────
 // Build the log HTML (used by buildRiskTickets and rtApplyFilters/rtToggleRow)
 function buildRTLogHTML(tickets) {
   var h = [];
@@ -8668,6 +8857,8 @@ function buildRTLogHTML(tickets) {
       if (t.pmNotes) h.push(detRow('PM Notes', escHtml(t.pmNotes)));
       h.push(detRow('Signed By (PM)', escHtml(t.signedBy||'—')));
       h.push(detRow('Sign Date', escHtml(t.signDate||'—')));
+      if (t.linkedCCE) h.push(detRow('Linked CCE', '<span style="color:#f59e0b;font-weight:700;">'
+        + escHtml(t.linkedCCE) + '</span>'));
       if (t._imported) h.push(detRow('Imported at', new Date(t._importedAt||'').toLocaleString('en-GB')));
       h.push('</div></td></tr>');
     }
@@ -8681,7 +8872,10 @@ function buildRiskTickets() {
   if (!body) return;
 
   var tickets = [];
-  try { tickets = JSON.parse(localStorage.getItem('dgc_risk_tickets') || '[]'); } catch(e) {}
+  try {
+    var _rtStored = localStorage.getItem('dgc_risk_tickets');
+    tickets = _rtStored ? JSON.parse(_rtStored) : DEFAULT_RISK_TICKETS;
+  } catch(e) { tickets = DEFAULT_RISK_TICKETS; }
 
   // Sequence = max(existing rtNums)+1 OR stored seq, whichever is higher
   var maxExisting = tickets.reduce(function(m,t){ return Math.max(m, t.rtNum||0); }, 100999);
