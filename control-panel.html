@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v102</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v103</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -3613,7 +3613,7 @@ function printDailyLog() {
 
 const AFPS = [
   { num:1, issued:'2026-04-01', invoice:'2026-04-07', payment:'2026-05-05', value:22984.59, net:22299, status:'paid', note:'Gross £22,985' },
-  { num:2, issued:'2026-04-30', invoice:'2026-04-30', payment:'2026-05-28', value:156739.46, net:156739.46, status:'due', note:'Ian Barnes certified £156,739.46 net (after AFP1 deducted + 2.5% retention). Materials on site £47,815 accepted as goodwill - needs backup for AFP3.' },
+  { num:2, issued:'2026-04-30', invoice:'2026-04-30', payment:'2026-05-28', value:156739.46, net:156739.46, status:'paid', note:'AFP1 combined into AFP2 certification. Ian Barnes certified £156,739.46 net (2.5% retention applied). Materials on site £47,815 accepted as goodwill - needs backup for AFP3. Payment received.' },
   { num:3, issued:'2026-05-22', invoice:'2026-05-29', payment:'2026-06-26', value:0, net:0, status:'pending', note:'TBC' },
   { num:4, issued:'2026-06-22', invoice:'2026-06-22', payment:'2026-07-20', value:0, net:0, status:'pending', note:'Final Account TBC' }
 ];
@@ -3657,6 +3657,12 @@ function updateSectionProgress(id, val, lbl) {
 }
 
 let ZONE_DEFAULTS = {1:32,2:75,3:82,4:82,5:72,6:72,7:22,8:22,9:5,10:5,11:0,12:0}; // QS confirmed 12 May 2026: ~55% actual, slightly ahead of revised programme (~53% planned)
+
+// Zone-specific constraint notes — shown in the EOT/overrun banner when a zone is past its programme date
+// but not yet complete. Add/update entries here when site conditions change.
+const ZONE_CONSTRAINTS = {
+  2: 'Third-party works obstructing access — remaining 25% not attributable to DGC. Document for EOT/variation claim.'
+};
 
 // ── Fortnightly plan vs achieved (updated each fortnight via apply script) ─────
 // status: 'done' | 'partial' | 'not_done' | 'cancelled'
@@ -6110,12 +6116,16 @@ window.addEventListener('DOMContentLoaded', () => {
     } catch(e8){}
   } catch(e) {}
 
-  if (TODAY > parseDate('2026-05-28')) {
-    set('kpi-next-payment',      'AFP 3 est. £128,109');
-    set('kpi-next-payment-date', 'Submit ~22 May · Due 29 May');
+  // Next payment reads from AFPS data — advances automatically when status flips to 'paid'
+  var _nextAfp = (typeof AFPS !== 'undefined') ? AFPS.find(function(a){ return a.status !== 'paid'; }) : null;
+  if (_nextAfp) {
+    var _afpVal = _nextAfp.net > 0 ? '£' + Math.round(_nextAfp.net).toLocaleString() : 'AFP ' + _nextAfp.num + ' est. TBC';
+    var _afpDue = _nextAfp.payment ? new Date(_nextAfp.payment).toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '—';
+    set('kpi-next-payment',      _afpVal);
+    set('kpi-next-payment-date', 'AFP ' + _nextAfp.num + ' · Due ' + _afpDue);
   } else {
-    set('kpi-next-payment',      '£156,739');
-    set('kpi-next-payment-date', 'Due 28 May (AFP 2 net)');
+    set('kpi-next-payment',      'Final Account');
+    set('kpi-next-payment-date', 'All AFPs paid');
   }
 
   try {
@@ -6256,7 +6266,7 @@ function buildTwoWeekReport() {
     var bud = z.budget || 0;
     var val = bud > 0 ? '£' + Math.round(bud/1000) + 'k' : '—';
     var _plnTd = (pln >= 100 && act < 100)
-      ? '<td style="text-align:right;color:#d97706;" title="Plan% from original programme dates. ' + act + '% physical complete — outstanding work carried forward under EOT.">' + pln + '%*</td>'
+      ? '<td style="text-align:right;color:#d97706;" title="Plan% from original programme dates. ' + act + '% physical complete. ' + ((typeof ZONE_CONSTRAINTS !== 'undefined' && ZONE_CONSTRAINTS[z.id]) || 'Outstanding work carried forward under EOT.') + '">' + pln + '%*</td>'
       : '<td style="text-align:right;">' + pln + '%</td>';
     zoneRows += '<tr>'
       + '<td style="font-weight:600;white-space:nowrap;">Z' + z.id + ' ' + (z.shortName||z.name) + '</td>'
@@ -6662,7 +6672,7 @@ function buildFortnightlyReport() {
     totalBudget += bud;
     totalSpent  += bud * act / 100;
     var _plnTd2 = (pln >= 100 && act < 100)
-      ? '<td style="text-align:right;color:#d97706;" title="Plan% from original programme dates. ' + act + '% physical complete — outstanding work carried forward under EOT.">' + pln + '%*</td>'
+      ? '<td style="text-align:right;color:#d97706;" title="Plan% from original programme dates. ' + act + '% physical complete. ' + ((typeof ZONE_CONSTRAINTS !== 'undefined' && ZONE_CONSTRAINTS[z.id]) || 'Outstanding work carried forward under EOT.') + '">' + pln + '%*</td>'
       : '<td style="text-align:right;">' + pln + '%</td>';
     zoneRows += '<tr>'
       + '<td style="font-weight:600;white-space:nowrap;">Z' + z.id + ' ' + (z.shortName||z.name) + '</td>'
@@ -7515,7 +7525,7 @@ function buildZoneSummaryList() {
       '</div>' +
       '<span style="font-size:11px;color:var(--text);font-weight:700;min-width:28px;text-align:right;">' + actual + '%</span>' +
       (planned >= 100 && actual < 100
-        ? '<span style="font-size:10px;color:#d97706;min-width:44px;text-align:right;cursor:help;" title="Plan% from original programme dates. ' + actual + '% physical complete — outstanding work carried forward under EOT.">plan ' + planned + '%*</span>'
+        ? '<span style="font-size:10px;color:#d97706;min-width:44px;text-align:right;cursor:help;" title="Plan% from original programme dates. ' + actual + '% physical complete. ' + ((typeof ZONE_CONSTRAINTS!=='undefined'&&ZONE_CONSTRAINTS[z.id])||'Outstanding work carried forward under EOT.') + '">plan ' + planned + '%*</span>'
         : '<span style="font-size:10px;color:var(--muted);min-width:44px;text-align:right;">plan ' + planned + '%</span>') +
       '</div>' +
       '</div>';
@@ -7556,8 +7566,9 @@ function buildZoneCards() {
     const tasks  = TASKS.filter(t => t.zone === z.id);
     const pln    = getZonePlannedPct(z.id);
     const rag    = getZoneRAG(z.id);
+    const _constraint = (typeof ZONE_CONSTRAINTS !== 'undefined' && ZONE_CONSTRAINTS[z.id]) || 'Outstanding work carried forward under EOT.';
     const _eotNote = (pln >= 100 && prog < 100)
-      ? '<div style="font-size:9px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:3px 6px;margin-bottom:6px;line-height:1.4;">Plan% = original programme dates. ' + prog + '% physical complete — outstanding work carried forward under EOT.</div>'
+      ? '<div style="font-size:9px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:3px 6px;margin-bottom:6px;line-height:1.4;">Plan% = original programme dates. ' + prog + '% physical complete. ' + _constraint + '</div>'
       : '';
     return '<div class="zone-card ' + status + '" onclick="toggleZoneTasks(' + z.id + ')">' +
       '<div class="zone-header"><div class="zone-name">' + z.name + '</div><span class="zone-status ' + status + '">' + status + '</span></div>' +
@@ -8993,7 +9004,7 @@ function openZoneHealth(zoneId) {
     (planned > 0 && planned < 100 ? '<div style="position:absolute;top:-3px;height:20px;width:2px;background:#64748b;border-radius:1px;left:' + Math.min(100,planned) + '%;"></div>' : '') +
     '</div>' +
     '</div>' +
-    (planned >= 100 && prog < 100 ? '<div style="font-size:10px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:5px;padding:5px 8px;margin-bottom:8px;line-height:1.4;">Plan% = original programme dates. ' + prog + '% physical complete — outstanding work carried forward under EOT.</div>' : '') +
+    (planned >= 100 && prog < 100 ? '<div style="font-size:10px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:5px;padding:5px 8px;margin-bottom:8px;line-height:1.4;">Plan% = original programme dates. ' + prog + '% physical complete. ' + ((typeof ZONE_CONSTRAINTS!=='undefined'&&ZONE_CONSTRAINTS[z.id])||'Outstanding work carried forward under EOT.') + '</div>' : '') +
 
     // ── Finance (admin) ──
     (isAdmin ?
