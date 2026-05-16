@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v117</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v118</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -6719,10 +6719,26 @@ function showTab(name, btn) {
     { id:'o7', date:'2026-05-16', supplierId:'s5', desc:'Type 1 MOT Sub-base — 20T',        amount:600,  cat:'materials', poRef:'PO-007', status:'ordered' }
   ];
 
+  // DEFAULT_AFP — real figures from Dandara Self-Billing Invoice SC193064-x17 (v118)
   var DEFAULT_AFP = [
-    { id:'a1', afpNo:'AFP-001', desc:'Zones 1–2 complete',           gross:80340,  retPct:5, submitted:'2026-04-15', expected:'2026-05-13', received:'2026-05-10', status:'received' },
-    { id:'a2', afpNo:'AFP-002', desc:'Zones 3–4 complete',           gross:166074, retPct:5, submitted:'2026-05-08', expected:'2026-06-05', received:'',           status:'submitted' },
-    { id:'a3', afpNo:'AFP-003', desc:'Zones 5–7 (forecast)',         gross:192475, retPct:5, submitted:'',           expected:'',          received:'',            status:'forecast'  }
+    {
+      id:'a1', afpNo:'Dandara App. 1',
+      desc:'DGC AFP 1+2 combined — 35% complete. Contract work £116,213 + Materials on site £47,815',
+      gross:     164028.11,   // Total certified by Ian Barnes (Dandara QS)
+      discountAmt: 2441.04,   // Dandara settlement discount (1.49% of gross)
+      retAmt:    4847.61,     // Retention held (~3% of gross-discount)
+      retPct:    3,           // Approximate % for future AFP estimates
+      submitted: '2026-04-30',// DGC submitted AFP; Dandara invoice issued 07/05/26
+      expected:  '2026-05-12',// Dandara final date of payment
+      received:  '2026-05-12',// Confirmed received
+      status: 'received'
+    },
+    {
+      id:'a2', afpNo:'AFP-002',
+      desc:'Zones 5–8 — not yet submitted (forecast only)',
+      gross: 0, discountAmt: 0, retAmt: 0, retPct: 3,
+      submitted:'', expected:'', received:'', status:'forecast'
+    }
   ];
 
   function loadCF(key, def) {
@@ -6789,9 +6805,11 @@ function showTab(name, btn) {
     });
     var totalReceived = 0, totalExpected = 0;
     afps.forEach(function(a) {
-      var net = a.gross * (1 - (a.retPct||5)/100);
-      if (a.status==='received') totalReceived += net;
-      if (a.status==='submitted') totalExpected += net;
+      var disc2 = a.discountAmt > 0 ? a.discountAmt : 0;
+      var ret2  = a.retAmt > 0 ? a.retAmt : Math.round((a.gross - disc2) * (a.retPct||3) / 100);
+      var net2  = a.gross > 0 ? (a.gross - disc2 - ret2) : 0;
+      if (a.status==='received')  totalReceived += net2;
+      if (a.status==='submitted') totalExpected += net2;
     });
 
     // ── KPI row ─────────────────────────────────────────────────
@@ -6828,17 +6846,20 @@ function showTab(name, btn) {
     h.push('<button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="cfAfpAdd()">+ Add AFP</button>');
     h.push('</div>');
     h.push('<div style="overflow-x:auto;"><table class="ph-table" style="min-width:600px;">');
-    h.push('<tr><th>AFP#</th><th>Description</th><th>Gross Amount</th><th>Retention (5%)</th><th>Net Receivable</th><th>Submitted</th><th>Expected</th><th>Received</th><th>Status</th><th></th></tr>');
+    h.push('<tr><th>AFP#</th><th>Description</th><th>Gross Certified</th><th>Discount</th><th>Retention</th><th>Net Receivable</th><th>Submitted</th><th>Expected</th><th>Received</th><th>Status</th><th></th></tr>');
     afps.forEach(function(a, idx) {
-      var ret  = Math.round(a.gross * (a.retPct||5) / 100);
-      var net  = a.gross - ret;
+      // Use exact amounts from invoice if available, else estimate from retPct
+      var disc = a.discountAmt > 0 ? a.discountAmt : 0;
+      var ret  = a.retAmt > 0 ? a.retAmt : Math.round((a.gross - disc) * (a.retPct||3) / 100);
+      var net  = a.gross > 0 ? (a.gross - disc - ret) : 0;
       var over = a.status==='submitted' && a.expected && isOverdue(a.expected);
       h.push('<tr>');
       h.push('<td><strong>' + esc(a.afpNo) + '</strong></td>');
       h.push('<td>' + esc(a.desc) + '</td>');
-      h.push('<td>' + fmtGBP(a.gross) + '</td>');
-      h.push('<td style="color:var(--muted);">-' + fmtGBP(ret) + '</td>');
-      h.push('<td><strong>' + fmtGBP(net) + '</strong></td>');
+      h.push('<td>' + (a.gross > 0 ? fmtGBP(a.gross) : '<span style="color:var(--muted);">—</span>') + '</td>');
+      h.push('<td style="color:var(--muted);">' + (disc > 0 ? '-' + fmtGBP(disc) : '—') + '</td>');
+      h.push('<td style="color:var(--muted);">' + (ret > 0 ? '-' + fmtGBP(ret) : '—') + '</td>');
+      h.push('<td><strong>' + (net > 0 ? fmtGBP(net) : '<span style="color:var(--muted);">—</span>') + '</strong></td>');
       h.push('<td>' + fmtDate(a.submitted) + '</td>');
       h.push('<td' + (over?' style="color:#f87171;"':'') + '>' + fmtDate(a.expected) + (over?' ⚠️':'') + '</td>');
       h.push('<td>' + (a.received ? '<span style="color:#4ade80;">✓ ' + fmtDate(a.received) + '</span>' : '—') + '</td>');
