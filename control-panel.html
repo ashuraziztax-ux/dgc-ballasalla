@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v112</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v113</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -34,6 +34,24 @@ a { color: var(--accent); text-decoration: none; }
 .project-title strong { color: var(--text); }
 .header-status { display: flex; gap: 12px; align-items: center; }
 #state-banner { display: none; font-size: 12px; line-height: 1.5; }
+.nav button.preview-tab { opacity: 0.75; }
+.nav button.preview-tab::after { content: "β"; font-size: 8px; vertical-align: super; margin-left: 3px; color: #f59e0b; font-weight: 900; }
+.ph-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+.ph-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 12px; }
+.ph-table { width:100%; border-collapse:collapse; font-size:11px; }
+.ph-table th { background:var(--surface2); padding:7px 10px; text-align:left; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; }
+.ph-table td { padding:8px 10px; border-bottom:1px solid var(--border); color:var(--text); }
+.ph-table tr:last-child td { border-bottom:none; }
+.ph-badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; }
+.ph-green { background:#16a34a20; color:#4ade80; border:1px solid #16a34a40; }
+.ph-amber { background:#d9780620; color:#f59e0b; border:1px solid #d9780640; }
+.ph-red   { background:#dc262620; color:#f87171; border:1px solid #dc262640; }
+.ph-blue  { background:#0ea5e920; color:#38bdf8; border:1px solid #0ea5e940; }
+.ph-kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px; }
+.ph-kpi { background:var(--surface2); border-radius:8px; padding:12px; text-align:center; }
+.ph-kpi .k-val { font-size:22px; font-weight:800; color:var(--accent); }
+.ph-kpi .k-lbl { font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-top:4px; }
+.ph-notice { background:#f59e0b18; border:1px solid #f59e0b40; border-radius:8px; padding:10px 14px; font-size:11px; color:#f59e0b; margin-bottom:14px; }
 #state-banner.sb-visible { display: block; }
 /* Client (Overview) mode simplifications */
 body.client-mode #velocity-card { display: none !important; }
@@ -909,6 +927,13 @@ function clearForm() {
   <button class="active admin-only" onclick="showTab('dashboard',this)">Dashboard</button>
   <button class="admin-only" onclick="showTab('data',this)">&#128202; Data</button>
   <button class="admin-only" onclick="showTab('setup',this)">&#9881; Setup</button>
+  <button class="admin-only preview-tab" onclick="showTab('hs',this)">H&amp;S</button>
+  <button class="admin-only preview-tab" onclick="showTab('valuations',this)">Valuations</button>
+  <button class="admin-only preview-tab" onclick="showTab('plant',this)">Plant</button>
+  <button class="admin-only preview-tab" onclick="showTab('documents',this)">Documents</button>
+  <button class="admin-only preview-tab" onclick="showTab('cashflow',this)">Cash Flow</button>
+  <button class="admin-only preview-tab" onclick="showTab('field',this)">Field</button>
+  <button class="admin-only preview-tab" onclick="showTab('portfolio',this)">Portfolio</button>
 </div>
 
 <div id="state-banner"></div>
@@ -9710,6 +9735,398 @@ function closeZoneHealth() {
     <div id="ql-status" style="margin-top:8px;font-size:11px;color:var(--green);font-weight:600;text-align:center;"></div>
   </div>
 </div>
+
+
+<!-- ═══════════ H&S TAB β ═══════════ -->
+<div id="tab-hs" class="tab-content admin-only">
+  <div class="ph-notice">β Preview — placeholder data. Connect your H&amp;S records or enter real data to replace these examples.</div>
+
+  <!-- KPIs -->
+  <div class="ph-kpi-row">
+    <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">0</div><div class="k-lbl">Open Incidents</div></div>
+    <div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">1</div><div class="k-lbl">Near Misses (30 days)</div></div>
+    <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">6</div><div class="k-lbl">Toolbox Talks</div></div>
+    <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">12</div><div class="k-lbl">Workers Inducted</div></div>
+    <div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">1</div><div class="k-lbl">RAMS Outstanding</div></div>
+  </div>
+
+  <!-- Incident Log -->
+  <div class="ph-card">
+    <div class="ph-title">Incident &amp; Near Miss Log</div>
+    <table class="ph-table">
+      <tr><th>Date</th><th>Type</th><th>Description</th><th>Action Taken</th><th>Status</th></tr>
+      <tr><td>12 May 2026</td><td><span class="ph-badge ph-amber">Near Miss</span></td><td>Muddy walkway — operative slipped near Z3 compound</td><td>Non-slip matting installed</td><td><span class="ph-badge ph-green">Closed</span></td></tr>
+      <tr><td>08 May 2026</td><td><span class="ph-badge ph-amber">First Aid</span></td><td>Minor cut to hand from rebar edge</td><td>Treated on site, first aid kit used</td><td><span class="ph-badge ph-green">Closed</span></td></tr>
+      <tr><td>22 Apr 2026</td><td><span class="ph-badge ph-amber">Near Miss</span></td><td>Delivery vehicle came within 2m of operative</td><td>Traffic management reviewed, banksman required</td><td><span class="ph-badge ph-green">Closed</span></td></tr>
+    </table>
+    <div style="margin-top:10px;"><button class="btn btn-secondary" onclick="alert('Coming soon — H&S module')">+ Log Incident / Near Miss</button></div>
+  </div>
+
+  <!-- Toolbox Talks -->
+  <div class="ph-card">
+    <div class="ph-title">Toolbox Talk Register</div>
+    <table class="ph-table">
+      <tr><th>Date</th><th>Topic</th><th>Attendees</th><th>Led By</th><th>Signed</th></tr>
+      <tr><td>14 May 2026</td><td>Manual Handling</td><td>8</td><td>Ash Razizian</td><td><span class="ph-badge ph-green">✓ Signed</span></td></tr>
+      <tr><td>07 May 2026</td><td>Working at Height</td><td>6</td><td>Ash Razizian</td><td><span class="ph-badge ph-green">✓ Signed</span></td></tr>
+      <tr><td>30 Apr 2026</td><td>Excavation Safety &amp; Trench Collapse</td><td>9</td><td>Ash Razizian</td><td><span class="ph-badge ph-green">✓ Signed</span></td></tr>
+      <tr><td>23 Apr 2026</td><td>PPE Requirements on Site</td><td>7</td><td>Ash Razizian</td><td><span class="ph-badge ph-green">✓ Signed</span></td></tr>
+      <tr><td>16 Apr 2026</td><td>COSHH — Fuels &amp; Lubricants</td><td>8</td><td>Ash Razizian</td><td><span class="ph-badge ph-green">✓ Signed</span></td></tr>
+      <tr><td>09 Apr 2026</td><td>Reversing Vehicles &amp; Banksman</td><td>10</td><td>Ash Razizian</td><td><span class="ph-badge ph-green">✓ Signed</span></td></tr>
+    </table>
+    <div style="margin-top:10px;"><button class="btn btn-secondary" onclick="alert('Coming soon')">+ Add Toolbox Talk</button></div>
+  </div>
+
+  <!-- RAMS -->
+  <div class="ph-card">
+    <div class="ph-title">RAMS Status — Method Statements</div>
+    <table class="ph-table">
+      <tr><th>Activity</th><th>Ref</th><th>Rev</th><th>Date Approved</th><th>Status</th></tr>
+      <tr><td>Excavation &amp; Earthworks</td><td>RAMS-001</td><td>Rev 2</td><td>23 Mar 2026</td><td><span class="ph-badge ph-green">✓ Approved</span></td></tr>
+      <tr><td>Drainage Installation</td><td>RAMS-002</td><td>Rev 1</td><td>23 Mar 2026</td><td><span class="ph-badge ph-green">✓ Approved</span></td></tr>
+      <tr><td>Concrete Pours &amp; Foundations</td><td>RAMS-003</td><td>Rev 1</td><td>05 Apr 2026</td><td><span class="ph-badge ph-green">✓ Approved</span></td></tr>
+      <tr><td>Temporary Works &amp; Propping</td><td>RAMS-004</td><td>Rev 1</td><td>—</td><td><span class="ph-badge ph-amber">⚠ Pending</span></td></tr>
+      <tr><td>Road Reinstatement &amp; Surfacing</td><td>RAMS-005</td><td>Rev 1</td><td>—</td><td><span class="ph-badge ph-amber">⚠ Not Started</span></td></tr>
+    </table>
+  </div>
+
+  <!-- Induction Register -->
+  <div class="ph-card">
+    <div class="ph-title">Site Induction Register</div>
+    <table class="ph-table">
+      <tr><th>Name</th><th>Company</th><th>Date Inducted</th><th>Version</th><th>CSCS</th></tr>
+      <tr><td>Ash Razizian</td><td>DGC</td><td>23 Mar 2026</td><td>v1.0</td><td><span class="ph-badge ph-green">✓</span></td></tr>
+      <tr><td>[Worker 2]</td><td>DGC</td><td>23 Mar 2026</td><td>v1.0</td><td><span class="ph-badge ph-green">✓</span></td></tr>
+      <tr><td colspan="5" style="color:var(--muted);font-style:italic;">+ 10 further workers — add names to populate</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════ VALUATIONS TAB β ═══════════ -->
+<div id="tab-valuations" class="tab-content admin-only">
+  <div class="ph-notice">β Preview — AFP figures from embedded data. Variation register and CVR need your accounts data to go live.</div>
+
+  <!-- AFP Tracker -->
+  <div class="ph-card">
+    <div class="ph-title">AFP Tracker — Applications for Payment</div>
+    <table class="ph-table">
+      <tr><th>AFP</th><th>Submitted</th><th>Gross Value</th><th>Retention (2.5%)</th><th>Net Payment</th><th>Status</th></tr>
+      <tr><td>AFP 1</td><td>28 Feb 2026</td><td>£82,400</td><td>£2,060</td><td>£80,340</td><td><span class="ph-badge ph-green">✓ Certified &amp; Paid</span></td></tr>
+      <tr><td>AFP 2</td><td>30 Apr 2026</td><td>£170,332</td><td>£4,258</td><td>£166,074</td><td><span class="ph-badge ph-green">✓ Certified &amp; Paid</span></td></tr>
+      <tr><td>AFP 3 (estimate)</td><td>~30 Jun 2026</td><td>£197,410</td><td>£4,935</td><td>£192,475</td><td><span class="ph-badge ph-amber">Pending — at completion</span></td></tr>
+      <tr style="font-weight:700;background:var(--surface2);"><td colspan="2">Total</td><td>£450,142</td><td>£11,253</td><td>£438,889</td><td></td></tr>
+    </table>
+  </div>
+
+  <!-- Retention Calculator -->
+  <div class="ph-card">
+    <div class="ph-title">Retention Release Schedule</div>
+    <div class="ph-kpi-row" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="ph-kpi"><div class="k-val">£11,253</div><div class="k-lbl">Total Retention Held</div></div>
+      <div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">£5,627</div><div class="k-lbl">Half Release — Practical Completion<br><span style="font-size:10px;color:var(--muted);">~26 Jun 2026</span></div></div>
+      <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">£5,626</div><div class="k-lbl">Full Release — 12 months PC<br><span style="font-size:10px;color:var(--muted);">~26 Jun 2027</span></div></div>
+    </div>
+  </div>
+
+  <!-- Variation Register -->
+  <div class="ph-card">
+    <div class="ph-title">Variation Register</div>
+    <table class="ph-table">
+      <tr><th>Ref</th><th>Description</th><th>Value</th><th>Submitted</th><th>Status</th></tr>
+      <tr><td>VAR-001</td><td>Additional drainage run — Plot 14A extended connection</td><td style="color:#4ade80;">£8,420</td><td>15 Apr 2026</td><td><span class="ph-badge ph-green">✓ Agreed</span></td></tr>
+      <tr><td>VAR-002</td><td>Rock encountered during excavation — Zones 5 &amp; 6</td><td style="color:#f59e0b;">£12,340</td><td>28 Apr 2026</td><td><span class="ph-badge ph-amber">In Dispute</span></td></tr>
+      <tr><td>VAR-003</td><td>Programme acceleration — additional labour weeks 6–8</td><td style="color:#f59e0b;">£4,200</td><td>12 May 2026</td><td><span class="ph-badge ph-blue">Submitted</span></td></tr>
+      <tr><td>VAR-004</td><td>Design change — manhole invert levels revised Drawing D-003 Rev B</td><td style="color:#f59e0b;">£1,850</td><td>14 May 2026</td><td><span class="ph-badge ph-blue">Submitted</span></td></tr>
+    </table>
+    <div style="margin-top:8px;font-size:11px;color:var(--muted);">
+      Agreed: £8,420 &nbsp;·&nbsp; In dispute: £12,340 &nbsp;·&nbsp; Submitted: £6,050 &nbsp;·&nbsp; <strong style="color:var(--text);">Total claimed: £26,810</strong>
+    </div>
+    <div style="margin-top:10px;"><button class="btn btn-secondary" onclick="alert('Coming soon')">+ Add Variation</button></div>
+  </div>
+
+  <!-- CVR -->
+  <div class="ph-card">
+    <div class="ph-title">Cost vs Value (CVR) — Connect Accounts to Populate</div>
+    <table class="ph-table">
+      <tr><th>Item</th><th>Budget</th><th>Actual to Date</th><th>Variance</th></tr>
+      <tr><td>Labour</td><td>£180,000</td><td style="color:var(--muted);">— connect payroll</td><td>—</td></tr>
+      <tr><td>Plant &amp; Equipment</td><td>£85,000</td><td style="color:var(--muted);">— connect hire records</td><td>—</td></tr>
+      <tr><td>Materials</td><td>£120,000</td><td style="color:var(--muted);">— connect accounts</td><td>—</td></tr>
+      <tr><td>Subcontractors</td><td>£32,000</td><td style="color:var(--muted);">— connect invoices</td><td>—</td></tr>
+      <tr><td>Preliminaries</td><td>£33,142</td><td style="color:var(--muted);">— connect accounts</td><td>—</td></tr>
+      <tr style="font-weight:700;background:var(--surface2);"><td>Total</td><td>£450,142</td><td colspan="2" style="color:var(--muted);">Upload accounts data to calculate</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════ PLANT TAB β ═══════════ -->
+<div id="tab-plant" class="tab-content admin-only">
+  <div class="ph-notice">β Preview — placeholder hire records. Edit these to match your actual plant schedule.</div>
+
+  <!-- Plant KPIs -->
+  <div class="ph-kpi-row">
+    <div class="ph-kpi"><div class="k-val">4</div><div class="k-lbl">Items on Hire</div></div>
+    <div class="ph-kpi"><div class="k-val" style="color:#f87171;">£700/day</div><div class="k-lbl">Daily Hire Cost</div></div>
+    <div class="ph-kpi"><div class="k-val">£28,180</div><div class="k-lbl">Total Hire Cost to Date</div></div>
+    <div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">£25,200</div><div class="k-lbl">Forecast to Completion</div></div>
+  </div>
+
+  <!-- Plant on Hire -->
+  <div class="ph-card">
+    <div class="ph-title">Plant on Hire</div>
+    <table class="ph-table">
+      <tr><th>Item</th><th>Make/Model</th><th>Supplier</th><th>From</th><th>Rate/day</th><th>Days</th><th>Cost to Date</th><th>Status</th></tr>
+      <tr><td>13T Excavator</td><td>JCB JS131</td><td>Manx Plant</td><td>23 Mar</td><td>£580</td><td>40</td><td>£23,200</td><td><span class="ph-badge ph-green">On Site</span></td></tr>
+      <tr><td>6T Dumper</td><td>Terex TA6</td><td>Manx Plant</td><td>23 Mar</td><td>£120</td><td>40</td><td>£4,800</td><td><span class="ph-badge ph-green">On Site</span></td></tr>
+      <tr><td>Road Saw</td><td>Stihl TS410</td><td>Hire It IoM</td><td>12 May</td><td>£45</td><td>4</td><td>£180</td><td><span class="ph-badge ph-green">On Site</span></td></tr>
+      <tr><td>Compactor Plate</td><td>Wacker WP1550A</td><td>DGC Owned</td><td>23 Mar</td><td>£0</td><td>—</td><td>£0</td><td><span class="ph-badge ph-blue">Owned</span></td></tr>
+    </table>
+    <div style="margin-top:10px;"><button class="btn btn-secondary" onclick="alert('Coming soon')">+ Add Plant Item</button></div>
+  </div>
+
+  <!-- Delivery Log -->
+  <div class="ph-card">
+    <div class="ph-title">Material Deliveries</div>
+    <table class="ph-table">
+      <tr><th>Date</th><th>Material</th><th>Qty</th><th>Supplier</th><th>Zone</th><th>Status</th></tr>
+      <tr><td style="color:#f59e0b;">18 May 2026</td><td>Concrete C35</td><td>8m³</td><td>Ready Mix IoM</td><td>Zone 6</td><td><span class="ph-badge ph-amber">Expected</span></td></tr>
+      <tr><td style="color:#f59e0b;">20 May 2026</td><td>Drainage Pipe DN300</td><td>60m</td><td>IoM Civils</td><td>Zone 7</td><td><span class="ph-badge ph-amber">Expected</span></td></tr>
+      <tr><td style="color:#f59e0b;">22 May 2026</td><td>Type 1 MOT Sub-base</td><td>20T</td><td>Ballasalla Quarry</td><td>Zones 5–6</td><td><span class="ph-badge ph-amber">Expected</span></td></tr>
+      <tr><td>14 May 2026</td><td>Precast Manholes ×4</td><td>4 units</td><td>Marshalls</td><td>Zone 4</td><td><span class="ph-badge ph-green">✓ Received</span></td></tr>
+      <tr><td>13 May 2026</td><td>Concrete C35</td><td>6m³</td><td>Ready Mix IoM</td><td>Zone 4</td><td><span class="ph-badge ph-green">✓ Received</span></td></tr>
+      <tr><td>09 May 2026</td><td>Ductile Iron Pipes DN150</td><td>40m</td><td>IoM Civils</td><td>Zone 3</td><td><span class="ph-badge ph-green">✓ Received</span></td></tr>
+    </table>
+    <div style="margin-top:10px;"><button class="btn btn-secondary" onclick="alert('Coming soon')">+ Log Delivery</button></div>
+  </div>
+</div>
+
+<!-- ═══════════ DOCUMENTS TAB β ═══════════ -->
+<div id="tab-documents" class="tab-content admin-only">
+  <div class="ph-notice">β Preview — example drawing register and RFI log. Upload actual drawings to replace placeholders.</div>
+
+  <!-- Drawing Register -->
+  <div class="ph-card">
+    <div class="ph-title">Drawing Register</div>
+    <table class="ph-table">
+      <tr><th>Ref</th><th>Title</th><th>Rev</th><th>Date Issued</th><th>Issued By</th><th>Status</th></tr>
+      <tr><td>D-001</td><td>Site Layout Plan</td><td>Rev C</td><td>15 Apr 2026</td><td>Dandara</td><td><span class="ph-badge ph-green">Current</span></td></tr>
+      <tr><td>D-002</td><td>Drainage Layout &amp; Levels</td><td>Rev B</td><td>02 Apr 2026</td><td>Dandara</td><td><span class="ph-badge ph-green">Current</span></td></tr>
+      <tr><td>D-003</td><td>Manhole Details &amp; Schedules</td><td>Rev B</td><td>14 May 2026</td><td>Dandara</td><td><span class="ph-badge ph-green">Current</span></td></tr>
+      <tr><td>D-004</td><td>Road Reinstatement Details</td><td>Rev A</td><td>23 Mar 2026</td><td>Dandara</td><td><span class="ph-badge ph-amber">⚠ Superseded</span></td></tr>
+      <tr><td>D-005</td><td>Temporary Works &amp; Shoring Layout</td><td>Rev A</td><td>05 Apr 2026</td><td>DGC</td><td><span class="ph-badge ph-green">Current</span></td></tr>
+    </table>
+    <div style="margin-top:10px;"><button class="btn btn-secondary" onclick="alert('Coming soon — upload drawing')">+ Add Drawing</button></div>
+  </div>
+
+  <!-- RFI Log -->
+  <div class="ph-card">
+    <div class="ph-title">RFI Log — Requests for Information</div>
+    <table class="ph-table">
+      <tr><th>Ref</th><th>Query</th><th>Raised</th><th>To</th><th>Response Due</th><th>Status</th></tr>
+      <tr><td>RFI-001</td><td>Clarification of invert level at MH7 — conflict between D-002 and D-003</td><td>12 Apr 2026</td><td>Dandara PM</td><td>16 Apr 2026</td><td><span class="ph-badge ph-green">✓ Closed</span></td></tr>
+      <tr><td>RFI-002</td><td>Pipe bedding specification for Zones 9–12 — granular or concrete?</td><td>05 May 2026</td><td>Dandara PM</td><td>12 May 2026</td><td><span class="ph-badge ph-red">⚠ Outstanding</span></td></tr>
+      <tr><td>RFI-003</td><td>Updated road reinstatement drawing for revised Plot 14A access</td><td>14 May 2026</td><td>Dandara PM</td><td>21 May 2026</td><td><span class="ph-badge ph-blue">Sent</span></td></tr>
+    </table>
+    <div style="margin-top:8px;font-size:11px;color:#f87171;">⚠ RFI-002 is 3 days overdue — chase Dandara PM</div>
+    <div style="margin-top:10px;"><button class="btn btn-secondary" onclick="alert('Coming soon')">+ Raise RFI</button></div>
+  </div>
+
+  <!-- As-built tracker -->
+  <div class="ph-card">
+    <div class="ph-title">As-Built &amp; Test Records</div>
+    <table class="ph-table">
+      <tr><th>Zone</th><th>As-Built Survey</th><th>Pipe Pressure Test</th><th>Concrete Test Cubes</th><th>Compaction Test</th></tr>
+      <tr><td>Zone 1</td><td><span class="ph-badge ph-green">✓ Complete</span></td><td><span class="ph-badge ph-green">✓ Pass</span></td><td><span class="ph-badge ph-green">✓ Pass</span></td><td><span class="ph-badge ph-green">✓ Pass</span></td></tr>
+      <tr><td>Zone 2</td><td><span class="ph-badge ph-green">✓ Complete</span></td><td><span class="ph-badge ph-green">✓ Pass</span></td><td><span class="ph-badge ph-green">✓ Pass</span></td><td><span class="ph-badge ph-green">✓ Pass</span></td></tr>
+      <tr><td>Zone 3</td><td><span class="ph-badge ph-amber">In Progress</span></td><td><span class="ph-badge ph-amber">Pending</span></td><td><span class="ph-badge ph-green">✓ Pass</span></td><td><span class="ph-badge ph-amber">Pending</span></td></tr>
+      <tr><td>Zones 4–6</td><td><span class="ph-badge ph-blue">Not started</span></td><td><span class="ph-badge ph-blue">Not started</span><td><span class="ph-badge ph-blue">Not started</span></td><td><span class="ph-badge ph-blue">Not started</span></td></tr>
+      <tr><td>Zones 7–12</td><td><span class="ph-badge ph-blue">Not started</span></td><td><span class="ph-badge ph-blue">Not started</span><td><span class="ph-badge ph-blue">Not started</span></td><td><span class="ph-badge ph-blue">Not started</span></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════ CASH FLOW TAB β ═══════════ -->
+<div id="tab-cashflow" class="tab-content admin-only">
+  <div class="ph-notice">β Preview — AFP receipts are real. Labour, plant and material costs are estimates — connect your accounts to go live.</div>
+
+  <!-- KPIs -->
+  <div class="ph-kpi-row">
+    <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">£246,414</div><div class="k-lbl">Cash In to Date (AFP 1+2)</div></div>
+    <div class="ph-kpi"><div class="k-val" style="color:#f87171;">£185,000</div><div class="k-lbl">Estimated Costs to Date</div></div>
+    <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">£61,414</div><div class="k-lbl">Estimated Gross Profit to Date</div></div>
+    <div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">£192,475</div><div class="k-lbl">AFP 3 Forecast (Jun)</div></div>
+  </div>
+
+  <!-- Monthly Cash Flow -->
+  <div class="ph-card">
+    <div class="ph-title">Monthly Cash Flow Forecast</div>
+    <table class="ph-table">
+      <tr><th>Month</th><th>Cash In (AFP)</th><th>Labour</th><th>Plant Hire</th><th>Materials</th><th>Other</th><th>Net</th></tr>
+      <tr><td>Mar 2026</td><td>£0</td><td>£28,000</td><td>£17,400</td><td>£18,000</td><td>£4,000</td><td style="color:#f87171;">-£67,400</td></tr>
+      <tr><td>Apr 2026</td><td>£80,340</td><td>£32,000</td><td>£20,880</td><td>£24,000</td><td>£3,200</td><td style="color:#4ade80;">+£260</td></tr>
+      <tr><td>May 2026</td><td>£166,074</td><td>£34,000</td><td>£20,880</td><td>£28,000</td><td>£3,500</td><td style="color:#4ade80;">+£79,694</td></tr>
+      <tr><td>Jun 2026</td><td>£192,475 est.</td><td>£36,000</td><td>£17,400</td><td>£22,000</td><td>£3,000</td><td style="color:#4ade80;">+£114,075 est.</td></tr>
+      <tr style="font-weight:700;background:var(--surface2);"><td>Total</td><td>£438,889</td><td>£130,000</td><td>£76,560</td><td>£92,000</td><td>£13,700</td><td style="color:#4ade80;">+£126,629 est.</td></tr>
+    </table>
+    <div style="margin-top:8px;font-size:10px;color:var(--muted);">Labour, plant and material costs are estimates based on typical build profiles. Connect your accounts for actuals.</div>
+  </div>
+
+  <!-- Running P&L -->
+  <div class="ph-card">
+    <div class="ph-title">Running P&amp;L Summary</div>
+    <div class="ph-kpi-row" style="grid-template-columns:1fr 1fr 1fr 1fr;">
+      <div class="ph-kpi"><div class="k-val">£450,142</div><div class="k-lbl">Contract Value</div></div>
+      <div class="ph-kpi"><div class="k-val" style="color:#f87171;">£312,260 est.</div><div class="k-lbl">Estimated Total Costs</div></div>
+      <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">£137,882 est.</div><div class="k-lbl">Estimated Gross Profit</div></div>
+      <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">30.6%</div><div class="k-lbl">Estimated Margin</div></div>
+    </div>
+    <div style="font-size:10px;color:var(--muted);margin-top:4px;">Estimates only — connect payroll and accounts for actuals. Variations not yet included in contract value above.</div>
+  </div>
+</div>
+
+<!-- ═══════════ FIELD TAB β ═══════════ -->
+<div id="tab-field" class="tab-content admin-only">
+  <div class="ph-notice">β Preview — designed for mobile use on site. Quick log, time sheet, and near miss reporting.</div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:700px;">
+
+    <!-- Near Miss Button -->
+    <div class="ph-card" style="border-color:#dc2626;text-align:center;">
+      <div style="font-size:36px;margin-bottom:8px;">🚨</div>
+      <div style="font-size:15px;font-weight:800;color:#f87171;margin-bottom:6px;">Log Near Miss / Incident</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">Tap to log immediately — no forms, just two lines</div>
+      <button style="background:#dc2626;border:none;color:#fff;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:800;cursor:pointer;width:100%;" onclick="alert('Coming soon — H&S module')">⚠ Report Now</button>
+    </div>
+
+    <!-- Clock In/Out -->
+    <div class="ph-card" style="text-align:center;">
+      <div style="font-size:36px;margin-bottom:8px;">⏱</div>
+      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px;">Time Sheet</div>
+      <div style="font-size:22px;font-weight:800;color:#4ade80;margin-bottom:4px;">07:30</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">Clocked in — 6h 45m so far</div>
+      <button style="background:#16a34a;border:none;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%;" onclick="alert('Coming soon')">Clock Out</button>
+    </div>
+
+    <!-- Quick Zone Log -->
+    <div class="ph-card" style="grid-column:1/-1;">
+      <div class="ph-title">Quick Progress Log</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">ZONE</label>
+          <select style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
+            <option>Zone 1 — Setup</option><option>Zone 2 — Zone A</option><option>Zone 3 — Zone B</option>
+            <option>Zone 4 — Zone C</option><option>Zone 5 — Zone D</option><option>Zone 6 — Zone E</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">ACTIVITY</label>
+          <select style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
+            <option>Pipe laying</option><option>Excavation</option><option>Backfill &amp; compact</option>
+            <option>Manhole construction</option><option>Concrete pour</option><option>Road reinstatement</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">NOTE (optional)</label>
+        <input type="text" placeholder="e.g. Completed 20m pipe run, ran into soft spot at chainage 45" style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;box-sizing:border-box;">
+      </div>
+      <button style="background:var(--accent);border:none;color:#000;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;" onclick="alert('Coming soon — will log to Daily Diary')">✓ Log It</button>
+    </div>
+
+    <!-- Morning Briefing -->
+    <div class="ph-card" style="grid-column:1/-1;">
+      <div class="ph-title">Today's Briefing — 16 May 2026</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center;">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Weather</div>
+          <div style="font-size:18px;">⛅</div>
+          <div style="font-size:11px;font-weight:700;color:var(--text);">Partly Cloudy</div>
+          <div style="font-size:10px;color:var(--muted);">12°C · Wind 15mph</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center;">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Men Today</div>
+          <div style="font-size:22px;font-weight:800;color:#4ade80;">12</div>
+          <div style="font-size:10px;color:var(--muted);">All confirmed on site</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center;">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Deliveries</div>
+          <div style="font-size:22px;font-weight:800;color:#f59e0b;">1</div>
+          <div style="font-size:10px;color:var(--muted);">Concrete 8m³ @ 10:00</div>
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Today's Tasks</div>
+      <div style="font-size:12px;color:var(--text);line-height:2;">
+        ☐ Zone 6 — foundation concrete pour (10:00 delivery)<br>
+        ☐ Zone 7 — continue pipe laying, 20m target<br>
+        ☐ Zone 3 — backfill and compact where clear<br>
+        ☐ All — PPE check at 07:30 briefing
+      </div>
+      <div style="margin-top:12px;"><button class="btn btn-secondary" onclick="alert('Coming soon — print morning briefing sheet')">🖨 Print Briefing</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ PORTFOLIO TAB β ═══════════ -->
+<div id="tab-portfolio" class="tab-content admin-only">
+  <div class="ph-notice">β Preview — multi-site portfolio view for director level. Only Ballasalla is live. Add further projects in Setup.</div>
+
+  <!-- Company KPIs -->
+  <div class="ph-kpi-row">
+    <div class="ph-kpi"><div class="k-val">1</div><div class="k-lbl">Active Sites</div></div>
+    <div class="ph-kpi"><div class="k-val">£450k</div><div class="k-lbl">Total Contract Value</div></div>
+    <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">57%</div><div class="k-lbl">Avg % Complete</div></div>
+    <div class="ph-kpi"><div class="k-val">12</div><div class="k-lbl">Men Deployed</div></div>
+    <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">~31%</div><div class="k-lbl">Est. Avg Margin</div></div>
+  </div>
+
+  <!-- Site Cards -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;">
+
+    <!-- Ballasalla — real data -->
+    <div style="background:var(--surface);border:2px solid #16a34a40;border-radius:12px;padding:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+        <div>
+          <div style="font-size:13px;font-weight:800;color:var(--text);">Ballasalla Phase 4</div>
+          <div style="font-size:11px;color:var(--muted);">Dandara / Man Cars Group · IoM</div>
+        </div>
+        <span class="ph-badge ph-green">On Track</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;text-align:center;">
+        <div><div style="font-size:18px;font-weight:800;color:#4ade80;">57%</div><div style="font-size:9px;color:var(--muted);">Complete</div></div>
+        <div><div style="font-size:18px;font-weight:800;color:var(--text);">26 Jun</div><div style="font-size:9px;color:var(--muted);">Deadline</div></div>
+        <div><div style="font-size:18px;font-weight:800;color:#4ade80;">1d ahead</div><div style="font-size:9px;color:var(--muted);">vs plan</div></div>
+      </div>
+      <div style="height:6px;background:var(--surface2);border-radius:3px;"><div style="height:6px;background:#4ade80;border-radius:3px;width:57%;"></div></div>
+      <div style="margin-top:10px;font-size:11px;color:var(--muted);">£450k contract · 12 men · Drainage &amp; groundworks</div>
+    </div>
+
+    <!-- Placeholder Site B -->
+    <div style="background:var(--surface);border:2px dashed var(--border);border-radius:12px;padding:16px;opacity:0.6;text-align:center;">
+      <div style="font-size:28px;margin-bottom:8px;">🏗️</div>
+      <div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:4px;">Next Site</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">Create a new project in Setup to add it here</div>
+      <button class="btn btn-secondary" onclick="setMode('admin');showTab('setup',document.querySelector('.nav button[onclick*=setup]'))">+ Add Project</button>
+    </div>
+
+    <!-- Placeholder Site C -->
+    <div style="background:var(--surface);border:2px dashed var(--border);border-radius:12px;padding:16px;opacity:0.4;text-align:center;">
+      <div style="font-size:28px;margin-bottom:8px;">🏗️</div>
+      <div style="font-size:13px;font-weight:700;color:var(--muted);">Tender Pipeline</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Coming soon — track jobs being priced</div>
+    </div>
+  </div>
+
+  <!-- Resource allocation placeholder -->
+  <div class="ph-card" style="margin-top:14px;">
+    <div class="ph-title">Resource Allocation This Week</div>
+    <table class="ph-table">
+      <tr><th>Name</th><th>Role</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Site</th></tr>
+      <tr><td>Ash Razizian</td><td>Site Manager</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>Ballasalla</td></tr>
+      <tr><td colspan="8" style="color:var(--muted);font-style:italic;">Add workers from Field tab → resource planner coming soon</td></tr>
+    </table>
+  </div>
+</div>
+
 
 </body>
 </html>
