@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v115</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v116</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -35,6 +35,16 @@ a { color: var(--accent); text-decoration: none; }
 .header-status { display: flex; gap: 12px; align-items: center; }
 #state-banner { display: none; font-size: 12px; line-height: 1.5; }
 .nav button.preview-tab { opacity: 0.75; }
+#wx-chip { align-items:center; gap:4px; white-space:nowrap; }
+.cf-form-row input, .cf-form-row select { background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:5px; padding:4px 7px; font-size:11px; width:100%; box-sizing:border-box; }
+.cf-form-row select option { background:var(--surface); }
+.cf-badge { display:inline-block; padding:2px 7px; border-radius:10px; font-size:10px; font-weight:700; }
+.cf-paid { background:#16a34a20; color:#4ade80; border:1px solid #16a34a40; }
+.cf-invoiced { background:#d9770620; color:#f59e0b; border:1px solid #d9770640; }
+.cf-ordered { background:#1d4ed820; color:#60a5fa; border:1px solid #1d4ed840; }
+.cf-received { background:#16a34a20; color:#4ade80; border:1px solid #16a34a40; }
+.cf-submitted { background:#d9770620; color:#f59e0b; border:1px solid #d9770640; }
+.cf-forecast { background:var(--surface2); color:var(--muted); border:1px solid var(--border); }
 .nav button.preview-tab::after { content: "preview"; font-size: 8px; vertical-align: super; margin-left: 3px; color: #f59e0b; font-weight: 900; letter-spacing: 0.02em; }
 .ph-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 14px; }
 .ph-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 12px; }
@@ -908,6 +918,12 @@ function clearForm() {
   </div>
   <div class="header-status">
     <span class="today-badge" id="today-label"></span>
+    <span id="wx-chip" onclick="fetchRonalswayWeather(true)"
+      title="Ronaldsway Airport weather — click to refresh"
+      style="display:none;align-items:center;gap:4px;font-size:10px;cursor:pointer;
+             padding:3px 9px;border-radius:5px;border:1px solid var(--border);
+             background:var(--surface2);color:var(--text);margin-left:6px;user-select:none;">
+    </span>
   </div>
 </div>
 
@@ -934,6 +950,10 @@ function clearForm() {
   <button class="admin-only preview-tab" onclick="showTab('cashflow',this)">Cash Flow</button>
   <button class="admin-only preview-tab" onclick="showTab('field',this)">Field</button>
   <button class="admin-only preview-tab" onclick="showTab('portfolio',this)">Portfolio</button>
+  <button class="admin-only preview-tab" onclick="showTab('waste',this)">Waste &amp; Spoil</button>
+  <button class="admin-only preview-tab" onclick="showTab('doi',this)">DOI / Licences</button>
+  <button class="admin-only preview-tab" onclick="showTab('tender',this)">Tender / Quote</button>
+  <button class="admin-only preview-tab" onclick="showTab('handover',this)">Handover</button>
 </div>
 
 <div id="state-banner"></div>
@@ -6359,7 +6379,8 @@ function showTab(name, btn) {
   if(name === 'programme')  buildProgrammeHeader();
   if(name === 'data')       buildDataTab();
   if(name === 'setup')      buildSetupTab();
-  if(name === 'plant')      { try { buildOwnedPlant(); } catch(e){} }
+  if(name === 'plant')      { try { buildOwnedPlant();    } catch(e){} }
+  if(name === 'cashflow')   { try { buildCashFlowTab();   } catch(e){} }
 }
 // ═══════════════════ OWNED PLANT ROI CALCULATOR ════════════════════
 (function() {
@@ -6558,6 +6579,457 @@ function showTab(name, btn) {
 })();
 // ═══════════════════════════════════════════════════════════════════
 
+// ═══════════════════ RONALDSWAY WEATHER ════════════════════════════
+(function() {
+  var WX_KEY = 'dgc_wx_cache';
+  var WX_TTL = 30 * 60 * 1000; // 30 min
+
+  var WX_DESC = {
+    0:'Clear ☀️',1:'Mostly clear ☀️',2:'Partly cloudy ⛅',3:'Overcast ☁️',
+    45:'Fog 🌫️',48:'Icy fog 🌫️',
+    51:'Light drizzle 🌦️',53:'Drizzle 🌦️',55:'Heavy drizzle 🌧️',
+    61:'Light rain 🌧️',63:'Rain 🌧️',65:'Heavy rain 🌧️',
+    71:'Light snow ❄️',73:'Snow ❄️',75:'Heavy snow ❄️',77:'Snow grains ❄️',
+    80:'Showers 🌧️',81:'Showers 🌧️',82:'Violent showers 🌧️',
+    85:'Snow showers ❄️',86:'Heavy snow showers ❄️',
+    95:'Thunderstorm ⛈️',96:'Thunderstorm + hail ⛈️',99:'Thunderstorm + hail ⛈️'
+  };
+
+  function wxDesc(c) {
+    c = parseInt(c||0);
+    for (var k in WX_DESC) { if (parseInt(k)===c) return WX_DESC[k]; }
+    return 'Unknown';
+  }
+
+  function wxSuit(temp, precip, wind, code) {
+    var c = parseInt(code||0);
+    var snow      = c>=71 && c<=86;
+    var thunder   = c>=95;
+    var heavyRain = c===65 || c===82 || precip > 10;
+    if (thunder || snow || temp < 0 || wind > 60) {
+      return { col:'#f87171', dot:'#ef4444', label:'⛔ Stop Work',
+        tip: thunder?'Thunderstorm — stop work, shelter operatives':
+             snow   ?'Snow / ice — trench collapse risk, halt excavation':
+             temp<0 ?'Sub-zero — frozen ground, no concrete pours':
+                     'High winds — lifting restrictions apply' };
+    }
+    if (temp < 3 || heavyRain || wind > 40) {
+      return { col:'#f59e0b', dot:'#d97706', label:'⚠️ Restricted',
+        tip: temp<3  ?'Near-freezing — no concrete pours, monitor ground conditions':
+             heavyRain?'Heavy rain — check trench stability, cover exposed excavations':
+                       'Wind 40+ km/h — no lifting operations or crane work' };
+    }
+    if (precip > 2 || wind > 25) {
+      return { col:'#f59e0b', dot:'#ca8a04', label:'⚠️ Caution',
+        tip:'Light rain or moderate wind — normal works with care' };
+    }
+    return { col:'#4ade80', dot:'#16a34a', label:'✓ Good', tip:'Suitable for all groundworks' };
+  }
+
+  function ago(ts) {
+    var m = Math.round((Date.now()-ts)/60000);
+    if (m < 2) return 'just now';
+    if (m < 60) return m+'m ago';
+    return Math.round(m/60)+'h ago';
+  }
+
+  function renderWx(data, ts) {
+    var chip = document.getElementById('wx-chip');
+    if (!chip) return;
+    var cur = data && data.current;
+    if (!cur) return;
+    var temp  = Math.round(cur.temperature_2m || 0);
+    var prec  = cur.precipitation || 0;
+    var wind  = Math.round(cur.wind_speed_10m || 0);
+    var code  = cur.weather_code || 0;
+    var suit  = wxSuit(temp, prec, wind, code);
+    var emoji = (wxDesc(code).match(/[^\x00-\x7F]+/) || [''])[0] || '🌤️';
+    chip.style.display = 'inline-flex';
+    chip.title = suit.tip + ' | Ronaldsway Airport | Last updated ' + ago(ts) + ' — click to refresh';
+    chip.innerHTML =
+      '<span style="width:7px;height:7px;border-radius:50%;background:'+suit.dot+';flex-shrink:0;"></span>' +
+      '<span>' + emoji + ' ' + temp + '°C</span>' +
+      '<span style="color:var(--muted);">·</span>' +
+      '<span>' + wind + 'km/h</span>' +
+      '<span style="color:'+suit.col+';font-weight:700;font-size:9px;">' + suit.label + '</span>' +
+      '<span style="color:var(--muted);font-size:9px;">' + ago(ts) + '</span>';
+  }
+
+  window.fetchRonalswayWeather = function(forceRefresh) {
+    if (!forceRefresh) {
+      try {
+        var c = JSON.parse(localStorage.getItem(WX_KEY) || 'null');
+        if (c && (Date.now() - c.ts) < WX_TTL) { renderWx(c.data, c.ts); return; }
+      } catch(e) {}
+    }
+    var chip = document.getElementById('wx-chip');
+    if (chip) { chip.style.display='inline-flex'; chip.innerHTML='<span>🌐 Loading…</span>'; }
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=54.0833&longitude=-4.6333' +
+          '&current=temperature_2m,precipitation,weather_code,wind_speed_10m' +
+          '&daily=precipitation_sum,temperature_2m_min,weather_code' +
+          '&forecast_days=3&timezone=Europe%2FLondon')
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        var cache = { data: data, ts: Date.now() };
+        localStorage.setItem(WX_KEY, JSON.stringify(cache));
+        renderWx(data, cache.ts);
+      })
+      .catch(function(e) {
+        console.warn('Ronaldsway wx fetch failed:', e);
+        if (chip) chip.style.display='none';
+      });
+  };
+})();
+
+// ═══════════════════ CASH FLOW SYSTEM ══════════════════════════════
+(function() {
+
+  var CF_SUPPLIER_KEY = 'dgc_cf_suppliers';
+  var CF_ORDER_KEY    = 'dgc_cf_orders';
+  var CF_AFP_KEY      = 'dgc_cf_afp';
+
+  var TERMS_LABELS = {
+    'cod':'Cash on Delivery','net7':'Net 7 days','net14':'Net 14 days',
+    'net21':'Net 21 days','net30':'Net 30 days','net60':'Net 60 days','eos':'End of Statement Month'
+  };
+
+  var DEFAULT_SUPPLIERS = [
+    { id:'s1', name:'Manx Plant Hire', type:'Plant',       terms:'net14', accountRef:'MPH-001' },
+    { id:'s2', name:'IoM Civils Supplies', type:'Materials', terms:'net30', accountRef:'ICS-DGC' },
+    { id:'s3', name:'Hire It IoM',     type:'Plant',       terms:'net7',  accountRef:'HII-001' },
+    { id:'s4', name:'Ready Mix IoM',   type:'Materials',   terms:'cod',   accountRef:'RM-001'  },
+    { id:'s5', name:'Ballasalla Quarry', type:'Materials', terms:'net30', accountRef:'BQ-DGC' },
+    { id:'s6', name:'Manx Utilities',  type:'Contractor',  terms:'net30', accountRef:'MU-DGC'  }
+  ];
+
+  var DEFAULT_ORDERS = [
+    { id:'o1', date:'2026-04-23', supplierId:'s1', desc:'13T Excavator hire — weeks 1–4',   amount:9280, cat:'plant',     poRef:'PO-001', status:'paid' },
+    { id:'o2', date:'2026-04-23', supplierId:'s1', desc:'6T Dumper hire — weeks 1–4',        amount:1920, cat:'plant',     poRef:'PO-002', status:'paid' },
+    { id:'o3', date:'2026-04-28', supplierId:'s2', desc:'Ductile Iron Pipes DN150 — 40m',   amount:3200, cat:'materials', poRef:'PO-003', status:'paid' },
+    { id:'o4', date:'2026-05-09', supplierId:'s4', desc:'Concrete C35 — 6m³ Zone 4',        amount:780,  cat:'materials', poRef:'PO-004', status:'invoiced' },
+    { id:'o5', date:'2026-05-12', supplierId:'s3', desc:'Road Saw hire — 4 days',            amount:180,  cat:'plant',     poRef:'PO-005', status:'invoiced' },
+    { id:'o6', date:'2026-05-14', supplierId:'s2', desc:'Precast Manholes ×4',               amount:2400, cat:'materials', poRef:'PO-006', status:'invoiced' },
+    { id:'o7', date:'2026-05-16', supplierId:'s5', desc:'Type 1 MOT Sub-base — 20T',        amount:600,  cat:'materials', poRef:'PO-007', status:'ordered' }
+  ];
+
+  var DEFAULT_AFP = [
+    { id:'a1', afpNo:'AFP-001', desc:'Zones 1–2 complete',           gross:80340,  retPct:5, submitted:'2026-04-15', expected:'2026-05-13', received:'2026-05-10', status:'received' },
+    { id:'a2', afpNo:'AFP-002', desc:'Zones 3–4 complete',           gross:166074, retPct:5, submitted:'2026-05-08', expected:'2026-06-05', received:'',           status:'submitted' },
+    { id:'a3', afpNo:'AFP-003', desc:'Zones 5–7 (forecast)',         gross:192475, retPct:5, submitted:'',           expected:'',          received:'',            status:'forecast'  }
+  ];
+
+  function loadCF(key, def) {
+    try { var s = localStorage.getItem(key); return s ? JSON.parse(s) : def.map(function(x){return Object.assign({},x);}); } catch(e) { return def.map(function(x){return Object.assign({},x);}); }
+  }
+  function saveCF(key, data) {
+    try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
+  }
+  function uid() { return 'c' + Date.now() + Math.random().toString(36).slice(2,6); }
+  function fmtDate(s) {
+    if (!s) return '—';
+    var d = new Date(s + 'T12:00:00');
+    return d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'2-digit'});
+  }
+  function addDays(dateStr, days) {
+    if (!dateStr) return '';
+    var d = new Date(dateStr + 'T12:00:00');
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0,10);
+  }
+  function endOfNextMonth(dateStr) {
+    if (!dateStr) return '';
+    var d = new Date(dateStr + 'T12:00:00');
+    var eom = new Date(d.getFullYear(), d.getMonth() + 2, 0);
+    return eom.toISOString().slice(0,10);
+  }
+  function paymentDue(orderDate, terms) {
+    if (!orderDate || !terms) return '';
+    switch(terms) {
+      case 'cod':   return orderDate;
+      case 'net7':  return addDays(orderDate, 7);
+      case 'net14': return addDays(orderDate, 14);
+      case 'net21': return addDays(orderDate, 21);
+      case 'net30': return addDays(orderDate, 30);
+      case 'net60': return addDays(orderDate, 60);
+      case 'eos':   return endOfNextMonth(orderDate);
+      default:      return addDays(orderDate, 30);
+    }
+  }
+  function isOverdue(dueDateStr) {
+    if (!dueDateStr) return false;
+    return new Date(dueDateStr + 'T12:00:00') < new Date();
+  }
+  function fmtGBP(n) { return '£' + Math.round(n||0).toLocaleString('en-GB'); }
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  window.buildCashFlowTab = function() {
+    var suppliers = loadCF(CF_SUPPLIER_KEY, DEFAULT_SUPPLIERS);
+    var orders    = loadCF(CF_ORDER_KEY,    DEFAULT_ORDERS);
+    var afps      = loadCF(CF_AFP_KEY,      DEFAULT_AFP);
+
+    var now = new Date();
+    var nowStr = now.toISOString().slice(0,10);
+    var updStr = now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+
+    // KPI calculations
+    var totalCommitted = 0, totalPaid = 0, totalInvoiced = 0, totalOrdered = 0;
+    orders.forEach(function(o) {
+      var amt = parseFloat(o.amount||0);
+      totalCommitted += amt;
+      if (o.status==='paid')     totalPaid     += amt;
+      if (o.status==='invoiced') totalInvoiced += amt;
+      if (o.status==='ordered')  totalOrdered  += amt;
+    });
+    var totalReceived = 0, totalExpected = 0;
+    afps.forEach(function(a) {
+      var net = a.gross * (1 - (a.retPct||5)/100);
+      if (a.status==='received') totalReceived += net;
+      if (a.status==='submitted') totalExpected += net;
+    });
+
+    // ── KPI row ─────────────────────────────────────────────────
+    var kpiEl = document.getElementById('cf-kpi-row');
+    if (kpiEl) {
+      kpiEl.className = 'ph-kpi-row';
+      kpiEl.innerHTML =
+        '<div class="ph-kpi"><div class="k-val" style="color:#4ade80;">' + fmtGBP(totalReceived) + '</div><div class="k-lbl">Cash Received (AFP)</div></div>' +
+        '<div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">' + fmtGBP(totalExpected) + '</div><div class="k-lbl">AFP Submitted (pending)</div></div>' +
+        '<div class="ph-kpi"><div class="k-val" style="color:#f87171;">' + fmtGBP(totalPaid) + '</div><div class="k-lbl">Orders Paid Out</div></div>' +
+        '<div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">' + fmtGBP(totalInvoiced) + '</div><div class="k-lbl">Invoices Due</div></div>' +
+        '<div class="ph-kpi"><div class="k-val">' + fmtGBP(totalOrdered) + '</div><div class="k-lbl">Ordered (not yet invoiced)</div></div>';
+    }
+
+    // ── Main body ────────────────────────────────────────────────
+    var bodyEl = document.getElementById('cf-body');
+    if (!bodyEl) return;
+
+    var suppOpts = suppliers.map(function(s) {
+      return '<option value="' + esc(s.id) + '">' + esc(s.name) + ' (' + (TERMS_LABELS[s.terms]||s.terms) + ')</option>';
+    }).join('');
+
+    var termsOpts = Object.keys(TERMS_LABELS).map(function(k) {
+      return '<option value="'+k+'">'+TERMS_LABELS[k]+'</option>';
+    }).join('');
+
+    var h = [];
+    h.push('<div style="font-size:10px;color:var(--muted);margin-bottom:6px;text-align:right;">Last updated: ' + updStr + '</div>');
+
+    // ─── AFP INCOME ──────────────────────────────────────────────
+    h.push('<div class="ph-card">');
+    h.push('<div class="ph-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">');
+    h.push('<span>AFP Income — Payment Applications</span>');
+    h.push('<button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="cfAfpAdd()">+ Add AFP</button>');
+    h.push('</div>');
+    h.push('<div style="overflow-x:auto;"><table class="ph-table" style="min-width:600px;">');
+    h.push('<tr><th>AFP#</th><th>Description</th><th>Gross Amount</th><th>Retention (5%)</th><th>Net Receivable</th><th>Submitted</th><th>Expected</th><th>Received</th><th>Status</th><th></th></tr>');
+    afps.forEach(function(a, idx) {
+      var ret  = Math.round(a.gross * (a.retPct||5) / 100);
+      var net  = a.gross - ret;
+      var over = a.status==='submitted' && a.expected && isOverdue(a.expected);
+      h.push('<tr>');
+      h.push('<td><strong>' + esc(a.afpNo) + '</strong></td>');
+      h.push('<td>' + esc(a.desc) + '</td>');
+      h.push('<td>' + fmtGBP(a.gross) + '</td>');
+      h.push('<td style="color:var(--muted);">-' + fmtGBP(ret) + '</td>');
+      h.push('<td><strong>' + fmtGBP(net) + '</strong></td>');
+      h.push('<td>' + fmtDate(a.submitted) + '</td>');
+      h.push('<td' + (over?' style="color:#f87171;"':'') + '>' + fmtDate(a.expected) + (over?' ⚠️':'') + '</td>');
+      h.push('<td>' + (a.received ? '<span style="color:#4ade80;">✓ ' + fmtDate(a.received) + '</span>' : '—') + '</td>');
+      h.push('<td><span class="cf-badge cf-'+esc(a.status)+'">' + a.status.charAt(0).toUpperCase() + a.status.slice(1) + '</span></td>');
+      h.push('<td><span onclick="cfAfpRemove(' + idx + ')" style="cursor:pointer;color:var(--muted);font-size:12px;" onmouseover="this.style.color=\'#f87171\'" onmouseout="this.style.color=\'var(--muted)\'">✕</span></td>');
+      h.push('</tr>');
+    });
+    if (!afps.length) h.push('<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:16px;">No AFP records — click + Add AFP</td></tr>');
+    // Add AFP form row (hidden)
+    h.push('<tr id="cf-afp-add-row" style="display:none;background:var(--surface2);">');
+    h.push('<td class="cf-form-row"><input id="cf-afp-no" placeholder="AFP-003" /></td>');
+    h.push('<td class="cf-form-row"><input id="cf-afp-desc" placeholder="Description" /></td>');
+    h.push('<td class="cf-form-row"><input id="cf-afp-gross" type="number" placeholder="Amount £" /></td>');
+    h.push('<td class="cf-form-row"><input id="cf-afp-ret" type="number" value="5" placeholder="%" /></td>');
+    h.push('<td>—</td>');
+    h.push('<td class="cf-form-row"><input id="cf-afp-sub" type="date" /></td>');
+    h.push('<td class="cf-form-row"><input id="cf-afp-exp" type="date" /></td>');
+    h.push('<td class="cf-form-row"><input id="cf-afp-rec" type="date" /></td>');
+    h.push('<td class="cf-form-row"><select id="cf-afp-status"><option value="forecast">Forecast</option><option value="submitted">Submitted</option><option value="received">Received</option></select></td>');
+    h.push('<td><button class="btn btn-primary" style="font-size:10px;padding:2px 8px;" onclick="cfAfpSave()">Save</button></td>');
+    h.push('</tr>');
+    h.push('</table></div></div>');
+
+    // ─── SUPPLIER DIRECTORY ──────────────────────────────────────
+    h.push('<div class="ph-card">');
+    h.push('<div class="ph-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">');
+    h.push('<span>Supplier &amp; Contractor Directory — Payment Terms</span>');
+    h.push('<button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="cfSupplierAdd()">+ Add Supplier</button>');
+    h.push('</div>');
+    h.push('<div style="overflow-x:auto;"><table class="ph-table" style="min-width:500px;">');
+    h.push('<tr><th>Name</th><th>Type</th><th>Payment Terms</th><th>Account Ref</th><th></th></tr>');
+    suppliers.forEach(function(s, idx) {
+      h.push('<tr>');
+      h.push('<td><strong>' + esc(s.name) + '</strong></td>');
+      h.push('<td><span class="ph-badge ph-blue">' + esc(s.type) + '</span></td>');
+      h.push('<td>' + (TERMS_LABELS[s.terms] || s.terms) + '</td>');
+      h.push('<td style="color:var(--muted);">' + esc(s.accountRef||'—') + '</td>');
+      h.push('<td><span onclick="cfSupplierRemove(' + idx + ')" style="cursor:pointer;color:var(--muted);font-size:12px;" onmouseover="this.style.color=\'#f87171\'" onmouseout="this.style.color=\'var(--muted)\'">✕</span></td>');
+      h.push('</tr>');
+    });
+    // Add row (hidden)
+    h.push('<tr id="cf-sup-add-row" style="display:none;background:var(--surface2);">');
+    h.push('<td class="cf-form-row"><input id="cf-sup-name" placeholder="Supplier name" /></td>');
+    h.push('<td class="cf-form-row"><select id="cf-sup-type"><option>Plant</option><option>Materials</option><option>Contractor</option><option>Labour</option><option>Other</option></select></td>');
+    h.push('<td class="cf-form-row"><select id="cf-sup-terms">' + termsOpts + '</select></td>');
+    h.push('<td class="cf-form-row"><input id="cf-sup-ref" placeholder="Account ref" /></td>');
+    h.push('<td><button class="btn btn-primary" style="font-size:10px;padding:2px 8px;" onclick="cfSupplierSave()">Save</button></td>');
+    h.push('</tr>');
+    h.push('</table></div></div>');
+
+    // ─── ORDER LOG ───────────────────────────────────────────────
+    h.push('<div class="ph-card">');
+    h.push('<div class="ph-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">');
+    h.push('<span>Order &amp; Expenditure Log</span>');
+    h.push('<button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="cfOrderAdd()">+ Log Order</button>');
+    h.push('</div>');
+    h.push('<div style="overflow-x:auto;"><table class="ph-table" style="min-width:680px;">');
+    h.push('<tr><th>Date Ordered</th><th>Supplier</th><th>Description</th><th>Category</th><th>Amount</th><th>Payment Due</th><th>Status</th><th></th></tr>');
+    var sortedOrders = orders.slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    sortedOrders.forEach(function(o, sortedIdx) {
+      var realIdx = orders.indexOf(o);
+      var sup    = suppliers.find(function(s){return s.id===o.supplierId;}) || {};
+      var due    = paymentDue(o.date, sup.terms);
+      var over   = (o.status==='invoiced' || o.status==='ordered') && due && isOverdue(due);
+      var dueStr = due ? fmtDate(due) : '—';
+      h.push('<tr' + (over?' style="background:#f8717115;"':'') + '>');
+      h.push('<td>' + fmtDate(o.date) + '</td>');
+      h.push('<td>' + esc(sup.name||'Unknown') + '</td>');
+      h.push('<td>' + esc(o.desc) + '</td>');
+      h.push('<td><span class="ph-badge ph-blue" style="text-transform:capitalize;">' + esc(o.cat||'') + '</span></td>');
+      h.push('<td><strong>' + fmtGBP(o.amount) + '</strong></td>');
+      h.push('<td' + (over?' style="color:#f87171;"':'') + '>' + dueStr + (over?' ⚠️':'') + '</td>');
+      h.push('<td>');
+      h.push('<select style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:2px 5px;font-size:10px;cursor:pointer;" onchange="cfOrderStatus(' + realIdx + ',this.value)">');
+      ['ordered','invoiced','paid'].forEach(function(st) {
+        h.push('<option value="'+st+'"' + (o.status===st?' selected':'') + '>' + st.charAt(0).toUpperCase()+st.slice(1) + '</option>');
+      });
+      h.push('</select>');
+      h.push('</td>');
+      h.push('<td><span onclick="cfOrderRemove(' + realIdx + ')" style="cursor:pointer;color:var(--muted);font-size:12px;" onmouseover="this.style.color=\'#f87171\'" onmouseout="this.style.color=\'var(--muted)\'">✕</span></td>');
+      h.push('</tr>');
+    });
+    // Add order row
+    h.push('<tr id="cf-ord-add-row" style="display:none;background:var(--surface2);">');
+    h.push('<td class="cf-form-row"><input id="cf-ord-date" type="date" value="' + nowStr + '" /></td>');
+    h.push('<td class="cf-form-row"><select id="cf-ord-sup">' + suppOpts + '</select></td>');
+    h.push('<td class="cf-form-row"><input id="cf-ord-desc" placeholder="Description / PO ref" /></td>');
+    h.push('<td class="cf-form-row"><select id="cf-ord-cat"><option value="materials">Materials</option><option value="plant">Plant</option><option value="labour">Labour</option><option value="subcontractor">Subcontractor</option><option value="other">Other</option></select></td>');
+    h.push('<td class="cf-form-row"><input id="cf-ord-amt" type="number" placeholder="Amount £" /></td>');
+    h.push('<td style="color:var(--muted);font-size:10px;" id="cf-ord-due-preview">Auto from terms</td>');
+    h.push('<td class="cf-form-row"><select id="cf-ord-status"><option value="ordered">Ordered</option><option value="invoiced">Invoiced</option><option value="paid">Paid</option></select></td>');
+    h.push('<td><button class="btn btn-primary" style="font-size:10px;padding:2px 8px;" onclick="cfOrderSave()">Save</button></td>');
+    h.push('</tr>');
+    if (!orders.length) h.push('<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px;">No orders logged yet — click + Log Order</td></tr>');
+    h.push('</table></div>');
+    h.push('<div style="margin-top:6px;font-size:10px;color:var(--muted);">Payment due dates are calculated automatically from each supplier\'s payment terms. Change status to "Paid" when settled.</div>');
+    h.push('</div>');
+
+    bodyEl.innerHTML = h.join('');
+
+    // Wire up order supplier change → update payment due preview
+    var supSel = document.getElementById('cf-ord-sup');
+    var dateSel = document.getElementById('cf-ord-date');
+    var duePrev = document.getElementById('cf-ord-due-preview');
+    function updateDuePreview() {
+      if (!supSel || !dateSel || !duePrev) return;
+      var sup2 = suppliers.find(function(s){return s.id===supSel.value;});
+      if (sup2) {
+        var d = paymentDue(dateSel.value, sup2.terms);
+        duePrev.textContent = d ? fmtDate(d) : '—';
+      }
+    }
+    if (supSel) supSel.addEventListener('change', updateDuePreview);
+    if (dateSel) dateSel.addEventListener('change', updateDuePreview);
+  };
+
+  // ── AFP actions ──────────────────────────────────────────────────
+  window.cfAfpAdd = function() {
+    var row = document.getElementById('cf-afp-add-row');
+    if (row) row.style.display = row.style.display==='none' ? '' : 'none';
+  };
+  window.cfAfpSave = function() {
+    var afps = loadCF(CF_AFP_KEY, DEFAULT_AFP);
+    afps.push({
+      id: uid(),
+      afpNo:  (document.getElementById('cf-afp-no')||{}).value || 'AFP-?',
+      desc:   (document.getElementById('cf-afp-desc')||{}).value || '',
+      gross:  parseFloat((document.getElementById('cf-afp-gross')||{}).value||0),
+      retPct: parseFloat((document.getElementById('cf-afp-ret')||{}).value||5),
+      submitted: (document.getElementById('cf-afp-sub')||{}).value || '',
+      expected:  (document.getElementById('cf-afp-exp')||{}).value || '',
+      received:  (document.getElementById('cf-afp-rec')||{}).value || '',
+      status:    (document.getElementById('cf-afp-status')||{}).value || 'forecast'
+    });
+    saveCF(CF_AFP_KEY, afps);
+    window.buildCashFlowTab();
+  };
+  window.cfAfpRemove = function(idx) {
+    var afps = loadCF(CF_AFP_KEY, DEFAULT_AFP);
+    if (!confirm('Remove AFP ' + (afps[idx]&&afps[idx].afpNo) + '?')) return;
+    afps.splice(idx,1); saveCF(CF_AFP_KEY, afps); window.buildCashFlowTab();
+  };
+
+  // ── Supplier actions ─────────────────────────────────────────────
+  window.cfSupplierAdd = function() {
+    var row = document.getElementById('cf-sup-add-row');
+    if (row) row.style.display = row.style.display==='none' ? '' : 'none';
+  };
+  window.cfSupplierSave = function() {
+    var sups = loadCF(CF_SUPPLIER_KEY, DEFAULT_SUPPLIERS);
+    var name = (document.getElementById('cf-sup-name')||{}).value||'';
+    if (!name.trim()) { alert('Enter a supplier name'); return; }
+    sups.push({
+      id: uid(), name: name.trim(),
+      type:  (document.getElementById('cf-sup-type')||{}).value||'Other',
+      terms: (document.getElementById('cf-sup-terms')||{}).value||'net30',
+      accountRef: (document.getElementById('cf-sup-ref')||{}).value||''
+    });
+    saveCF(CF_SUPPLIER_KEY, sups); window.buildCashFlowTab();
+  };
+  window.cfSupplierRemove = function(idx) {
+    var sups = loadCF(CF_SUPPLIER_KEY, DEFAULT_SUPPLIERS);
+    if (!confirm('Remove supplier ' + (sups[idx]&&sups[idx].name) + '?')) return;
+    sups.splice(idx,1); saveCF(CF_SUPPLIER_KEY, sups); window.buildCashFlowTab();
+  };
+
+  // ── Order actions ────────────────────────────────────────────────
+  window.cfOrderAdd = function() {
+    var row = document.getElementById('cf-ord-add-row');
+    if (row) row.style.display = row.style.display==='none' ? '' : 'none';
+  };
+  window.cfOrderSave = function() {
+    var ords = loadCF(CF_ORDER_KEY, DEFAULT_ORDERS);
+    var amt  = parseFloat((document.getElementById('cf-ord-amt')||{}).value||0);
+    if (!amt) { alert('Enter an amount'); return; }
+    ords.push({
+      id: uid(),
+      date:       (document.getElementById('cf-ord-date')||{}).value||'',
+      supplierId: (document.getElementById('cf-ord-sup')||{}).value||'',
+      desc:       (document.getElementById('cf-ord-desc')||{}).value||'',
+      cat:        (document.getElementById('cf-ord-cat')||{}).value||'other',
+      amount:     amt,
+      status:     (document.getElementById('cf-ord-status')||{}).value||'ordered'
+    });
+    saveCF(CF_ORDER_KEY, ords); window.buildCashFlowTab();
+  };
+  window.cfOrderRemove = function(idx) {
+    var ords = loadCF(CF_ORDER_KEY, DEFAULT_ORDERS);
+    if (!confirm('Remove this order?')) return;
+    ords.splice(idx,1); saveCF(CF_ORDER_KEY, ords); window.buildCashFlowTab();
+  };
+  window.cfOrderStatus = function(idx, status) {
+    var ords = loadCF(CF_ORDER_KEY, DEFAULT_ORDERS);
+    if (ords[idx]) { ords[idx].status = status; saveCF(CF_ORDER_KEY, ords); window.buildCashFlowTab(); }
+  };
+})();
+// ═══════════════════════════════════════════════════════════════════
+
 
 // ═══════════════════════ INIT ═══════════════════════
 window.addEventListener('DOMContentLoaded', () => {
@@ -6570,8 +7042,9 @@ window.addEventListener('DOMContentLoaded', () => {
   // ── Compute the single source of truth (reads PROJECT_CONFIG overrides) ──
   try { window.DS = computeDS(); } catch(e) { console.error('computeDS failed:', e); window.DS = null; }
   // ── Populate top-bar project dropdown + data-date chip ───────────────────
-  try { updateHeaderDropdown(); } catch(e) {}
-  try { buildStateBanner();     } catch(e) {}
+  try { updateHeaderDropdown(); }    catch(e) {}
+  try { buildStateBanner();     }    catch(e) {}
+  try { fetchRonalswayWeather(); }   catch(e) {}
 
   // Safe setter — never throws, silently skips missing elements
   function set(id, val) { try { const el = document.getElementById(id); if(el) el.textContent = val; } catch(e){} }
@@ -10146,43 +10619,10 @@ function closeZoneHealth() {
   </div>
 </div>
 
-<!-- ═══════════ CASH FLOW TAB β ═══════════ -->
+<!-- ═══════════ CASH FLOW TAB v116 — live database ═══════════ -->
 <div id="tab-cashflow" class="tab-content admin-only">
-  <div class="ph-notice">β Preview — AFP receipts are real. Labour, plant and material costs are estimates — connect your accounts to go live.</div>
-
-  <!-- KPIs -->
-  <div class="ph-kpi-row">
-    <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">£246,414</div><div class="k-lbl">Cash In to Date (AFP 1+2)</div></div>
-    <div class="ph-kpi"><div class="k-val" style="color:#f87171;">£185,000</div><div class="k-lbl">Estimated Costs to Date</div></div>
-    <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">£61,414</div><div class="k-lbl">Estimated Gross Profit to Date</div></div>
-    <div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">£192,475</div><div class="k-lbl">AFP 3 Forecast (Jun)</div></div>
-  </div>
-
-  <!-- Monthly Cash Flow -->
-  <div class="ph-card">
-    <div class="ph-title">Monthly Cash Flow Forecast</div>
-    <table class="ph-table">
-      <tr><th>Month</th><th>Cash In (AFP)</th><th>Labour</th><th>Plant Hire</th><th>Materials</th><th>Other</th><th>Net</th></tr>
-      <tr><td>Mar 2026</td><td>£0</td><td>£28,000</td><td>£17,400</td><td>£18,000</td><td>£4,000</td><td style="color:#f87171;">-£67,400</td></tr>
-      <tr><td>Apr 2026</td><td>£80,340</td><td>£32,000</td><td>£20,880</td><td>£24,000</td><td>£3,200</td><td style="color:#4ade80;">+£260</td></tr>
-      <tr><td>May 2026</td><td>£166,074</td><td>£34,000</td><td>£20,880</td><td>£28,000</td><td>£3,500</td><td style="color:#4ade80;">+£79,694</td></tr>
-      <tr><td>Jun 2026</td><td>£192,475 est.</td><td>£36,000</td><td>£17,400</td><td>£22,000</td><td>£3,000</td><td style="color:#4ade80;">+£114,075 est.</td></tr>
-      <tr style="font-weight:700;background:var(--surface2);"><td>Total</td><td>£438,889</td><td>£130,000</td><td>£76,560</td><td>£92,000</td><td>£13,700</td><td style="color:#4ade80;">+£126,629 est.</td></tr>
-    </table>
-    <div style="margin-top:8px;font-size:10px;color:var(--muted);">Labour, plant and material costs are estimates based on typical build profiles. Connect your accounts for actuals.</div>
-  </div>
-
-  <!-- Running P&L -->
-  <div class="ph-card">
-    <div class="ph-title">Running P&amp;L Summary</div>
-    <div class="ph-kpi-row" style="grid-template-columns:1fr 1fr 1fr 1fr;">
-      <div class="ph-kpi"><div class="k-val">£450,142</div><div class="k-lbl">Contract Value</div></div>
-      <div class="ph-kpi"><div class="k-val" style="color:#f87171;">£312,260 est.</div><div class="k-lbl">Estimated Total Costs</div></div>
-      <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">£137,882 est.</div><div class="k-lbl">Estimated Gross Profit</div></div>
-      <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">30.6%</div><div class="k-lbl">Estimated Margin</div></div>
-    </div>
-    <div style="font-size:10px;color:var(--muted);margin-top:4px;">Estimates only — connect payroll and accounts for actuals. Variations not yet included in contract value above.</div>
-  </div>
+  <div id="cf-kpi-row"></div>
+  <div id="cf-body"></div>
 </div>
 
 <!-- ═══════════ FIELD TAB β ═══════════ -->
@@ -10328,6 +10768,332 @@ function closeZoneHealth() {
   </div>
 </div>
 
+
+<!-- ═══════════ WASTE & SPOIL TAB (preview) ═══════════ -->
+<div id="tab-waste" class="tab-content admin-only">
+  <div class="ph-notice">preview — log excavated spoil and imported fill volumes per zone. Tipping cost and material balance calculated automatically.</div>
+
+  <!-- KPIs -->
+  <div class="ph-kpi-row">
+    <div class="ph-kpi"><div class="k-val" style="color:#f87171;">1,840 m³</div><div class="k-lbl">Total Spoil Excavated</div></div>
+    <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">620 m³</div><div class="k-lbl">Reused on Site (fill)</div></div>
+    <div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">1,220 m³</div><div class="k-lbl">Sent to Tip</div></div>
+    <div class="ph-kpi"><div class="k-val" style="color:#f87171;">£18,300</div><div class="k-lbl">Tipping Cost to Date</div></div>
+    <div class="ph-kpi"><div class="k-val">940 T</div><div class="k-lbl">Aggregate Imported</div></div>
+  </div>
+
+  <!-- Spoil log -->
+  <div class="ph-card">
+    <div class="ph-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Excavation & Spoil Log</span>
+      <button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="alert('Coming soon — log a cut')">+ Log Cut</button>
+    </div>
+    <table class="ph-table">
+      <tr><th>Date</th><th>Zone</th><th>Description</th><th>Volume (m³)</th><th>Disposition</th><th>Tip Tickets</th><th>Cost</th></tr>
+      <tr><td>23–30 Mar</td><td>Zone 1</td><td>Topsoil strip + drainage excavation</td><td>320</td><td><span class="ph-badge ph-green">180 reused · 140 tipped</span></td><td>TT-001 to 004</td><td>£2,100</td></tr>
+      <tr><td>01–14 Apr</td><td>Zone 2</td><td>Drainage trenches + road break</td><td>280</td><td><span class="ph-badge ph-amber">All tipped — poor material</span></td><td>TT-005 to 010</td><td>£4,200</td></tr>
+      <tr><td>14 Apr–05 May</td><td>Zones 3–4</td><td>Manhole excavations + pipe runs</td><td>640</td><td><span class="ph-badge ph-green">440 reused · 200 tipped</span></td><td>TT-011 to 018</td><td>£3,000</td></tr>
+      <tr><td>06–14 May</td><td>Zones 5–6</td><td>Drainage + road formation</td><td>600</td><td><span class="ph-badge ph-amber">In progress</span></td><td>TT-019+</td><td>£9,000 est.</td></tr>
+    </table>
+    <div style="margin-top:8px;font-size:10px;color:var(--muted);">Tipping rate: £15/m³ to Ballasalla Quarry licensed tip.</div>
+  </div>
+
+  <!-- Aggregate import -->
+  <div class="ph-card">
+    <div class="ph-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Imported Fill & Aggregate</span>
+      <button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="alert('Coming soon')">+ Log Delivery</button>
+    </div>
+    <table class="ph-table">
+      <tr><th>Date</th><th>Material</th><th>Grade/Spec</th><th>Qty</th><th>Supplier</th><th>Zone</th><th>Cost</th><th>Docket</th></tr>
+      <tr><td>25 Mar</td><td>Type 1 MOT</td><td>DoT Spec</td><td>80 T</td><td>Ballasalla Quarry</td><td>Zones 1–2</td><td>£2,400</td><td>BQ-2026-0341</td></tr>
+      <tr><td>02 Apr</td><td>Type 1 MOT</td><td>DoT Spec</td><td>120 T</td><td>Ballasalla Quarry</td><td>Zones 2–3</td><td>£3,600</td><td>BQ-2026-0398</td></tr>
+      <tr><td>14 Apr</td><td>Granular Bedding (10mm)</td><td>SD/019 Class B</td><td>35 T</td><td>IoM Civils</td><td>Zone 3</td><td>£1,925</td><td>ICS-0512</td></tr>
+      <tr><td>28 Apr</td><td>Concrete C35</td><td>BS 8500-2</td><td>24 m³</td><td>Ready Mix IoM</td><td>Zones 3–4</td><td>£5,280</td><td>RM-2026-0119</td></tr>
+      <tr><td>22 May</td><td>Type 1 MOT</td><td>DoT Spec</td><td>20 T (expected)</td><td>Ballasalla Quarry</td><td>Zones 5–6</td><td>£600 est.</td><td>—</td></tr>
+    </table>
+  </div>
+
+  <!-- Material Balance -->
+  <div class="ph-card">
+    <div class="ph-title">Material Balance Summary</div>
+    <div class="ph-kpi-row" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="ph-kpi"><div class="k-val">1,840 m³</div><div class="k-lbl">Cut (excavated)</div></div>
+      <div class="ph-kpi"><div class="k-val">620 m³</div><div class="k-lbl">Fill (reused cut)</div></div>
+      <div class="ph-kpi"><div class="k-val" style="color:#f87171;">1,220 m³</div><div class="k-lbl">Net export to tip</div></div>
+    </div>
+    <div style="font-size:10px;color:var(--muted);margin-top:6px;">Waste carrier: ONLY use licensed waste carriers. Keep all tip tickets for EA audit trail.</div>
+  </div>
+</div>
+
+<!-- ═══════════ DOI / LICENCES TAB (preview) ═══════════ -->
+<div id="tab-doi" class="tab-content admin-only">
+  <div class="ph-notice">preview — track DOI road opening licences, traffic management approvals, and utility notifications for Isle of Man works.</div>
+
+  <!-- KPIs -->
+  <div class="ph-kpi-row">
+    <div class="ph-kpi"><div class="k-val">3</div><div class="k-lbl">Active Licences</div></div>
+    <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">2</div><div class="k-lbl">Inspections Passed</div></div>
+    <div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">1</div><div class="k-lbl">Reinstatement Pending</div></div>
+    <div class="ph-kpi"><div class="k-val" style="color:#f87171;">1</div><div class="k-lbl">Expiring Within 7 Days</div></div>
+  </div>
+
+  <!-- Road Opening Licences -->
+  <div class="ph-card">
+    <div class="ph-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Road Opening Licences — Department of Infrastructure</span>
+      <button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="alert('Coming soon')">+ Add Licence</button>
+    </div>
+    <table class="ph-table">
+      <tr><th>Licence No.</th><th>Location</th><th>Works Description</th><th>Applied</th><th>Approved</th><th>Expires</th><th>Status</th><th>Reinstatement</th></tr>
+      <tr>
+        <td>DOI-2026-0441</td><td>Balthane Road, Ballasalla</td><td>New drainage crossing — Zone 1</td>
+        <td>18 Mar 2026</td><td>22 Mar 2026</td><td style="color:#4ade80;">30 May 2026</td>
+        <td><span class="ph-badge ph-green">Active</span></td>
+        <td><span class="ph-badge ph-green">✓ Inspected &amp; passed 12 Apr</span></td>
+      </tr>
+      <tr>
+        <td>DOI-2026-0489</td><td>School Road Junction</td><td>Road break — Zone 2 sewer crossing</td>
+        <td>25 Mar 2026</td><td>28 Mar 2026</td><td style="color:#4ade80;">15 Jun 2026</td>
+        <td><span class="ph-badge ph-green">Active</span></td>
+        <td><span class="ph-badge ph-amber">⚠ Reinstatement due — temporary only</span></td>
+      </tr>
+      <tr>
+        <td>DOI-2026-0551</td><td>Main Road, Ballasalla</td><td>Zone 5 service crossing</td>
+        <td>01 May 2026</td><td>06 May 2026</td><td style="color:#f59e0b;">22 May 2026</td>
+        <td><span class="ph-badge ph-amber">⚠ Expiring soon</span></td>
+        <td><span class="ph-badge ph-blue">Temporary in place</span></td>
+      </tr>
+    </table>
+    <div style="margin-top:8px;font-size:11px;color:#f87171;">⚠ DOI-2026-0551 expires 22 May — apply for extension or complete permanent reinstatement before then.</div>
+  </div>
+
+  <!-- Traffic Management -->
+  <div class="ph-card">
+    <div class="ph-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Traffic Management Approvals</span>
+      <button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="alert('Coming soon')">+ Add TM Approval</button>
+    </div>
+    <table class="ph-table">
+      <tr><th>Ref</th><th>Location</th><th>Type</th><th>Approved By</th><th>Valid From</th><th>Valid To</th><th>Status</th></tr>
+      <tr><td>TM-001</td><td>Balthane Road</td><td>Stop/Go</td><td>DOI Highways</td><td>23 Mar 2026</td><td>30 May 2026</td><td><span class="ph-badge ph-green">Active</span></td></tr>
+      <tr><td>TM-002</td><td>School Road</td><td>Lane closure</td><td>DOI Highways</td><td>01 Apr 2026</td><td>15 Jun 2026</td><td><span class="ph-badge ph-green">Active</span></td></tr>
+    </table>
+  </div>
+
+  <!-- Utility Notifications -->
+  <div class="ph-card">
+    <div class="ph-title">Utility Strike Avoidance — Notifications Sent</div>
+    <table class="ph-table">
+      <tr><th>Utility</th><th>Area</th><th>CAT Scan Date</th><th>Notified</th><th>Response</th><th>Status</th></tr>
+      <tr><td>Manx Telecom</td><td>Zones 1–4</td><td>20 Mar 2026</td><td>21 Mar 2026</td><td>Clear — route confirmed</td><td><span class="ph-badge ph-green">✓</span></td></tr>
+      <tr><td>Manx Gas</td><td>Zones 1–4</td><td>20 Mar 2026</td><td>21 Mar 2026</td><td>Gas main at 800mm — update drawings</td><td><span class="ph-badge ph-green">✓</span></td></tr>
+      <tr><td>Manx Utilities (Water)</td><td>Zones 5–8</td><td>30 Apr 2026</td><td>01 May 2026</td><td>Awaiting response</td><td><span class="ph-badge ph-amber">Pending</span></td></tr>
+      <tr><td>Manx Telecom</td><td>Zones 5–8</td><td>—</td><td>—</td><td>—</td><td><span class="ph-badge ph-blue">Not yet notified</span></td></tr>
+    </table>
+    <div style="margin-top:8px;font-size:11px;color:#f59e0b;">⚠ Notify Manx Telecom for Zones 5–8 before works commence in this area.</div>
+  </div>
+</div>
+
+<!-- ═══════════ TENDER / QUOTE TAB (preview) ═══════════ -->
+<div id="tab-tender" class="tab-content admin-only">
+  <div class="ph-notice">preview — build up a tender price from first principles using your own plant, labour rates and material costs. Each completed job feeds better pricing data for the next one.</div>
+
+  <!-- Summary KPIs -->
+  <div class="ph-kpi-row">
+    <div class="ph-kpi"><div class="k-val" style="color:#60a5fa;">New Tender</div><div class="k-lbl">Status</div></div>
+    <div class="ph-kpi"><div class="k-val">£0</div><div class="k-lbl">Labour (so far)</div></div>
+    <div class="ph-kpi"><div class="k-val">£0</div><div class="k-lbl">Plant (so far)</div></div>
+    <div class="ph-kpi"><div class="k-val">£0</div><div class="k-lbl">Materials (so far)</div></div>
+    <div class="ph-kpi"><div class="k-val">—</div><div class="k-lbl">Target Margin</div></div>
+  </div>
+
+  <!-- Project details -->
+  <div class="ph-card">
+    <div class="ph-title">Tender Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:11px;">
+      <div>
+        <div style="color:var(--muted);margin-bottom:3px;">Job Title</div>
+        <input type="text" placeholder="e.g. Braddan Road Phase 2 Drainage" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-size:11px;">
+      </div>
+      <div>
+        <div style="color:var(--muted);margin-bottom:3px;">Client</div>
+        <input type="text" placeholder="e.g. Dandara" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-size:11px;">
+      </div>
+      <div>
+        <div style="color:var(--muted);margin-bottom:3px;">Tender Deadline</div>
+        <input type="date" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-size:11px;">
+      </div>
+      <div>
+        <div style="color:var(--muted);margin-bottom:3px;">Contract Duration (weeks)</div>
+        <input type="number" placeholder="e.g. 14" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-size:11px;">
+      </div>
+      <div>
+        <div style="color:var(--muted);margin-bottom:3px;">Target Margin %</div>
+        <input type="number" placeholder="e.g. 25" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-size:11px;">
+      </div>
+      <div>
+        <div style="color:var(--muted);margin-bottom:3px;">Prelims Allowance %</div>
+        <input type="number" placeholder="e.g. 8" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-size:11px;">
+      </div>
+    </div>
+  </div>
+
+  <!-- Labour -->
+  <div class="ph-card">
+    <div class="ph-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Labour</span>
+      <button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="alert('Coming soon')">+ Add Labour Item</button>
+    </div>
+    <table class="ph-table">
+      <tr><th>Role</th><th>Rate/day</th><th>Days</th><th>Total</th></tr>
+      <tr><td style="color:var(--muted);font-style:italic;" colspan="4">Add labour items above to build up your price</td></tr>
+      <tr style="font-weight:700;background:var(--surface2);"><td colspan="3">Labour Total</td><td>£0</td></tr>
+    </table>
+    <div style="margin-top:6px;font-size:10px;color:var(--muted);">Tip: Ballasalla Phase 4 used ~12 men for 13 weeks. Day rates from Harry's HR system when connected.</div>
+  </div>
+
+  <!-- Plant -->
+  <div class="ph-card">
+    <div class="ph-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Plant &amp; Equipment</span>
+      <button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="alert('Coming soon')">+ Add Plant Item</button>
+    </div>
+    <table class="ph-table">
+      <tr><th>Item</th><th>Owned / Hired</th><th>Rate/day</th><th>Days</th><th>Total</th></tr>
+      <tr><td style="color:var(--muted);font-style:italic;" colspan="5">Add plant items — owned plant will auto-fill break-even rates from your Plant tab</td></tr>
+      <tr style="font-weight:700;background:var(--surface2);"><td colspan="4">Plant Total</td><td>£0</td></tr>
+    </table>
+  </div>
+
+  <!-- Materials -->
+  <div class="ph-card">
+    <div class="ph-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Materials &amp; Disposal</span>
+      <button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="alert('Coming soon')">+ Add Material</button>
+    </div>
+    <table class="ph-table">
+      <tr><th>Description</th><th>Unit</th><th>Qty</th><th>Rate</th><th>Total</th></tr>
+      <tr><td style="color:var(--muted);font-style:italic;" colspan="5">Add material items to build up the BoQ</td></tr>
+      <tr style="font-weight:700;background:var(--surface2);"><td colspan="4">Materials Total</td><td>£0</td></tr>
+    </table>
+  </div>
+
+  <!-- Summary -->
+  <div class="ph-card">
+    <div class="ph-title">Tender Build-Up Summary</div>
+    <table class="ph-table">
+      <tr><td>Labour</td><td>£0</td></tr>
+      <tr><td>Plant &amp; Equipment</td><td>£0</td></tr>
+      <tr><td>Materials &amp; Disposal</td><td>£0</td></tr>
+      <tr><td>Prelims (0%)</td><td>£0</td></tr>
+      <tr style="font-weight:700;border-top:2px solid var(--border);"><td>Net Cost</td><td>£0</td></tr>
+      <tr><td>Margin (0%)</td><td>£0</td></tr>
+      <tr style="font-weight:800;font-size:14px;background:var(--surface2);"><td>Tender Price</td><td>£0</td></tr>
+    </table>
+    <div style="margin-top:10px;display:flex;gap:8px;">
+      <button class="btn btn-primary" onclick="alert('Coming soon — generates PDF tender document')">Generate Tender Document</button>
+      <button class="btn btn-secondary" onclick="alert('Coming soon — save this tender')">Save Draft</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ HANDOVER TAB (preview) ═══════════ -->
+<div id="tab-handover" class="tab-content admin-only">
+  <div class="ph-notice">preview — compile the project handover package for Dandara. Complete each section to generate the final handover document and release retention.</div>
+
+  <!-- Completion status -->
+  <div class="ph-kpi-row">
+    <div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">6 / 10</div><div class="k-lbl">Handover Items Complete</div></div>
+    <div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">60%</div><div class="k-lbl">Handover Readiness</div></div>
+    <div class="ph-kpi"><div class="k-val" style="color:#f87171;">4</div><div class="k-lbl">Items Outstanding</div></div>
+    <div class="ph-kpi"><div class="k-val">26 Jun 2026</div><div class="k-lbl">Target PC Date</div></div>
+  </div>
+
+  <!-- Checklist -->
+  <div class="ph-card">
+    <div class="ph-title">Handover Checklist</div>
+    <table class="ph-table">
+      <tr><th>#</th><th>Item</th><th>Status</th><th>Notes</th><th>Action</th></tr>
+      <tr>
+        <td>1</td><td>As-built drawings — all zones</td>
+        <td><span class="ph-badge ph-amber">In Progress</span></td>
+        <td>Zones 1–4 complete. 5–8 in progress.</td>
+        <td><button class="btn btn-secondary" style="font-size:10px;padding:2px 7px;">Upload</button></td>
+      </tr>
+      <tr>
+        <td>2</td><td>CCTV drainage survey — all pipes</td>
+        <td><span class="ph-badge ph-blue">Not Started</span></td>
+        <td>Book survey when pipe laying complete</td>
+        <td><button class="btn btn-secondary" style="font-size:10px;padding:2px 7px;">Log</button></td>
+      </tr>
+      <tr>
+        <td>3</td><td>Air pressure test certificates — all manholes</td>
+        <td><span class="ph-badge ph-green">✓ Complete</span></td>
+        <td>All zones tested &amp; passed</td>
+        <td><button class="btn btn-secondary" style="font-size:10px;padding:2px 7px;">View</button></td>
+      </tr>
+      <tr>
+        <td>4</td><td>Concrete cube test results</td>
+        <td><span class="ph-badge ph-green">✓ Complete</span></td>
+        <td>All mixes passed BS EN 206</td>
+        <td><button class="btn btn-secondary" style="font-size:10px;padding:2px 7px;">View</button></td>
+      </tr>
+      <tr>
+        <td>5</td><td>Compaction test records</td>
+        <td><span class="ph-badge ph-green">✓ Complete</span></td>
+        <td>Zones 1–4 passed. 5–6 in progress.</td>
+        <td><button class="btn btn-secondary" style="font-size:10px;padding:2px 7px;">View</button></td>
+      </tr>
+      <tr>
+        <td>6</td><td>Road reinstatement — final surface</td>
+        <td><span class="ph-badge ph-blue">Not Started</span></td>
+        <td>Await subbase compaction sign-off</td>
+        <td><button class="btn btn-secondary" style="font-size:10px;padding:2px 7px;">Log</button></td>
+      </tr>
+      <tr>
+        <td>7</td><td>DOI reinstatement inspection — all openings</td>
+        <td><span class="ph-badge ph-amber">In Progress</span></td>
+        <td>2 of 3 passed. DOI-2026-0551 outstanding.</td>
+        <td><button class="btn btn-secondary" style="font-size:10px;padding:2px 7px;">Log</button></td>
+      </tr>
+      <tr>
+        <td>8</td><td>H&amp;S file — risk assessments, method statements</td>
+        <td><span class="ph-badge ph-green">✓ Complete</span></td>
+        <td>All 12 RA/MS used on this project included</td>
+        <td><button class="btn btn-secondary" style="font-size:10px;padding:2px 7px;">View</button></td>
+      </tr>
+      <tr>
+        <td>9</td><td>Defects liability / snag sign-off</td>
+        <td><span class="ph-badge ph-blue">Not Started</span></td>
+        <td>Issue snag list to Dandara at PC</td>
+        <td><button class="btn btn-secondary" style="font-size:10px;padding:2px 7px;">Create</button></td>
+      </tr>
+      <tr>
+        <td>10</td><td>Final account agreed &amp; signed</td>
+        <td><span class="ph-badge ph-green">✓ In Progress</span></td>
+        <td>Variations under discussion</td>
+        <td><button class="btn btn-secondary" style="font-size:10px;padding:2px 7px;">View</button></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Generate package -->
+  <div class="ph-card">
+    <div class="ph-title">Generate Handover Package</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">When all items are complete, generate a single professional PDF handover document to send to Dandara. This triggers the practical completion clock and starts the retention release process.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-primary" style="opacity:0.5;" onclick="alert('Complete all handover items first')">Generate Handover Package PDF</button>
+      <button class="btn btn-secondary" onclick="alert('Coming soon — email Dandara a progress update')">Email Progress to Dandara</button>
+      <button class="btn btn-secondary" onclick="alert('Coming soon — view retention schedule')">View Retention Schedule</button>
+    </div>
+    <div style="margin-top:10px;font-size:10px;color:var(--muted);">
+      <strong>Retention held:</strong> £11,253 &nbsp;·&nbsp;
+      <strong>Half release at PC:</strong> £5,627 (est. 26 Jun 2026) &nbsp;·&nbsp;
+      <strong>Full release 12 months after PC:</strong> £5,626 (est. Jun 2027)
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
