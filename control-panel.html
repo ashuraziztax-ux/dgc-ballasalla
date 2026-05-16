@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v95</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v96</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -2534,19 +2534,14 @@ function buildVelocityPanel() {
   var daysElapsed = Math.max(1, Math.round((today - projStart) / 86400000));
   var targetEnd  = new Date('2026-06-26T00:00:00');
   var totalCalDays = Math.round((targetEnd - projStart) / 86400000);
-  // plannedPct: use task-schedule-weighted method (matches Programme Clock + QS)
-  var plannedPct = (function(){ try{ return getPlannedProgress(); }catch(e){ return Math.min(100, daysElapsed/totalCalDays*100); } })();
+  var plannedPct = Math.min(100, daysElapsed / totalCalDays * 100);
   var variance   = overallPct - plannedPct;
   var ratePerDay = overallPct / daysElapsed;
   var ratePerWeek = ratePerDay * 7;
   var remaining  = 100 - overallPct;
-  // WD-based forecast at efficiency-adjusted pace — mirrors Programme Clock "Expected End Date"
-  var IOM_BH_vp = {'2026-04-03':1,'2026-04-06':1,'2026-05-04':1,'2026-05-25':1,'2026-06-12':1};
-  function isWD_vp(d) { var w=d.getDay(); if(w===0||w===6)return false; var k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); return !IOM_BH_vp[k]; }
-  function addWDs_vp(s, n) { var d=new Date(s.getTime()),add=Math.ceil(Math.abs(n)),done=0,safety=add*3+200; while(done<add&&safety-->0){d.setDate(d.getDate()+1);if(isWD_vp(d))done++;} return d; }
-  var remainWDs_vp = 65 * (1 - overallPct/100);
-  var effDrag_vp   = (plannedPct > 1 && overallPct > 1) ? plannedPct / overallPct : 1;
-  var fcDate = addWDs_vp(today, remainWDs_vp * effDrag_vp);
+  var daysNeeded = ratePerDay > 0 ? Math.round(remaining / ratePerDay) : 9999;
+  var fcDate     = new Date(today.getTime());
+  fcDate.setDate(fcDate.getDate() + daysNeeded);
   var fcStr      = fcDate.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
   var fcLate     = fcDate > targetEnd;
   var daysOff    = Math.round(Math.abs(fcDate - targetEnd) / 86400000);
@@ -4136,8 +4131,7 @@ function buildForecastTab() {
   var daysElapsed  = Math.max(1, daysBetween(projStart, TODAY));
   var totalCalDays = daysBetween(projStart, agreedDL);
   var calDaysLeft  = Math.max(0, daysBetween(TODAY, agreedDL));
-  // plannedPct: task-schedule-weighted (matches Programme Clock + KPI tiles)
-  var plannedPct   = (function(){ try{ return getPlannedProgress(); }catch(e){ return Math.min(100, daysElapsed/totalCalDays*100); } })();
+  var plannedPct   = Math.min(100, daysElapsed / totalCalDays * 100);
   var ratePerDay   = overallPct / daysElapsed;
   var remaining    = Math.max(0, 100 - overallPct);
   var totalProgWDs = 65;
