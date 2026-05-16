@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v101</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v102</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -49,6 +49,7 @@ a { color: var(--accent); text-decoration: none; }
 
 /* TABS */
 .tab-content { display: none; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
 .tab-content.active { display: block; }
 
 /* KPI GRID */
@@ -4439,11 +4440,337 @@ function buildSetupTab() {
   h.push('<button onclick="resetProjectConfig()" style="padding:10px 22px;background:none;border:1px solid #ef4444;color:#ef4444;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">⚠ Reset to Blank</button>');
   h.push('</div>');
 
+  // ── Validation panel ────────────────────────────────────────────────────
+  h.push(card(
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">'
+    + '<span style="font-size:20px;">🔍</span>'
+    + '<div><div style="font-size:14px;font-weight:800;color:var(--text);">Sanity Check</div>'
+    + '<div style="font-size:10px;color:var(--muted);margin-top:2px;">Runs automatically on save — flags crossed dates, missing data and inconsistencies</div></div>'
+    + '<button onclick="var c=cfgLoad()||{};var i=runValidation(c);renderValidationPanel(i);" '
+    + 'style="margin-left:auto;padding:5px 14px;background:#1e293b;border:1px solid var(--border);color:var(--muted);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">↻ Re-check</button>'
+    + '</div>'
+    + '<div id="su-validation" style="font-size:12px;color:var(--muted);">Save the form to run validation.</div>'
+  ));
+
+  // ── AI Assistant ─────────────────────────────────────────────────────────
+  h.push(card(
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">'
+    + '<span style="font-size:20px;">🤖</span>'
+    + '<div><div style="font-size:14px;font-weight:800;color:var(--text);">AI Setup Assistant</div>'
+    + '<div style="font-size:10px;color:var(--muted);margin-top:2px;">Reads your project config, spots inconsistencies and asks the right questions</div></div>'
+    + '<div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">'
+    + '<button onclick="suAnalyse()" style="padding:6px 14px;background:#1e3a5f;border:1px solid #38bdf8;color:#38bdf8;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;">▶ Analyse project</button>'
+    + '<button onclick="suClearChat()" style="padding:6px 10px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;font-size:11px;cursor:pointer;">Clear</button>'
+    + '</div></div>'
+    // API key notice
+    + '<div style="font-size:10px;color:#64748b;background:#0f172a;border:1px solid var(--border);border-radius:6px;padding:7px 10px;margin-bottom:12px;">'
+    + '🔑 Uses your Anthropic API key — stored in this browser only, never sent anywhere except the Anthropic API. '
+    + '<button onclick="var k=prompt(\'API key (leave blank to clear):\',localStorage.getItem(\'dgc_ai_key\')||\'\');if(k!==null){if(k.trim()){localStorage.setItem(\'dgc_ai_key\',k.trim());suToast(\'API key saved\');}else{localStorage.removeItem(\'dgc_ai_key\');suToast(\'API key cleared\');}}" '
+    + 'style="background:none;border:none;color:#38bdf8;font-size:10px;cursor:pointer;text-decoration:underline;">'
+    + (localStorage.getItem('dgc_ai_key') ? '✓ Key set — click to change' : '⚠ No key set — click to add')
+    + '</button></div>'
+    // Chat window
+    + '<div id="su-chat-messages" style="height:320px;overflow-y:auto;background:#0f172a;border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;"></div>'
+    // Thinking indicator
+    + '<div id="su-chat-thinking" style="display:none;align-items:center;gap:8px;padding:6px 0;margin-bottom:6px;">'
+    + '<div style="width:8px;height:8px;background:#38bdf8;border-radius:50%;animation:pulse 1s infinite;"></div>'
+    + '<span style="font-size:11px;color:var(--muted);">Thinking…</span></div>'
+    // Input row
+    + '<div style="display:flex;gap:8px;">'
+    + '<input id="su-chat-input" type="text" placeholder="Ask a question or reply to the assistant…" '
+    + 'onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();suSendMessage();}" '
+    + 'style="flex:1;padding:9px 12px;background:#1e293b;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;">'
+    + '<button id="su-chat-send" onclick="suSendMessage()" '
+    + 'style="padding:9px 18px;background:#38bdf8;border:none;color:#000;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;">Send</button>'
+    + '</div>'
+    // Suggested questions
+    + '<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">'
+    + ['What is inconsistent in my config?', 'What am I missing?', 'Does the EOT make sense?', 'Are the zone budgets correct?'].map(function(q){
+        return '<button onclick="suSendMessage(\'' + q.replace(/'/g,"\\'") + '\')" '
+          + 'style="padding:4px 10px;background:#1e293b;border:1px solid var(--border);color:var(--muted);border-radius:20px;font-size:10px;cursor:pointer;">' + q + '</button>';
+      }).join('')
+    + '</div>'
+  ));
+
   h.push('<div id="su-toast" style="display:none;position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:700;z-index:9999;"></div>');
   h.push('</div>');
   el.innerHTML = h.join('');
+  // Render chat history if any
+  suRenderChat();
+  // If config exists, run validation immediately
+  if (cfgLoad()) {
+    var _initIssues = runValidation(cfgLoad());
+    renderValidationPanel(_initIssues);
+  }
+}
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// VALIDATION ENGINE
+// ══════════════════════════════════════════════════════════════════════════
+function runValidation(cfg) {
+  var issues = [];
+  var p = cfg.project || {};
+  function add(sev, msg, field) { issues.push({ sev: sev, msg: msg, field: field||null }); }
+
+  // ── Required fields ──────────────────────────────────────────────────────
+  if (!p.name)         add('warning', 'Project name is not set — will appear blank in reports', 'name');
+  if (!p.client)       add('warning', 'Client name is not set', 'client');
+  if (!p.start)        add('error',   'Programme start date is missing — timeline calculations will fail', 'start');
+  if (!p.agreedEnd)    add('error',   'Agreed completion date is missing', 'end');
+  if (!p.contractSum || p.contractSum <= 0)
+                       add('error',   'Contract sum is zero or not set — budget calculations will be wrong', 'sum');
+
+  // ── Date logic ───────────────────────────────────────────────────────────
+  if (p.start && p.agreedEnd) {
+    var sD = new Date(p.start), eD = new Date(p.agreedEnd);
+    if (sD >= eD)      add('error',   'Agreed completion (' + p.agreedEnd + ') is not after start (' + p.start + ') — dates are crossed', 'end');
+    var progDays = Math.round((eD - sD) / 86400000);
+    if (progDays > 365) add('warning', 'Programme spans ' + progDays + ' calendar days (' + Math.round(progDays/7) + ' wks) — is that right?', 'end');
+    if (progDays < 14)  add('warning', 'Programme is only ' + progDays + ' days long — seems very short', 'start');
+    if (eD < new Date() && (!cfg.zoneProgress || Object.values(cfg.zoneProgress).every(function(v){ return v < 100; })))
+      add('warning', 'Agreed completion (' + p.agreedEnd + ') is in the past but zones are not 100% complete — project overrunning?', 'end');
+  }
+  if (p.start && p.originalEnd && p.agreedEnd) {
+    var oD = new Date(p.originalEnd), aD = new Date(p.agreedEnd);
+    if (oD > aD) add('error',   'Original completion (' + p.originalEnd + ') is after agreed completion (' + p.agreedEnd + ') — these look swapped', 'origend');
+    if (oD.getTime() === aD.getTime()) add('info', 'Original and agreed completion are the same date — no EOT has been recorded');
+  }
+
+  // ── EOT cross-check ──────────────────────────────────────────────────────
+  if (p.originalEnd && p.agreedEnd && p.eotWDs) {
+    var origD = new Date(p.originalEnd), agrD = new Date(p.agreedEnd);
+    var calExt = Math.round((agrD - origD) / 86400000);
+    var approxWDs = Math.round(calExt * 5 / 7);
+    var diff = Math.abs(approxWDs - p.eotWDs);
+    if (diff > 3) {
+      add('question', p.originalEnd + ' → ' + p.agreedEnd + ' is ~' + approxWDs + ' working days, but EOT is set to ' + p.eotWDs + ' WDs (difference: ' + diff + ' WDs). Which is the QS-agreed figure?', 'eot');
+    }
+  }
+
+  // ── Contract sum vs zone budgets ─────────────────────────────────────────
+  var zoneTot = (ZONES||[]).reduce(function(s,z){ return s + (z.budget||0); }, 0);
+  if (p.contractSum && zoneTot > 0) {
+    var pctDiff = Math.abs(zoneTot - p.contractSum) / p.contractSum * 100;
+    if (pctDiff > 10) add('warning', 'Zone budgets total £' + Math.round(zoneTot).toLocaleString() + ' but contract sum is £' + Math.round(p.contractSum).toLocaleString() + ' — ' + Math.round(pctDiff) + '% apart. Is the contract sum correct?', 'sum');
+  }
+
+  // ── Zone progress ────────────────────────────────────────────────────────
+  var zp = cfg.zoneProgress || {};
+  var allZero = Object.keys(zp).length > 0 && Object.values(zp).every(function(v){ return v === 0; });
+  if (allZero) add('warning', 'All zone progress values are 0% — have QS figures been entered?');
+  Object.keys(zp).forEach(function(k) {
+    if (zp[k] > 100) add('error', 'Zone ' + k + ' progress is ' + zp[k] + '% — cannot exceed 100%', 'zone-' + k);
+    if (zp[k] < 0)   add('error', 'Zone ' + k + ' progress is negative', 'zone-' + k);
+  });
+
+  // ── Data date ────────────────────────────────────────────────────────────
+  if (cfg.dataDate) {
+    var dd = new Date(cfg.dataDate + 'T12:00:00');
+    var daysOld = Math.round((new Date() - dd) / 86400000);
+    if (daysOld > 28)   add('warning', 'Data is ' + daysOld + ' days old (from ' + cfg.dataDate + ') — planned% will be behind today\'s date. Update zone figures when next on site.');
+    if (daysOld < -1)   add('warning', 'Data date (' + cfg.dataDate + ') is ' + Math.abs(daysOld) + ' days in the future — is this intentional?');
+    if (p.start && new Date(cfg.dataDate) < new Date(p.start))
+      add('error', 'Data date (' + cfg.dataDate + ') is before programme start (' + p.start + ')', 'datadate');
+    if (p.agreedEnd && new Date(cfg.dataDate) > new Date(p.agreedEnd))
+      add('warning', 'Data date is after agreed completion — is the project finished?', 'datadate');
+  } else {
+    add('info', 'No data date set — using the hardcoded DATA_AS_OF constant. Set this to your latest site visit date.');
+  }
+
+  // ── Programme ────────────────────────────────────────────────────────────
+  if (!cfg.tasks || cfg.tasks.length === 0) {
+    add('info', 'No GanttPro tasks imported — programme tab and Gantt will use hardcoded task data');
+  } else {
+    var noZone = cfg.tasks.filter(function(t){ return !t.isGroup && !t.zone; }).length;
+    if (noZone > 0) add('warning', noZone + ' imported tasks have no zone assigned — they won\'t appear in zone progress. Check WBS numbering in your GanttPro export.');
+  }
+
+  // ── Bank holidays ────────────────────────────────────────────────────────
+  if (!cfg.bankHolidays || cfg.bankHolidays.length === 0)
+    add('warning', 'No bank holidays set — working day counts will overestimate available days');
+
+  // ── Retention ────────────────────────────────────────────────────────────
+  if (p.retentionRate > 10) add('question', 'Retention rate is ' + p.retentionRate + '% — typical is 2.5–5%. Is this correct?', 'ret');
+
+  return issues;
+}
+
+function renderValidationPanel(issues) {
+  var el = document.getElementById('su-validation');
+  if (!el) return;
+  if (!issues || !issues.length) {
+    el.innerHTML = '<div style="font-size:12px;color:#22c55e;padding:10px 0;">✓ No issues found</div>';
+    return;
+  }
+  var sevOrder = { error: 0, warning: 1, question: 2, info: 3 };
+  issues.sort(function(a,b){ return sevOrder[a.sev] - sevOrder[b.sev]; });
+  var colours = { error: ['#ef4444','#7f1d1d','🔴'], warning: ['#f59e0b','#78350f','🟡'], question: ['#38bdf8','#0c4a6e','❓'], info: ['#64748b','#1e293b','ℹ'] };
+  var html = issues.map(function(iss) {
+    var c = colours[iss.sev] || colours.info;
+    return '<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 10px;border-left:3px solid ' + c[0] + ';background:' + c[1] + '30;border-radius:0 5px 5px 0;margin-bottom:5px;">'
+      + '<span style="flex-shrink:0;font-size:13px;">' + c[2] + '</span>'
+      + '<span style="font-size:11px;color:var(--text);line-height:1.5;">' + iss.msg + '</span>'
+      + (iss.field ? '<button onclick="suFocusField(\'' + iss.field + '\')" style="flex-shrink:0;background:none;border:none;font-size:10px;color:#38bdf8;cursor:pointer;white-space:nowrap;margin-left:auto;">→ Fix</button>' : '')
+      + '</div>';
+  }).join('');
+  el.innerHTML = '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:8px;">'
+    + issues.filter(function(i){ return i.sev==='error'; }).length + ' error · '
+    + issues.filter(function(i){ return i.sev==='warning'; }).length + ' warning · '
+    + issues.filter(function(i){ return i.sev==='question'; }).length + ' question · '
+    + issues.filter(function(i){ return i.sev==='info'; }).length + ' info'
+    + '</div>' + html;
+}
+
+function suFocusField(field) {
+  var el = document.getElementById('su-' + field) || document.querySelector('[id*="su-' + field + '"]');
+  if (el) { el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); el.style.outline = '2px solid #ef4444'; setTimeout(function(){ el.style.outline=''; }, 2000); }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// AI SETUP ASSISTANT
+// ══════════════════════════════════════════════════════════════════════════
+window._suChatHistory = [];
+
+function suBuildSystemPrompt(cfg, issues) {
+  var zoneList = (ZONES||[]).map(function(z){
+    return z.shortName + ': budget £' + Math.round(z.budget||0).toLocaleString() + ', progress ' + ((cfg.zoneProgress||{})[z.id]||0) + '%';
+  }).join('\n');
+  var issueList = (issues||[]).map(function(i){ return '[' + i.sev.toUpperCase() + '] ' + i.msg; }).join('\n') || 'None found';
+  var taskCount = (cfg.tasks || []).length;
+
+  return [
+    'You are a construction project setup assistant. You are helping a groundworks and drainage contractor set up a site control dashboard for a new project.',
+    '',
+    'Your role:',
+    '- Understand the project from the config below',
+    '- Spot crossed or inconsistent information',
+    '- Ask clear, direct questions to fill gaps',
+    '- Suggest sensible values based on what you know',
+    '- Be concise and practical — the user is a contractor, not an accountant',
+    '- If something is ambiguous, ask one focused question at a time',
+    '- When the user gives you information, summarise what you\'ve updated in your understanding',
+    '',
+    '== CURRENT PROJECT CONFIG ==',
+    'Name: ' + ((cfg.project||{}).name || '(not set)'),
+    'Client: ' + ((cfg.project||{}).client || '(not set)'),
+    'Address: ' + ((cfg.project||{}).address || '(not set)'),
+    'Contract sum: £' + (((cfg.project||{}).contractSum||0)).toLocaleString(),
+    'Retention: ' + (((cfg.project||{}).retentionRate)||'?') + '%',
+    'Start: ' + ((cfg.project||{}).start || '(not set)'),
+    'Original completion: ' + ((cfg.project||{}).originalEnd || '(not set)'),
+    'Agreed completion: ' + ((cfg.project||{}).agreedEnd || '(not set)'),
+    'EOT (working days): ' + (((cfg.project||{}).eotWDs)||'(not set)'),
+    'QS / Certifier: ' + ((cfg.project||{}).qs || '(not set)'),
+    'Foreman: ' + ((cfg.project||{}).foreman || '(not set)'),
+    'Data as of: ' + (cfg.dataDate || '(not set)'),
+    'Tasks imported: ' + taskCount,
+    'Bank holidays: ' + ((cfg.bankHolidays||[]).join(', ') || '(none set)'),
+    'Scope: ' + ((cfg.project||{}).description || '(not set)'),
+    '',
+    '== ZONE PROGRESS (QS CONFIRMED) ==',
+    zoneList,
+    '',
+    '== VALIDATION ISSUES FOUND ==',
+    issueList,
+    '',
+    'Today\'s date is ' + new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'}) + '.',
+    'Keep responses under 200 words. Use plain English. Ask one or two questions at most per reply.'
+  ].join('\n');
+}
+
+async function suCallAI(userMsg, cfg, issues) {
+  var key = localStorage.getItem('dgc_ai_key');
+  if (!key) return null;
+  window._suChatHistory.push({ role: 'user', content: userMsg });
+  try {
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-5',
+        max_tokens: 600,
+        system: suBuildSystemPrompt(cfg, issues),
+        messages: window._suChatHistory
+      })
+    });
+    if (!resp.ok) {
+      var err = await resp.json().catch(function(){ return {error:{message:'HTTP '+resp.status}}; });
+      return 'API error: ' + ((err.error && err.error.message) || resp.status);
+    }
+    var data = await resp.json();
+    var reply = data.content[0].text;
+    window._suChatHistory.push({ role: 'assistant', content: reply });
+    return reply;
+  } catch(e) { return 'Connection error: ' + e.message; }
+}
+
+function suRenderChat() {
+  var box = document.getElementById('su-chat-messages');
+  if (!box) return;
+  var html = window._suChatHistory.map(function(m) {
+    var isUser = m.role === 'user';
+    return '<div style="display:flex;justify-content:' + (isUser?'flex-end':'flex-start') + ';margin-bottom:10px;">'
+      + '<div style="max-width:85%;padding:10px 14px;border-radius:' + (isUser?'12px 12px 2px 12px':'12px 12px 12px 2px') + ';'
+      + 'background:' + (isUser?'#1e3a5f':'#1e293b') + ';border:1px solid ' + (isUser?'#38bdf840':'var(--border)') + ';'
+      + 'font-size:12px;color:var(--text);line-height:1.6;white-space:pre-wrap;">' + m.content.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div></div>';
+  }).join('');
+  box.innerHTML = html || '<div style="font-size:12px;color:var(--muted);text-align:center;padding:20px;">Click "Analyse project" to start</div>';
+  box.scrollTop = box.scrollHeight;
+}
+
+async function suSendMessage(msg) {
+  var cfg = cfgLoad() || {};
+  var issues = runValidation(cfg);
+  var inp = document.getElementById('su-chat-input');
+  if (!msg && inp) { msg = inp.value.trim(); if (inp) inp.value = ''; }
+  if (!msg) return;
+
+  var key = localStorage.getItem('dgc_ai_key');
+  if (!key) {
+    var k = prompt('Enter your Anthropic API key (stored locally in your browser only):');
+    if (!k) return;
+    localStorage.setItem('dgc_ai_key', k.trim());
+  }
+
+  // Show user message immediately
+  suRenderChat();
+  var sendBtn = document.getElementById('su-chat-send');
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = '…'; }
+  var thinkEl = document.getElementById('su-chat-thinking');
+  if (thinkEl) thinkEl.style.display = 'flex';
+
+  var reply = await suCallAI(msg, cfg, issues);
+
+  if (thinkEl) thinkEl.style.display = 'none';
+  if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send'; }
+  if (reply) {
+    suRenderChat();
+  } else {
+    suToast('AI not available — check API key in Setup', true);
+  }
+}
+
+async function suAnalyse() {
+  window._suChatHistory = [];
+  var cfg = cfgLoad() || {};
+  var issues = runValidation(cfg);
+  renderValidationPanel(issues);
+  var intro = 'Please review this project setup. Tell me: (1) what you\'ve understood about the project, (2) flag any inconsistencies you see, and (3) ask me the most important questions to make sense of anything that\'s crossed or missing.';
+  await suSendMessage(intro);
+}
+
+function suClearChat() {
+  window._suChatHistory = [];
+  suRenderChat();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // ── Setup tab action handlers ───────────────────────────────────────────────
 function saveSetupForm() {
   var cfg = cfgLoad() || {};
@@ -4487,7 +4814,13 @@ function saveSetupForm() {
 
   cfgSave(cfg);
   applyProjectConfig();
-  suToast('✓ Saved and applied to dashboard');
+  // Run validation and show results
+  var issues = runValidation(cfg);
+  renderValidationPanel(issues);
+  var errCt = issues.filter(function(i){ return i.sev==='error'; }).length;
+  var warnCt = issues.filter(function(i){ return i.sev==='warning'; }).length;
+  var qCt    = issues.filter(function(i){ return i.sev==='question'; }).length;
+  suToast('✓ Saved' + (errCt ? ' · ' + errCt + ' error' + (errCt>1?'s':'') : '') + (warnCt ? ' · ' + warnCt + ' warning' + (warnCt>1?'s':'') : '') + (qCt ? ' · ' + qCt + ' question' + (qCt>1?'s':'') : '') + (errCt||warnCt||qCt ? ' — see Validation below' : ' · No issues'), !!(errCt));
 }
 
 function suToast(msg, isErr) {
