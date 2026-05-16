@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v122</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v125</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -6394,7 +6394,8 @@ function showTab(name, btn) {
   if(name === 'programme')  buildProgrammeHeader();
   if(name === 'data')       buildDataTab();
   if(name === 'setup')      buildSetupTab();
-  if(name === 'plant')      { try { buildOwnedPlant();    } catch(e){} }
+  if(name === 'hs')         { try { buildToolboxTalks(); } catch(e){} }
+  if(name === 'plant')      { try { buildOwnedPlant(); buildHirePlant(); } catch(e){} }
   if(name === 'dashboard')  { try { buildDashboardRAG();  } catch(e){} }
   if(name === 'cashflow')   { try { buildCashFlowTab();   } catch(e){} }
   if(name === 'finalac')    { try { buildFinalAcTab();    } catch(e){} }
@@ -6596,6 +6597,267 @@ function showTab(name, btn) {
 })();
 // ═══════════════════════════════════════════════════════════════════
 
+// ═══════════════════ HIRED PLANT TRACKER v124 ════════════════════════════════
+(function() {
+  var HIRE_KEY = 'dgc_hire_records';
+  var DEFAULT_HIRE_RECORDS = [
+    { id:'h1', item:'13T Excavator', model:'JCB JS131',   supplier:'Manx Plant',  fromDate:'2026-03-23', dayRate:580, status:'on-site',   toDate:'' },
+    { id:'h2', item:'6T Dumper',     model:'Terex TA6',   supplier:'Manx Plant',  fromDate:'2026-03-23', dayRate:120, status:'on-site',   toDate:'' },
+    { id:'h3', item:'Road Saw',      model:'Stihl TS410', supplier:'Hire It IoM', fromDate:'2026-05-12', dayRate:45,  status:'off-hired', toDate:'2026-05-15' }
+  ];
+
+  function loadHR() {
+    try { var s = localStorage.getItem(HIRE_KEY); return s ? JSON.parse(s) : DEFAULT_HIRE_RECORDS; }
+    catch(e) { return DEFAULT_HIRE_RECORDS; }
+  }
+  function saveHR(data) { try { localStorage.setItem(HIRE_KEY, JSON.stringify(data)); } catch(e) {} }
+  function uid() { return 'h' + Date.now() + Math.random().toString(36).slice(2,6); }
+  function fmtHP(n) { return '£' + Math.round(n||0).toLocaleString('en-GB'); }
+  function daysOnHire(fromDate, toDate) {
+    if (!fromDate) return 0;
+    var from = new Date(fromDate + 'T12:00:00');
+    var to   = toDate ? new Date(toDate + 'T12:00:00') : new Date();
+    return Math.max(0, Math.round((to - from) / (1000*60*60*24)));
+  }
+  function fmtShort(d) {
+    if (!d) return '—';
+    var p = d.split('-');
+    if (p.length < 3) return d;
+    var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return parseInt(p[2]) + ' ' + m[parseInt(p[1])-1];
+  }
+  function escHP(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  window.buildHirePlant = function() {
+    var records = loadHR();
+    var nowStr  = new Date().toISOString().slice(0,10);
+
+    // KPIs
+    var onSite    = records.filter(function(r){ return r.status === 'on-site'; });
+    var dailyRate = onSite.reduce(function(s,r){ return s + (r.dayRate||0); }, 0);
+    var totalCost = records.reduce(function(s,r){
+      return s + daysOnHire(r.fromDate, r.status==='on-site' ? '' : r.toDate) * (r.dayRate||0);
+    }, 0);
+
+    var kpiEl = document.getElementById('hire-kpi-row');
+    if (kpiEl) {
+      kpiEl.innerHTML =
+        '<div class="ph-kpi"><div class="k-val">' + onSite.length + '</div><div class="k-lbl">Items on Hire</div></div>' +
+        '<div class="ph-kpi"><div class="k-val" style="color:#f87171;">' + fmtHP(dailyRate) + '/day</div><div class="k-lbl">Current Daily Rate</div></div>' +
+        '<div class="ph-kpi"><div class="k-val">' + fmtHP(totalCost) + '</div><div class="k-lbl">Total Hire Cost to Date</div></div>' +
+        '<div class="ph-kpi"><div class="k-val" style="color:var(--muted);">' + records.length + ' item' + (records.length!==1?'s':'') + '</div><div class="k-lbl">All Items Tracked</div></div>';
+    }
+
+    var cardEl = document.getElementById('hire-plant-card');
+    if (!cardEl) return;
+    var h = [];
+    h.push('<div class="ph-card">');
+    h.push('<div class="ph-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">');
+    h.push('<span>Plant on Hire</span>');
+    h.push('<button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="hireAdd()">+ Log Hire Item</button>');
+    h.push('</div>');
+    h.push('<div style="overflow-x:auto;"><table class="ph-table" style="min-width:720px;">');
+    h.push('<tr><th>Item</th><th>Make/Model</th><th>Supplier</th><th>On Hire</th><th>Off Hire</th><th>Rate/day</th><th>Days</th><th>Cost</th><th>Action</th><th></th></tr>');
+    records.forEach(function(r, idx) {
+      var days = daysOnHire(r.fromDate, r.status==='on-site' ? '' : r.toDate);
+      var cost = days * (r.dayRate||0);
+      var isOn = r.status === 'on-site';
+      h.push('<tr>');
+      h.push('<td><strong>' + escHP(r.item||'—') + '</strong></td>');
+      h.push('<td style="color:var(--muted);font-size:11px;">' + escHP(r.model||'—') + '</td>');
+      h.push('<td>' + escHP(r.supplier||'—') + '</td>');
+      h.push('<td>' + fmtShort(r.fromDate) + '</td>');
+      h.push('<td>' + (r.toDate ? fmtShort(r.toDate) : '<span style="color:var(--muted);font-style:italic;">Still on site</span>') + '</td>');
+      h.push('<td>' + fmtHP(r.dayRate) + '</td>');
+      h.push('<td>' + days + '</td>');
+      h.push('<td><strong>' + fmtHP(cost) + '</strong></td>');
+      h.push('<td>');
+      if (isOn) {
+        h.push('<button class="btn btn-secondary" style="font-size:10px;padding:2px 8px;background:#f59e0b22;border-color:#f59e0b55;color:#f59e0b;" '
+             + 'onclick="hireOffHire(' + idx + ','' + nowStr + '')">✓ Off-Hire Today</button>');
+      } else {
+        h.push('<span style="font-size:10px;color:#64748b;">Returned ' + fmtShort(r.toDate) + '</span>');
+      }
+      h.push('</td>');
+      h.push('<td><span onclick="hireRemove(' + idx + ')" style="cursor:pointer;color:var(--muted);font-size:12px;" '
+           + 'onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='var(--muted)'">✕</span></td>');
+      h.push('</tr>');
+    });
+    if (!records.length) {
+      h.push('<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:16px;">No hire records — click + Log Hire Item</td></tr>');
+    }
+    // Add row (hidden)
+    var inp = 'style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:3px 6px;font-size:11px;box-sizing:border-box;"';
+    h.push('<tr id="hire-add-row" style="display:none;background:var(--surface2);">');
+    h.push('<td style="padding:4px;"><input id="hire-item" placeholder="13T Excavator" ' + inp + '/></td>');
+    h.push('<td style="padding:4px;"><input id="hire-model" placeholder="JCB JS131" ' + inp + '/></td>');
+    h.push('<td style="padding:4px;"><input id="hire-supp" placeholder="Manx Plant" ' + inp + '/></td>');
+    h.push('<td style="padding:4px;"><input id="hire-from" type="date" value="' + nowStr + '" ' + inp + '/></td>');
+    h.push('<td style="padding:4px;font-size:10px;color:var(--muted);">Set on off-hire</td>');
+    h.push('<td style="padding:4px;"><input id="hire-rate" type="number" placeholder="580" ' + inp + ' style="width:70px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:3px 6px;font-size:11px;"/></td>');
+    h.push('<td colspan="2" style="font-size:10px;color:var(--muted);">Auto-calculated</td>');
+    h.push('<td><button class="btn btn-primary" style="font-size:10px;padding:2px 8px;" onclick="hireSave()">Save</button></td>');
+    h.push('<td></td></tr>');
+    h.push('</table></div>');
+    h.push('<div style="margin-top:6px;font-size:10px;color:var(--muted);">Days and cost calculated from on-hire date to today (or off-hire date). Click "✓ Off-Hire Today" when plant leaves site.</div>');
+    h.push('</div>');
+    cardEl.innerHTML = h.join('');
+  };
+
+  window.hireAdd = function() {
+    var row = document.getElementById('hire-add-row');
+    if (row) row.style.display = row.style.display === 'none' ? '' : 'none';
+  };
+  window.hireSave = function() {
+    var rec  = loadHR();
+    var item = (document.getElementById('hire-item')||{}).value||'';
+    if (!item.trim()) { alert('Enter an item name'); return; }
+    rec.push({
+      id: uid(), item: item.trim(),
+      model:    (document.getElementById('hire-model')||{}).value||'',
+      supplier: (document.getElementById('hire-supp')||{}).value||'',
+      fromDate: (document.getElementById('hire-from')||{}).value||'',
+      dayRate:  parseFloat((document.getElementById('hire-rate')||{}).value||0),
+      status: 'on-site', toDate: ''
+    });
+    saveHR(rec); window.buildHirePlant();
+  };
+  window.hireOffHire = function(idx, dateStr) {
+    var rec = loadHR();
+    if (rec[idx]) { rec[idx].status = 'off-hired'; rec[idx].toDate = dateStr; }
+    saveHR(rec); window.buildHirePlant();
+  };
+  window.hireRemove = function(idx) {
+    var rec = loadHR();
+    if (!confirm('Remove hire record for "' + ((rec[idx]&&rec[idx].item)||'item') + '"?')) return;
+    rec.splice(idx,1); saveHR(rec); window.buildHirePlant();
+  };
+
+  // Auto-build if plant tab is active on load
+  try {
+    var pt = document.getElementById('tab-plant');
+    if (pt && pt.classList.contains('active')) window.buildHirePlant();
+  } catch(e) {}
+})();
+// ══════════════════════════════════════════════════════════════════════════════
+
+
+// ═══════════════════ TOOLBOX TALKS REGISTER v125 ════════════════════════════
+(function() {
+  var TT_KEY = 'dgc_toolbox_talks';
+  var DEFAULT_TOOLBOX_TALKS = [
+    { id:'tt1', date:'2026-04-09', topic:'Reversing Vehicles & Banksman',        attendees:10, ledBy:'Ash Razizian', signed:true },
+    { id:'tt2', date:'2026-04-16', topic:'COSHH — Fuels & Lubricants',          attendees:8,  ledBy:'Ash Razizian', signed:true },
+    { id:'tt3', date:'2026-04-23', topic:'PPE Requirements on Site',              attendees:7,  ledBy:'Ash Razizian', signed:true },
+    { id:'tt4', date:'2026-04-30', topic:'Excavation Safety & Trench Collapse',   attendees:9,  ledBy:'Ash Razizian', signed:true },
+    { id:'tt5', date:'2026-05-07', topic:'Working at Height',                     attendees:6,  ledBy:'Ash Razizian', signed:true },
+    { id:'tt6', date:'2026-05-14', topic:'Manual Handling',                       attendees:8,  ledBy:'Ash Razizian', signed:true }
+  ];
+
+  function loadTT() {
+    try { var s = localStorage.getItem(TT_KEY); return s ? JSON.parse(s) : DEFAULT_TOOLBOX_TALKS.slice(); }
+    catch(e) { return DEFAULT_TOOLBOX_TALKS.slice(); }
+  }
+  function saveTT(data) { try { localStorage.setItem(TT_KEY, JSON.stringify(data)); } catch(e) {} }
+  function uid() { return 'tt' + Date.now() + Math.random().toString(36).slice(2,5); }
+  function escTT(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function fmtTT(d) {
+    if (!d) return '—';
+    var p = d.split('-');
+    if (p.length < 3) return d;
+    var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return parseInt(p[2]) + ' ' + m[parseInt(p[1])-1] + ' ' + p[0];
+  }
+
+  window.buildToolboxTalks = function() {
+    var talks = loadTT().slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    var nowStr = new Date().toISOString().slice(0,10);
+
+    // Update KPI tile
+    var kpiTile = document.getElementById('hs-kpi-tt');
+    if (kpiTile) kpiTile.innerHTML = '<div class="k-val" style="color:#4ade80;">' + talks.length + '</div><div class="k-lbl">Toolbox Talks</div>';
+
+    var cardEl = document.getElementById('tt-card');
+    if (!cardEl) return;
+    var h = [];
+    h.push('<div class="ph-card">');
+    h.push('<div class="ph-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">');
+    h.push('<span>Toolbox Talk Register</span>');
+    h.push('<button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="ttAdd()">+ Add Toolbox Talk</button>');
+    h.push('</div>');
+    h.push('<div style="overflow-x:auto;"><table class="ph-table" style="min-width:560px;">');
+    h.push('<tr><th>Date</th><th>Topic</th><th>Attendees</th><th>Led By</th><th>Signed</th><th></th></tr>');
+    talks.forEach(function(t, idx) {
+      h.push('<tr>');
+      h.push('<td style="white-space:nowrap;">' + fmtTT(t.date) + '</td>');
+      h.push('<td><strong>' + escTT(t.topic) + '</strong></td>');
+      h.push('<td style="text-align:center;">' + (t.attendees||0) + '</td>');
+      h.push('<td>' + escTT(t.ledBy||'—') + '</td>');
+      h.push('<td>');
+      if (t.signed) {
+        h.push('<span class="ph-badge ph-green">&#x2713; Signed</span>');
+      } else {
+        h.push('<button class="btn btn-secondary" style="font-size:10px;padding:2px 6px;" onclick="ttSign(' + idx + ')">Sign Off</button>');
+      }
+      h.push('</td>');
+      h.push('<td><span onclick="ttRemove(' + idx + ')" style="cursor:pointer;color:var(--muted);font-size:12px;" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='var(--muted)'">&#x2715;</span></td>');
+      h.push('</tr>');
+    });
+    if (!talks.length) {
+      h.push('<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px;">No toolbox talks recorded — click + Add Toolbox Talk</td></tr>');
+    }
+    // Add row (hidden)
+    var inp = 'style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:3px 6px;font-size:11px;box-sizing:border-box;"';
+    h.push('<tr id="tt-add-row" style="display:none;background:var(--surface2);">');
+    h.push('<td style="padding:4px;"><input id="tt-date" type="date" value="' + nowStr + '" ' + inp + '/></td>');
+    h.push('<td style="padding:4px;"><input id="tt-topic" placeholder="Topic / subject" ' + inp + '/></td>');
+    h.push('<td style="padding:4px;"><input id="tt-att" type="number" placeholder="0" min="0" ' + inp + ' style="width:60px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:3px 6px;font-size:11px;"/></td>');
+    h.push('<td style="padding:4px;"><input id="tt-led" placeholder="Name" ' + inp + '/></td>');
+    h.push('<td style="padding:4px;"><label style="font-size:11px;display:flex;align-items:center;gap:4px;"><input type="checkbox" id="tt-signed" checked/> Signed</label></td>');
+    h.push('<td><button class="btn btn-primary" style="font-size:10px;padding:2px 8px;" onclick="ttSave()">Save</button></td>');
+    h.push('</tr>');
+    h.push('</table></div>');
+    h.push('<div style="margin-top:6px;font-size:10px;color:var(--muted);">Weekly toolbox talks are a legal requirement. Records are stored locally. Print or export for your H&amp;S file.</div>');
+    h.push('</div>');
+    cardEl.innerHTML = h.join('');
+  };
+
+  window.ttAdd = function() {
+    var row = document.getElementById('tt-add-row');
+    if (row) row.style.display = row.style.display === 'none' ? '' : 'none';
+  };
+  window.ttSave = function() {
+    var talks = loadTT();
+    var topic = (document.getElementById('tt-topic')||{}).value||'';
+    if (!topic.trim()) { alert('Enter a topic'); return; }
+    talks.push({
+      id: uid(),
+      date:      (document.getElementById('tt-date')||{}).value||'',
+      topic:     topic.trim(),
+      attendees: parseInt((document.getElementById('tt-att')||{}).value||0),
+      ledBy:     (document.getElementById('tt-led')||{}).value||'',
+      signed:    !!(document.getElementById('tt-signed')||{}).checked
+    });
+    saveTT(talks); window.buildToolboxTalks();
+  };
+  window.ttSign = function(idx) {
+    var talks = loadTT().slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    if (talks[idx]) { talks[idx].signed = true; }
+    saveTT(talks); window.buildToolboxTalks();
+  };
+  window.ttRemove = function(idx) {
+    var talks = loadTT().slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    if (!confirm('Remove toolbox talk: "' + ((talks[idx]&&talks[idx].topic)||'') + '"?')) return;
+    talks.splice(idx,1); saveTT(talks); window.buildToolboxTalks();
+  };
+
+  // Auto-build if H&S tab active
+  try {
+    var hst = document.getElementById('tab-hs');
+    if (hst && hst.classList.contains('active')) window.buildToolboxTalks();
+  } catch(e) {}
+})();
+// ══════════════════════════════════════════════════════════════════════════════
 // ═══════════════════ RONALDSWAY WEATHER ════════════════════════════
 (function() {
   var WX_KEY = 'dgc_wx_cache';
@@ -6925,8 +7187,34 @@ function showTab(name, btn) {
     h.push('<div class="ph-card">');
     h.push('<div class="ph-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">');
     h.push('<span>Order &amp; Expenditure Log</span>');
+    h.push('<div style="display:flex;gap:6px;">');
+    h.push('<button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="cfExportCSV()">📥 Export CSV</button>');
     h.push('<button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="cfOrderAdd()">+ Log Order</button>');
     h.push('</div>');
+    h.push('</div>');
+    // ── Payments due soon panel ──────────────────────────────────────────
+    var soon7 = [], in7 = new Date(now.getTime() + 7*24*60*60*1000);
+    orders.forEach(function(o) {
+      if (o.status === 'paid') return;
+      var sup2 = suppliers.find(function(s){return s.id===o.supplierId;}) || {};
+      var due2 = paymentDue(o.date, sup2.terms);
+      if (!due2) return;
+      var dueD = new Date(due2 + 'T12:00:00');
+      if (dueD <= in7) soon7.push({o:o, sup:sup2, due:due2, dueD:dueD});
+    });
+    soon7.sort(function(a,b){return a.dueD - b.dueD;});
+    if (soon7.length) {
+      h.push('<div style="background:#f59e0b18;border:1px solid #f59e0b44;border-radius:8px;padding:10px 14px;margin-bottom:10px;">');
+      h.push('<div style="font-size:12px;font-weight:700;color:#f59e0b;margin-bottom:6px;">⚡ ' + soon7.length + ' payment' + (soon7.length!==1?'s':'') + ' due within 7 days</div>');
+      soon7.forEach(function(item) {
+        var isOvd = item.dueD < now;
+        h.push('<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-top:1px solid #f59e0b22;font-size:11px;">');
+        h.push('<span><strong>' + esc(item.sup.name||'Unknown') + '</strong> &mdash; ' + esc(item.o.desc||'&mdash;') + '</span>');
+        h.push('<span style="white-space:nowrap;margin-left:12px;color:' + (isOvd?'#f87171':'#f59e0b') + ';font-weight:700;">' + (isOvd?'OVERDUE ':'Due ') + fmtDate(item.due) + ' &middot; ' + fmtGBP(item.o.amount) + '</span>');
+        h.push('</div>');
+      });
+      h.push('</div>');
+    }
     h.push('<div style="overflow-x:auto;"><table class="ph-table" style="min-width:680px;">');
     h.push('<tr><th>Date Ordered</th><th>Supplier</th><th>Description</th><th>Category</th><th>Amount</th><th>Payment Due</th><th>Status</th><th></th></tr>');
     var sortedOrders = orders.slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
@@ -7065,6 +7353,35 @@ function showTab(name, btn) {
   window.cfOrderStatus = function(idx, status) {
     var ords = loadCF(CF_ORDER_KEY, DEFAULT_ORDERS);
     if (ords[idx]) { ords[idx].status = status; saveCF(CF_ORDER_KEY, ords); window.buildCashFlowTab(); }
+  };
+
+  // ── Cash Flow CSV export ────────────────────────────────────────────────────
+  window.cfExportCSV = function() {
+    var sups  = loadCF(CF_SUPPLIER_KEY, DEFAULT_SUPPLIERS);
+    var ords  = loadCF(CF_ORDER_KEY,    DEFAULT_ORDERS);
+    var afps  = loadCF(CF_AFP_KEY,      DEFAULT_AFP);
+    var q     = function(s) { return '"' + String(s||'').replace(/"/g,'""') + '"'; };
+    var rows  = ['Date Ordered,Supplier,Description,Category,Amount (£),Payment Due,Status'];
+    ords.slice().sort(function(a,b){return (a.date||'').localeCompare(b.date||'');}).forEach(function(o) {
+      var sup  = sups.find(function(s){return s.id===o.supplierId;}) || {};
+      var due  = paymentDue(o.date, sup.terms) || '';
+      rows.push([o.date||'', q(sup.name||'Unknown'), q(o.desc||''), q(o.cat||''), (o.amount||0), due, o.status||''].join(','));
+    });
+    rows.push('');
+    rows.push('AFP Reference,Description,Gross Certified (£),Discount (£),Retention (£),Net Receivable (£),Submitted,Expected,Received,Status');
+    afps.forEach(function(a) {
+      var disc = a.discountAmt > 0 ? a.discountAmt : 0;
+      var ret  = a.retAmt > 0 ? a.retAmt : Math.round((a.gross - disc) * (a.retPct||3) / 100);
+      var net  = a.gross > 0 ? (a.gross - disc - ret) : 0;
+      rows.push([q(a.afpNo||''), q(a.desc||''), (a.gross||0), disc, ret, net, a.submitted||'', a.expected||'', a.received||'', a.status||''].join(','));
+    });
+    var blob = new Blob([rows.join('\n')], {type:'text/csv;charset=utf-8;'});
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href = url;
+    a.download = 'dgc-ballasalla-cashflow-' + new Date().toISOString().slice(0,10) + '.csv';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
   };
 })();
 // ═══════════════════════════════════════════════════════════════════
@@ -10919,11 +11236,11 @@ function closeZoneHealth() {
 <div id="tab-hs" class="tab-content admin-only">
   <div class="ph-notice">β Preview — placeholder data. Connect your H&amp;S records or enter real data to replace these examples.</div>
 
-  <!-- KPIs -->
-  <div class="ph-kpi-row">
+  <!-- KPIs (dynamic v125) -->
+  <div id="hs-kpi-row" class="ph-kpi-row">
     <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">0</div><div class="k-lbl">Open Incidents</div></div>
     <div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">1</div><div class="k-lbl">Near Misses (30 days)</div></div>
-    <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">6</div><div class="k-lbl">Toolbox Talks</div></div>
+    <div class="ph-kpi" id="hs-kpi-tt"><div class="k-val" style="color:#4ade80;">6</div><div class="k-lbl">Toolbox Talks</div></div>
     <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">12</div><div class="k-lbl">Workers Inducted</div></div>
     <div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">1</div><div class="k-lbl">RAMS Outstanding</div></div>
   </div>
@@ -10940,20 +11257,8 @@ function closeZoneHealth() {
     <div style="margin-top:10px;"><button class="btn btn-secondary" onclick="fieldReportNearMiss()">+ Log Incident / Near Miss</button></div>
   </div>
 
-  <!-- Toolbox Talks -->
-  <div class="ph-card">
-    <div class="ph-title">Toolbox Talk Register</div>
-    <table class="ph-table">
-      <tr><th>Date</th><th>Topic</th><th>Attendees</th><th>Led By</th><th>Signed</th></tr>
-      <tr><td>14 May 2026</td><td>Manual Handling</td><td>8</td><td>Ash Razizian</td><td><span class="ph-badge ph-green">✓ Signed</span></td></tr>
-      <tr><td>07 May 2026</td><td>Working at Height</td><td>6</td><td>Ash Razizian</td><td><span class="ph-badge ph-green">✓ Signed</span></td></tr>
-      <tr><td>30 Apr 2026</td><td>Excavation Safety &amp; Trench Collapse</td><td>9</td><td>Ash Razizian</td><td><span class="ph-badge ph-green">✓ Signed</span></td></tr>
-      <tr><td>23 Apr 2026</td><td>PPE Requirements on Site</td><td>7</td><td>Ash Razizian</td><td><span class="ph-badge ph-green">✓ Signed</span></td></tr>
-      <tr><td>16 Apr 2026</td><td>COSHH — Fuels &amp; Lubricants</td><td>8</td><td>Ash Razizian</td><td><span class="ph-badge ph-green">✓ Signed</span></td></tr>
-      <tr><td>09 Apr 2026</td><td>Reversing Vehicles &amp; Banksman</td><td>10</td><td>Ash Razizian</td><td><span class="ph-badge ph-green">✓ Signed</span></td></tr>
-    </table>
-    <div style="margin-top:10px;"><button class="btn btn-secondary" onclick="alert('Coming soon')">+ Add Toolbox Talk</button></div>
-  </div>
+  <!-- Toolbox Talks (dynamic v125) -->
+  <div id="tt-card"></div>
 
   <!-- RAMS -->
   <div class="ph-card">
@@ -11039,31 +11344,16 @@ function closeZoneHealth() {
 
 <!-- ═══════════ PLANT TAB β ═══════════ -->
 <div id="tab-plant" class="tab-content admin-only">
-  <div class="ph-notice">β Preview — placeholder hire records. Edit these to match your actual plant schedule.</div>
+  <div class="ph-notice">Plant hire records are tracked in localStorage. Add items with "+ Log Hire Item" and click "✓ Off-Hire" when plant is returned to site.</div>
 
   <!-- Owned Plant Calculator -->
   <div id="owned-plant-section"></div>
 
-  <!-- Plant KPIs -->
-  <div class="ph-kpi-row">
-    <div class="ph-kpi"><div class="k-val">4</div><div class="k-lbl">Items on Hire</div></div>
-    <div class="ph-kpi"><div class="k-val" style="color:#f87171;">£700/day</div><div class="k-lbl">Daily Hire Cost</div></div>
-    <div class="ph-kpi"><div class="k-val">£28,180</div><div class="k-lbl">Total Hire Cost to Date</div></div>
-    <div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">£25,200</div><div class="k-lbl">Forecast to Completion</div></div>
-  </div>
+  <!-- Plant KPIs (dynamic v124) -->
+  <div id="hire-kpi-row" class="ph-kpi-row"></div>
 
-  <!-- Plant on Hire -->
-  <div class="ph-card">
-    <div class="ph-title">Plant on Hire</div>
-    <table class="ph-table">
-      <tr><th>Item</th><th>Make/Model</th><th>Supplier</th><th>From</th><th>Rate/day</th><th>Days</th><th>Cost to Date</th><th>Status</th></tr>
-      <tr><td>13T Excavator</td><td>JCB JS131</td><td>Manx Plant</td><td>23 Mar</td><td>£580</td><td>40</td><td>£23,200</td><td><span class="ph-badge ph-green">On Site</span></td></tr>
-      <tr><td>6T Dumper</td><td>Terex TA6</td><td>Manx Plant</td><td>23 Mar</td><td>£120</td><td>40</td><td>£4,800</td><td><span class="ph-badge ph-green">On Site</span></td></tr>
-      <tr><td>Road Saw</td><td>Stihl TS410</td><td>Hire It IoM</td><td>12 May</td><td>£45</td><td>4</td><td>£180</td><td><span class="ph-badge ph-green">On Site</span></td></tr>
-      <tr><td style="color:var(--muted);font-style:italic;" colspan="8">+ Add your plant items — click button below</td></tr>
-    </table>
-    <div style="margin-top:10px;"><button class="btn btn-secondary" onclick="ownedPlantAdd(); document.getElementById('owned-plant-section').scrollIntoView({behavior:'smooth'});">+ Add Plant Item</button></div>
-  </div>
+  <!-- Plant on Hire (dynamic v124) -->
+  <div id="hire-plant-card"></div>
 
   <!-- Delivery Log -->
   <div class="ph-card">
@@ -11077,7 +11367,7 @@ function closeZoneHealth() {
       <tr><td>13 May 2026</td><td>Concrete C35</td><td>6m³</td><td>Ready Mix IoM</td><td>Zone 4</td><td><span class="ph-badge ph-green">✓ Received</span></td></tr>
       <tr><td>09 May 2026</td><td>Ductile Iron Pipes DN150</td><td>40m</td><td>IoM Civils</td><td>Zone 3</td><td><span class="ph-badge ph-green">✓ Received</span></td></tr>
     </table>
-    <div style="margin-top:10px;"><button class="btn btn-secondary" onclick="alert('Coming soon')">+ Log Delivery</button></div>
+    <div style="margin-top:10px;"><button class="btn btn-secondary" onclick="var b=document.querySelector('[onclick*=\'cashflow\']');if(b)b.click();">+ Log Delivery (→ Cash Flow)</button></div>
   </div>
 </div>
 
