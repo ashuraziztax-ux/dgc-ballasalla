@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v103</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v104</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -4509,7 +4509,6 @@ function buildSetupTab() {
     renderValidationPanel(_initIssues);
   }
 }
-}
 
 // ══════════════════════════════════════════════════════════════════════════
 // VALIDATION ENGINE
@@ -4739,9 +4738,12 @@ async function suSendMessage(msg) {
 
   var key = localStorage.getItem('dgc_ai_key');
   if (!key) {
-    var k = prompt('Enter your Anthropic API key (stored locally in your browser only):');
-    if (!k) return;
-    localStorage.setItem('dgc_ai_key', k.trim());
+    suToast('No API key set — click the "⚠ No key set" link above to add one', true);
+    // Show inline hint in chat window
+    var _chatEl = document.getElementById('su-chat-messages');
+    if (_chatEl) _chatEl.innerHTML = '<div style="color:#f59e0b;font-size:12px;padding:12px;">'
+      + '⚠ No Anthropic API key set. Click the <strong>"⚠ No key set — click to add"</strong> link above to enter your key, then try again.</div>';
+    return;
   }
 
   // Show user message immediately
