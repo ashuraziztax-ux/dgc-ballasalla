@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v121</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v122</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -972,6 +972,7 @@ function clearForm() {
       Progress, KPIs and charts reflect this date.
     </div>
   </div>
+  <div id="rag-status-bar" style="margin-bottom:10px;"></div>
   <div id="alerts-area" style="margin-bottom:14px;"></div>
 
   <!-- ── Row 1: Physical Progress (left) + Days & Financials (right) ── -->
@@ -6394,6 +6395,7 @@ function showTab(name, btn) {
   if(name === 'data')       buildDataTab();
   if(name === 'setup')      buildSetupTab();
   if(name === 'plant')      { try { buildOwnedPlant();    } catch(e){} }
+  if(name === 'dashboard')  { try { buildDashboardRAG();  } catch(e){} }
   if(name === 'cashflow')   { try { buildCashFlowTab();   } catch(e){} }
   if(name === 'finalac')    { try { buildFinalAcTab();    } catch(e){} }
 }
@@ -7067,6 +7069,109 @@ function showTab(name, btn) {
 })();
 // ═══════════════════════════════════════════════════════════════════
 
+
+// ═══════════════════ FIELD + DASHBOARD HELPERS v122 ══════════════════════════
+(function() {
+
+  // ── Field: Near Miss → Risk Tickets (H&S pre-selected) ──────────────────
+  window.fieldReportNearMiss = function() {
+    // Navigate to risks tab
+    var rBtn = document.querySelector('[onclick*="showTab('risks'"]');
+    if (rBtn) rBtn.click();
+    // After render, pre-check Health & Safety checkbox
+    setTimeout(function() {
+      var cbs = document.querySelectorAll('#tab-risks input[type="checkbox"]');
+      cbs.forEach(function(cb) {
+        if (cb.value && (cb.value.indexOf('Health') >= 0 || cb.value.indexOf('Safety') >= 0)) {
+          cb.checked = true;
+        }
+      });
+      // Scroll to form
+      var form = document.querySelector('#tab-risks .card');
+      if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+  };
+
+  // ── Field: Quick progress log → saves to localStorage ────────────────────
+  window.fieldLogProgress = function() {
+    var actEl  = document.getElementById('field-act-sel');
+    var noteEl = document.getElementById('field-note-inp');
+    var activity = actEl  ? actEl.value  : 'Unknown activity';
+    var note     = noteEl ? noteEl.value : '';
+    var now = new Date();
+    var dateStr = now.toISOString().slice(0,10);
+    var timeStr = now.toTimeString().slice(0,5);
+    var entry = {
+      date: dateStr, time: timeStr,
+      type: 'field_quick_log',
+      activity: activity,
+      note: note || '(no note)',
+      savedAt: now.toISOString()
+    };
+    try {
+      var logs = JSON.parse(localStorage.getItem('dgc_field_log') || '[]');
+      logs.push(entry);
+      localStorage.setItem('dgc_field_log', JSON.stringify(logs));
+    } catch(e) {}
+    if (typeof suToast === 'function') {
+      suToast('✓ Logged: ' + activity + (note ? ' — ' + note.slice(0,40) : ''));
+    } else {
+      alert('Logged: ' + activity + (note ? ' — ' + note : ''));
+    }
+    if (noteEl) noteEl.value = '';
+  };
+
+  // ── Dashboard: RAG status bar ─────────────────────────────────────────────
+  window.buildDashboardRAG = function() {
+    var el = document.getElementById('rag-status-bar');
+    if (!el) return;
+    var DS = window.DS || {};
+    var daysLate = typeof DS.daysLateEarly === 'number' ? DS.daysLateEarly : null;
+    var certPct  = typeof DS.actualPct    === 'number' ? DS.actualPct    : null;
+    var planPct  = typeof DS.plannedPct   === 'number' ? DS.plannedPct   : null;
+    var deadline = '26 Jun 2026';
+
+    var ragCol, ragDot, ragLabel, ragDetail;
+    if (daysLate === null) {
+      ragCol = '#64748b'; ragDot = '⬤'; ragLabel = 'Status loading…'; ragDetail = '';
+    } else if (daysLate <= 0) {
+      ragCol = '#4ade80'; ragDot = '🟢';
+      ragLabel = daysLate === 0 ? 'On track — forecast finish ' + deadline
+                                : Math.abs(daysLate) + ' day' + (Math.abs(daysLate)!==1?'s':'') + ' ahead of deadline';
+      ragDetail = certPct !== null ? certPct.toFixed(0) + '% certified vs ' + (planPct||0).toFixed(0) + '% planned' : '';
+    } else if (daysLate <= 5) {
+      ragCol = '#f59e0b'; ragDot = '🟡';
+      ragLabel = daysLate + ' day' + (daysLate!==1?'s':'') + ' behind — recoverable with increased output';
+      ragDetail = certPct !== null ? certPct.toFixed(0) + '% certified vs ' + (planPct||0).toFixed(0) + '% planned' : '';
+    } else {
+      ragCol = '#f87171'; ragDot = '🔴';
+      ragLabel = daysLate + ' days behind — acceleration or revised programme required';
+      ragDetail = certPct !== null ? certPct.toFixed(0) + '% certified vs ' + (planPct||0).toFixed(0) + '% planned' : '';
+    }
+
+    el.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;'
+      + 'border-radius:8px;background:' + ragCol + '18;border:1px solid ' + ragCol + '44;'
+      + 'margin-bottom:2px;">'
+      + '<span style="font-size:18px;">' + ragDot + '</span>'
+      + '<div style="flex:1;">'
+      + '<div style="font-size:13px;font-weight:800;color:' + ragCol + ';">' + ragLabel + '</div>'
+      + (ragDetail ? '<div style="font-size:10px;color:var(--muted);margin-top:2px;">' + ragDetail + '</div>' : '')
+      + '</div>'
+      + '<div style="font-size:10px;color:var(--muted);white-space:nowrap;">Deadline: ' + deadline + '</div>'
+      + '</div>';
+  };
+
+  // Auto-render RAG on first load (dashboard is active by default)
+  try {
+    if (document.getElementById('tab-dashboard') &&
+        document.getElementById('tab-dashboard').classList.contains('active')) {
+      window.buildDashboardRAG();
+    }
+  } catch(e) {}
+
+})();
+// ══════════════════════════════════════════════════════════════════════════════
+
 // ═══════════════════ FINAL ACCOUNT TAB v119 ═══════════════════════
 (function() {
 
@@ -7252,6 +7357,7 @@ window.addEventListener('DOMContentLoaded', () => {
   try { updateHeaderDropdown(); }    catch(e) {}
   try { buildStateBanner();     }    catch(e) {}
   try { fetchRonalswayWeather(); }   catch(e) {}
+  try { buildDashboardRAG(); }       catch(e) {}
 
   // Safe setter — never throws, silently skips missing elements
   function set(id, val) { try { const el = document.getElementById(id); if(el) el.textContent = val; } catch(e){} }
@@ -10831,7 +10937,7 @@ function closeZoneHealth() {
       <tr><td>08 May 2026</td><td><span class="ph-badge ph-amber">First Aid</span></td><td>Minor cut to hand from rebar edge</td><td>Treated on site, first aid kit used</td><td><span class="ph-badge ph-green">Closed</span></td></tr>
       <tr><td>22 Apr 2026</td><td><span class="ph-badge ph-amber">Near Miss</span></td><td>Delivery vehicle came within 2m of operative</td><td>Traffic management reviewed, banksman required</td><td><span class="ph-badge ph-green">Closed</span></td></tr>
     </table>
-    <div style="margin-top:10px;"><button class="btn btn-secondary" onclick="alert('Coming soon — H&S module')">+ Log Incident / Near Miss</button></div>
+    <div style="margin-top:10px;"><button class="btn btn-secondary" onclick="fieldReportNearMiss()">+ Log Incident / Near Miss</button></div>
   </div>
 
   <!-- Toolbox Talks -->
@@ -10956,7 +11062,7 @@ function closeZoneHealth() {
       <tr><td>Road Saw</td><td>Stihl TS410</td><td>Hire It IoM</td><td>12 May</td><td>£45</td><td>4</td><td>£180</td><td><span class="ph-badge ph-green">On Site</span></td></tr>
       <tr><td style="color:var(--muted);font-style:italic;" colspan="8">+ Add your plant items — click button below</td></tr>
     </table>
-    <div style="margin-top:10px;"><button class="btn btn-secondary" onclick="alert('Coming soon')">+ Add Plant Item</button></div>
+    <div style="margin-top:10px;"><button class="btn btn-secondary" onclick="ownedPlantAdd(); document.getElementById('owned-plant-section').scrollIntoView({behavior:'smooth'});">+ Add Plant Item</button></div>
   </div>
 
   <!-- Delivery Log -->
@@ -11043,7 +11149,7 @@ function closeZoneHealth() {
       <div style="font-size:36px;margin-bottom:8px;">🚨</div>
       <div style="font-size:15px;font-weight:800;color:#f87171;margin-bottom:6px;">Log Near Miss / Incident</div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">Tap to log immediately — no forms, just two lines</div>
-      <button style="background:#dc2626;border:none;color:#fff;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:800;cursor:pointer;width:100%;" onclick="alert('Coming soon — H&S module')">⚠ Report Now</button>
+      <button style="background:#dc2626;border:none;color:#fff;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:800;cursor:pointer;width:100%;" onclick="fieldReportNearMiss()">⚠ Report Now</button>
     </div>
 
     <!-- Clock In/Out -->
@@ -11068,7 +11174,7 @@ function closeZoneHealth() {
         </div>
         <div>
           <label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">ACTIVITY</label>
-          <select style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
+          <select id="field-act-sel" style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;">
             <option>Pipe laying</option><option>Excavation</option><option>Backfill &amp; compact</option>
             <option>Manhole construction</option><option>Concrete pour</option><option>Road reinstatement</option>
           </select>
@@ -11076,9 +11182,9 @@ function closeZoneHealth() {
       </div>
       <div style="margin-bottom:12px;">
         <label style="font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;">NOTE (optional)</label>
-        <input type="text" placeholder="e.g. Completed 20m pipe run, ran into soft spot at chainage 45" style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;box-sizing:border-box;">
+        <input type="text" id="field-note-inp" placeholder="e.g. Completed 20m pipe run, ran into soft spot at chainage 45" style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;box-sizing:border-box;">
       </div>
-      <button style="background:var(--accent);border:none;color:#000;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;" onclick="alert('Coming soon — will log to Daily Diary')">✓ Log It</button>
+      <button style="background:var(--accent);border:none;color:#000;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;" onclick="fieldLogProgress()">✓ Log It</button>
     </div>
 
     <!-- Morning Briefing -->
@@ -11109,7 +11215,7 @@ function closeZoneHealth() {
         ☐ Zone 3 — backfill and compact where clear<br>
         ☐ All — PPE check at 07:30 briefing
       </div>
-      <div style="margin-top:12px;"><button class="btn btn-secondary" onclick="alert('Coming soon — print morning briefing sheet')">🖨 Print Briefing</button></div>
+      <div style="margin-top:12px;"><button class="btn btn-secondary" onclick="window.print()">🖨 Print Briefing</button></div>
     </div>
   </div>
 </div>
