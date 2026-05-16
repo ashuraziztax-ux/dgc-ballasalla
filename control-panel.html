@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v105</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v106</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -4104,16 +4104,50 @@ function projSwitch(id) {
   buildSetupTab();
   suToast('Switched to: ' + ((projAll()[id] && projAll()[id]._name) || id));
 }
-// Duplicate current project under a new name
-function projDuplicate(newName) {
+// Clone current project under a new name + optional type tag
+// type: 'live' | 'staging' | 'template'
+function projDuplicate(newName, type) {
   var cfg = cfgLoad();
   if (!cfg) { suToast('No project loaded', true); return; }
   var id = projCreate(newName);
   if (!id) return;
   var copy = JSON.parse(JSON.stringify(cfg));
-  copy._name = newName; copy._id = id; delete copy._saved;
+  copy._name = newName; copy._id = id; copy._type = type || 'staging'; delete copy._saved;
   var all = projAll(); all[id] = copy; projSaveAll(all);
   projSwitch(id);
+}
+// Set the type badge of the active project
+function projSetType(id, type) {
+  var all = projAll();
+  if (!all[id]) return;
+  all[id]._type = type;
+  projSaveAll(all);
+  buildSetupTab();
+}
+// DGC framework template — blank project with standard 12-zone spine, IoM BH, AFP structure
+function projNewFromTemplate(name) {
+  var id = projCreate(name);
+  if (!id) return;
+  var all = projAll();
+  all[id] = {
+    _name: name, _id: id, _type: 'live',
+    project: { name: name, client: '', ref: '', address: '', sum: 0, retention: 2.5,
+                start: '', originalEnd: '', agreedEnd: '', eotDays: 0,
+                qs: '', pm: '', foreman: '', scope: '' },
+    dataDate: '',
+    zoneProgress: { 1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 7:0, 8:0, 9:0, 10:0, 11:0, 12:0 },
+    bankHolidays: ['(replace with your region\'s bank holidays, one per line as YYYY-MM-DD)'],
+    tasks: [], drawings: [], documents: [], fileLocations: [],
+    afps: [
+      { num:1, status:'pending', note:'' },
+      { num:2, status:'pending', note:'' },
+      { num:3, status:'pending', note:'' },
+      { num:4, status:'pending', note:'Final Account TBC' }
+    ]
+  };
+  projSaveAll(all);
+  projSwitch(id);
+  suToast('New project from DGC template: ' + name);
 }
 // Delete a project (will not delete if it's the last one)
 function projDelete(id) {
@@ -4408,26 +4442,49 @@ function buildSetupTab() {
   if (_projKeys.length === 0) {
     h.push('<option value="">— no projects saved —</option>');
   } else {
+    var _typeLabel = { live:'🟢 Live', staging:'🟡 Staging', template:'📋 Template' };
     _projKeys.forEach(function(k) {
-      var n = (_allProj[k] && _allProj[k]._name) || k;
-      h.push('<option value="' + k + '"' + (k === _activeId ? ' selected' : '') + '>' + n + '</option>');
+      var p = _allProj[k] || {};
+      var n = p._name || k;
+      var badge = _typeLabel[p._type] ? ' [' + _typeLabel[p._type] + ']' : '';
+      h.push('<option value="' + k + '"' + (k === _activeId ? ' selected' : '') + '>' + n + badge + '</option>');
     });
   }
   h.push('</select>');
-  // New project inline form
+
+  // Type badge for active project
+  var _curType = (_allProj[_activeId] && _allProj[_activeId]._type) || 'live';
+  var _typeCols = { live:'#16a34a', staging:'#d97706', template:'#6366f1' };
+  var _typeNames = { live:'🟢 Live', staging:'🟡 Staging', template:'📋 Template' };
+  h.push('<select onchange="projSetType(\'' + _activeId + '\',this.value)" title="Tag this project" '
+    + 'style="padding:6px 8px;background:' + (_typeCols[_curType]||'#1e293b') + '22;border:1px solid ' + (_typeCols[_curType]||'var(--border)') + ';border-radius:6px;color:' + (_typeCols[_curType]||'var(--text)') + ';font-size:11px;font-weight:700;cursor:pointer;">');
+  ['live','staging','template'].forEach(function(t) {
+    h.push('<option value="' + t + '"' + (t === _curType ? ' selected' : '') + '>' + _typeNames[t] + '</option>');
+  });
+  h.push('</select>');
+
+  h.push('</div>');
+
+  // Second row: action buttons
+  h.push('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">');
+  // New blank project
   h.push('<input id="proj-new-name" type="text" placeholder="New project name…" '
-    + 'style="padding:7px 10px;background:#1e293b;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;width:160px;"'
-    + 'onkeydown="if(event.key===\'Enter\'){var n=this.value.trim();if(n){var id=projCreate(n);if(id){projSwitch(id);}this.value=\'\';}}">');
-  h.push('<button onclick="(function(){var n=document.getElementById(\'proj-new-name\').value.trim();if(!n){suToast(\'Enter a project name first\',true);return;}var id=projCreate(n);if(id){document.getElementById(\'proj-new-name\').value=\'\';projSwitch(id);}})()" '
-    + 'style="padding:7px 14px;background:#16a34a;border:none;color:#fff;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;">+ New</button>');
-  // Duplicate
-  h.push('<button onclick="(function(){var n=prompt(\'Name for duplicate:\',(\'' + (_allProj[_activeId] && _allProj[_activeId]._name ? _allProj[_activeId]._name.replace(/'/g,"\\'") : 'Copy') + ' copy\'));if(n)projDuplicate(n);})()" '
-    + 'style="padding:7px 14px;background:#1e293b;border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap;">Duplicate</button>');
+    + 'style="padding:6px 10px;background:#1e293b;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;width:150px;"'
+    + 'onkeydown="if(event.key===\'Enter\'){var n=this.value.trim();if(n){projNewFromTemplate(n);this.value=\'\';}}">');
+  h.push('<button onclick="(function(){var n=document.getElementById(\'proj-new-name\').value.trim();if(!n){suToast(\'Enter a project name first\',true);return;}projNewFromTemplate(n);document.getElementById(\'proj-new-name\').value=\'\';})()" '
+    + 'title="Create a new blank project pre-loaded with the DGC 12-zone framework" '
+    + 'style="padding:6px 12px;background:#16a34a;border:none;color:#fff;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;">+ New from Template</button>');
+  // Clone (copy all data, tag as staging)
+  var _cloneSrcName = (_allProj[_activeId] && _allProj[_activeId]._name) ? _allProj[_activeId]._name.replace(/'/g,"\\'") : 'Project';
+  h.push('<button onclick="(function(){var n=prompt(\'Clone name:\',\'' + _cloneSrcName + ' (staging)\');if(!n)return;projDuplicate(n,\'staging\');})()" '
+    + 'title="Clone this project — all current data copied. Tag it as Staging so you know which is live." '
+    + 'style="padding:6px 12px;background:#1e293b;border:1px solid #d9780640;color:#d97806;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;">🟡 Clone to Staging</button>');
   // Delete (disabled if only one project)
   h.push('<button onclick="if(confirm(\'Delete this project? This cannot be undone.\'))projDelete(\'' + _activeId + '\')" '
     + (_projKeys.length <= 1 ? 'disabled title="Cannot delete the only project" ' : '')
-    + 'style="padding:7px 14px;background:#1e293b;border:1px solid #dc262640;color:#dc2626;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap;' + (_projKeys.length <= 1 ? 'opacity:0.4;cursor:not-allowed;' : '') + '">Delete</button>');
+    + 'style="padding:6px 12px;background:#1e293b;border:1px solid #dc262640;color:#dc2626;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap;margin-left:auto;' + (_projKeys.length <= 1 ? 'opacity:0.4;cursor:not-allowed;' : '') + '">Delete</button>');
   h.push('</div>');
+
   if (_allProj[_activeId] && _allProj[_activeId]._saved) {
     h.push('<div style="font-size:9px;color:var(--muted);margin-top:6px;">Last saved: ' + new Date(_allProj[_activeId]._saved).toLocaleString('en-GB') + '</div>');
   }
