@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v96</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v97</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -1062,9 +1062,9 @@ function clearForm() {
         <div style="font-size:9px;color:var(--muted);margin-top:4px;">of plan speed needed<br><span id="pc-plan-rem" style="color:var(--muted);"></span></div>
       </div>
       <div style="border-left:1px solid var(--border);padding-left:12px;">
-        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">Honest forecast (current pace)</div>
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">At-pace forecast (current pace)</div>
         <div style="font-size:20px;font-weight:800;line-height:1.2;" id="pc-forecast-pace">—</div>
-        <div style="font-size:9px;color:var(--muted);margin-top:4px;">if nothing changes<br><span id="pc-pace-velocity" style="color:#a78bfa;"></span></div>
+        <div style="font-size:9px;color:var(--muted);margin-top:4px;">live calc · may differ from snapshot<br><span id="pc-pace-velocity" style="color:#a78bfa;"></span></div>
       </div>
     </div>
       </div><!-- /pc-content -->
@@ -2199,7 +2199,7 @@ const TODAY = new Date();
 // DATA_AS_OF: date of the most recent data upload — updated each fortnight.
 // calcForecast() uses this (not live TODAY) so the projected end date stays
 // stable between updates rather than drifting every calendar day.
-const DATA_AS_OF = new Date('2026-05-14T00:00:00');
+const DATA_AS_OF = new Date('2026-05-14T12:00:00'); // noon = BST-safe
 
 const ZONES = [
   { id:1,  wbs:'1',  name:'Site Setup',               shortName:'Setup',  budget:23807.29, start:'2026-03-23', end:'2026-06-12', color:'#64748b', type:'prelims' },
@@ -4041,9 +4041,22 @@ function buildProgrammeClock() {
       totActDone += bud * (getZoneProgress(z.id) / 100);
     });
     var actualPct  = totBud > 0 ? totActDone / totBud * 100 : 0;
-    // Planned: call getPlannedProgress() so clock, KPI tiles, and QS all agree
-    var plannedPct = getPlannedProgress();
+    // Planned: calendar-day method — matches Velocity Panel (user-trusted, consistent)
+    var plannedPct = Math.min(100, elapsedDays / totalDays * 100);
     var remWorkPct = Math.max(0, 100 - actualPct);
+    // Update Dashboard status badge dynamically
+    try {
+      var _badge = document.getElementById('prog-status-badge');
+      if (_badge) {
+        var _vari = actualPct - plannedPct;
+        var _bSt = _vari >= 2 ? 'Ahead of Programme' : _vari <= -5 ? 'Behind Programme' : 'On Programme';
+        var _bTx = _vari >= 2 ? '#16a34a' : _vari <= -5 ? '#dc2626' : '#d97706';
+        _badge.textContent = _bSt;
+        _badge.style.background = _bTx + '20';
+        _badge.style.borderColor = _bTx + '40';
+        _badge.style.color = _bTx;
+      }
+    } catch(_e) {}
 
     // ── Speed needed to hit 26 Jun ───────────────────────────────────────────
     // How fast does the team need to work (as % of plan speed) to finish by deadline?
@@ -5475,7 +5488,7 @@ function buildTwoWeekReport() {
   // ── Footer ─────────────────────────────────────────────────────────────────
   h.push('<div style="margin-top:18px;padding-top:8px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:7.5pt;color:#94a3b8;">');
   h.push('<span>Drainage &amp; Groundwork Contractors Ltd &mdash; 23 Circular Road, Douglas, IM1 1AF</span>');
-  h.push('<span>Two-Week Progress Report &mdash; Ballasalla Phase 4 v91</span>');
+  h.push('<span>Two-Week Progress Report &mdash; Ballasalla Phase 4 v97</span>');
   h.push('</div>');
 
   h.push('</div>'); // rpt-body
@@ -6395,9 +6408,11 @@ function buildZoneSummaryList() {
 function buildUpcomingList() {
   const el = document.getElementById('upcoming-tasks-list');
   const weekEnd = new Date(TODAY.getTime() + 14*86400000);
+  const _sevenDaysAgo = new Date(TODAY.getTime() - 7 * 86400000);
   const upcoming = TASKS.filter(t => {
     const s = parseDate(t.start), e = parseDate(t.end);
-    return (s >= TODAY && s <= weekEnd) || (s <= TODAY && e >= TODAY);
+    // Exclude tasks started >7 days ago (avoids perpetual prelims/spanning tasks)
+    return (s >= TODAY && s <= weekEnd) || (s <= TODAY && e >= TODAY && s >= _sevenDaysAgo);
   }).slice(0,14);
   if(!upcoming.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px;">No tasks in next two weeks</div>'; return; }
   const stCol = { complete:'#22c55e', active:'#f59e0b', upcoming:'#64748b' };
@@ -6616,10 +6631,12 @@ function buildReport() {
   if(rptUpcoming) {
     const cutoff = new Date(TODAY.getTime() + 14 * 86400000);
     // Include active tasks and tasks starting in next 14 calendar days, excluding group headers
+    var _sevenDaysAgo = new Date(TODAY.getTime() - 7 * 86400000);
     var lookaheadTasks = TASKS.filter(function(t) {
       if(t.isGroup) return false;
       var s = parseDate(t.start), e = parseDate(t.end);
-      return e >= TODAY && s <= cutoff;
+      // Exclude tasks started >7 days ago (avoids perpetual prelims/spanning tasks)
+      return e >= TODAY && s <= cutoff && s >= _sevenDaysAgo;
     }).sort(function(a,b){ return parseDate(a.start) - parseDate(b.start); });
 
     var zoneCol = {1:'#22c55e',2:'#ca8a04',3:'#d97706',4:'#2563eb',5:'#9333ea',6:'#db2777'};
@@ -6755,14 +6772,17 @@ function buildGantt() {
       ' — check console (F12) for details.</div></td></tr>';
     return;
   }
-  const minDate   = new Date(Math.min.apply(null, allDates));
-  const maxDate   = new Date(Math.max.apply(null, allDates));
-  const totalDays = daysBetween(minDate, maxDate) + 5;
+  const minDate    = new Date(Math.min.apply(null, allDates));
+  const maxDate    = new Date(Math.max.apply(null, allDates));
+  // Ensure timeline extends at least 2 weeks past agreed completion (26 Jun 2026)
+  var _ganttFloor  = new Date('2026-07-10T00:00:00');
+  const ganttCeil  = new Date(Math.max(maxDate.getTime(), _ganttFloor.getTime()));
+  const totalDays  = daysBetween(minDate, ganttCeil) + 5;
 
   // Week headers
   const weeks = [];
   let wd = new Date(minDate);
-  while(wd <= maxDate) { weeks.push(new Date(wd)); wd.setDate(wd.getDate() + 7); }
+  while(wd <= ganttCeil) { weeks.push(new Date(wd)); wd.setDate(wd.getDate() + 7); }
   var compareLegend = (gMode === 'compare' && hasUpload)
     ? '<div style="padding:2px 0 5px;font-size:9px;color:var(--muted);display:flex;align-items:center;gap:10px;">'
       + '<span><span style="display:inline-block;width:12px;height:8px;background:#0ea5e9;border-radius:2px;opacity:0.9;vertical-align:middle;margin-right:3px;"></span>Last Agreed</span>'
@@ -6785,7 +6805,7 @@ function buildGantt() {
     const zW    = ((daysBetween(zs, ze)+1) / totalDays * 100).toFixed(1);
     html += '<tr class="zone-row"><td>' + z.wbs + '</td><td>' + z.name + '</td><td></td><td class="gantt-bar-cell">'
       + '<div class="gantt-bar-wrapper"><div class="gantt-bar zone" style="left:' + zLeft + '%;width:' + zW + '%"></div>'
-      + '<div class="today-line" style="left:' + todayPct + '%"><span class="gantt-today-label">Today</span></div></div></td></tr>';
+      + '<div class="today-line" style="left:' + todayPct + '%"></div></div></td></tr>'; // label removed: shown once in header only
 
     tasks.filter(t => t.zone === z.id).forEach(t => {
       const ts = parseDate(t.start), te = parseDate(t.end);
