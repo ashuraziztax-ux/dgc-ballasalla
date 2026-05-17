@@ -526,24 +526,26 @@ body.client-mode .no-client  { display: none !important; }
 .sh-diff-neg { color:#ef4444; font-weight:700; }
 .sh-diff-zero { color:var(--muted); }
 .sh-sat-tag { font-size:9px; background:#f59e0b20; color:#f59e0b; border:1px solid #f59e0b40; border-radius:8px; padding:1px 6px; margin-left:4px; }
-/* ── Staff daily hours tracker (v87) ── */
-.sh-tracker-table { width:100%; border-collapse:collapse; font-size:12px; min-width:900px; }
-.sh-tracker-table th { padding:5px 4px; text-align:center; background:var(--surface2); color:var(--muted); font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--border); white-space:nowrap; }
-.sh-tracker-table td { padding:4px 3px; border-bottom:1px solid var(--border); vertical-align:middle; text-align:center; }
+/* ── Staff daily hours tracker (v87, restyled v131) ── */
+.sh-tracker-table { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; min-width:960px; }
+.sh-tracker-table th { padding:12px 8px; text-align:center; background:var(--surface2); color:var(--muted); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; border-bottom:2px solid var(--border); white-space:nowrap; }
+.sh-tracker-table td { padding:11px 6px; border-bottom:1px solid var(--border); vertical-align:middle; text-align:center; line-height:1.4; }
+.sh-tracker-table tbody tr:hover td { background:#ffffff08; }
 .sh-tracker-table tr:last-child td { border-bottom:none; }
-.sh-tr-name { text-align:left !important; white-space:nowrap; min-width:130px; padding-left:8px !important; font-weight:600; }
-.sh-tr-day { min-width:50px; }
-.sh-tr-wknd { background:var(--surface) !important; }
-.sh-tr-today-col { background:#60a5fa12 !important; border-left:2px solid #60a5fa50 !important; border-right:2px solid #60a5fa50 !important; }
-.sh-tr-total { font-weight:700; min-width:62px; white-space:nowrap; }
-.sh-tr-status { min-width:92px; white-space:nowrap; }
-.sh-tr-notes { min-width:150px; }
-.sh-tr-cell input[type=number] { width:42px; background:var(--surface2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:11px; font-weight:600; padding:2px 3px; text-align:center; }
-.sh-tr-changed input[type=number] { border-color:#f59e0b; background:#f59e0b12; color:#f59e0b; }
-.sh-tr-team-row td { background:var(--surface2); border-top:2px solid var(--accent2); font-weight:700; }
-.sh-tr-exp-row td { background:transparent; opacity:0.65; }
-.sh-status-ok   { color:#22c55e; font-size:11px; font-weight:700; }
-.sh-status-warn { color:#f59e0b; font-size:11px; font-weight:700; }
+.sh-tr-name { text-align:left !important; white-space:nowrap; min-width:160px; padding-left:16px !important; font-weight:700; font-size:13px; }
+.sh-tr-day { min-width:66px; }
+.sh-tr-wknd { background:rgba(0,0,0,.12) !important; opacity:0.7; }
+.sh-tr-today-col { background:#60a5fa14 !important; border-left:2px solid #60a5fa60 !important; border-right:2px solid #60a5fa60 !important; }
+.sh-tr-total { font-weight:800; min-width:74px; white-space:nowrap; font-size:14px; }
+.sh-tr-status { min-width:110px; white-space:nowrap; }
+.sh-tr-notes { min-width:170px; }
+.sh-tr-cell input[type=number] { width:54px; background:var(--surface2); border:1px solid var(--border); border-radius:7px; color:var(--text); font-size:14px; font-weight:700; padding:6px 4px; text-align:center; transition:border-color .15s,background .15s; }
+.sh-tr-cell input[type=number]:focus { outline:none; border-color:var(--accent); background:#0ea5e912; }
+.sh-tr-changed input[type=number] { border-color:#f59e0b; background:#f59e0b18; color:#f59e0b; }
+.sh-tr-team-row td { background:var(--surface2); border-top:2px solid var(--border); font-weight:700; padding-top:13px; padding-bottom:13px; }
+.sh-tr-exp-row td { background:transparent; opacity:0.5; font-size:11px; }
+.sh-status-ok   { color:#22c55e; font-size:12px; font-weight:700; }
+.sh-status-warn { color:#f59e0b; font-size:12px; font-weight:700; }
 </style>
 </head>
 <body>
@@ -10923,14 +10925,15 @@ function buildStaffTracker() {
     var sat  = d.getDay() === 6, sun = d.getDay() === 0;
     var wknd = (sat || sun) ? ' sh-tr-wknd' : '';
     var tdy  = (isCurPeriod && dk === todayKey) ? ' sh-tr-today-col' : '';
-    h += '<th class="sh-tr-day' + wknd + tdy + '">' + DAY[d.getDay()] +
-         '<br><span style="font-weight:400;">' + d.getDate() + ' ' + MO[d.getMonth()] + '</span></th>';
+    h += '<th class="sh-tr-day' + wknd + tdy + '" style="line-height:1.5;">' +
+         '<div style="font-size:11px;font-weight:800;letter-spacing:.04em;">' + DAY[d.getDay()] + '</div>' +
+         '<div style="font-size:10px;font-weight:500;color:var(--muted);">' + d.getDate() + ' ' + MO[d.getMonth()] + '</div></th>';
   });
   h += '<th class="sh-tr-total">Total</th><th class="sh-tr-status">Status</th>' +
        '<th class="sh-tr-notes">Notes</th></tr>';
 
   // Expected row (greyed reference)
-  h += '<tr class="sh-tr-exp-row"><td class="sh-tr-name" style="color:var(--muted);font-size:10px;font-style:italic;">Expected (priced)</td>';
+  h += '<tr class="sh-tr-exp-row"><td class="sh-tr-name" style="color:var(--muted);font-size:11px;font-style:italic;font-weight:500;border-left:3px solid var(--border);">Expected (priced)</td>';
   dates.forEach(function(d, i) {
     var sat  = d.getDay() === 6, sun = d.getDay() === 0;
     var wknd = (sat || sun) ? ' sh-tr-wknd' : '';
@@ -10950,7 +10953,7 @@ function buildStaffTracker() {
     var note = (sd._note || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
     var personTotal = 0, hasChanges = false;
 
-    h += '<tr><td class="sh-tr-name">' + name + '</td>';
+    h += '<tr><td class="sh-tr-name" style="border-left:3px solid var(--accent);">' + name + '</td>';
 
     dates.forEach(function(d, i) {
       var dk   = d.toISOString().slice(0, 10);
@@ -10984,8 +10987,8 @@ function buildStaffTracker() {
          '<input type="text" class="sh-tracker-note"' +
          ' data-period="' + periodKey + '" data-staff="' + name + '"' +
          ' placeholder="Notes…" value="' + note + '"' +
-         ' style="width:100%;min-width:120px;background:var(--surface2);border:1px solid var(--border);' +
-         'border-radius:4px;color:var(--text);font-size:11px;padding:3px 6px;"></td>';
+         ' style="width:100%;min-width:130px;background:var(--surface2);border:1px solid var(--border);' +
+         'border-radius:6px;color:var(--text);font-size:12px;padding:6px 8px;"></td>';
     h += '</tr>';
   });
 
