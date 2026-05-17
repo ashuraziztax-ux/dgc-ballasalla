@@ -5,6 +5,28 @@ All versions committed to `main` → deployed at
 
 ---
 
+## v128 — 17 May 2026
+**Hotfix: 7 JavaScript syntax errors resolved (all tabs now functional)**
+- Fixed unescaped single quotes in h.push() strings in the Hired Plant (v124), Toolbox Talk (v125) and RFI Log (v126) IIFEs — `hireOffHire`, hover colour handlers, `ttRemove`, `rfiRemove` all had `'#f87171'` or `','' + var` patterns breaking the JS parser
+- Fixed unescaped apostrophe in `querySelector('[onclick*="showTab('risks'"]')` in fieldReportNearMiss (v122)
+- Fixed unescaped apostrophe in DEFAULT_RISK_TICKETS: `Shaun O'Boyle` → `Shaun O\'Boyle` and `it's time` → `it\'s time` (v120 data)
+- All 7 syntax errors were causing a SyntaxError that prevented the entire main script block from running; confirmed fixed with `new Function()` parse test — `showTab` and all builder functions now resolve correctly
+
+## v127 — 17 May 2026
+**Gantt: zone progress overlay + % complete column (Jamie persona)**
+- Gantt header: "Assigned" column renamed to "Assigned / %"
+- Zone rows now show % complete in the Assigned column, colour-coded (blue <50%, amber 50–99%, green 100%)
+- Zone bars now show a translucent green fill overlay proportional to actual progress vs planned span
+- Progress legend added below the Gantt chart (Planned span / Actual progress / Complete / Active / Late)
+
+## v126 — 17 May 2026
+**Documents tab: RFI log goes live (Jamie/QS persona)**
+- RFI Log section is now fully localStorage-backed — 3 seed RFIs pre-loaded (RFI-001 closed, RFI-002 outstanding, RFI-003 sent)
+- Auto-increments RFI reference numbers (RFI-004, RFI-005…)
+- Overdue detection: RFIs past their due date show an amber banner "⚠ N RFI overdue: — chase Dandara PM"
+- Status dropdown on each row (Sent / Outstanding / Closed) updates localStorage immediately
+- "+ Raise RFI" button opens inline form; closed RFIs show their response text
+
 ## v125 — 17 May 2026
 **H&S Toolbox Talk register goes live (Dave persona)**
 - Toolbox Talk Register is now localStorage-backed — the 6 existing talks (Apr–May) are pre-loaded as DEFAULT_TOOLBOX_TALKS so the register shows real history on first load

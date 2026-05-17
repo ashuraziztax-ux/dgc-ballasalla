@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v127</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v128</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -6684,13 +6684,13 @@ function showTab(name, btn) {
       h.push('<td>');
       if (isOn) {
         h.push('<button class="btn btn-secondary" style="font-size:10px;padding:2px 8px;background:#f59e0b22;border-color:#f59e0b55;color:#f59e0b;" '
-             + 'onclick="hireOffHire(' + idx + ','' + nowStr + '')">✓ Off-Hire Today</button>');
+             + 'onclick="hireOffHire(' + idx + ',\'' + nowStr + '\')">✓ Off-Hire Today</button>');
       } else {
         h.push('<span style="font-size:10px;color:#64748b;">Returned ' + fmtShort(r.toDate) + '</span>');
       }
       h.push('</td>');
       h.push('<td><span onclick="hireRemove(' + idx + ')" style="cursor:pointer;color:var(--muted);font-size:12px;" '
-           + 'onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='var(--muted)'">✕</span></td>');
+           + 'onmouseover="this.style.color=\'#f87171\'" onmouseout="this.style.color=\'var(--muted)\'">✕</span></td>');
       h.push('</tr>');
     });
     if (!records.length) {
@@ -6810,7 +6810,7 @@ function showTab(name, btn) {
         h.push('<button class="btn btn-secondary" style="font-size:10px;padding:2px 6px;" onclick="ttSign(' + idx + ')">Sign Off</button>');
       }
       h.push('</td>');
-      h.push('<td><span onclick="ttRemove(' + idx + ')" style="cursor:pointer;color:var(--muted);font-size:12px;" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='var(--muted)'">&#x2715;</span></td>');
+      h.push('<td><span onclick="ttRemove(' + idx + ')" style="cursor:pointer;color:var(--muted);font-size:12px;" onmouseover="this.style.color=\'#f87171\'" onmouseout="this.style.color=\'var(--muted)\'">&#x2715;</span></td>');
       h.push('</tr>');
     });
     if (!talks.length) {
@@ -6948,7 +6948,7 @@ function showTab(name, btn) {
         h.push('<option value="' + st + '"' + (r.status===st?' selected':'') + '>' + (STATUS_LABELS[st]||st) + '</option>');
       });
       h.push('</select></td>');
-      h.push('<td><span onclick="rfiRemove(' + idx + ')" style="cursor:pointer;color:var(--muted);font-size:12px;" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='var(--muted)'">&#x2715;</span></td>');
+      h.push('<td><span onclick="rfiRemove(' + idx + ')" style="cursor:pointer;color:var(--muted);font-size:12px;" onmouseover="this.style.color=\'#f87171\'" onmouseout="this.style.color=\'var(--muted)\'">&#x2715;</span></td>');
       h.push('</tr>');
     });
     if (!rfis.length) {
@@ -7545,7 +7545,7 @@ function showTab(name, btn) {
   // ── Field: Near Miss → Risk Tickets (H&S pre-selected) ──────────────────
   window.fieldReportNearMiss = function() {
     // Navigate to risks tab
-    var rBtn = document.querySelector('[onclick*="showTab('risks'"]');
+    var rBtn = document.querySelector('[onclick*="showTab(\'risks\'"]');
     if (rBtn) rBtn.click();
     // After render, pre-check Health & Safety checkbox
     setTimeout(function() {
@@ -9164,7 +9164,7 @@ var DEFAULT_RISK_TICKETS = [
   },
   {
     rtNum:101006, date:'2026-04-08', project:'Ballasalla Phase 4',
-    raisedBy:'Shaun O'Boyle', role:'Dandara',
+    raisedBy:'Shaun O\'Boyle', role:'Dandara',
     categories:['Programme / Deadline','Logistics / Material'],
     description:'Told topsoil will be moved from site, along with some spoil bunds to allow access to site. Verbal from Shaun to Harry approximately 1500.',
     resolution:'DGC requested to hire machines to Dandara if needed. DGC happy to help if required.',
@@ -9229,7 +9229,7 @@ var DEFAULT_RISK_TICKETS = [
     rtNum:101013, date:'2026-04-14', project:'Ballasalla Phase 4',
     raisedBy:'David Smith', role:'DGC',
     categories:['Programme / Deadline','Financial'],
-    description:'Verbal conversation 10/4/26. Pedro (site exec) — James Coogan (DGC). Pedro informing it's time for James to take skips from the site to reuse.',
+    description:'Verbal conversation 10/4/26. Pedro (site exec) — James Coogan (DGC). Pedro informing it\'s time for James to take skips from the site to reuse.',
     resolution:'Please confirm in writing. This is OK to do.',
     pmStatus:'Action taken', pmNotes:'Action required (Dandara).',
     signedBy:'David Smith', signDate:'2026-04-14', linkedCCE:''
