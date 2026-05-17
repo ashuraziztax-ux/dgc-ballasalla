@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v125</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v127</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -1408,6 +1408,15 @@ function clearForm() {
       <table class="gantt-table" id="gantt-table">
         <thead id="gantt-head"></thead>
         <tbody id="gantt-body"></tbody>
+      </table>
+      <div style="margin-top:6px;display:flex;align-items:center;gap:14px;font-size:9px;color:var(--muted);">
+        <span><span style="display:inline-block;width:14px;height:8px;background:#3b82f640;border:1px solid #3b82f6;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>Planned span</span>
+        <span><span style="display:inline-block;width:14px;height:8px;background:#4ade8055;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>Actual progress (zone level)</span>
+        <span><span style="display:inline-block;width:14px;height:8px;background:#22c55e;border-radius:2px;vertical-align:middle;margin-right:3px;opacity:0.8;"></span>Complete task</span>
+        <span><span style="display:inline-block;width:14px;height:8px;background:#3b82f6;border-radius:2px;vertical-align:middle;margin-right:3px;opacity:0.9;"></span>Active task</span>
+        <span><span style="display:inline-block;width:14px;height:8px;background:#ef4444;border-radius:2px;vertical-align:middle;margin-right:3px;opacity:0.8;"></span>Late task</span>
+      </div>
+      <table style="display:none">
       </table>
     </div>
   </div>
@@ -6395,6 +6404,7 @@ function showTab(name, btn) {
   if(name === 'data')       buildDataTab();
   if(name === 'setup')      buildSetupTab();
   if(name === 'hs')         { try { buildToolboxTalks(); } catch(e){} }
+  if(name === 'documents')  { try { buildRFILog();       } catch(e){} }
   if(name === 'plant')      { try { buildOwnedPlant(); buildHirePlant(); } catch(e){} }
   if(name === 'dashboard')  { try { buildDashboardRAG();  } catch(e){} }
   if(name === 'cashflow')   { try { buildCashFlowTab();   } catch(e){} }
@@ -6855,6 +6865,148 @@ function showTab(name, btn) {
   try {
     var hst = document.getElementById('tab-hs');
     if (hst && hst.classList.contains('active')) window.buildToolboxTalks();
+  } catch(e) {}
+})();
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════ RFI LOG v126 ════════════════════════════════════════════
+(function() {
+  var RFI_KEY = 'dgc_rfi_log';
+  var DEFAULT_RFI_LOG = [
+    { id:'r1', ref:'RFI-001', query:'Clarification of invert level at MH7 — conflict between D-002 and D-003',
+      raised:'2026-04-12', to:'Dandara PM', due:'2026-04-16', status:'closed', response:'Confirmed invert per D-003 Rev B — D-002 superseded.' },
+    { id:'r2', ref:'RFI-002', query:'Pipe bedding specification for Zones 9–12 — granular or concrete?',
+      raised:'2026-05-05', to:'Dandara PM', due:'2026-05-12', status:'outstanding', response:'' },
+    { id:'r3', ref:'RFI-003', query:'Updated road reinstatement drawing for revised Plot 14A access',
+      raised:'2026-05-14', to:'Dandara PM', due:'2026-05-21', status:'sent', response:'' }
+  ];
+  var STATUS_LABELS = { open:'Open', sent:'Sent', outstanding:'⚠ Outstanding', closed:'✓ Closed' };
+  var STATUS_COLS   = { open:'ph-blue', sent:'ph-blue', outstanding:'ph-red', closed:'ph-green' };
+
+  function loadRFI() {
+    try { var s = localStorage.getItem(RFI_KEY); return s ? JSON.parse(s) : DEFAULT_RFI_LOG.slice(); }
+    catch(e) { return DEFAULT_RFI_LOG.slice(); }
+  }
+  function saveRFI(data) { try { localStorage.setItem(RFI_KEY, JSON.stringify(data)); } catch(e) {} }
+  function uid() { return 'r' + Date.now() + Math.random().toString(36).slice(2,5); }
+  function escR(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function fmtR(d) {
+    if (!d) return '—';
+    var p = d.split('-'); if (p.length < 3) return d;
+    var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return parseInt(p[2]) + ' ' + m[parseInt(p[1])-1];
+  }
+  function isOverdueR(dueDate, status) {
+    if (!dueDate || status === 'closed') return false;
+    return new Date(dueDate + 'T12:00:00') < new Date();
+  }
+  function nextRef(rfis) {
+    var nums = rfis.map(function(r){ var m=(r.ref||'').match(/\d+$/); return m?parseInt(m[0]):0; });
+    return 'RFI-' + String(Math.max(0, ...nums) + 1).padStart('003'.length,'0');
+  }
+
+  window.buildRFILog = function() {
+    var rfis   = loadRFI().slice().sort(function(a,b){ return (b.raised||'').localeCompare(a.raised||''); });
+    var nowStr = new Date().toISOString().slice(0,10);
+    var cardEl = document.getElementById('rfi-card');
+    if (!cardEl) return;
+
+    // Count overdue
+    var overdue = rfis.filter(function(r){ return isOverdueR(r.due, r.status); });
+    var open    = rfis.filter(function(r){ return r.status !== 'closed'; });
+
+    var h = [];
+    h.push('<div class="ph-card">');
+    h.push('<div class="ph-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">');
+    h.push('<span>RFI Log <span style="font-weight:400;font-size:11px;color:var(--muted);">— Requests for Information</span></span>');
+    h.push('<button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="rfiAdd()">+ Raise RFI</button>');
+    h.push('</div>');
+
+    // Overdue banner
+    if (overdue.length) {
+      h.push('<div style="background:#f8717115;border:1px solid #f8717144;border-radius:7px;padding:8px 12px;margin-bottom:8px;font-size:11px;color:#f87171;font-weight:600;">');
+      h.push('⚠ ' + overdue.length + ' RFI' + (overdue.length!==1?'s':'') + ' overdue: ');
+      h.push(overdue.map(function(r){ return escR(r.ref); }).join(', '));
+      h.push(' — chase Dandara PM</div>');
+    }
+
+    h.push('<div style="overflow-x:auto;"><table class="ph-table" style="min-width:660px;">');
+    h.push('<tr><th>Ref</th><th>Query</th><th>Raised</th><th>To</th><th>Due</th><th>Status</th><th></th></tr>');
+    rfis.forEach(function(r, idx) {
+      var ovd = isOverdueR(r.due, r.status);
+      h.push('<tr' + (ovd?' style="background:#f8717108;"':'') + '>');
+      h.push('<td style="white-space:nowrap;"><strong>' + escR(r.ref) + '</strong></td>');
+      h.push('<td style="max-width:300px;">' + escR(r.query));
+      if (r.response) h.push('<div style="font-size:10px;color:#4ade80;margin-top:2px;">↩ ' + escR(r.response) + '</div>');
+      h.push('</td>');
+      h.push('<td style="white-space:nowrap;">' + fmtR(r.raised) + '</td>');
+      h.push('<td>' + escR(r.to||'—') + '</td>');
+      h.push('<td style="white-space:nowrap;' + (ovd?'color:#f87171;font-weight:700;':'') + '">' + fmtR(r.due) + (ovd?' ⚠':'') + '</td>');
+      h.push('<td>');
+      h.push('<select style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:2px 4px;font-size:10px;cursor:pointer;" onchange="rfiStatus(' + idx + ',this.value)">');
+      ['open','sent','outstanding','closed'].forEach(function(st) {
+        h.push('<option value="' + st + '"' + (r.status===st?' selected':'') + '>' + (STATUS_LABELS[st]||st) + '</option>');
+      });
+      h.push('</select></td>');
+      h.push('<td><span onclick="rfiRemove(' + idx + ')" style="cursor:pointer;color:var(--muted);font-size:12px;" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='var(--muted)'">&#x2715;</span></td>');
+      h.push('</tr>');
+    });
+    if (!rfis.length) {
+      h.push('<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px;">No RFIs raised — click + Raise RFI</td></tr>');
+    }
+    // Add row
+    var inp = 'style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:3px 6px;font-size:11px;box-sizing:border-box;"';
+    var nRef = nextRef(loadRFI());
+    h.push('<tr id="rfi-add-row" style="display:none;background:var(--surface2);">');
+    h.push('<td style="padding:4px;"><input id="rfi-ref" value="' + nRef + '" ' + inp + '/></td>');
+    h.push('<td style="padding:4px;"><input id="rfi-query" placeholder="Query description" ' + inp + '/></td>');
+    h.push('<td style="padding:4px;"><input id="rfi-raised" type="date" value="' + nowStr + '" ' + inp + '/></td>');
+    h.push('<td style="padding:4px;"><input id="rfi-to" placeholder="Dandara PM" ' + inp + '/></td>');
+    h.push('<td style="padding:4px;"><input id="rfi-due" type="date" ' + inp + '/></td>');
+    h.push('<td style="padding:4px;"><select id="rfi-status" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:3px 5px;font-size:11px;"><option value="open">Open</option><option value="sent">Sent</option></select></td>');
+    h.push('<td><button class="btn btn-primary" style="font-size:10px;padding:2px 8px;" onclick="rfiSave()">Save</button></td>');
+    h.push('</tr>');
+    h.push('</table></div>');
+    h.push('<div style="margin-top:6px;font-size:10px;color:var(--muted);">Status updates are saved automatically. "Outstanding" = overdue with no response. "Closed" = response received and accepted.</div>');
+    h.push('</div>');
+    cardEl.innerHTML = h.join('');
+  };
+
+  window.rfiAdd = function() {
+    var row = document.getElementById('rfi-add-row');
+    if (row) row.style.display = row.style.display === 'none' ? '' : 'none';
+  };
+  window.rfiSave = function() {
+    var rfis  = loadRFI();
+    var query = (document.getElementById('rfi-query')||{}).value||'';
+    if (!query.trim()) { alert('Enter an RFI query description'); return; }
+    rfis.push({
+      id: uid(),
+      ref:    (document.getElementById('rfi-ref')||{}).value||nextRef(rfis),
+      query:  query.trim(),
+      raised: (document.getElementById('rfi-raised')||{}).value||'',
+      to:     (document.getElementById('rfi-to')||{}).value||'Dandara PM',
+      due:    (document.getElementById('rfi-due')||{}).value||'',
+      status: (document.getElementById('rfi-status')||{}).value||'open',
+      response: ''
+    });
+    saveRFI(rfis); window.buildRFILog();
+  };
+  window.rfiStatus = function(idx, status) {
+    var rfis = loadRFI().slice().sort(function(a,b){ return (b.raised||'').localeCompare(a.raised||''); });
+    if (rfis[idx]) { rfis[idx].status = status; }
+    saveRFI(rfis); window.buildRFILog();
+  };
+  window.rfiRemove = function(idx) {
+    var rfis = loadRFI().slice().sort(function(a,b){ return (b.raised||'').localeCompare(a.raised||''); });
+    if (!confirm('Remove RFI: ' + ((rfis[idx]&&rfis[idx].ref)||'') + '?')) return;
+    rfis.splice(idx,1); saveRFI(rfis); window.buildRFILog();
+  };
+
+  // Auto-build if documents tab active
+  try {
+    var dt = document.getElementById('tab-documents');
+    if (dt && dt.classList.contains('active')) window.buildRFILog();
   } catch(e) {}
 })();
 // ══════════════════════════════════════════════════════════════════════════════
@@ -10066,7 +10218,7 @@ function buildGantt() {
       + '<span><span style="display:inline-block;width:12px;height:8px;background:#0ea5e9;border-radius:2px;opacity:0.9;vertical-align:middle;margin-right:3px;"></span>Last Agreed</span>'
       + '<span><span style="display:inline-block;width:12px;height:8px;background:#f59e0b;border-radius:2px;opacity:0.6;vertical-align:middle;margin-right:3px;"></span>Last Uploaded</span>'
       + '</div>' : '';
-  head.innerHTML = '<tr><th style="min-width:40px;">WBS</th><th style="min-width:220px;">Task</th><th style="min-width:90px;">Assigned</th>'
+  head.innerHTML = '<tr><th style="min-width:40px;">WBS</th><th style="min-width:220px;">Task</th><th style="min-width:90px;">Assigned / %</th>'
     + '<th class="gantt-bar-cell">'
     + compareLegend
     + '<div style="position:relative;height:20px;">'
@@ -10081,9 +10233,16 @@ function buildGantt() {
     const zs = parseDate(z.start), ze = parseDate(z.end);
     const zLeft = (daysBetween(minDate, zs) / totalDays * 100).toFixed(1);
     const zW    = ((daysBetween(zs, ze)+1) / totalDays * 100).toFixed(1);
-    html += '<tr class="zone-row"><td>' + z.wbs + '</td><td>' + z.name + '</td><td></td><td class="gantt-bar-cell">'
-      + '<div class="gantt-bar-wrapper"><div class="gantt-bar zone" style="left:' + zLeft + '%;width:' + zW + '%"></div>'
-      + '<div class="today-line" style="left:' + todayPct + '%"></div></div></td></tr>'; // label removed: shown once in header only
+    var zProg = 0; try { zProg = Math.round(getZoneProgress(z.id)||0); } catch(e){}
+    var progFillW = (parseFloat(zW) * Math.min(zProg, 100) / 100).toFixed(1);
+    var zProgCol = zProg >= 100 ? '#4ade80' : zProg >= 50 ? '#f59e0b' : zProg > 0 ? '#60a5fa' : 'var(--muted)';
+    html += '<tr class="zone-row"><td>' + z.wbs + '</td><td>' + z.name + '</td>'
+      + '<td style="font-size:11px;font-weight:700;color:' + zProgCol + ';">' + zProg + '%</td>'
+      + '<td class="gantt-bar-cell"><div class="gantt-bar-wrapper">'
+      + '<div class="gantt-bar zone" style="left:' + zLeft + '%;width:' + zW + '%"></div>'
+      + (zProg > 0 ? '<div class="gantt-bar" style="left:' + zLeft + '%;width:' + progFillW + '%;background:#4ade8055;border-radius:3px;z-index:2;pointer-events:none;"></div>' : '')
+      + '<div class="today-line" style="left:' + todayPct + '%"></div>'
+      + '</div></td></tr>'; // progress fill added v127
 
     tasks.filter(t => t.zone === z.id).forEach(t => {
       const ts = parseDate(t.start), te = parseDate(t.end);
@@ -11373,7 +11532,7 @@ function closeZoneHealth() {
 
 <!-- ═══════════ DOCUMENTS TAB β ═══════════ -->
 <div id="tab-documents" class="tab-content admin-only">
-  <div class="ph-notice">β Preview — example drawing register and RFI log. Upload actual drawings to replace placeholders.</div>
+  <div class="ph-notice">RFI log is now localStorage-backed. Drawing register is static — use it as a reference checklist. RFIs auto-flag as overdue when response date passes.</div>
 
   <!-- Drawing Register -->
   <div class="ph-card">
@@ -11386,21 +11545,11 @@ function closeZoneHealth() {
       <tr><td>D-004</td><td>Road Reinstatement Details</td><td>Rev A</td><td>23 Mar 2026</td><td>Dandara</td><td><span class="ph-badge ph-amber">⚠ Superseded</span></td></tr>
       <tr><td>D-005</td><td>Temporary Works &amp; Shoring Layout</td><td>Rev A</td><td>05 Apr 2026</td><td>DGC</td><td><span class="ph-badge ph-green">Current</span></td></tr>
     </table>
-    <div style="margin-top:10px;"><button class="btn btn-secondary" onclick="alert('Coming soon — upload drawing')">+ Add Drawing</button></div>
+    <div style="margin-top:10px;font-size:10px;color:var(--muted);">Drawings are managed in your OneDrive folder. Update the drawing register in code when new issues are received.</div>
   </div>
 
-  <!-- RFI Log -->
-  <div class="ph-card">
-    <div class="ph-title">RFI Log — Requests for Information</div>
-    <table class="ph-table">
-      <tr><th>Ref</th><th>Query</th><th>Raised</th><th>To</th><th>Response Due</th><th>Status</th></tr>
-      <tr><td>RFI-001</td><td>Clarification of invert level at MH7 — conflict between D-002 and D-003</td><td>12 Apr 2026</td><td>Dandara PM</td><td>16 Apr 2026</td><td><span class="ph-badge ph-green">✓ Closed</span></td></tr>
-      <tr><td>RFI-002</td><td>Pipe bedding specification for Zones 9–12 — granular or concrete?</td><td>05 May 2026</td><td>Dandara PM</td><td>12 May 2026</td><td><span class="ph-badge ph-red">⚠ Outstanding</span></td></tr>
-      <tr><td>RFI-003</td><td>Updated road reinstatement drawing for revised Plot 14A access</td><td>14 May 2026</td><td>Dandara PM</td><td>21 May 2026</td><td><span class="ph-badge ph-blue">Sent</span></td></tr>
-    </table>
-    <div style="margin-top:8px;font-size:11px;color:#f87171;">⚠ RFI-002 is 3 days overdue — chase Dandara PM</div>
-    <div style="margin-top:10px;"><button class="btn btn-secondary" onclick="alert('Coming soon')">+ Raise RFI</button></div>
-  </div>
+  <!-- RFI Log (dynamic v126) -->
+  <div id="rfi-card"></div>
 
   <!-- As-built tracker -->
   <div class="ph-card">
