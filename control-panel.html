@@ -2511,7 +2511,7 @@ let TASKS = [
 // ════════════════════════════════════════════════════════════
 var ZONES_BASELINE = [];
 var TASKS_BASELINE = [];
-var PROG_VIEW = 'live';
+var PROG_VIEW = 'current';
 
 function progDateAdd(dateStr, days) {
   var d = new Date(dateStr + 'T00:00:00');
@@ -2566,15 +2566,9 @@ function applyProgOverrides() {
 
 function setProgView(view) {
   PROG_VIEW = view;
-  if (view === 'original') {
-    ZONES.splice(0);
-    ZONES_BASELINE.forEach(function(z) { ZONES.push(JSON.parse(JSON.stringify(z))); });
-    TASKS.splice(0);
-    TASKS_BASELINE.forEach(function(t) { TASKS.push(JSON.parse(JSON.stringify(t))); });
-  } else {
-    applyProgOverrides();
-  }
-  ['original','live'].forEach(function(v) {
+  // Both 'current' and 'adjusted' use the live programme with overrides applied
+  applyProgOverrides();
+  ['current','adjusted'].forEach(function(v) {
     var btn = document.getElementById('pv-' + v);
     if (!btn) return;
     btn.style.background = v === view ? 'var(--accent)' : 'transparent';
@@ -2605,7 +2599,7 @@ function buildVelocityPanel() {
   hdr.appendChild(ttlEl);
   var tgl = document.createElement('div');
   tgl.style.cssText = 'display:flex;gap:4px;margin-left:auto;';
-  [{v:'original',lbl:'Original'},{v:'live',lbl:'Live'}].forEach(function(item) {
+  [{v:'current',lbl:'Current'},{v:'adjusted',lbl:'Adjusted'}].forEach(function(item) {
     var btn = document.createElement('button');
     btn.id = 'pv-' + item.v;
     btn.textContent = item.lbl;
@@ -2631,6 +2625,13 @@ function buildVelocityPanel() {
   var remaining  = _DS.remainPct    || Math.max(0, 100 - overallPct);
   var daysNeeded = _DS.daysToComplete || (ratePerDay > 0 ? Math.round(remaining / ratePerDay) : 9999);
   var fcDate     = _DS.forecastDate || new Date(today.getTime() + daysNeeded * 86400000);
+  // Adjusted mode: stretch remaining calendar days by the efficiency drag factor
+  var effPct     = _DS.efficiencyPct || 100;
+  var dragFactor = (effPct > 0 && effPct < 300) ? 100 / effPct : 1;
+  if (PROG_VIEW === 'adjusted' && effPct !== 100 && daysNeeded < 9999) {
+    var adjDaysNeeded = Math.round(daysNeeded * dragFactor);
+    fcDate = new Date(today.getTime() + adjDaysNeeded * 86400000);
+  }
   var fcStr      = fcDate.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
   var fcLate     = fcDate > targetEnd;
   var daysOff    = Math.round(Math.abs(fcDate - targetEnd) / 86400000);
@@ -2646,7 +2647,9 @@ function buildVelocityPanel() {
 
   var bannerLabel = document.createElement('div');
   bannerLabel.style.cssText = 'font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:8px;';
-  bannerLabel.textContent = 'At current rate — no intervention';
+  bannerLabel.textContent = PROG_VIEW === 'adjusted'
+    ? 'Efficiency-adjusted forecast — ' + effPct + '% efficiency · ×' + dragFactor.toFixed(2) + ' drag applied to remaining work'
+    : 'Current programme — at current rate, no intervention';
   banner.appendChild(bannerLabel);
 
   var bannerMain = document.createElement('div');
@@ -2668,7 +2671,9 @@ function buildVelocityPanel() {
   var bannerSub = document.createElement('div');
   bannerSub.style.cssText = 'font-size:11px;color:var(--muted);border-top:1px solid ' + bannerBdr + ';padding-top:8px;display:flex;gap:18px;flex-wrap:wrap;';
   var sub1 = document.createElement('span');
-  sub1.innerHTML = '<b style="color:var(--text);">Agreed deadline:</b> 26 Jun 2026 (QS updated programme, 12 May 2026 — includes all variations &amp; EOT)';
+  sub1.innerHTML = PROG_VIEW === 'adjusted'
+    ? '<b style="color:var(--text);">Agreed deadline:</b> 26 Jun 2026 &nbsp;·&nbsp; <b style="color:var(--text);">Efficiency:</b> ' + effPct + '% of plan pace &nbsp;·&nbsp; remaining calendar days stretched ×' + dragFactor.toFixed(2)
+    : '<b style="color:var(--text);">Agreed deadline:</b> 26 Jun 2026 (QS updated programme, 12 May 2026 — includes all variations &amp; EOT)';
   var sub2 = document.createElement('span');
   sub2.innerHTML = '<b style="color:var(--text);">Time remaining:</b> ' + weeksToTarget + ' weeks (' + daysToTarget + ' calendar days)';
   bannerSub.appendChild(sub1);
