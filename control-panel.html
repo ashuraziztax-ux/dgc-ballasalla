@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v128</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v129</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -1521,13 +1521,29 @@ function clearForm() {
             <td colspan="2" style="font-size:11px;color:var(--muted);">Gross cumulative claim: ~£293,658 (65.2%) | Less 3% retention: ~&minus;£8,810 | Less AFP 1&amp;2: &minus;£156,739 | = <strong style="color:#f59e0b;">~£128,109 net est.</strong> | These figures are <em>not certified</em> — see Predicted AFP 3 card below for full breakdown</td>
             <td></td><td></td>
           </tr>
-          <tr>
-            <td>AFP 4 / Final Account</td>
-            <td>~22 Jun 2026</td>
-            <td>~22 Jun 2026</td>
-            <td class="upcoming">~20 Jul 2026</td>
-            <td class="upcoming">TBC</td>
-            <td><span class="chip pending">Pending</span></td>
+          <tr style="opacity:0.75;font-style:italic;">
+            <td>AFP 4 — Tarmac <span style="font-size:9px;font-style:normal;font-weight:600;color:#f59e0b;background:#f59e0b18;border:1px solid #f59e0b44;padding:1px 5px;border-radius:8px;vertical-align:middle;">ESTIMATE</span></td>
+            <td>~30 Jun 2026</td>
+            <td>~30 Jun 2026</td>
+            <td style="color:#f59e0b;">~28 Jul 2026</td>
+            <td style="color:#f59e0b;">TBC</td>
+            <td><span class="chip pending">Not submitted</span></td>
+          </tr>
+          <tr style="opacity:0.75;font-style:italic;">
+            <td>AFP 5 — Final Account <span style="font-size:9px;font-style:normal;font-weight:600;color:#f59e0b;background:#f59e0b18;border:1px solid #f59e0b44;padding:1px 5px;border-radius:8px;vertical-align:middle;">ESTIMATE</span></td>
+            <td>~Jul 2026</td>
+            <td>~Jul 2026</td>
+            <td style="color:#f59e0b;">~Aug 2026</td>
+            <td style="color:#f59e0b;">TBC (remaining + agreed EOT)</td>
+            <td><span class="chip pending">Not submitted</span></td>
+          </tr>
+          <tr style="opacity:0.6;font-style:italic;">
+            <td>AFP 6 — Retention Release</td>
+            <td>~Jul 2027</td>
+            <td>~Jul 2027</td>
+            <td style="color:var(--muted);">~Aug 2027</td>
+            <td style="color:var(--muted);">~£6,842 est. (1.5% EFA net)</td>
+            <td><span class="chip pending">12-mo defects</span></td>
           </tr>
           <tr style="background:var(--surface2);">
             <td colspan="4"><strong>Contract Sum (per AFP 2)</strong></td>
@@ -1536,7 +1552,7 @@ function clearForm() {
           </tr>
         </tbody>
       </table>
-      <div style="margin-top:12px; font-size:11px; color:var(--muted);">2.5% retention applied by Ian Barnes (contract rate is 3%). Estimated release: &frac12; at PC (~Jun 2026) &asymp; £1,960 | &frac12; at defects end (~Jun 2027) &asymp; £1,960. Payment terms: 28 days from invoice.</div>
+      <div style="margin-top:12px; font-size:11px; color:var(--muted);">2.5% retention applied by Ian Barnes on AFP1+2 (contract rate is 3%). Per QS (Sophie, 17 May 2026): retention reduces to 1.5% when final account is issued — half released at FA, remaining 1.5% after 12-month defect period (~Jul 2027). Total schedule extended to <strong style="color:var(--text);">6 AFPs</strong>: AFP3 June groundworks | AFP4 Tarmac | AFP5 Final Account | AFP6 Retention. Payment terms: 28 days from invoice.</div>
     </div>
 
     <div class="card">
@@ -3688,10 +3704,12 @@ function printDailyLog() {
 }
 
 const AFPS = [
-  { num:1, issued:'2026-04-01', invoice:'2026-04-07', payment:'2026-05-05', value:22984.59, net:22299, status:'paid', note:'Gross £22,985' },
-  { num:2, issued:'2026-04-30', invoice:'2026-04-30', payment:'2026-05-28', value:156739.46, net:156739.46, status:'paid', note:'AFP1 combined into AFP2 certification. Ian Barnes certified £156,739.46 net (2.5% retention applied). Materials on site £47,815 accepted as goodwill - needs backup for AFP3. Payment received.' },
-  { num:3, issued:'2026-05-22', invoice:'2026-05-29', payment:'2026-06-26', value:0, net:0, status:'pending', note:'TBC' },
-  { num:4, issued:'2026-06-22', invoice:'2026-06-22', payment:'2026-07-20', value:0, net:0, status:'pending', note:'Final Account TBC' }
+  { num:1, issued:'2026-04-01', invoice:'2026-04-07', payment:null,         value:22984.59, net:0,         status:'combined', note:'AFP1 gross £22,984.59 absorbed into Dandara App.1 (SBI SC193064-x17) — NOT paid separately. Rolled into AFP2 certification.' },
+  { num:2, issued:'2026-04-30', invoice:'2026-05-07', payment:'2026-05-12', value:164028.11, net:156739.46, status:'paid',     note:'AFP1+2 combined — SBI SC193064-x17. Ian Barnes certified £156,739.46 net (gross £164,028.11 | discount −£2,441.04 | retention −£4,847.61). Materials on site £47,815 accepted as goodwill. Received 12 May 2026.' },
+  { num:3, issued:'2026-05-22', invoice:'2026-05-29', payment:'2026-06-26', value:128109,    net:128109,    status:'pending',  note:'June groundworks (ex-tarmac) — QS estimate, not yet submitted to Dandara. ~£128k net est. Tarmac roadbase and kerbing carried to AFP4.' },
+  { num:4, issued:'2026-06-30', invoice:'2026-06-30', payment:'2026-07-28', value:0,         net:0,         status:'pending',  note:'Tarmac — submitted after road build complete. Value TBC. Per QS (Sophie, 17 May 2026): tarmac is a big chunk, better paid separately before final account.' },
+  { num:5, issued:'2026-07-15', invoice:'2026-07-15', payment:'2026-08-12', value:0,         net:0,         status:'pending',  note:'Final Account — remaining works + agreed EOT prelims. EOT-D–I (£16,167 est.) not yet submitted to Dandara. Value TBC.' },
+  { num:6, issued:'2027-07-01', invoice:'2027-07-01', payment:'2027-07-29', value:6842,      net:6842,      status:'pending',  note:'Retention release — after 12-month defect period. 1.5% of EFA net ~£456,143 = ~£6,842. Per QS: retention reduces to 1.5% at final account issue, final 1.5% claimed back after defects period.' }
 ];
 
 // Section A-J mapping (physical drawing sections)
@@ -7158,10 +7176,28 @@ function showTab(name, btn) {
       status: 'received'
     },
     {
-      id:'a2', afpNo:'AFP-002',
-      desc:'Zones 5–8 — not yet submitted (forecast only)',
+      id:'a2', afpNo:'AFP-003',
+      desc:'June groundworks (ex-tarmac) — QS estimate ~£128k net',
+      gross: 128109, discountAmt: 0, retAmt: 3843, retPct: 3,
+      submitted:'2026-05-22', expected:'2026-06-26', received:'', status:'forecast'
+    },
+    {
+      id:'a3', afpNo:'AFP-004',
+      desc:'Tarmac — after road build complete. Value TBC.',
       gross: 0, discountAmt: 0, retAmt: 0, retPct: 3,
-      submitted:'', expected:'', received:'', status:'forecast'
+      submitted:'', expected:'2026-07-28', received:'', status:'forecast'
+    },
+    {
+      id:'a4', afpNo:'AFP-005',
+      desc:'Final Account — remaining works + agreed EOT prelims',
+      gross: 0, discountAmt: 0, retAmt: 0, retPct: 3,
+      submitted:'', expected:'2026-08-12', received:'', status:'forecast'
+    },
+    {
+      id:'a5', afpNo:'AFP-006',
+      desc:'Retention release — 12-month defect period (~Jul 2027)',
+      gross: 6842, discountAmt: 0, retAmt: 0, retPct: 0,
+      submitted:'', expected:'2027-07-29', received:'', status:'forecast'
     }
   ];
 

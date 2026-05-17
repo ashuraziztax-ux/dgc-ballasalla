@@ -5,6 +5,16 @@ All versions committed to `main` → deployed at
 
 ---
 
+## v129 — 17 May 2026
+**AFP schedule corrected: 4 payments → 6 payments (per QS Sophie, 17 May 2026)**
+- AFP1 status changed from `paid` to `combined` — clarifies it was NOT paid separately; gross £22,984.59 absorbed into Dandara App.1 (SBI SC193064-x17). Removes false impression of £178k+ total received.
+- AFP4 renamed from "Final Account" to "Tarmac" — tarmac roadbase is a large standalone payment before final account is issued (Sophie confirmed 17 May 2026)
+- AFP5 added: Final Account — remaining works + agreed EOT prelims
+- AFP6 added: Retention release — after 12-month defect period (~Jul 2027), ~£6,842 (1.5% of EFA net)
+- Retention footnote updated: retention reduces to 1.5% at final account issue, not at PC; final 1.5% released after 12-month defect period
+- DEFAULT_AFP in Cash Flow tab updated: AFP-002 placeholder replaced with AFP-003 through AFP-006 matching revised schedule
+- Root cause of AFP confusion: late start (2 weeks) pushed tarmac into June; tarmac split from June groundworks into own AFP4; total AFP schedule extended. No money is lost — timing shifted.
+
 ## v128 — 17 May 2026
 **Hotfix: 7 JavaScript syntax errors resolved (all tabs now functional)**
 - Fixed unescaped single quotes in h.push() strings in the Hired Plant (v124), Toolbox Talk (v125) and RFI Log (v126) IIFEs — `hireOffHire`, hover colour handlers, `ttRemove`, `rfiRemove` all had `'#f87171'` or `','' + var` patterns breaking the JS parser
