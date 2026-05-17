@@ -11047,38 +11047,87 @@ function shRenderRosterMgmt() {
   if (!el) return;
   SH_STAFF_ROSTER = shLoadRoster();
   var roster = SH_STAFF_ROSTER;
-  var notes  = shLoadMemberNotes();
-  var h = '<div style="background:var(--surface2);border-radius:8px;padding:12px 14px;border:1px solid var(--border);">';
-  h += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;';
-  h += 'color:var(--muted);margin-bottom:10px;">Manage Roster &mdash; ' + roster.length + ' staff</div>';
-  h += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">';
-  h += '<input id="sh-add-staff-input" type="text" placeholder="Full name&#8230;" ';
-  h += 'style="flex:1;min-width:140px;max-width:260px;background:var(--bg);';
-  h += 'border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:12px;padding:5px 9px;">';
-  h += '<button class="sh-roster-add-btn" style="font-size:12px;padding:5px 14px;border-radius:5px;';
-  h += 'border:none;background:#1e3a5f;color:#fff;cursor:pointer;font-weight:600;white-space:nowrap;">+ Add</button>';
-  h += '</div>';
-  h += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
-  roster.forEach(function(name, idx) {
-    h += '<div class="sh-roster-chip" style="display:inline-flex;align-items:center;gap:4px;';
-    h += 'background:var(--bg);border:1px solid var(--border);border-radius:20px;';
-    h += 'padding:4px 8px 4px 12px;font-size:12px;white-space:nowrap;">';
-    h += '<span style="max-width:160px;overflow:hidden;text-overflow:ellipsis;">' + name + '</span>';
-    h += '<button class="sh-roster-remove-btn" data-idx="' + idx + '" title="Remove from roster" ';
-    h += 'style="background:none;border:none;cursor:pointer;font-size:16px;line-height:1;padding:0 2px;';
-    h += 'color:var(--muted);">&#215;</button>';
+  var open   = el.dataset.open === '1';
+
+  // ── Collapsed bar ─────────────────────────────────────────────────────────
+  var preview = roster.length
+    ? roster.slice(0, 4).join(', ') + (roster.length > 4 ? ' +' + (roster.length - 4) + ' more' : '')
+    : 'No staff — click to add';
+
+  var h = '';
+  // Toggle bar
+  h += '<div id="sh-roster-toggle" style="display:flex;align-items:center;gap:10px;cursor:pointer;'
+    + 'background:var(--surface2);border:1px solid var(--border);border-radius:' + (open ? '8px 8px 0 0' : '8px') + ';'
+    + 'padding:10px 14px;user-select:none;transition:border-radius .15s;">'
+    + '<span style="font-size:15px;">&#128101;</span>'
+    + '<span style="font-size:12px;font-weight:700;color:var(--text);flex:1;">'
+    +   'Staff Roster <span style="color:var(--accent);margin-left:4px;">' + roster.length + '</span>'
+    + '</span>'
+    + '<span style="font-size:11px;color:var(--muted);flex:3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + preview + '</span>'
+    + '<span style="font-size:12px;color:var(--muted);margin-left:8px;">' + (open ? '&#9650;' : '&#9660;') + '</span>'
+    + '</div>';
+
+  // ── Expanded panel ────────────────────────────────────────────────────────
+  if (open) {
+    h += '<div style="background:var(--surface2);border:1px solid var(--border);border-top:none;'
+      + 'border-radius:0 0 8px 8px;padding:14px 16px;">';
+
+    // Name chips
+    h += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">';
+    roster.forEach(function(name, idx) {
+      h += '<div style="display:inline-flex;align-items:center;gap:0;'
+        + 'background:var(--bg);border:1px solid var(--border);border-radius:20px;'
+        + 'padding:0;overflow:hidden;white-space:nowrap;">'
+        + '<span style="padding:6px 10px 6px 13px;font-size:12.5px;font-weight:600;">' + name + '</span>'
+        + '<button class="sh-roster-remove-btn" data-idx="' + idx + '" title="Remove ' + name + '"'
+        + ' style="background:#ef444420;border:none;border-left:1px solid var(--border);cursor:pointer;'
+        + 'padding:6px 10px;font-size:15px;line-height:1;color:#f87171;font-weight:700;'
+        + 'transition:background .15s;" onmouseover="this.style.background=\'#ef444440\'" onmouseout="this.style.background=\'#ef444420\'">&#215;</button>'
+        + '</div>';
+    });
+    if (!roster.length) {
+      h += '<span style="font-size:12px;color:var(--muted);font-style:italic;">No staff on roster yet.</span>';
+    }
     h += '</div>';
-  });
-  h += '</div></div>';
+
+    // Add new staff row
+    h += '<div style="display:flex;gap:8px;align-items:center;padding-top:10px;border-top:1px solid var(--border);">'
+      + '<input id="sh-add-staff-input" type="text" placeholder="Full name — press Enter or click Add" '
+      + 'style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;'
+      + 'color:var(--text);font-size:13px;padding:7px 11px;">'
+      + '<button class="sh-roster-add-btn" style="padding:7px 18px;border-radius:6px;border:none;'
+      + 'background:var(--accent);color:#000;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">+ Add</button>'
+      + '</div>';
+
+    h += '</div>';
+  }
+
   el.innerHTML = h;
-  // Wire listeners (data-idx avoids name-escaping issues)
+
+  // ── Wire toggle bar ───────────────────────────────────────────────────────
+  var toggleBar = el.querySelector('#sh-roster-toggle');
+  if (toggleBar) toggleBar.addEventListener('click', function() {
+    el.dataset.open = open ? '0' : '1';
+    shRenderRosterMgmt();
+    if (!open) setTimeout(function() {
+      var inp = el.querySelector('#sh-add-staff-input');
+      // don't auto-focus — just show the panel
+    }, 50);
+  });
+
+  // ── Wire remove buttons ───────────────────────────────────────────────────
+  el.querySelectorAll('.sh-roster-remove-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation(); // don't close the panel
+      shRemoveStaffUI(roster[parseInt(btn.dataset.idx)]);
+    });
+  });
+
+  // ── Wire add button + Enter key ───────────────────────────────────────────
   var addBtn = el.querySelector('.sh-roster-add-btn');
   if (addBtn) addBtn.addEventListener('click', shAddStaffUI);
   var inp = el.querySelector('#sh-add-staff-input');
   if (inp) inp.addEventListener('keydown', function(ev) { if (ev.key === 'Enter') shAddStaffUI(); });
-  el.querySelectorAll('.sh-roster-remove-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() { shRemoveStaffUI(roster[parseInt(btn.dataset.idx)]); });
-  });
 }
 
 function shOpenNote(name) {
