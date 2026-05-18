@@ -602,7 +602,7 @@ function setMode(m) {
   // Redirect to appropriate default tab for mode
   var active = document.querySelector('.nav button.active');
   var activeTxt = active ? active.textContent.trim() : '';
-  var hiddenInUser   = ['Financials','Variations','Staff Hours','Delays','Dashboard'];
+  var hiddenInUser   = ['Financials','Variations','Staff Hours','Delays','Dashboard','Efficiency','Progress Report','Programme'];
   var hiddenInClient = ['Staff Hours','Financials','Daily Log','Variations','Efficiency','Gantt Chart'];
   var hidden = m === 'admin' ? [] : m === 'user' ? hiddenInUser : hiddenInClient;
 
@@ -1347,7 +1347,6 @@ function clearForm() {
         <tr>
           <th>Ref</th>
           <th style="min-width:280px">Task</th>
-          <th>Assigned</th>
           <th>Start</th>
           <th>End</th>
           <th class="admin-only">Budget</th>
@@ -9944,7 +9943,7 @@ function buildProgTable() {
   }
   ZONES.forEach(z => {
     const prog = getZoneProgress(z.id), status = getZoneStatus(z);
-    html += '<tr class="zone-row"><td>' + z.wbs + '</td><td colspan="2">' + z.name + '</td><td>' + fmtShortDate(z.start) + '</td><td>' + fmtShortDate(z.end) + '</td><td class="admin-only">' + fmt(z.budget) + '</td>' +
+    html += '<tr class="zone-row"><td>' + z.wbs + '</td><td>' + z.name + '</td><td>' + fmtShortDate(z.start) + '</td><td>' + fmtShortDate(z.end) + '</td><td class="admin-only">' + fmt(z.budget) + '</td>' +
       '<td><div class="mini-bar" style="width:80px;"><div class="mini-fill" style="width:' + prog + '%;background:' + stcol[status] + ';"></div></div></td>' +
       '<td><span class="zone-status ' + status + '" style="display:inline-block;">' + status.toUpperCase() + '</span></td></tr>';
     TASKS.filter(t => t.zone === z.id).forEach(t => {
@@ -9957,7 +9956,7 @@ function buildProgTable() {
       var endCell = adjEnd
         ? '<td style="font-size:11px;"><div style="color:#f59e0b;font-weight:700;">' + fmtShortDate(adjEnd) + '</div><div style="font-size:9px;color:var(--muted);">' + fmtShortDate(t.end) + '</div></td>'
         : '<td style="font-size:11px;">' + fmtShortDate(t.end) + '</td>';
-      html += '<tr><td style="color:var(--muted);">' + t.wbs + '</td><td class="task-indent">' + t.name + '</td><td style="color:var(--muted);font-size:11px;">' + t.assigned + '</td>' +
+      html += '<tr><td style="color:var(--muted);">' + t.wbs + '</td><td class="task-indent">' + t.name + '</td>' +
         '<td style="font-size:11px;">' + fmtShortDate(t.start) + '</td>' + endCell +
         '<td class="admin-only" style="font-size:11px;color:var(--accent);">' + fmt(t.budget) + '</td>' +
         '<td><div class="mini-bar" style="width:80px;"><div class="mini-fill" style="width:' + tProgVal + '%;background:' + stcol[ts] + ';"></div></div></td>' +
