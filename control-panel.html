@@ -8143,29 +8143,21 @@ function buildTwoWeekReport() {
   var periodStr   = fmt(periodStart,true) + ' – ' + fmt(periodEnd,false);
   var reportDate  = fmt(today, false);
 
-  // ── Programme ──────────────────────────────────────────────────────────────
-  var actualPct  = getOverallProgress ? Math.round(getOverallProgress()) : 0;
-  var plannedPct = getRevisedPlanProgress ? Math.round(getRevisedPlanProgress()) : 0;
-  var gapPct     = actualPct - plannedPct;
-  var overallStatus = gapPct >= 2  ? 'Ahead of Programme'
-                    : gapPct <= -5 ? 'Behind Programme'
-                    : 'On Programme';
-  var overallCol = gapPct >= 2 ? '#16a34a' : gapPct <= -5 ? '#dc2626' : '#d97706';
-  var overallBg  = gapPct >= 2 ? '#f0fdf4' : gapPct <= -5 ? '#fef2f2' : '#fffbeb';
-
-  // ── Zone rows ──────────────────────────────────────────────────────────────
+  // ── Zone rows + OVERALL (consistent weighted calc) ───────────────────────
   var zoneRows = '';
+  var _totBud = 0, _wgtPlan = 0, _wgtAct = 0;
   ZONES.forEach(function(z) {
     var act = getZoneProgress(z.id);
     var pln = Math.round(getZonePlannedPct ? getZonePlannedPct(z.id) : 0);
+    var bud = z.budget || 0;
+    _totBud += bud; _wgtPlan += bud * pln; _wgtAct += bud * act;
     var gap = act - pln;
     var rag   = gap >= 2 ? '#16a34a' : gap <= -5 ? '#dc2626' : '#d97706';
     var ragBg = gap >= 2 ? '#f0fdf4' : gap <= -5 ? '#fef2f2' : '#fffbeb';
     var ragLbl= gap >= 2 ? 'Ahead'   : gap <= -5 ? 'Behind'  : 'On Track';
-    var bud = z.budget || 0;
     var val = bud > 0 ? '£' + Math.round(bud/1000) + 'k' : '—';
     var _plnTd = (pln >= 100 && act < 100)
-      ? '<td style="text-align:right;color:#d97706;" title="Plan% from original programme dates. ' + act + '% physical complete. ' + ((typeof ZONE_CONSTRAINTS !== 'undefined' && ZONE_CONSTRAINTS[z.id]) || 'Outstanding work carried forward under EOT.') + '">' + pln + '%*</td>'
+      ? '<td style="text-align:right;color:#d97706;" title="Plan% from original programme dates. ' + act + '% physical complete.">' + pln + '%*</td>'
       : '<td style="text-align:right;">' + pln + '%</td>';
     zoneRows += '<tr>'
       + '<td style="font-weight:600;white-space:nowrap;">Z' + z.id + ' ' + (z.shortName||z.name) + '</td>'
@@ -8190,7 +8182,7 @@ function buildTwoWeekReport() {
     + '<td colspan="2">OVERALL</td>'
     + '<td style="text-align:right;">' + plannedPct + '%</td>'
     + '<td style="text-align:right;">' + actualPct + '%</td>'
-    + '<td style="text-align:right;color:' + overallCol + ';">' + (gapPct>=0?'+':'') + gapPct + '%</td>'
+    + '<td style="text-align:right;color:' + overallCol + ';"><' + (gapPct>=0?'+':'') + gapPct + '%</td>'
     + '<td style="text-align:center;background:' + overallBg + ';color:' + overallCol
       + ';font-weight:800;border-radius:4px;">' + overallStatus + '</td>'
     + '</tr>';
