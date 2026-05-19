@@ -2506,6 +2506,134 @@ let TASKS = [
   {wbs:'7.2',zone:12,name:'Tidy Site, Demobilisation & Handover',assigned:'Harry Harrison',start:'2026-06-11',end:'2026-06-12',progress:0,budget:0}
 ];
 
+// ── Project Drawing Data (from engineering drawings, Dec 2025) ──────────────
+var PROJECT_DATA = {
+  project: {
+    name: 'Ballasalla Phase 4',
+    client: 'Dandara Homes Ltd',
+    location: 'Parkfield, Ballahick Lane, Ballasalla, Isle of Man',
+    jobNo: '2333',
+    contractor: 'DGC Ltd',
+    contractStart: '2026-03-23',
+    contractEnd: '2026-06-26',
+    contractDays: 63,
+    boqTotal: 454326.77
+  },
+  manholes: [
+    // Surface Water chambers
+    { id:'S4.1', type:'SW', dia:1200, mhType:'B', cl:25.471, il:23.669, depth:1.576, e:228747.387, n:470073.211 },
+    { id:'S4.2', type:'SW', dia:1350, mhType:'C', cl:23.480, il:21.895, depth:1.360, e:228697.984, n:470053.386 },
+    { id:'S4.3', type:'SW', dia:1350, mhType:'C', cl:23.327, il:21.958, depth:1.144, e:228710.201, n:470022.779 },
+    { id:'S4.4', type:'SW', dia:1350, mhType:'C', cl:23.189, il:21.812, depth:1.153, e:228688.428, n:470045.367 },
+    { id:'S4.5', type:'SW', dia:1350, mhType:'C', cl:22.546, il:21.522, depth:0.798, e:228656.881, n:470015.485 },
+    { id:'S4.6', type:'SW', dia:1350, mhType:'C', cl:22.500, il:21.374, depth:0.901, e:228640.899, n:470000.089 },
+    // Foul Water chambers
+    { id:'F4.1', type:'FW', dia:1200, mhType:'B', cl:24.755, il:22.537, depth:2.069, e:228729.834, n:470067.463 },
+    { id:'F4.2', type:'FW', dia:1200, mhType:'B', cl:23.551, il:21.641, depth:1.760, e:228698.451, n:470055.247 },
+    { id:'F4.3', type:'FW', dia:1200, mhType:'B', cl:23.348, il:21.574, depth:1.624, e:228710.201, n:470024.655 },
+    { id:'F4.4', type:'FW', dia:1200, mhType:'B', cl:23.253, il:21.207, depth:1.896, e:228688.470, n:470047.353 },
+    { id:'F4.5', type:'FW', dia:1200, mhType:'B', cl:22.563, il:20.899, depth:1.514, e:228654.901, n:470015.631 },
+    { id:'F4.6', type:'FW', dia:1200, mhType:'B', cl:22.500, il:20.751, depth:1.599, e:228638.953, n:470000.091 },
+    // Existing chambers (connections)
+    { id:'S1.21', type:'SW', existing:true, cl:22.500, il:20.940, notes:'SW outfall connection' },
+    { id:'F1.21', type:'FW', existing:true, cl:22.400, il:20.620, notes:'FW outfall connection' },
+    { id:'S11.3', type:'SW', existing:true, cl:26.507, il:24.200, notes:'Upper SW connection' },
+    { id:'F11.3', type:'FW', existing:true, cl:26.513, il:24.160, notes:'Upper FW connection' }
+  ],
+  pipeRuns: [
+    { id:'SW-PN1.000',  from:'S4.1', to:'S4.2', type:'SW', size:225, gradient:'1:30',  length:53.23, road:'Road 3' },
+    { id:'SW-PN1.001',  from:'S4.2', to:'S4.3', type:'SW', size:225, gradient:'1:150', road:'Road 1' },
+    { id:'SW-PN1.002a', from:'S4.3', to:'S4.4', type:'SW', size:225, gradient:'1:215', length:31.37, road:'Road 1' },
+    { id:'SW-PN1.002b', from:'S4.2', to:'S4.4', type:'SW', size:225, gradient:'1:150', length:43.45, road:'Road 3' },
+    { id:'SW-PN1.003',  from:'S4.4', to:'S4.5', type:'SW', size:225, gradient:'1:150' },
+    { id:'SW-PN1.004',  from:'S4.5', to:'S4.6', type:'SW', size:225, gradient:'1:150' },
+    { id:'SW-OUTFALL',  from:'S4.6', to:'S1.21', type:'SW', size:225, gradient:'1:150', notes:'Final outfall' },
+    { id:'FW-PN1.000',  from:'F4.1', to:'F4.2', type:'FW', size:150, gradient:'1:30',  length:33.68, road:'Road 3' },
+    { id:'FW-PN1.001',  from:'F4.2', to:'F4.3', type:'FW', size:150, gradient:'1:30' },
+    { id:'FW-PN1.002a', from:'F4.3', to:'F4.4', type:'FW', size:150, gradient:'1:86',  length:31.42, road:'Road 1' },
+    { id:'FW-PN1.002b', from:'F4.2', to:'F4.4', type:'FW', size:150, gradient:'1:150', length:46.19, road:'Road 3' },
+    { id:'FW-PN1.003',  from:'F4.4', to:'F4.5', type:'FW', size:150, gradient:'1:150' },
+    { id:'FW-PN1.004',  from:'F4.5', to:'F4.6', type:'FW', size:150, gradient:'1:150' },
+    { id:'FW-OUTFALL',  from:'F4.6', to:'F1.21', type:'FW', size:150, gradient:'1:60',  notes:'Final outfall' }
+  ],
+  programme: [
+    { id:'1',    name:'Site Setup',                                     gang:'Gang A',   start:'2026-03-23', end:'2026-04-21', days:19.5, pct:95  },
+    { id:'1.1',  name:'Site Mobilisation (Plant arrived)',               gang:'Gang A',   start:'2026-03-23', end:'2026-03-23', days:1,    pct:100 },
+    { id:'1.2',  name:'Variation 1 (CCE 101221) — Hand-dig services',   gang:'Gang A',   start:'2026-03-24', end:'2026-03-26', days:3,    pct:100 },
+    { id:'1.3',  name:'Variation 2 (CCE 101223) — Site Compound',       gang:'Gang A',   start:'2026-03-25', end:'2026-03-30', days:4,    pct:100 },
+    { id:'1.4',  name:'Variation 3 (CCE 101224) — Training/MU Scan',    gang:'Gang A',   start:'2026-03-31', end:'2026-04-08', days:4.5,  pct:100 },
+    { id:'1.5',  name:'Setting Out (Main Site)',                         gang:'Gang A',   start:'2026-04-08', end:'2026-04-08', days:0.5,  pct:100 },
+    { id:'1.6',  name:'Reduce Level Dig & Disposal',                    gang:'Gang A',   start:'2026-04-09', end:'2026-04-16', days:6,    pct:80  },
+    { id:'1.7',  name:'Setting Out (Drainage)',                          gang:'Gang A',   start:'2026-04-15', end:'2026-04-15', days:1,    pct:60  },
+    { id:'1.8',  name:'Variation 5 (CCE 101228) — 11 strikes/scanning', gang:'Gang A',   start:'2026-04-08', end:'2026-04-21', days:9.5,  pct:100 },
+    { id:'2',    name:'Top Road B81 & B82',                             gang:'Gang B',   start:'2026-04-09', end:'2026-05-14', days:26,   pct:25  },
+    { id:'2.1',  name:'Reduce Dig',                                      gang:'Gang B',   start:'2026-04-09', end:'2026-04-10', days:2,    pct:100 },
+    { id:'2.2',  name:'Setting Out',                                     gang:'Gang B',   start:'2026-04-15', end:'2026-04-15', days:1,    pct:50  },
+    { id:'2.3',  name:'Drainage Trench Excav for Road Gully',           gang:'Gang B',   start:'2026-04-16', end:'2026-04-17', days:2,    pct:50  },
+    { id:'2.4',  name:'Drainage Bed & Surround',                        gang:'Gang B',   start:'2026-04-29', end:'2026-04-29', days:1,    pct:0   },
+    { id:'2.5',  name:'Backfill Trench & Compact',                      gang:'Gang B',   start:'2026-04-30', end:'2026-05-04', days:3,    pct:0   },
+    { id:'2.6',  name:'CBR Testing',                                     gang:'Gang B',   start:'2026-04-15', end:'2026-04-15', days:1,    pct:100 },
+    { id:'2.7',  name:'Subbase (Terram + Type 1) & Compaction',         gang:'Gang B',   start:'2026-05-05', end:'2026-05-06', days:2,    pct:0   },
+    { id:'2.8',  name:'Kerbs',                                           gang:'Gang B',   start:'2026-05-07', end:'2026-05-11', days:3,    pct:0   },
+    { id:'2.9',  name:'Tarmac — Road & Pavement',                       gang:'Gang B',   start:'2026-05-12', end:'2026-05-13', days:2,    pct:0   },
+    { id:'2.10', name:'Tidy, Inspect & Handover Top Road',              gang:'Gang B',   start:'2026-05-14', end:'2026-05-14', days:1,    pct:0   },
+    { id:'3',    name:'Mid Road 1 & Road 3',                            gang:'Gang A+B', start:'2026-04-10', end:'2026-06-16', days:43,   pct:31  },
+    { id:'3.1',  name:'Drainage Excav 150/225mm pipe & Manholes',       gang:'Gang A',   start:'2026-04-10', end:'2026-05-08', days:21,   pct:50  },
+    { id:'3.2',  name:'Drainage Excav 110mm pipe',                      gang:'Gang A',   start:'2026-04-23', end:'2026-05-07', days:11,   pct:50  },
+    { id:'3.3',  name:'Services, Ducts & Street Lighting',              gang:'Gang B',   start:'2026-05-08', end:'2026-05-12', days:3,    pct:0   },
+    { id:'3.4',  name:'Backfill Trench & Compact',                      gang:'Gang B',   start:'2026-05-13', end:'2026-05-14', days:2,    pct:25  },
+    { id:'3.5',  name:'CBR Testing',                                     gang:'Gang B',   start:'2026-05-07', end:'2026-05-07', days:1,    pct:75  },
+    { id:'3.6',  name:'Capping Layer SW pipe (MH S4.3–S4.4)',           gang:'Gang B',   start:'2026-05-15', end:'2026-05-15', days:1,    pct:0   },
+    { id:'3.7',  name:'Backfill SW trench above capping',               gang:'Gang B',   start:'2026-05-18', end:'2026-05-18', days:1,    pct:0   },
+    { id:'3.8',  name:'Subbase (Terram + Type 1) & Compaction',         gang:'Gang B',   start:'2026-05-19', end:'2026-05-26', days:6,    pct:0   },
+    { id:'3.9',  name:'Kerbs (Gang 2 only)',                             gang:'Gang B',   start:'2026-05-27', end:'2026-06-11', days:7,    pct:0   },
+    { id:'3.10', name:'Tarmac to Road & Pavement',                      gang:'Gang B',   start:'2026-06-12', end:'2026-06-16', days:3,    pct:0   },
+    { id:'4',    name:'Lower Road 1',                                   gang:'Gang B+C', start:'2026-05-11', end:'2026-06-24', days:28,   pct:0   },
+    { id:'4.1',  name:'Drainage Excav 150/225mm pipe',                  gang:'Gang B',   start:'2026-05-11', end:'2026-05-15', days:5,    pct:0   },
+    { id:'4.2',  name:'Drainage Excav 110mm pipe',                      gang:'Gang B',   start:'2026-05-18', end:'2026-05-22', days:5,    pct:0   },
+    { id:'4.3',  name:'Services, ducts & Street Lighting',              gang:'Gang B',   start:'2026-05-25', end:'2026-05-27', days:3,    pct:0   },
+    { id:'4.4',  name:'Backfill Trench & Compact',                      gang:'Gang B',   start:'2026-05-28', end:'2026-05-29', days:2,    pct:0   },
+    { id:'4.5',  name:'CBR Testing',                                     gang:'Gang C',   start:'2026-06-08', end:'2026-06-08', days:1,    pct:0   },
+    { id:'4.6',  name:'Capping Layer SW pipe (MH S4.4–S4.5)',           gang:'Gang C',   start:'2026-06-09', end:'2026-06-10', days:2,    pct:0   },
+    { id:'4.7',  name:'Backfill SW Trench above Capping',               gang:'Gang C',   start:'2026-06-11', end:'2026-06-12', days:2,    pct:0   },
+    { id:'4.8',  name:'Subbase (Terram & Type 1) & Compaction',         gang:'Gang C',   start:'2026-06-15', end:'2026-06-17', days:3,    pct:0   },
+    { id:'4.9',  name:'Kerbs',                                           gang:'Gang C',   start:'2026-06-18', end:'2026-06-22', days:3,    pct:0   },
+    { id:'4.10', name:'Tarmac Roadbase & Pavement',                     gang:'Gang C',   start:'2026-06-23', end:'2026-06-24', days:2,    pct:0   },
+    { id:'5',    name:'Drain Run S4.5–S4.6 & F4.5–F4.6',              gang:'Gang A+C', start:'2026-06-10', end:'2026-06-24', days:11,   pct:0   },
+    { id:'5.1',  name:'Drainage Trench, pipe, Bed & surround & MHs',   gang:'Gang C',   start:'2026-06-10', end:'2026-06-17', days:6,    pct:0   },
+    { id:'5.2',  name:'Backfill trench & Compact',                      gang:'Gang C',   start:'2026-06-18', end:'2026-06-19', days:2,    pct:0   },
+    { id:'5.3',  name:'Terram & Backfill with 6F2 & Compaction',        gang:'Gang C',   start:'2026-06-22', end:'2026-06-24', days:3,    pct:0   },
+    { id:'6',    name:'Jet Wash, Tidy & Demobilisation',               gang:'Gang A',   start:'2026-06-18', end:'2026-06-26', days:7,    pct:0   },
+    { id:'6.1',  name:'Jet Washing & CCTV Survey',                      gang:'Gang A',   start:'2026-06-18', end:'2026-06-19', days:2,    pct:0   },
+    { id:'6.2',  name:'Tidy Site',                                       gang:'Gang A',   start:'2026-06-25', end:'2026-06-25', days:1,    pct:0   },
+    { id:'6.3',  name:'Demobilisation & Handover',                      gang:'Gang A',   start:'2026-06-26', end:'2026-06-26', days:1,    pct:0   }
+  ],
+  boq: {
+    total: 454326.77,
+    externalWorks: 250403.24,
+    drainage: 200302.20,
+    services: 3621.33,
+    streetLighting: 0
+  },
+  terminology: {
+    'Sullys': 'Road drainage gullies',
+    'S4.x': 'Surface water manhole chamber, Section 4, sequence x',
+    'F4.x': 'Foul water manhole chamber, Section 4, sequence x',
+    'Control kerbs': 'Laying precast concrete kerb units (bed & haunch)',
+    'Type 1': 'Crushed stone sub-base material',
+    '6F2': 'Granular fill (coarser than Type 1)',
+    'Terram T1000': 'Geotextile separation membrane',
+    'CBR Testing': 'California Bearing Ratio — ground strength test',
+    'Capping layer': 'Concrete protection layer over large-diameter SW pipe',
+    'Bed & surround': 'Pea gravel bedding under and around pipe',
+    'De-frothing': 'Breaking out excess concrete / striking formwork',
+    'Road gully': 'Surface water collection point at kerb, connects to SW sewer',
+    'CL': 'Cover Level (top of manhole lid, metres Above Ordnance Datum)',
+    'IL': 'Invert Level (bottom inside pipe at chamber, metres AOD)',
+    'AOD': 'Above Ordnance Datum (standard UK height reference)'
+  }
+};
+
 // ════════════════════════════════════════════════════════════
 // PROGRAMME MANAGEMENT v10
 // ════════════════════════════════════════════════════════════
