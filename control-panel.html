@@ -2150,9 +2150,6 @@ function clearForm() {
 .drw-cat-chip { font-size:9px; font-weight:800; letter-spacing:0.5px; text-transform:uppercase; padding:2px 8px; border-radius:10px; white-space:nowrap; flex-shrink:0; }
 .drw-cat-engineering { background:#dbeafe; color:#1e40af; }
 .drw-cat-details     { background:#d1fae5; color:#065f46; }
-.drw-cat-programme   { background:#fef3c7; color:#92400e; }
-.drw-cat-commercial  { background:#f3e8ff; color:#6b21a8; }
-.drw-cat-variations  { background:#fee2e2; color:#991b1b; }
 .drw-cat-reference   { background:#f1f5f9; color:#334155; }
 .drw-ref { font-size:11px; font-weight:700; color:var(--navy); font-family:monospace; }
 .drw-rev { font-size:10px; background:#f1f5f9; color:#64748b; border-radius:4px; padding:1px 6px; font-weight:700; }
@@ -2178,9 +2175,6 @@ function clearForm() {
     <span class="drw-chip active" onclick="drwSetCat('all',this)">All</span>
     <span class="drw-chip" onclick="drwSetCat('engineering',this)">Engineering</span>
     <span class="drw-chip" onclick="drwSetCat('details',this)">Spec Details</span>
-    <span class="drw-chip" onclick="drwSetCat('programme',this)">Programme</span>
-    <span class="drw-chip" onclick="drwSetCat('commercial',this)">Commercial</span>
-    <span class="drw-chip" onclick="drwSetCat('variations',this)">Variations</span>
     <span class="drw-chip" onclick="drwSetCat('reference',this)">Reference</span>
   </div>
 
@@ -2262,51 +2256,6 @@ var DRW_DRAWINGS = [
     name:'Pipe Bedding Details',
     desc:'MU/DOI standard pipe bedding and surround details. Shows granular bedding zones, pipe support, and backfill requirements by pipe size and depth.',
     file:'drawings/sd019__pipe_bedding_details.pdf'
-  },
-  // ── Programme & Overview ──────────────────────────────────────────────────
-  {
-    cat:'programme', ref:'Programme', rev:'Macro',
-    name:'Macro Overview Programme',
-    desc:'Master programme — all 6 sections, 54 tasks with start/end dates and gang allocation. The baseline programme for the contract (start 23 Mar, finish 26 Jun 2026).',
-    file:'drawings/Ballasalla_Phase_4_Macro_Overview.pdf'
-  },
-  {
-    cat:'programme', ref:'Programme', rev:'Updated',
-    name:'Updated Programme (Latest)',
-    desc:'Most recent revision of the site programme reflecting actual progress and any changes to planned dates.',
-    file:'drawings/Dandara_BA4_Updated_Programme.pdf'
-  },
-  // ── Commercial ────────────────────────────────────────────────────────────
-  {
-    cat:'commercial', ref:'BoQ', rev:'02.02.26',
-    name:'Bill of Quantities — DGC Priced',
-    desc:'Full priced BoQ submitted by DGC. External works £250k, drainage £200k, services £3.6k. Total contract £454,327. Contains all unit rates and quantities.',
-    file:'drawings/BA4_BoQ_DGC_WIP_Priced_02.02.26.pdf'
-  },
-  {
-    cat:'commercial', ref:'Scope', rev:'—',
-    name:'Dandara B4 Scope of Work',
-    desc:'Client-issued scope of works document describing the full extent of DGC\'s obligations under the subcontract.',
-    file:'drawings/Dandara_B4_Scope_of_Work.pdf'
-  },
-  {
-    cat:'commercial', ref:'Scope', rev:'Valuations',
-    name:'Scope of Works (Valuations)',
-    desc:'Scope document used for valuation and AFP purposes.',
-    file:'drawings/BA4_Scope_of_Works.pdf'
-  },
-  // ── Variations ────────────────────────────────────────────────────────────
-  {
-    cat:'variations', ref:'CCE 101221', rev:'Approved',
-    name:'Variation 1 — Hand Dig of Services',
-    desc:'CCE for hand-excavation around existing underground services. Required after utility strikes during initial excavation. Now 100% complete.',
-    file:'drawings/CCE_101221__Hand_Dig_Services.pdf'
-  },
-  {
-    cat:'variations', ref:'CCE 101223', rev:'Approved',
-    name:'Variation 2 — Welfare & Site Compound',
-    desc:'CCE for site compound setup including welfare facilities, fencing, and temporary accommodation. Now 100% complete.',
-    file:'drawings/CCE_101223__Welfare_and_Compound.pdf'
   },
   // ── Reference ─────────────────────────────────────────────────────────────
   {
