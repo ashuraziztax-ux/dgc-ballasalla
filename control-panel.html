@@ -2172,10 +2172,10 @@ function clearForm() {
   </div>
 
   <div class="drw-filters" id="drw-filters">
-    <span class="drw-chip active" onclick="drwSetCat('all',this)">All</span>
-    <span class="drw-chip" onclick="drwSetCat('engineering',this)">Engineering</span>
+    <span class="drw-chip active" onclick="drwSetCat('engineering',this)">Engineering</span>
     <span class="drw-chip" onclick="drwSetCat('details',this)">Spec Details</span>
     <span class="drw-chip" onclick="drwSetCat('reference',this)">Reference</span>
+    <span class="drw-chip" onclick="drwSetCat('all',this)">All</span>
   </div>
 
   <div class="drw-grid" id="drw-grid"></div>
@@ -2266,7 +2266,7 @@ var DRW_DRAWINGS = [
   }
 ];
 
-var _drwCat = 'all';
+var _drwCat = 'engineering';
 
 function drwSetCat(cat, el) {
   _drwCat = cat;
