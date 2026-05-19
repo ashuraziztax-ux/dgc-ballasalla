@@ -938,6 +938,7 @@ function clearForm() {
   <button class="no-client" onclick="showTab('efficiency',this)">Efficiency</button>
   <button class="no-client" onclick="showTab('gantt',this)">Gantt Chart</button>
   <button class="no-client" onclick="showTab('daily',this)">Daily Log</button>
+  <button onclick="showTab('drawings',this)">&#128196; Drawings</button>
   <button class="admin-only" onclick="showTab('staffhours',this)">Staff Hours</button>
   <button class="admin-only" onclick="showTab('financial',this)">Financials</button>
   <button class="admin-only" onclick="showTab('delays',this)">Delays</button>
@@ -2129,6 +2130,243 @@ function clearForm() {
 
 <div id="tab-risks" class="tab-content">
   <div id="risks-body"><p style="padding:20px;color:var(--muted);font-size:12px;">Loading…</p></div>
+</div>
+
+<!-- ══════════════════════════════ DRAWINGS ════════════════════════════════ -->
+<div id="tab-drawings" class="tab-content">
+<style>
+.drw-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:18px; }
+.drw-title { font-size:17px; font-weight:800; color:var(--navy); }
+.drw-subtitle { font-size:12px; color:var(--muted); margin-top:2px; }
+.drw-filters { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px; }
+.drw-chip { padding:5px 13px; border-radius:20px; font-size:11px; font-weight:700; border:1.5px solid #e2e8f0; background:#fff; color:#64748b; cursor:pointer; transition:all 0.15s; letter-spacing:0.2px; }
+.drw-chip.active, .drw-chip:hover { background:var(--navy); color:#fff; border-color:var(--navy); }
+.drw-search { width:100%; max-width:320px; padding:8px 14px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; }
+.drw-search:focus { border-color:var(--navy); }
+.drw-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:14px; }
+.drw-card { background:#fff; border:1.5px solid #e8edf5; border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px; transition:box-shadow 0.15s,transform 0.1s; cursor:default; }
+.drw-card:hover { box-shadow:0 4px 18px rgba(30,58,95,0.10); transform:translateY(-1px); }
+.drw-card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+.drw-cat-chip { font-size:9px; font-weight:800; letter-spacing:0.5px; text-transform:uppercase; padding:2px 8px; border-radius:10px; white-space:nowrap; flex-shrink:0; }
+.drw-cat-engineering { background:#dbeafe; color:#1e40af; }
+.drw-cat-details     { background:#d1fae5; color:#065f46; }
+.drw-cat-programme   { background:#fef3c7; color:#92400e; }
+.drw-cat-commercial  { background:#f3e8ff; color:#6b21a8; }
+.drw-cat-variations  { background:#fee2e2; color:#991b1b; }
+.drw-cat-reference   { background:#f1f5f9; color:#334155; }
+.drw-ref { font-size:11px; font-weight:700; color:var(--navy); font-family:monospace; }
+.drw-rev { font-size:10px; background:#f1f5f9; color:#64748b; border-radius:4px; padding:1px 6px; font-weight:700; }
+.drw-name { font-size:13px; font-weight:700; color:#1e293b; line-height:1.3; }
+.drw-desc { font-size:11px; color:#64748b; line-height:1.5; flex:1; }
+.drw-actions { display:flex; gap:8px; margin-top:4px; }
+.drw-btn-open { flex:1; padding:7px 0; background:var(--navy); color:#fff; border:none; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer; text-align:center; text-decoration:none; display:block; transition:background 0.15s; }
+.drw-btn-open:hover { background:#2d5a8e; }
+.drw-empty { padding:40px 20px; text-align:center; color:var(--muted); font-size:13px; }
+@media(max-width:480px){ .drw-grid { grid-template-columns:1fr; } .drw-search{max-width:100%;} }
+</style>
+
+<div style="padding:16px 16px 24px;">
+  <div class="drw-header">
+    <div>
+      <div class="drw-title">&#128196; Drawing Register</div>
+      <div class="drw-subtitle" id="drw-project-label">Dandara Phase 4 — Ballasalla</div>
+    </div>
+    <input class="drw-search" id="drw-search" placeholder="Search drawings…" oninput="drwFilter()" />
+  </div>
+
+  <div class="drw-filters" id="drw-filters">
+    <span class="drw-chip active" onclick="drwSetCat('all',this)">All</span>
+    <span class="drw-chip" onclick="drwSetCat('engineering',this)">Engineering</span>
+    <span class="drw-chip" onclick="drwSetCat('details',this)">Spec Details</span>
+    <span class="drw-chip" onclick="drwSetCat('programme',this)">Programme</span>
+    <span class="drw-chip" onclick="drwSetCat('commercial',this)">Commercial</span>
+    <span class="drw-chip" onclick="drwSetCat('variations',this)">Variations</span>
+    <span class="drw-chip" onclick="drwSetCat('reference',this)">Reference</span>
+  </div>
+
+  <div class="drw-grid" id="drw-grid"></div>
+</div>
+
+<script>
+var DRW_DRAWINGS = [
+  // ── Engineering Drawings ─────────────────────────────────────────────────
+  {
+    cat:'engineering', ref:'90001 P02', rev:'P02',
+    name:'Drainage Layout',
+    desc:'All manhole chamber positions (S4.1–S4.6, F4.1–F4.6), pipe runs, cover & invert levels, pipe sizes and gradients. The primary drainage reference for the site.',
+    file:'drawings/2333DANBA4DRDC90001revP02__Drainage_Layout.pdf'
+  },
+  {
+    cat:'engineering', ref:'90002 P02', rev:'P02',
+    name:'Road Layout & Gully Drainage Areas',
+    desc:'Road geometry, kerb lines, road gully positions, and drainage catchment areas for each gully. Shows which gullies feed into which chambers.',
+    file:'drawings/2333DANBA4DRDC90002revP02__Road_Layout_and_Gulley_Drainage_Areas.pdf'
+  },
+  {
+    cat:'engineering', ref:'90003 P02', rev:'P02',
+    name:'Flood Exceedance Routes',
+    desc:'Overland flood flow routes in the event of drainage capacity being exceeded. Required for Section 4 & 8 adoption agreement.',
+    file:'drawings/2333DANBA4DRDC90003revP02__Flood_Exceedance_Routes.pdf'
+  },
+  {
+    cat:'engineering', ref:'90004 P02', rev:'P02',
+    name:'Impermeable Areas',
+    desc:'Catchment area calculations per pipe run. Total impermeable area 3,545m². Used to size the drainage system.',
+    file:'drawings/2333DANBA4DRDC90004revP02__Impermeable_Areas.pdf'
+  },
+  {
+    cat:'engineering', ref:'90005 P01', rev:'P01',
+    name:'Road & Drainage Construction Details',
+    desc:'Cross-section build-up details for road and drainage — subbase layers, pipe bedding zones, capping, surfacing. Use this on site to check layer thicknesses.',
+    file:'drawings/2333DANBA4DRDC90005revP01__Road_and_Drainage_Construction_Details.pdf'
+  },
+  {
+    cat:'engineering', ref:'90006 P01', rev:'P01',
+    name:'Road Longitudinal Sections',
+    desc:'Long-section profiles for Road 1 and Road 3 showing road surface levels, channel levels, and chamber invert levels at every chainage point.',
+    file:'drawings/2333DANBA4DRDC90006revP01__Road_Longitudinal_Sections.pdf'
+  },
+  {
+    cat:'engineering', ref:'Zone Layout', rev:'—',
+    name:'Zone Layout Plan',
+    desc:'Site zoning plan showing the 12 work zones used for programme and progress tracking.',
+    file:'drawings/Zone_Layout.pdf'
+  },
+  {
+    cat:'engineering', ref:'CBR', rev:'—',
+    name:'CBR Test Levels vs FRL',
+    desc:'California Bearing Ratio test results and Formation Reduced Levels across the site. Required before placing subbase.',
+    file:'drawings/Phase4_CBR_Levels_vs_FRL.pdf'
+  },
+  // ── Standard Details ──────────────────────────────────────────────────────
+  {
+    cat:'details', ref:'SD001a', rev:'—',
+    name:'Typical Carriageway Construction',
+    desc:'MU/DOI standard detail for adoptable carriageway build-up. Shows layer thicknesses, materials and compaction requirements for the road construction.',
+    file:'drawings/sd001a__typical_carriageway_construction.pdf'
+  },
+  {
+    cat:'details', ref:'SD002a', rev:'—',
+    name:'Typical Footway Construction',
+    desc:'MU/DOI standard detail for adoptable footway/pavement build-up. Use this to confirm footpath construction layers.',
+    file:'drawings/sd002a__typical_footway_construction.pdf'
+  },
+  {
+    cat:'details', ref:'SD005a', rev:'—',
+    name:'Kerbing Details',
+    desc:'MU/DOI standard kerb bedding and haunching details. Shows kerb types, concrete bed dimensions, and haunch profiles.',
+    file:'drawings/sd005a__kerbing_details.pdf'
+  },
+  {
+    cat:'details', ref:'SD019', rev:'—',
+    name:'Pipe Bedding Details',
+    desc:'MU/DOI standard pipe bedding and surround details. Shows granular bedding zones, pipe support, and backfill requirements by pipe size and depth.',
+    file:'drawings/sd019__pipe_bedding_details.pdf'
+  },
+  // ── Programme & Overview ──────────────────────────────────────────────────
+  {
+    cat:'programme', ref:'Programme', rev:'Macro',
+    name:'Macro Overview Programme',
+    desc:'Master programme — all 6 sections, 54 tasks with start/end dates and gang allocation. The baseline programme for the contract (start 23 Mar, finish 26 Jun 2026).',
+    file:'drawings/Ballasalla_Phase_4_Macro_Overview.pdf'
+  },
+  {
+    cat:'programme', ref:'Programme', rev:'Updated',
+    name:'Updated Programme (Latest)',
+    desc:'Most recent revision of the site programme reflecting actual progress and any changes to planned dates.',
+    file:'drawings/Dandara_BA4_Updated_Programme.pdf'
+  },
+  // ── Commercial ────────────────────────────────────────────────────────────
+  {
+    cat:'commercial', ref:'BoQ', rev:'02.02.26',
+    name:'Bill of Quantities — DGC Priced',
+    desc:'Full priced BoQ submitted by DGC. External works £250k, drainage £200k, services £3.6k. Total contract £454,327. Contains all unit rates and quantities.',
+    file:'drawings/BA4_BoQ_DGC_WIP_Priced_02.02.26.pdf'
+  },
+  {
+    cat:'commercial', ref:'Scope', rev:'—',
+    name:'Dandara B4 Scope of Work',
+    desc:'Client-issued scope of works document describing the full extent of DGC\'s obligations under the subcontract.',
+    file:'drawings/Dandara_B4_Scope_of_Work.pdf'
+  },
+  {
+    cat:'commercial', ref:'Scope', rev:'Valuations',
+    name:'Scope of Works (Valuations)',
+    desc:'Scope document used for valuation and AFP purposes.',
+    file:'drawings/BA4_Scope_of_Works.pdf'
+  },
+  // ── Variations ────────────────────────────────────────────────────────────
+  {
+    cat:'variations', ref:'CCE 101221', rev:'Approved',
+    name:'Variation 1 — Hand Dig of Services',
+    desc:'CCE for hand-excavation around existing underground services. Required after utility strikes during initial excavation. Now 100% complete.',
+    file:'drawings/CCE_101221__Hand_Dig_Services.pdf'
+  },
+  {
+    cat:'variations', ref:'CCE 101223', rev:'Approved',
+    name:'Variation 2 — Welfare & Site Compound',
+    desc:'CCE for site compound setup including welfare facilities, fencing, and temporary accommodation. Now 100% complete.',
+    file:'drawings/CCE_101223__Welfare_and_Compound.pdf'
+  },
+  // ── Reference ─────────────────────────────────────────────────────────────
+  {
+    cat:'reference', ref:'MU/DOI', rev:'Feb 2022',
+    name:'Manual for Manx Roads',
+    desc:'Isle of Man Department of Infrastructure standard specification for roads and drainage. Governs all adoptable highway and drainage construction on the island.',
+    file:'drawings/manual_for_manx_roads.pdf'
+  }
+];
+
+var _drwCat = 'all';
+
+function drwSetCat(cat, el) {
+  _drwCat = cat;
+  document.querySelectorAll('.drw-chip').forEach(function(c){ c.classList.remove('active'); });
+  el.classList.add('active');
+  drwFilter();
+}
+
+function drwFilter() {
+  var q = (document.getElementById('drw-search').value || '').toLowerCase();
+  var grid = document.getElementById('drw-grid');
+  grid.innerHTML = '';
+  var shown = 0;
+  DRW_DRAWINGS.forEach(function(d) {
+    if (_drwCat !== 'all' && d.cat !== _drwCat) return;
+    if (q && !(d.name.toLowerCase().includes(q) || d.ref.toLowerCase().includes(q) || d.desc.toLowerCase().includes(q))) return;
+    shown++;
+    var catLabels = {engineering:'Engineering',details:'Spec Detail',programme:'Programme',commercial:'Commercial',variations:'Variation',reference:'Reference'};
+    grid.innerHTML += '<div class="drw-card">'
+      + '<div class="drw-card-top">'
+        + '<div>'
+          + '<span class="drw-cat-chip drw-cat-' + d.cat + '">' + (catLabels[d.cat]||d.cat) + '</span>'
+        + '</div>'
+        + '<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
+          + '<span class="drw-ref">' + d.ref + '</span>'
+          + (d.rev && d.rev!=='—' ? '<span class="drw-rev">' + d.rev + '</span>' : '')
+        + '</div>'
+      + '</div>'
+      + '<div class="drw-name">' + d.name + '</div>'
+      + '<div class="drw-desc">' + d.desc + '</div>'
+      + '<div class="drw-actions">'
+        + '<a class="drw-btn-open" href="' + d.file + '" target="_blank" rel="noopener">&#128196; Open PDF</a>'
+      + '</div>'
+    + '</div>';
+  });
+  if (shown === 0) {
+    grid.innerHTML = '<div class="drw-empty">No drawings match your search.</div>';
+  }
+}
+
+// Init on tab open
+(function() {
+  var origShowTab = showTab;
+  showTab = function(name, btn) {
+    origShowTab(name, btn);
+    if (name === 'drawings') drwFilter();
+  };
+})();
+</script>
 </div>
 
 <!-- ═══════════════════════════════ SITE MAP ═══════════════════════════════ -->
