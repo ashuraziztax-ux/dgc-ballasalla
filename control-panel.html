@@ -63,7 +63,7 @@ a { color: var(--accent); text-decoration: none; }
 .ph-kpi .k-lbl { font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-top:4px; }
 .ph-notice { background:#f59e0b18; border:1px solid #f59e0b40; border-radius:8px; padding:10px 14px; font-size:11px; color:#f59e0b; margin-bottom:14px; }
 #state-banner.sb-visible { display: block; }
-/* Client (Overview) mode simplifications */
+/* Client mode simplifications */
 body.client-mode #velocity-card { display: none !important; }
 body.client-mode .prog-secondary .hide-client { display: none !important; }
 body.client-mode .dashboard-secondary-row { display: none !important; }
@@ -913,9 +913,9 @@ function clearForm() {
     
     <div id="mode-toggle" style="display:flex;align-items:center;gap:2px;background:var(--surface2);border-radius:8px;padding:3px;">
       <span style="font-size:9px;color:var(--muted);padding:2px 8px;white-space:nowrap;flex-shrink:0;">View as:</span>
-      <span id="mode-btn-admin"  onclick="setMode('admin')"  style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Admin</span>
+      <span id="mode-btn-client" onclick="setMode('client')" style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Client</span>
       <span id="mode-btn-user"   onclick="setMode('user')"   style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Site Team</span>
-      <span id="mode-btn-client" onclick="setMode('client')" style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Overview</span>
+      <span id="mode-btn-admin"  onclick="setMode('admin')"  style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Admin</span>
     </div>
   </div>
   <div class="header-status">
