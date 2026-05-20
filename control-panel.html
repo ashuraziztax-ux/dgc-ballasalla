@@ -2135,34 +2135,48 @@ function clearForm() {
 <!-- ══════════════════════════════ DRAWINGS ════════════════════════════════ -->
 <div id="tab-drawings" class="tab-content">
 <style>
-.drw-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:18px; }
+.drw-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:14px; }
 .drw-title { font-size:17px; font-weight:800; color:var(--navy); }
 .drw-subtitle { font-size:12px; color:var(--muted); margin-top:2px; }
-.drw-filters { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px; }
+.drw-filters { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
 .drw-chip { padding:5px 13px; border-radius:20px; font-size:11px; font-weight:700; border:1.5px solid #e2e8f0; background:#fff; color:#64748b; cursor:pointer; transition:all 0.15s; letter-spacing:0.2px; }
 .drw-chip.active, .drw-chip:hover { background:var(--navy); color:#fff; border-color:var(--navy); }
-.drw-search { width:100%; max-width:320px; padding:8px 14px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; }
+.drw-search { width:100%; max-width:260px; padding:7px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:12px; outline:none; }
 .drw-search:focus { border-color:var(--navy); }
-.drw-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:14px; }
-.drw-card { background:#fff; border:1.5px solid #e8edf5; border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px; transition:box-shadow 0.15s,transform 0.1s; cursor:default; }
-.drw-card:hover { box-shadow:0 4px 18px rgba(30,58,95,0.10); transform:translateY(-1px); }
-.drw-card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
-.drw-cat-chip { font-size:9px; font-weight:800; letter-spacing:0.5px; text-transform:uppercase; padding:2px 8px; border-radius:10px; white-space:nowrap; flex-shrink:0; }
+/* ── Split layout ── */
+.drw-split { display:flex; gap:0; height:calc(100vh - 230px); min-height:480px; }
+.drw-list { width:280px; flex-shrink:0; overflow-y:auto; padding-right:6px; border-right:1.5px solid #e2e8f0; }
+.drw-viewer-panel { flex:1; min-width:0; display:flex; flex-direction:column; padding-left:14px; }
+.drw-viewer-bar { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; flex-shrink:0; }
+.drw-viewer-name { font-size:13px; font-weight:700; color:var(--navy); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.drw-viewer-open { font-size:11px; font-weight:700; color:var(--navy); text-decoration:none; padding:4px 10px; border:1.5px solid var(--navy); border-radius:6px; white-space:nowrap; flex-shrink:0; transition:all 0.15s; }
+.drw-viewer-open:hover { background:var(--navy); color:#fff; }
+.drw-viewer-placeholder { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; border:2px dashed #e2e8f0; border-radius:10px; color:var(--muted); font-size:13px; gap:8px; }
+.drw-iframe { flex:1; border:none; border-radius:10px; width:100%; display:block; }
+/* ── Card list items ── */
+.drw-card { background:#fff; border:1.5px solid #e8edf5; border-radius:10px; padding:12px 13px; display:flex; flex-direction:column; gap:7px; cursor:pointer; transition:box-shadow 0.15s,border-color 0.15s; margin-bottom:8px; }
+.drw-card:hover { box-shadow:0 3px 12px rgba(30,58,95,0.10); border-color:#c7d7ea; }
+.drw-card.drw-selected { border-color:var(--navy); background:#eef4fb; box-shadow:0 2px 10px rgba(30,58,95,0.13); }
+.drw-card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:6px; }
+.drw-cat-chip { font-size:9px; font-weight:800; letter-spacing:0.5px; text-transform:uppercase; padding:2px 7px; border-radius:10px; white-space:nowrap; flex-shrink:0; }
 .drw-cat-engineering { background:#dbeafe; color:#1e40af; }
 .drw-cat-details     { background:#d1fae5; color:#065f46; }
 .drw-cat-reference   { background:#f1f5f9; color:#334155; }
-.drw-ref { font-size:11px; font-weight:700; color:var(--navy); font-family:monospace; }
-.drw-rev { font-size:10px; background:#f1f5f9; color:#64748b; border-radius:4px; padding:1px 6px; font-weight:700; }
-.drw-name { font-size:13px; font-weight:700; color:#1e293b; line-height:1.3; }
-.drw-desc { font-size:11px; color:#64748b; line-height:1.5; flex:1; }
-.drw-actions { display:flex; gap:8px; margin-top:4px; }
-.drw-btn-open { flex:1; padding:7px 0; background:var(--navy); color:#fff; border:none; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer; text-align:center; text-decoration:none; display:block; transition:background 0.15s; }
-.drw-btn-open:hover { background:#2d5a8e; }
-.drw-empty { padding:40px 20px; text-align:center; color:var(--muted); font-size:13px; }
-@media(max-width:480px){ .drw-grid { grid-template-columns:1fr; } .drw-search{max-width:100%;} }
+.drw-ref { font-size:10px; font-weight:700; color:var(--navy); font-family:monospace; }
+.drw-rev { font-size:9px; background:#f1f5f9; color:#64748b; border-radius:4px; padding:1px 5px; font-weight:700; }
+.drw-name { font-size:12px; font-weight:700; color:#1e293b; line-height:1.3; }
+.drw-desc { font-size:10.5px; color:#64748b; line-height:1.5; }
+.drw-empty { padding:30px 10px; text-align:center; color:var(--muted); font-size:12px; }
+/* ── Mobile: stack ── */
+@media(max-width:680px){
+  .drw-split { flex-direction:column; height:auto; min-height:0; }
+  .drw-list { width:100%; border-right:none; border-bottom:1.5px solid #e2e8f0; padding-right:0; padding-bottom:4px; max-height:280px; overflow-y:auto; }
+  .drw-viewer-panel { padding-left:0; padding-top:12px; height:70vw; min-height:340px; display:flex; flex-direction:column; }
+  .drw-search { max-width:100%; }
+}
 </style>
 
-<div style="padding:16px 16px 24px;">
+<div style="padding:14px 16px 20px;">
   <div class="drw-header">
     <div>
       <div class="drw-title">&#128196; Drawing Register</div>
@@ -2178,7 +2192,23 @@ function clearForm() {
     <span class="drw-chip" onclick="drwSetCat('all',this)">All</span>
   </div>
 
-  <div class="drw-grid" id="drw-grid"></div>
+  <div class="drw-split">
+    <!-- Left: card list -->
+    <div class="drw-list" id="drw-list"></div>
+
+    <!-- Right: inline PDF viewer -->
+    <div class="drw-viewer-panel" id="drw-viewer-panel">
+      <div class="drw-viewer-bar" id="drw-viewer-bar" style="display:none;">
+        <div class="drw-viewer-name" id="drw-viewer-name"></div>
+        <a class="drw-viewer-open" id="drw-viewer-open" href="#" target="_blank" rel="noopener">&#8599; Full screen</a>
+      </div>
+      <div class="drw-viewer-placeholder" id="drw-placeholder">
+        <span style="font-size:32px;">&#128196;</span>
+        <span>Select a drawing to view it here</span>
+      </div>
+      <iframe id="drw-iframe" class="drw-iframe" style="display:none;" allowfullscreen></iframe>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -2267,6 +2297,7 @@ var DRW_DRAWINGS = [
 ];
 
 var _drwCat = 'engineering';
+var _drwActiveFile = null;
 
 function drwSetCat(cat, el) {
   _drwCat = cat;
@@ -2275,35 +2306,57 @@ function drwSetCat(cat, el) {
   drwFilter();
 }
 
+function drwOpen(cardEl, d) {
+  // Highlight selected card
+  document.querySelectorAll('.drw-card').forEach(function(c){ c.classList.remove('drw-selected'); });
+  cardEl.classList.add('drw-selected');
+  _drwActiveFile = d.file;
+
+  // Show iframe, hide placeholder
+  var iframe = document.getElementById('drw-iframe');
+  var placeholder = document.getElementById('drw-placeholder');
+  var bar = document.getElementById('drw-viewer-bar');
+  iframe.src = d.file;
+  iframe.style.display = 'block';
+  placeholder.style.display = 'none';
+  bar.style.display = 'flex';
+  document.getElementById('drw-viewer-name').textContent = d.name;
+  document.getElementById('drw-viewer-open').href = d.file;
+}
+
 function drwFilter() {
   var q = (document.getElementById('drw-search').value || '').toLowerCase();
-  var grid = document.getElementById('drw-grid');
-  grid.innerHTML = '';
+  var list = document.getElementById('drw-list');
+  list.innerHTML = '';
   var shown = 0;
+  var firstMatch = null;
+  var catLabels = {engineering:'Engineering',details:'Spec Detail',reference:'Reference'};
   DRW_DRAWINGS.forEach(function(d) {
     if (_drwCat !== 'all' && d.cat !== _drwCat) return;
     if (q && !(d.name.toLowerCase().includes(q) || d.ref.toLowerCase().includes(q) || d.desc.toLowerCase().includes(q))) return;
     shown++;
-    var catLabels = {engineering:'Engineering',details:'Spec Detail',programme:'Programme',commercial:'Commercial',variations:'Variation',reference:'Reference'};
-    grid.innerHTML += '<div class="drw-card">'
-      + '<div class="drw-card-top">'
-        + '<div>'
-          + '<span class="drw-cat-chip drw-cat-' + d.cat + '">' + (catLabels[d.cat]||d.cat) + '</span>'
-        + '</div>'
-        + '<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
-          + '<span class="drw-ref">' + d.ref + '</span>'
-          + (d.rev && d.rev!=='—' ? '<span class="drw-rev">' + d.rev + '</span>' : '')
-        + '</div>'
+    var isActive = (d.file === _drwActiveFile);
+    var card = document.createElement('div');
+    card.className = 'drw-card' + (isActive ? ' drw-selected' : '');
+    card.innerHTML =
+        '<div class="drw-card-top">'
+      +   '<span class="drw-cat-chip drw-cat-' + d.cat + '">' + (catLabels[d.cat]||d.cat) + '</span>'
+      +   '<div style="display:flex;gap:4px;align-items:center;">'
+      +     '<span class="drw-ref">' + d.ref + '</span>'
+      +     (d.rev && d.rev!=='—' ? '<span class="drw-rev">' + d.rev + '</span>' : '')
+      +   '</div>'
       + '</div>'
       + '<div class="drw-name">' + d.name + '</div>'
-      + '<div class="drw-desc">' + d.desc + '</div>'
-      + '<div class="drw-actions">'
-        + '<a class="drw-btn-open" href="' + d.file + '" target="_blank" rel="noopener">&#128196; Open PDF</a>'
-      + '</div>'
-    + '</div>';
+      + '<div class="drw-desc">' + d.desc + '</div>';
+    (function(dd, el){ el.addEventListener('click', function(){ drwOpen(el, dd); }); })(d, card);
+    list.appendChild(card);
+    if (!firstMatch) firstMatch = {card:card, d:d};
   });
   if (shown === 0) {
-    grid.innerHTML = '<div class="drw-empty">No drawings match your search.</div>';
+    list.innerHTML = '<div class="drw-empty">No drawings match your search.</div>';
+  } else if (!_drwActiveFile && firstMatch) {
+    // Auto-open first card on first load
+    drwOpen(firstMatch.card, firstMatch.d);
   }
 }
 
