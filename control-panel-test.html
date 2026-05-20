@@ -933,7 +933,6 @@ function clearForm() {
 <div class="nav">
   <button onclick="showTab('programme',this)">Programme</button>
   <button onclick="showTab('sitemap',this)">Site Map</button>
-  <button onclick="showTab('forecast',this)">Forecast</button>
   <button onclick="showTab('report',this)">Progress Report</button>
   <button onclick="showTab('risks',this)">Risk Tickets</button>
   <button class="no-client" onclick="showTab('efficiency',this)">Efficiency</button>
@@ -1326,10 +1325,12 @@ function clearForm() {
 
 <!-- ═══════════════════════════════ PROGRAMME ═══════════════════════════════ -->
 <div id="tab-programme" class="tab-content">
+  <div class="card" style="margin-bottom:12px;">
+    <div id="forecast-panel"></div>
+  </div>
   <div class="card" style="margin-bottom:12px;" id="programme-master-header">
     <div id="programme-header-panel"></div>
   </div>
-  <div class="card no-client" style="margin-bottom:12px;font-size:11px;color:var(--muted);padding:10px 14px;">Detailed velocity metrics available in the Forecast tab.</div>
   <div class="card" style="margin-bottom:12px;" id="velocity-card">
     <div id="velocity-panel"></div>
     <div id="velocity-trend-wrap" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:none;">
@@ -1361,12 +1362,6 @@ function clearForm() {
   </div>
 </div>
 
-<!-- ═══════════════════════════════ FORECAST ══════════════════════════════════ -->
-<div id="tab-forecast" class="tab-content">
-  <div class="card">
-    <div id="forecast-panel"></div>
-  </div>
-</div>
 
 <!-- ═══════════════════════════════ GANTT ═══════════════════════════════ -->
 <div id="tab-gantt" class="tab-content">
