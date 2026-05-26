@@ -437,6 +437,112 @@ body.client-mode .no-client  { display: none !important; }
 #tab-sitemap svg { overflow: visible; }
 [id^="sm-sect-"] { cursor: pointer; }
 
+/* ══════ v130 — Comprehensive Mobile Layout ══════ */
+
+/* ── Shared scroll wrap for wide tables ── */
+.tbl-scroll-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+
+@media (max-width: 768px) {
+  /* 1. Dashboard outer 2fr/1fr → single column */
+  .dash-outer-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 2. Progress hero: 1fr auto 1fr → single column */
+  .prog-hero-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .prog-behind-box {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  #kpi-certified-pct { font-size: 40px !important; }
+
+  /* 3. Programme Clock: 5 cols → 3 cols */
+  #pc-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 10px !important;
+  }
+  /* Hide border-left on pc-grid items that wrap to new row */
+  #pc-grid > div[style*="border-left"] {
+    border-left: none !important;
+    padding-left: 0 !important;
+  }
+
+  /* 4. Financial mini-grid: 3 → 2 cols */
+  .dash-fin-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* 5. Zone grid: force single column */
+  .zone-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 6. Task row: allow name to wrap */
+  .task-name { white-space: normal; }
+  .task-dates { min-width: 90px; }
+
+  /* 7. Programme clock flex container: stack on very small */
+  #tab-dashboard .kpi-card[style*="grid-column:1/-1"] > div[style*="display:flex"] {
+    flex-wrap: wrap;
+  }
+
+  /* 8. KPI font reduction */
+  .kpi-value { font-size: 22px; }
+
+  /* 9. Nav button font */
+  .nav button { font-size: 11px; padding: 0 10px; }
+
+  /* 10. Header: compact on mobile */
+  .header-left .project-title { display: none; }
+
+  /* 11. Main bottom padding (FAB clearance) */
+  .main { padding-bottom: 90px; }
+
+  /* 12. ph-kpi-row: 2 columns */
+  .ph-kpi-row { grid-template-columns: 1fr 1fr !important; }
+
+  /* 13. grid-3 → 1 col (already covered at 900px but reinforce) */
+  .grid-3 { grid-template-columns: 1fr !important; }
+
+  /* 14. Variation table: scroll */
+  #var-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+
+  /* 15. Shift tracker table: scroll */
+  #sh-tracker-wrap { -webkit-overflow-scrolling: touch; }
+
+  /* 16. Payment table containers */
+  .payment-table { min-width: 480px; }
+}
+
+@media (max-width: 480px) {
+  /* Programme clock: 3 → 2 cols */
+  #pc-grid { grid-template-columns: 1fr 1fr !important; }
+
+  /* Financial mini: 2 → 1 col */
+  .dash-fin-grid { grid-template-columns: 1fr !important; }
+
+  /* Logo: trim on tiny screens */
+  .logo { font-size: 16px; }
+  .logo span { display: none; }
+
+  /* KPI grid: 1 col on tiny phones */
+  .kpi-grid { grid-template-columns: 1fr 1fr !important; }
+
+  /* Hide project-status pill to save space */
+  #prog-status-badge { display: none !important; }
+
+  /* Nav: even smaller */
+  .nav button { font-size: 10px; padding: 0 8px; min-height: 40px; }
+
+  /* Zone card: compact padding */
+  .zone-card { padding: 12px; }
+
+  /* Reduce hero font further */
+  #kpi-certified-pct { font-size: 32px !important; }
+}
+
 /* ─── v7: UX audit enhancements ─── */
 /* Smoother progress bar animations */
 .progress-fill { transition: width 0.8s ease-out !important; }
@@ -980,7 +1086,7 @@ function clearForm() {
   <div id="alerts-area" style="margin-bottom:14px;"></div>
 
   <!-- ── Row 1: Physical Progress (left) + Days & Financials (right) ── -->
-  <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px;align-items:stretch;">
+  <div class="dash-outer-row" style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px;align-items:stretch;">
     <div class="kpi-card accent" style="height:100%;">
     
       <!-- ── HERO: Certified vs Revised ── -->
@@ -1079,7 +1185,7 @@ function clearForm() {
       <!-- Contract Value + Next Payment + Programme Budget combined -->
       <div class="kpi-card green admin-only" style="flex:1;">
         <div class="kpi-label" style="margin-bottom:10px;">Financials</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div class="dash-fin-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
           <div>
             <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">Contract Value</div>
             <div style="font-size:20px;font-weight:800;color:#4ade80;line-height:1;">£450k</div>
@@ -8485,6 +8591,19 @@ window.addEventListener('DOMContentLoaded', () => {
     if (preview && window._sitemapSrc) preview.src = window._sitemapSrc;
   })();
   try { initGanttDropZone(); } catch(e) {}
+
+  // ── v130: Mobile table scroll-wrap ──────────────────────────────────────
+  (function wrapTablesForMobile() {
+    var sel = '.payment-table, .prog-table, .ph-table, .delay-tbl, .delay-table, .sh-tracker-table, .mat-table';
+    document.querySelectorAll(sel).forEach(function(t) {
+      if (!t.parentElement.classList.contains('tbl-scroll-wrap')) {
+        var w = document.createElement('div');
+        w.className = 'tbl-scroll-wrap';
+        t.parentNode.insertBefore(w, t);
+        w.appendChild(t);
+      }
+    });
+  })();
 });
 
 // ═══════════════════════ TWO-WEEK BREAKDOWN REPORT ═══════════════════════
