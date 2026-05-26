@@ -2696,7 +2696,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-26T23:15:00'); // date + time of this push
+const LAST_UPDATED = new Date('2026-05-26T23:45:00'); // date + time of this push
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -4252,7 +4252,7 @@ const AFPS = [
   { num:1, issued:'2026-04-01', invoice:'2026-04-07', payment:null,         value:22984.59, net:0,         status:'combined', note:'AFP1 gross £22,984.59 absorbed into Dandara App.1 (SBI SC193064-x17) — NOT paid separately. Rolled into AFP2 certification.' },
   { num:2, issued:'2026-04-30', invoice:'2026-05-07', payment:'2026-05-12', value:164028.11, net:156739.46, status:'paid',     note:'AFP1+2 combined — SBI SC193064-x17. Ian Barnes certified £156,739.46 net (gross £164,028.11 | discount −£2,441.04 | retention −£4,847.61). Materials on site £47,815 accepted as goodwill. Received 12 May 2026.' },
   { num:3, issued:'2026-05-22', invoice:'2026-05-29', payment:'2026-06-26', value:128109,    net:128109,    status:'submitted', note:'Submitted to Dandara 22 May 2026. June groundworks (excl. tarmac) — ~£128k net est. (QS: Sophie). Tarmac roadbase and kerbing carried to AFP4. Awaiting Dandara certification (target 26 Jun 2026).' },
-  { num:4, issued:'2026-06-30', invoice:'2026-06-30', payment:'2026-07-28', value:0,         net:0,         status:'estimate', note:'ESTIMATE ONLY — Tarmac package (HPM + TCQ). Value TBC once subcontractor quotes confirmed. Per QS Sophie (17 May 2026): tarmac better claimed separately before final account. Not yet submitted.' },
+  { num:4, issued:'2026-06-30', invoice:'2026-06-30', payment:'2026-07-28', value:0,         net:0,         status:'estimate', note:'ESTIMATE ONLY — HPM roadbase only (TCQ wearing course removed from contract scope 26 May 2026). Value TBC once HPM subcontractor quotes confirmed. Per QS Sophie (17 May 2026): tarmac better claimed separately before final account. Not yet submitted.' },
   { num:5, issued:'2026-07-15', invoice:'2026-07-15', payment:'2026-08-12', value:0,         net:0,         status:'pending',  note:'Final Account — remaining works + agreed EOT prelims. EOT-D–I (£16,167 est.) not yet submitted to Dandara. Value TBC.' },
   { num:6, issued:'2027-07-01', invoice:'2027-07-01', payment:'2027-07-29', value:6842,      net:6842,      status:'pending',  note:'Retention release — after 12-month defect period. 1.5% of EFA net ~£456,143 = ~£6,842. Per QS: retention reduces to 1.5% at final account issue, final 1.5% claimed back after defects period.' }
 ];
@@ -4302,11 +4302,11 @@ let ZONE_DEFAULTS = {1:85,2:67,3:81,4:81,5:81,6:81,7:77,8:77,9:0,10:0,11:0,12:0}
 // but not yet complete. Add/update entries here when site conditions change.
 const ZONE_CONSTRAINTS = {
   1: 'Site setup ongoing through contract duration — management, QS admin and road sweeper run to practical completion.',
-  2: 'Tarmac roadbase (HPM) and surface course (TCQ) outstanding — awaiting tarmac subcontractors, not attributable to DGC. EOT covers this delay. Plan% vs original dates only.',
-  3: 'Tarmac roadbase (HPM) and wearing course (TCQ) outstanding — same position as Zone 2. Drainage, services and kerbing 100% complete. Tarmac subcontractor programme TBC.',
-  4: 'Tarmac roadbase and pavement layers outstanding — HPM/TCQ subcontractors not yet on site. All drainage, subbase and kerbing complete. Awaiting tarmac programme.',
-  5: 'Final kerbing and tarmac outstanding — awaiting HPM/TCQ. Drainage 100% complete. DGC works ahead of original plan; delay is subcontractor-driven.',
-  6: 'Tarmac roadbase and surface outstanding — HPM/TCQ to follow. All DGC drainage, subbase and kerbing works complete to standard.',
+  2: 'HPM roadbase (tarmac base layer) outstanding — awaiting HPM subcontractor. Wearing course (TCQ) has been removed from contract scope. Drainage, services and kerbing 100% complete. EOT covers tarmac delay — not attributable to DGC.',
+  3: 'HPM roadbase outstanding — same position as Zone 2. Drainage, services and kerbing 100% complete. Wearing course removed from scope. HPM subcontractor programme TBC.',
+  4: 'HPM roadbase outstanding — HPM subcontractor not yet on site. Wearing course removed from scope. All drainage, subbase and kerbing complete. Awaiting HPM tarmac programme.',
+  5: 'Final kerbing and HPM roadbase outstanding. Wearing course removed from scope. Drainage 100% complete. DGC works ahead of original plan; delay is HPM subcontractor-driven.',
+  6: 'HPM roadbase outstanding — HPM to follow. Wearing course removed from scope. All DGC drainage, subbase and kerbing works complete to standard.',
   7: 'Kerbing started (25% — ahead of original programme). Subbase, tarmac still to come. Lower Road drainage 100% complete. EOT covers extended programme.',
   8: 'Lower Road drainage 100% complete. Kerbing, subbase and tarmac to follow. Remaining work is later-stage road build — not overdue under revised programme.',
   9: 'Drain Run S4.5–S4.6 — starts 10 June 2026 with Gang C. Not yet started per original and revised programme. On track.',
@@ -6395,58 +6395,71 @@ function buildProgrammeV135() {
   +   '</div>'
   + '</div>'
 
+  // ── Scope change flag ─────────────────────────────────────────────────────
+  + '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:11px;line-height:1.7;">'
+  + '<div style="font-weight:800;color:#dc2626;margin-bottom:4px;font-size:12px;">⚠ SCOPE CHANGE — Action Required (QS)</div>'
+  + '<div style="color:#7f1d1d;"><strong>Pavement wearing course (TCQ) has been removed from this contract.</strong> The 100% figure below reflects the original programme scope. If GanttPro has not been updated to remove these tasks, the "% remaining" is overstated — DGC\'s true completion against revised scope is higher than shown.</div>'
+  + '<div style="color:#7f1d1d;margin-top:6px;font-size:10px;font-weight:700;">Action: Sophie (QS) to confirm revised programme removes all TCQ pavement tasks. If removed, ZONE_DEFAULTS and projected finish date should be recalculated.</div>'
+  + '</div>'
+
   // ── KPI cards row ─────────────────────────────────────────────────────────
   + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:18px;">'
 
-  // 1. Projected finish
+  // 1. Projected finish — self-explaining with velocity math
   + '<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid '+projCol+';border-radius:8px;padding:12px 14px;">'
-  +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px;">Projected Finish</div>'
-  +   '<div style="font-size:18px;font-weight:800;color:'+projCol+';">'+projFinStr+'</div>'
-  +   '<div style="font-size:10px;color:'+projCol+';margin-top:2px;font-weight:600;">'+projLabel+' (at current rate)</div>'
-  +   '<div style="font-size:9px;color:var(--muted);margin-top:4px;">'+Math.round(ratePerWeek*10)/10+'% / week velocity</div>'
+  +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px;">Finish at This Pace ↗</div>'
+  +   '<div style="font-size:22px;font-weight:900;color:'+projCol+';line-height:1.1;">'+projFinStr+'</div>'
+  +   '<div style="font-size:11px;color:'+projCol+';margin-top:4px;font-weight:700;">✅ '+projLabel+' vs '+dlStr+'</div>'
+  +   '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);line-height:1.5;">'
+  +     Math.round(ratePerDay*100)/100+'%/day · '+Math.round(ratePerWeek*10)/10+'%/week<br>'
+  +     (100-actualPct)+'% left ÷ '+Math.round(ratePerDay*100)/100+'%/day = ~'+daysToFinish+' more days'
+  +   '</div>'
   + '</div>'
 
   // 2. Days remaining
   + '<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid #38bdf8;border-radius:8px;padding:12px 14px;">'
   +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px;">Time to Deadline</div>'
-  +   '<div style="font-size:18px;font-weight:800;color:#38bdf8;">'+calDaysLeft+' days</div>'
-  +   '<div style="font-size:10px;color:var(--muted);margin-top:2px;">calendar · deadline '+dlStr+'</div>'
-  +   '<div style="font-size:9px;color:var(--muted);margin-top:4px;">≈ '+(Math.round(calDaysLeft*5/7))+' working days est.</div>'
+  +   '<div style="font-size:22px;font-weight:900;color:#38bdf8;line-height:1.1;">'+calDaysLeft+'</div>'
+  +   '<div style="font-size:11px;color:var(--muted);margin-top:4px;">calendar days · '+dlStr+'</div>'
+  +   '<div style="font-size:10px;color:var(--muted);margin-top:6px;">≈ '+(Math.round(calDaysLeft*5/7))+' working days</div>'
   + '</div>'
 
   // 3. Work remaining
   + '<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid #f59e0b;border-radius:8px;padding:12px 14px;">'
   +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px;">Work Remaining</div>'
-  +   '<div style="font-size:18px;font-weight:800;color:#f59e0b;">'+(100-actualPct)+'%</div>'
-  +   '<div style="font-size:10px;color:var(--muted);margin-top:2px;">outstanding of total scope</div>'
-  +   '<div style="font-size:9px;color:var(--muted);margin-top:4px;">Tarmac + Drain Run H–J</div>'
+  +   '<div style="font-size:22px;font-weight:900;color:#f59e0b;line-height:1.1;">'+(100-actualPct)+'%</div>'
+  +   '<div style="font-size:11px;color:var(--muted);margin-top:4px;">of current programme scope</div>'
+  +   '<div style="font-size:10px;color:var(--muted);margin-top:6px;">HPM roadbase + Drain Run H–J</div>'
   + '</div>'
 
   // 4. Open issues
   + '<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid '+(openRisks>3?'#ef4444':'#64748b')+';border-radius:8px;padding:12px 14px;">'
   +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px;">Open Issues</div>'
-  +   '<div style="font-size:18px;font-weight:800;color:var(--text);">'+openRisks+' <span style="font-size:12px;font-weight:500;color:var(--muted);">risk tickets</span></div>'
-  +   '<div style="font-size:10px;color:var(--muted);margin-top:2px;">deferred / monitoring</div>'
-  +   (openDelays > 0 ? '<div style="font-size:9px;color:#f59e0b;margin-top:4px;font-weight:700;">'+openDelays+' delay event(s) unagreed</div>' : '')
+  +   '<div style="font-size:22px;font-weight:900;color:var(--text);line-height:1.1;">'+openRisks+'</div>'
+  +   '<div style="font-size:11px;color:var(--muted);margin-top:4px;">risk tickets — deferred</div>'
+  +   (openDelays > 0 ? '<div style="font-size:10px;color:#f59e0b;margin-top:6px;font-weight:700;">'+openDelays+' delay event(s) unagreed</div>' : '<div style="font-size:10px;color:var(--muted);margin-top:6px;">No unagreed delays</div>')
   + '</div>'
 
   + '</div>' // end KPI grid
 
   // ── Velocity chart ────────────────────────────────────────────────────────
   + '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:18px;">'
-  +   '<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px;">Progress Velocity</div>'
+  +   '<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:6px;">'
+  +     '<div style="font-size:12px;font-weight:700;color:var(--text);">Progress Velocity Chart</div>'
+  +     '<div style="font-size:10px;color:'+projCol+';font-weight:700;">📍 On current pace: finish '+projFinStr+' ('+projLabel+')</div>'
+  +   '</div>'
   +   '<div style="font-size:10px;color:var(--muted);margin-bottom:10px;">'
-  +     'Green solid = actual work done &nbsp;·&nbsp; Grey dashed = planned linear pace &nbsp;·&nbsp; Green dashed = projected at current velocity'
+  +     '━ Green = actual done &nbsp;·&nbsp; ╌ Grey = planned pace &nbsp;·&nbsp; ╌ Green dashed = projected at current velocity'
   +   '</div>'
   +   chartSVG
   + '</div>'
 
-  // ── Critical path note ────────────────────────────────────────────────────
+  // ── What still can't be done (simplified, no TCQ) ─────────────────────────
   + '<div style="background:#fef3c720;border:1px solid #d9770640;border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:11px;line-height:1.7;">'
-  + '<div style="font-weight:700;color:#92400e;margin-bottom:4px;">⚠ Key Constraints to 100%</div>'
-  + '<div style="color:var(--text);">Tarmac subcontractors <strong>HPM</strong> (roadbase) and <strong>TCQ</strong> (wearing course) not yet mobilised — Sections A–E cannot reach 100% until tarmac is laid.</div>'
-  + '<div style="color:var(--text);">Drain Run Sections H–J starts <strong>10 June 2026</strong> with Gang C — currently 0%, on programme per revised dates.</div>'
-  + '<div style="color:var(--text);margin-top:4px;font-size:10px;color:var(--muted);">RFI 04 (6F2 written approval) required before Section 5 can start · RFI 07 (generator/mains) ongoing</div>'
+  + '<div style="font-weight:700;color:#92400e;margin-bottom:6px;">What can\'t be completed yet</div>'
+  + '<div style="color:var(--text);">🚛 <strong>HPM roadbase (tarmac base layer)</strong> — subcontractor not yet mobilised. Sections A–E need HPM on site before road build can reach 100%.</div>'
+  + '<div style="color:var(--text);">🔧 <strong>Drain Run H–J</strong> — Gang C starts <strong>10 June 2026</strong>. Sections H, I, J at 0%, on programme per revised dates.</div>'
+  + '<div style="color:var(--text);font-size:10px;color:var(--muted);margin-top:6px;">RFI 04: 6F2 written approval needed before Section 5 starts &nbsp;·&nbsp; RFI 07: generator/mains — ongoing</div>'
   + '</div>'
 
   // ── Section cards ─────────────────────────────────────────────────────────
@@ -10534,7 +10547,7 @@ var MAT_DEFAULTS = [
   {id:'m11', cat:'Road',      name:'Road Gullies',            unit:'no.',  qty:'—', status:'ok',      note:''},
   {id:'m12', cat:'Road',      name:'Kerb Units',              unit:'no.',  qty:'—', status:'ok',      note:'In progress — Top Road 53%, Mid Road 53%, Lower Road 25%'},
   {id:'m13', cat:'Road',      name:'Tarmac Roadbase',         unit:'t',    qty:'—', status:'pending', note:'HPM subcontractor supply. Top Road & Mid Road outstanding.'},
-  {id:'m14', cat:'Road',      name:'Tarmac Wearing Course',   unit:'t',    qty:'—', status:'pending', note:'TCQ subcontractor supply.'},
+  {id:'m14', cat:'Road',      name:'Tarmac Wearing Course',   unit:'t',    qty:'—', status:'cancelled', note:'REMOVED FROM SCOPE — TCQ wearing course pavement work taken off contract 26 May 2026. Not required.'},
   {id:'m15', cat:'Services',  name:'Duct (services)',         unit:'m',    qty:'—', status:'ok',      note:''},
   {id:'m16', cat:'Services',  name:'Tote Bags (V14)',         unit:'no.',  qty:'—', status:'ok',      note:'V14 complete — tote bags placed over all laterals.'},
 ];
