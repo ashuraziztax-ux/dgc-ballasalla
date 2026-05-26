@@ -2529,14 +2529,7 @@ function drwFilter() {
   }
 }
 
-// Init on tab open
-(function() {
-  var origShowTab = showTab;
-  showTab = function(name, btn) {
-    origShowTab(name, btn);
-    if (name === 'drawings') drwFilter();
-  };
-})();
+// drwFilter() is called by showTab in main script when drawings tab opens
 </script>
 </div>
 
@@ -2702,7 +2695,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-26T22:00:00'); // date + time of this push
+const LAST_UPDATED = new Date('2026-05-26T23:15:00'); // date + time of this push
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -6170,99 +6163,190 @@ function buildProgrammeV135() {
   var actualPct  = Math.round(_DS.actualPct  || 0);
   var plannedPct = Math.round(_DS.plannedPct || 0);
   var deadline   = (_DS.PROJECT_END instanceof Date) ? _DS.PROJECT_END : parseDate('2026-07-03');
+  var projStart  = parseDate('2026-03-23');
   var calDaysLeft = Math.max(0, Math.round((deadline - TODAY) / 86400000));
   var gap = actualPct - plannedPct;
   var isOnTrack = gap >= -5;
 
-  // ── Deadline display ─────────────────────────────────────────────────────
-  var dlStr = deadline.toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'});
-  var daysStr = calDaysLeft > 0 ? calDaysLeft + ' days remaining' : (calDaysLeft === 0 ? 'Due today' : Math.abs(calDaysLeft) + ' days overdue');
+  // ── Dates ─────────────────────────────────────────────────────────────────
+  var dlStr   = deadline.toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'});
+  var dataStr = (typeof DATA_AS_OF !== 'undefined')
+    ? DATA_AS_OF.toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'})
+    : '';
+  var daysStr = calDaysLeft > 0 ? calDaysLeft + ' calendar days remaining'
+              : calDaysLeft === 0 ? 'Due today' : Math.abs(calDaysLeft) + ' days overdue';
 
-  // ── Section groups ────────────────────────────────────────────────────────
-  // Each group: name, subtitle, zone IDs (weighted avg by budget)
+  // ── Velocity & projection ─────────────────────────────────────────────────
+  var dataDate   = (typeof DATA_AS_OF !== 'undefined') ? DATA_AS_OF : TODAY;
+  var daysElapsed = Math.max(1, Math.round((dataDate - projStart) / 86400000));
+  var ratePerDay  = actualPct / daysElapsed;           // % per calendar day
+  var ratePerWeek = ratePerDay * 7;
+  var daysToFinish = actualPct < 100 ? Math.round((100 - actualPct) / ratePerDay) : 0;
+  var projFinish   = new Date(dataDate.getTime() + daysToFinish * 86400000);
+  var projFinStr   = projFinish.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+  var daysEarly    = Math.round((deadline - projFinish) / 86400000);
+  var projLabel    = daysEarly > 0 ? daysEarly + ' days early' : daysEarly === 0 ? 'On exact deadline' : Math.abs(daysEarly) + ' days late';
+  var projCol      = daysEarly >= 0 ? '#22c55e' : '#ef4444';
+
+  // ── Earned Value (high level, QS view) ───────────────────────────────────
+  var contractVal = (typeof PROJECT_CONFIG !== 'undefined' && PROJECT_CONFIG.boq && PROJECT_CONFIG.boq.total)
+                    ? PROJECT_CONFIG.boq.total : 454327;
+  var EV = Math.round(contractVal * actualPct / 100);
+  var PV = Math.round(contractVal * plannedPct / 100);
+  var SV = EV - PV;  // schedule variance £
+
+  // ── AFP position ─────────────────────────────────────────────────────────
+  var AFPS_LOCAL = typeof AFPS !== 'undefined' ? AFPS : [];
+  var afpPaid = AFPS_LOCAL.filter(function(a){ return a.status === 'paid'; });
+  var afpCertified = afpPaid.reduce(function(s,a){ return s + (a.certified||a.net||0); }, 0);
+  var afpSubmitted = AFPS_LOCAL.filter(function(a){ return a.status === 'submitted'; });
+  var afpPending   = afpSubmitted.reduce(function(s,a){ return s + (a.value||a.net||0); }, 0);
+  var nextDue = AFPS_LOCAL.find(function(a){ return a.status !== 'paid' && a.status !== 'submitted'; });
+
+  // ── Risk / delay count ───────────────────────────────────────────────────
+  var openRisks = 0;
+  try {
+    var rtAll = JSON.parse(localStorage.getItem('dgc_risk_tickets')||'null') || DEFAULT_RISK_TICKETS;
+    openRisks = rtAll.filter(function(t){ return t.pmStatus === 'Deferred / monitor'; }).length;
+  } catch(e) {}
+  var openDelays = 0;
+  try {
+    var dAll = JSON.parse(localStorage.getItem('dgc_delays')||'[]');
+    openDelays = dAll.filter(function(d){ return d.category === 'client' && d.status !== 'agreed'; }).length;
+  } catch(e) {}
+
+  // ── Section groups (using section letters A–J) ───────────────────────────
   var GROUPS = [
-    { name:'Site Setup',   sub:'Zone 1',       zones:[1]       },
-    { name:'Top Road',     sub:'Zone 2',       zones:[2]       },
-    { name:'Mid Road',     sub:'Zones 3–6',    zones:[3,4,5,6] },
-    { name:'Lower Road',   sub:'Zones 7–8',    zones:[7,8]     },
-    { name:'Drain Run',    sub:'Zones 9–11',   zones:[9,10,11] },
-    { name:'Demob',        sub:'Zone 12',      zones:[12]      },
+    { name:'Site Setup',   sub:'Prelims',       zones:[1],        icon:'🏗' },
+    { name:'Top Road',     sub:'Section A',     zones:[2],        icon:'🟡' },
+    { name:'Mid Road',     sub:'Sections B–C',  zones:[3,4],      icon:'🟠' },
+    { name:'Road 3',       sub:'Sections D–E',  zones:[5,6],      icon:'🔵' },
+    { name:'Lower Road',   sub:'Sections F–G',  zones:[7,8],      icon:'🟣' },
+    { name:'Drain Run',    sub:'Sections H–J',  zones:[9,10,11],  icon:'🩷' },
+    { name:'Demob',        sub:'Handover',       zones:[12],       icon:'✅' },
   ];
 
   function groupPct(g) {
-    var totalBudget = 0, weightedProg = 0;
+    var tot = 0, wprog = 0;
     g.zones.forEach(function(zid) {
       var z = ZONES.find(function(z){ return z.id === zid; });
       if (!z) return;
       var b = z.budget || 0;
-      var p = getZoneProgress(zid);
-      totalBudget += b;
-      weightedProg += b * p;
+      tot   += b;
+      wprog += b * getZoneProgress(zid);
     });
-    return totalBudget > 0 ? Math.round(weightedProg / totalBudget) : 0;
+    return tot > 0 ? Math.round(wprog / tot) : 0;
   }
 
-  function sectionStatus(pct) {
-    if (pct >= 95) return 'pv5-complete';
-    if (pct > 0)   return 'pv5-active';
-    return 'pv5-upcoming';
-  }
-
-  function sectionBarColor(pct) {
-    if (pct >= 95) return '#22c55e';
-    if (pct > 0)   return '#f59e0b';
-    return '#e2e8f0';
-  }
-
-  function sectionStatusLabel(pct) {
-    if (pct >= 95) return '✓ Complete';
-    if (pct > 0)   return '→ In Progress';
-    return '○ Not Started';
-  }
+  function statusClass(pct)  { return pct >= 95 ? 'pv5-complete' : pct > 0 ? 'pv5-active' : 'pv5-upcoming'; }
+  function barColor(pct)     { return pct >= 95 ? '#22c55e' : pct > 0 ? '#f59e0b' : '#e2e8f0'; }
+  function statusLabel(pct)  { return pct >= 95 ? '✓ Complete' : pct > 0 ? '→ In Progress' : '○ Not Started'; }
 
   // ── Snap banner ───────────────────────────────────────────────────────────
-  var snapBanner = '';
-  try {
-    if (typeof DATA_AS_OF !== 'undefined') {
-      var sDateStr = DATA_AS_OF.toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'});
-      snapBanner = '<div class="pv5-snap-banner">📋 <span>Progress figures from snapshot: <strong>' + sDateStr + '</strong>. Updated fortnightly.</span></div>';
-    }
-  } catch(e) {}
+  var snapBanner = dataStr
+    ? '<div class="pv5-snap-banner">📋 <span>Progress figures correct as at: <strong>' + dataStr + '</strong> · Updated fortnightly · Deadline: <strong>' + dlStr + '</strong></span></div>'
+    : '';
+
+  // ── Section cards ─────────────────────────────────────────────────────────
+  var sectionCardsHtml = GROUPS.map(function(g) {
+    var pct = groupPct(g);
+    var sc  = statusClass(pct);
+    var col = barColor(pct);
+    var constraint = ZONE_CONSTRAINTS ? ZONE_CONSTRAINTS[g.zones[0]] : '';
+    var constraintHtml = (pct > 0 && pct < 95 && constraint)
+      ? '<div style="font-size:9px;color:var(--muted);margin-top:5px;line-height:1.4;font-style:italic;">'
+        + constraint.split(' — ')[0].slice(0,60) + (constraint.length > 60 ? '…' : '') + '</div>'
+      : '';
+    return '<div class="pv5-section-card ' + sc + '">'
+      + '<div class="pv5-section-pct ' + sc + '">' + pct + '%</div>'
+      + '<div class="pv5-section-name">' + g.icon + ' ' + g.name + '</div>'
+      + '<div class="pv5-section-sub">' + g.sub + ' · ' + statusLabel(pct) + '</div>'
+      + '<div class="pv5-section-bar"><div class="pv5-section-bar-fill" style="width:' + pct + '%;background:' + col + ';"></div></div>'
+      + constraintHtml
+      + '</div>';
+  }).join('');
+
+  // ── SVG velocity chart ────────────────────────────────────────────────────
+  // Simple line chart: planned line (linear) vs actual (data point + projection)
+  var chartW = 600, chartH = 140;
+  var padL = 36, padR = 20, padT = 10, padB = 28;
+  var innerW = chartW - padL - padR, innerH = chartH - padT - padB;
+  var totalMs = deadline.getTime() - projStart.getTime();
+  function xPos(date) { return padL + Math.max(0, Math.min(1, (date.getTime() - projStart.getTime()) / totalMs)) * innerW; }
+  function yPos(pct)  { return padT + (1 - pct / 100) * innerH; }
+  var today_x  = xPos(TODAY);
+  var data_x   = xPos(dataDate);
+  var data_y   = yPos(actualPct);
+  var plan_y   = yPos(plannedPct);
+  var proj_x   = xPos(projFinish);
+  // Planned line: 0% at start → 100% at deadline
+  var planLine = 'M'+padL+','+(padT+innerH)+' L'+(padL+innerW)+','+padT;
+  // Actual line: start at 0, end at data point
+  var actualLine = 'M'+padL+','+(padT+innerH)+' L'+data_x+','+data_y;
+  // Projection dashed: from data point to projected finish
+  var projLine = 'M'+data_x+','+data_y+' L'+proj_x+','+padT;
+  // Month tick labels
+  var months = ['Mar','Apr','May','Jun','Jul'];
+  var monthDates = [new Date('2026-03-23'),new Date('2026-04-15'),new Date('2026-05-15'),new Date('2026-06-15'),new Date('2026-07-03')];
+  var ticks = months.map(function(m,i){
+    var mx = xPos(monthDates[i]);
+    return '<text x="'+mx+'" y="'+(padT+innerH+18)+'" text-anchor="middle" font-size="9" fill="var(--muted)">'+m+'</text>'
+      +'<line x1="'+mx+'" y1="'+(padT+innerH)+'" x2="'+mx+'" y2="'+(padT+innerH+4)+'" stroke="var(--border)" stroke-width="1"/>';
+  }).join('');
+  var chartSVG = '<svg viewBox="0 0 '+chartW+' '+chartH+'" style="width:100%;max-width:'+chartW+'px;height:auto;display:block;">'
+    // Grid
+    +'<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(padT+innerH)+'" stroke="var(--border)" stroke-width="1"/>'
+    +'<line x1="'+padL+'" y1="'+(padT+innerH)+'" x2="'+(padL+innerW)+'" y2="'+(padT+innerH)+'" stroke="var(--border)" stroke-width="1"/>'
+    // Y axis labels
+    +'<text x="'+(padL-4)+'" y="'+(padT+4)+'" text-anchor="end" font-size="9" fill="var(--muted)">100%</text>'
+    +'<text x="'+(padL-4)+'" y="'+(padT+innerH/2+4)+'" text-anchor="end" font-size="9" fill="var(--muted)">50%</text>'
+    +'<text x="'+(padL-4)+'" y="'+(padT+innerH+4)+'" text-anchor="end" font-size="9" fill="var(--muted)">0%</text>'
+    // 50% grid line
+    +'<line x1="'+padL+'" y1="'+(padT+innerH/2)+'" x2="'+(padL+innerW)+'" y2="'+(padT+innerH/2)+'" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="3,3"/>'
+    // Plan line
+    +'<path d="'+planLine+'" stroke="#94a3b8" stroke-width="1.5" fill="none" stroke-dasharray="5,3"/>'
+    // Actual line (solid green)
+    +'<path d="'+actualLine+'" stroke="#22c55e" stroke-width="2.5" fill="none" stroke-linecap="round"/>'
+    // Projection dashed green
+    +'<path d="'+projLine+'" stroke="#22c55e" stroke-width="1.5" fill="none" stroke-dasharray="4,3" opacity="0.6"/>'
+    // Today vertical line
+    +'<line x1="'+today_x+'" y1="'+padT+'" x2="'+today_x+'" y2="'+(padT+innerH)+'" stroke="var(--accent)" stroke-width="1" stroke-dasharray="3,3" opacity="0.7"/>'
+    +'<text x="'+today_x+'" y="'+(padT-2)+'" text-anchor="middle" font-size="8" fill="var(--accent)">today</text>'
+    // Actual dot
+    +'<circle cx="'+data_x+'" cy="'+data_y+'" r="5" fill="#22c55e" stroke="#fff" stroke-width="1.5"/>'
+    +'<text x="'+(data_x+7)+'" y="'+(data_y+4)+'" font-size="9" font-weight="700" fill="#22c55e">'+actualPct+'%</text>'
+    // Plan dot at data date
+    +'<circle cx="'+data_x+'" cy="'+plan_y+'" r="3.5" fill="#94a3b8" stroke="#fff" stroke-width="1"/>'
+    +'<text x="'+(data_x+7)+'" y="'+(plan_y+4)+'" font-size="9" fill="#94a3b8">'+plannedPct+'%</text>'
+    // Projected finish dot
+    +(daysEarly > 0 ? '<circle cx="'+proj_x+'" cy="'+padT+'" r="4" fill="'+projCol+'" stroke="#fff" stroke-width="1.5"/>' : '')
+    // X ticks
+    + ticks
+    // Legend
+    +'<rect x="'+padL+'" y="'+(padT+innerH+20)+'" width="10" height="2" fill="#22c55e"/>'
+    +'<text x="'+(padL+13)+'" y="'+(padT+innerH+25)+'" font-size="9" fill="var(--muted)">Actual</text>'
+    +'<rect x="'+(padL+60)+'" y="'+(padT+innerH+20)+'" width="10" height="2" fill="#94a3b8"/>'
+    +'<text x="'+(padL+73)+'" y="'+(padT+innerH+25)+'" font-size="9" fill="var(--muted)">Planned</text>'
+    +'<rect x="'+(padL+130)+'" y="'+(padT+innerH+20)+'" width="10" height="2" fill="#22c55e" opacity="0.5"/>'
+    +'<text x="'+(padL+143)+'" y="'+(padT+innerH+25)+'" font-size="9" fill="var(--muted)">Projected</text>'
+    +'</svg>';
 
   // ── Financial summary (admin only) ───────────────────────────────────────
   var finBlock = '';
   try {
-    var AFPS_LOCAL = typeof AFPS !== 'undefined' ? AFPS : [];
-    var paid = AFPS_LOCAL.filter(function(a){ return a.status === 'paid'; });
-    var totalPaid = paid.reduce(function(s,a){ return s + (a.certified||a.submitted||0); }, 0);
-    var nextAfp = AFPS_LOCAL.find(function(a){ return a.status !== 'paid'; });
-    var nextAmt = nextAfp ? (nextAfp.estimated || nextAfp.submitted || 0) : 0;
-    var nextLbl = nextAfp ? (nextAfp.label || 'Next AFP') : 'None';
-    var contractVal = (typeof PROJECT_CONFIG !== 'undefined' && PROJECT_CONFIG.boq && PROJECT_CONFIG.boq.total)
-                      ? PROJECT_CONFIG.boq.total : 454327;
+    var certLbl  = afpPaid.map(function(a){ return a.label; }).join(' + ') || 'None';
+    var pendLbl  = afpSubmitted.map(function(a){ return a.label; }).join(', ') || '—';
+    var nextLbl2 = nextDue ? (nextDue.label || 'Next AFP') : '—';
     finBlock = '<div class="pv5-fin-block admin-only" style="margin-top:20px;">'
-      + '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;margin-bottom:14px;">Financial Summary (Admin)</div>'
+      + '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:14px;">Commercial Summary — Admin Only</div>'
       + '<div class="pv5-fin-grid">'
-      + '<div class="pv5-fin-item"><div class="f-lbl">Contract BoQ</div><div class="f-val" style="color:#38bdf8;">£' + Math.round(contractVal/1000) + 'k</div><div class="f-sub">total scope value</div></div>'
-      + '<div class="pv5-fin-item"><div class="f-lbl">Certified to Date</div><div class="f-val" style="color:#4ade80;">£' + Math.round(totalPaid/1000) + 'k</div><div class="f-sub">AFP1 + AFP2 paid</div></div>'
-      + '<div class="pv5-fin-item"><div class="f-lbl">Next Payment</div><div class="f-val" style="color:#f59e0b;">£' + Math.round(nextAmt/1000) + 'k</div><div class="f-sub">' + nextLbl + ' est.</div></div>'
-      + '<div class="pv5-fin-item"><div class="f-lbl">Budget (Programme)</div><div class="f-val" style="color:#c084fc;">£367k</div><div class="f-sub">cost plan total</div></div>'
+      + '<div class="pv5-fin-item"><div class="f-lbl">Contract BoQ</div><div class="f-val" style="color:#38bdf8;">£' + Math.round(contractVal/1000) + 'k</div><div class="f-sub">full scope value</div></div>'
+      + '<div class="pv5-fin-item"><div class="f-lbl">Certified & Paid</div><div class="f-val" style="color:#4ade80;">£' + Math.round(afpCertified/1000) + 'k</div><div class="f-sub">' + certLbl + '</div></div>'
+      + '<div class="pv5-fin-item"><div class="f-lbl">Submitted Pending</div><div class="f-val" style="color:#f59e0b;">£' + Math.round(afpPending/1000) + 'k</div><div class="f-sub">' + pendLbl + ' — awaiting cert.</div></div>'
+      + '<div class="pv5-fin-item"><div class="f-lbl">Earned Value</div><div class="f-val" style="color:#c084fc;">£' + Math.round(EV/1000) + 'k</div><div class="f-sub">'+(SV>=0?'+':'')+'£'+Math.round(SV/1000)+'k vs plan</div></div>'
       + '</div>'
       + '</div>';
   } catch(e) {}
-
-  // ── Section cards HTML ────────────────────────────────────────────────────
-  var sectionCardsHtml = GROUPS.map(function(g) {
-    var pct = groupPct(g);
-    var st  = sectionStatus(pct);
-    var col = sectionBarColor(pct);
-    return '<div class="pv5-section-card ' + st + '">'
-      + '<div class="pv5-section-pct ' + st + '">' + pct + '%</div>'
-      + '<div class="pv5-section-name">' + g.name + '</div>'
-      + '<div class="pv5-section-sub">' + g.sub + ' · ' + sectionStatusLabel(pct) + '</div>'
-      + '<div class="pv5-section-bar"><div class="pv5-section-bar-fill" style="width:' + pct + '%;background:' + col + ';"></div></div>'
-      + '</div>';
-  }).join('');
 
   // ── Full HTML ─────────────────────────────────────────────────────────────
   var html = snapBanner
@@ -6272,48 +6356,106 @@ function buildProgrammeV135() {
   +   '<div class="pv5-hero-flex">'
   +     '<div>'
   +       '<div class="pv5-status-pill ' + (isOnTrack ? 'on-track' : 'behind') + '">'
-  +         (isOnTrack ? '✓ On Track' : '⚠ Behind Programme')
-  +       '</div>'
+  +         (isOnTrack ? '✓ On Track' : '⚠ Behind Programme') + '</div>'
   +       '<div class="pv5-pct">' + actualPct + '%</div>'
-  +       '<div class="pv5-deadline">Overall complete · Deadline: <strong>' + dlStr + '</strong></div>'
+  +       '<div class="pv5-deadline">Work complete · Agreed end: <strong>' + dlStr + '</strong></div>'
   +       '<div class="pv5-deadline" style="margin-top:4px;font-size:13px;color:#94a3b8;">' + daysStr + '</div>'
   +     '</div>'
   +     '<div style="text-align:right;">'
-  +       '<div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">vs Plan</div>'
+  +       '<div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Ahead of Plan</div>'
   +       '<div style="font-size:36px;font-weight:900;color:' + (gap >= 0 ? '#4ade80' : '#f87171') + ';">'
-  +         (gap >= 0 ? '+' : '') + gap + '%'
-  +       '</div>'
+  +         (gap >= 0 ? '+' : '') + gap + '%' + '</div>'
   +       '<div style="font-size:11px;color:#64748b;margin-top:4px;">actual vs scheduled</div>'
   +     '</div>'
   +   '</div>'
   + '</div>'
 
-  // Progress bars
+  // Progress bars with date context
   + '<div class="pv5-bar-section">'
-  +   '<div style="font-size:12px;font-weight:700;color:#1e293b;margin-bottom:14px;">Plan vs Actual Progress</div>'
+  +   '<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:14px;">Plan vs Actual Progress</div>'
   +   '<div class="pv5-bar-row">'
   +     '<div>'
-  +       '<div class="pv5-bar-label">Actual Work Done</div>'
+  +       '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">'
+  +         '<div class="pv5-bar-label">✅ Actual Work Done</div>'
+  +         (dataStr ? '<div style="font-size:10px;color:var(--muted);">as at ' + dataStr + '</div>' : '')
+  +       '</div>'
   +       '<div class="pv5-bar-track"><div class="pv5-bar-fill-actual" style="width:' + actualPct + '%;"></div></div>'
   +       '<div style="display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-top:4px;">'
-  +         '<span>0%</span><span style="font-weight:700;color:#16a34a;">' + actualPct + '%</span><span>100%</span>'
+  +         '<span>0%</span><span style="font-weight:700;color:#16a34a;">' + actualPct + '% complete</span><span>100%</span>'
   +       '</div>'
   +     '</div>'
   +     '<div>'
-  +       '<div class="pv5-bar-label">Plan (Should Be At)</div>'
+  +       '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">'
+  +         '<div class="pv5-bar-label">📅 Where We Should Be</div>'
+  +         '<div style="font-size:10px;color:var(--muted);">based on ' + dlStr + ' deadline</div>'
+  +       '</div>'
   +       '<div class="pv5-bar-track"><div class="pv5-bar-fill-plan" style="width:' + plannedPct + '%;"></div></div>'
   +       '<div style="display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-top:4px;">'
-  +         '<span>0%</span><span style="font-weight:700;color:#d97706;">' + plannedPct + '%</span><span>100%</span>'
+  +         '<span>0%</span><span style="font-weight:700;color:#d97706;">' + plannedPct + '% planned</span><span>100%</span>'
   +       '</div>'
   +     '</div>'
   +   '</div>'
   + '</div>'
 
-  // Section cards
-  + '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:#64748b;margin-bottom:10px;">Section Progress</div>'
+  // ── KPI cards row ─────────────────────────────────────────────────────────
+  + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:18px;">'
+
+  // 1. Projected finish
+  + '<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid '+projCol+';border-radius:8px;padding:12px 14px;">'
+  +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px;">Projected Finish</div>'
+  +   '<div style="font-size:18px;font-weight:800;color:'+projCol+';">'+projFinStr+'</div>'
+  +   '<div style="font-size:10px;color:'+projCol+';margin-top:2px;font-weight:600;">'+projLabel+' (at current rate)</div>'
+  +   '<div style="font-size:9px;color:var(--muted);margin-top:4px;">'+Math.round(ratePerWeek*10)/10+'% / week velocity</div>'
+  + '</div>'
+
+  // 2. Days remaining
+  + '<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid #38bdf8;border-radius:8px;padding:12px 14px;">'
+  +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px;">Time to Deadline</div>'
+  +   '<div style="font-size:18px;font-weight:800;color:#38bdf8;">'+calDaysLeft+' days</div>'
+  +   '<div style="font-size:10px;color:var(--muted);margin-top:2px;">calendar · deadline '+dlStr+'</div>'
+  +   '<div style="font-size:9px;color:var(--muted);margin-top:4px;">≈ '+(Math.round(calDaysLeft*5/7))+' working days est.</div>'
+  + '</div>'
+
+  // 3. Work remaining
+  + '<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid #f59e0b;border-radius:8px;padding:12px 14px;">'
+  +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px;">Work Remaining</div>'
+  +   '<div style="font-size:18px;font-weight:800;color:#f59e0b;">'+(100-actualPct)+'%</div>'
+  +   '<div style="font-size:10px;color:var(--muted);margin-top:2px;">outstanding of total scope</div>'
+  +   '<div style="font-size:9px;color:var(--muted);margin-top:4px;">Tarmac + Drain Run H–J</div>'
+  + '</div>'
+
+  // 4. Open issues
+  + '<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid '+(openRisks>3?'#ef4444':'#64748b')+';border-radius:8px;padding:12px 14px;">'
+  +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px;">Open Issues</div>'
+  +   '<div style="font-size:18px;font-weight:800;color:var(--text);">'+openRisks+' <span style="font-size:12px;font-weight:500;color:var(--muted);">risk tickets</span></div>'
+  +   '<div style="font-size:10px;color:var(--muted);margin-top:2px;">deferred / monitoring</div>'
+  +   (openDelays > 0 ? '<div style="font-size:9px;color:#f59e0b;margin-top:4px;font-weight:700;">'+openDelays+' delay event(s) unagreed</div>' : '')
+  + '</div>'
+
+  + '</div>' // end KPI grid
+
+  // ── Velocity chart ────────────────────────────────────────────────────────
+  + '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:18px;">'
+  +   '<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px;">Progress Velocity</div>'
+  +   '<div style="font-size:10px;color:var(--muted);margin-bottom:10px;">'
+  +     'Green solid = actual work done &nbsp;·&nbsp; Grey dashed = planned linear pace &nbsp;·&nbsp; Green dashed = projected at current velocity'
+  +   '</div>'
+  +   chartSVG
+  + '</div>'
+
+  // ── Critical path note ────────────────────────────────────────────────────
+  + '<div style="background:#fef3c720;border:1px solid #d9770640;border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:11px;line-height:1.7;">'
+  + '<div style="font-weight:700;color:#92400e;margin-bottom:4px;">⚠ Key Constraints to 100%</div>'
+  + '<div style="color:var(--text);">Tarmac subcontractors <strong>HPM</strong> (roadbase) and <strong>TCQ</strong> (wearing course) not yet mobilised — Sections A–E cannot reach 100% until tarmac is laid.</div>'
+  + '<div style="color:var(--text);">Drain Run Sections H–J starts <strong>10 June 2026</strong> with Gang C — currently 0%, on programme per revised dates.</div>'
+  + '<div style="color:var(--text);margin-top:4px;font-size:10px;color:var(--muted);">RFI 04 (6F2 written approval) required before Section 5 can start · RFI 07 (generator/mains) ongoing</div>'
+  + '</div>'
+
+  // ── Section cards ─────────────────────────────────────────────────────────
+  + '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:10px;">Section Progress</div>'
   + '<div class="pv5-sections-grid">' + sectionCardsHtml + '</div>'
 
-  // Financial block (admin only)
+  // ── Financial (admin only) ────────────────────────────────────────────────
   + finBlock;
 
   root.innerHTML = html;
@@ -7193,6 +7335,7 @@ function showTab(name, btn) {
   if(name === 'staffhours') buildStaffHours();
   if(name === 'efficiency') buildEfficiencyTab();
   if(name === 'programme')  { buildProgrammeV135(); }
+  if(name === 'drawings')   { try { drwFilter(); } catch(e) {} }
   if(name === 'data')       buildDataTab();
   if(name === 'setup')      buildSetupTab();
   if(name === 'hs')         { try { buildToolboxTalks(); } catch(e){} }
