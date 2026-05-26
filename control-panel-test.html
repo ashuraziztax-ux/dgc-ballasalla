@@ -1172,9 +1172,9 @@ function clearForm() {
   <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
               margin-bottom:14px;border-radius:8px;
               background:#f59e0b14;border:1px solid #f59e0b44;">
-    <span style="font-size:15px;">📋</span>
+    
     <div style="font-size:11px;color:#f59e0b;line-height:1.5;">
-      <strong>📸 Snapshot as of <span id="snap-date-lbl">26 May 2026</span></strong> — live programme data, updated fortnightly. Next refresh ~<span id="snap-next-lbl">9 Jun 2026</span>.
+      <strong>Snapshot as of <span id="snap-date-lbl">26 May 2026</span></strong> — live programme data, updated fortnightly. Next refresh ~<span id="snap-next-lbl">9 Jun 2026</span>.
       Progress, KPIs and charts reflect this date.
     </div>
   </div>
@@ -6215,13 +6215,13 @@ function buildProgrammeV135() {
 
   // ── Section groups (using section letters A–J) ───────────────────────────
   var GROUPS = [
-    { name:'Site Setup',   sub:'Prelims',       zones:[1],        icon:'🏗' },
-    { name:'Top Road',     sub:'Section A',     zones:[2],        icon:'🟡' },
-    { name:'Mid Road',     sub:'Sections B–C',  zones:[3,4],      icon:'🟠' },
-    { name:'Road 3',       sub:'Sections D–E',  zones:[5,6],      icon:'🔵' },
-    { name:'Lower Road',   sub:'Sections F–G',  zones:[7,8],      icon:'🟣' },
-    { name:'Drain Run',    sub:'Sections H–J',  zones:[9,10,11],  icon:'🩷' },
-    { name:'Demob',        sub:'Handover',       zones:[12],       icon:'✅' },
+    { name:'Site Setup',   sub:'Prelims',       zones:[1],        icon:'' },
+    { name:'Top Road',     sub:'Section A',     zones:[2],        icon:'' },
+    { name:'Mid Road',     sub:'Sections B–C',  zones:[3,4],      icon:'' },
+    { name:'Road 3',       sub:'Sections D–E',  zones:[5,6],      icon:'' },
+    { name:'Lower Road',   sub:'Sections F–G',  zones:[7,8],      icon:'' },
+    { name:'Drain Run',    sub:'Sections H–J',  zones:[9,10,11],  icon:'' },
+    { name:'Demob',        sub:'Handover',       zones:[12],       icon:'' },
   ];
 
   function groupPct(g) {
@@ -6242,7 +6242,7 @@ function buildProgrammeV135() {
 
   // ── Snap banner ───────────────────────────────────────────────────────────
   var snapBanner = dataStr
-    ? '<div class="pv5-snap-banner">📋 <span>Progress figures correct as at: <strong>' + dataStr + '</strong> · Updated fortnightly · Deadline: <strong>' + dlStr + '</strong></span></div>'
+    ? '<div class="pv5-snap-banner"><span>Progress figures correct as at: <strong>' + dataStr + '</strong> · Updated fortnightly · Deadline: <strong>' + dlStr + '</strong></span></div>'
     : '';
 
   // ── Section cards ─────────────────────────────────────────────────────────
@@ -6257,7 +6257,7 @@ function buildProgrammeV135() {
       : '';
     return '<div class="pv5-section-card ' + sc + '">'
       + '<div class="pv5-section-pct ' + sc + '">' + pct + '%</div>'
-      + '<div class="pv5-section-name">' + g.icon + ' ' + g.name + '</div>'
+      + '<div class="pv5-section-name">' + g.name + '</div>'
       + '<div class="pv5-section-sub">' + g.sub + ' · ' + statusLabel(pct) + '</div>'
       + '<div class="pv5-section-bar"><div class="pv5-section-bar-fill" style="width:' + pct + '%;background:' + col + ';"></div></div>'
       + constraintHtml
@@ -6354,7 +6354,7 @@ function buildProgrammeV135() {
   +   '<div class="pv5-hero-flex">'
   +     '<div>'
   +       '<div class="pv5-status-pill ' + (isOnTrack ? 'on-track' : 'behind') + '">'
-  +         (isOnTrack ? '✓ On Track' : '⚠ Behind Programme') + '</div>'
+  +         (isOnTrack ? 'On Track' : 'Behind Programme') + '</div>'
   +       '<div class="pv5-pct">' + actualPct + '%</div>'
   +       '<div class="pv5-deadline">Work complete · Agreed end: <strong>' + dlStr + '</strong></div>'
   +       '<div class="pv5-deadline" style="margin-top:4px;font-size:13px;color:#94a3b8;">' + daysStr + '</div>'
@@ -6374,7 +6374,7 @@ function buildProgrammeV135() {
   +   '<div class="pv5-bar-row">'
   +     '<div>'
   +       '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">'
-  +         '<div class="pv5-bar-label">✅ Actual Work Done</div>'
+  +         '<div class="pv5-bar-label">Actual Work Done</div>'
   +         (dataStr ? '<div style="font-size:10px;color:var(--muted);">as at ' + dataStr + '</div>' : '')
   +       '</div>'
   +       '<div class="pv5-bar-track"><div class="pv5-bar-fill-actual" style="width:' + actualPct + '%;"></div></div>'
@@ -6384,7 +6384,7 @@ function buildProgrammeV135() {
   +     '</div>'
   +     '<div>'
   +       '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">'
-  +         '<div class="pv5-bar-label">📅 Where We Should Be</div>'
+  +         '<div class="pv5-bar-label">Where We Should Be</div>'
   +         '<div style="font-size:10px;color:var(--muted);">based on ' + dlStr + ' deadline</div>'
   +       '</div>'
   +       '<div class="pv5-bar-track"><div class="pv5-bar-fill-plan" style="width:' + plannedPct + '%;"></div></div>'
@@ -6397,7 +6397,7 @@ function buildProgrammeV135() {
 
   // ── Scope change flag ─────────────────────────────────────────────────────
   + '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:11px;line-height:1.7;">'
-  + '<div style="font-weight:800;color:#dc2626;margin-bottom:4px;font-size:12px;">⚠ SCOPE CHANGE — Action Required (QS)</div>'
+  + '<div style="font-weight:800;color:#dc2626;margin-bottom:4px;font-size:12px;">SCOPE CHANGE — Action Required (QS)</div>'
   + '<div style="color:#7f1d1d;"><strong>Pavement wearing course (TCQ) has been removed from this contract.</strong> The 100% figure below reflects the original programme scope. If GanttPro has not been updated to remove these tasks, the "% remaining" is overstated — DGC\'s true completion against revised scope is higher than shown.</div>'
   + '<div style="color:#7f1d1d;margin-top:6px;font-size:10px;font-weight:700;">Action: Sophie (QS) to confirm revised programme removes all TCQ pavement tasks. If removed, ZONE_DEFAULTS and projected finish date should be recalculated.</div>'
   + '</div>'
@@ -6409,7 +6409,7 @@ function buildProgrammeV135() {
   + '<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid '+projCol+';border-radius:8px;padding:12px 14px;">'
   +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px;">Finish at This Pace ↗</div>'
   +   '<div style="font-size:22px;font-weight:900;color:'+projCol+';line-height:1.1;">'+projFinStr+'</div>'
-  +   '<div style="font-size:11px;color:'+projCol+';margin-top:4px;font-weight:700;">✅ '+projLabel+' vs '+dlStr+'</div>'
+  +   '<div style="font-size:11px;color:'+projCol+';margin-top:4px;font-weight:700;">'+projLabel+' vs '+dlStr+'</div>'
   +   '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);line-height:1.5;">'
   +     Math.round(ratePerDay*100)/100+'%/day · '+Math.round(ratePerWeek*10)/10+'%/week<br>'
   +     (100-actualPct)+'% left ÷ '+Math.round(ratePerDay*100)/100+'%/day = ~'+daysToFinish+' more days'
@@ -6446,7 +6446,7 @@ function buildProgrammeV135() {
   + '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:18px;">'
   +   '<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:6px;">'
   +     '<div style="font-size:12px;font-weight:700;color:var(--text);">Progress Velocity Chart</div>'
-  +     '<div style="font-size:10px;color:'+projCol+';font-weight:700;">📍 On current pace: finish '+projFinStr+' ('+projLabel+')</div>'
+  +     '<div style="font-size:10px;color:'+projCol+';font-weight:700;">On current pace: finish '+projFinStr+' ('+projLabel+')</div>'
   +   '</div>'
   +   '<div style="font-size:10px;color:var(--muted);margin-bottom:10px;">'
   +     '━ Green = actual done &nbsp;·&nbsp; ╌ Grey = planned pace &nbsp;·&nbsp; ╌ Green dashed = projected at current velocity'
@@ -6457,8 +6457,8 @@ function buildProgrammeV135() {
   // ── What still can't be done (simplified, no TCQ) ─────────────────────────
   + '<div style="background:#fef3c720;border:1px solid #d9770640;border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:11px;line-height:1.7;">'
   + '<div style="font-weight:700;color:#92400e;margin-bottom:6px;">What can\'t be completed yet</div>'
-  + '<div style="color:var(--text);">🚛 <strong>HPM roadbase (tarmac base layer)</strong> — subcontractor not yet mobilised. Sections A–E need HPM on site before road build can reach 100%.</div>'
-  + '<div style="color:var(--text);">🔧 <strong>Drain Run H–J</strong> — Gang C starts <strong>10 June 2026</strong>. Sections H, I, J at 0%, on programme per revised dates.</div>'
+  + '<div style="color:var(--text);"><strong>HPM roadbase (tarmac base layer)</strong> — subcontractor not yet mobilised. Sections A–E need HPM on site before road build can reach 100%.</div>'
+  + '<div style="color:var(--text);"><strong>Drain Run H–J</strong> — Gang C starts <strong>10 June 2026</strong>. Sections H, I, J at 0%, on programme per revised dates.</div>'
   + '<div style="color:var(--text);font-size:10px;color:var(--muted);margin-top:6px;">RFI 04: 6F2 written approval needed before Section 5 starts &nbsp;·&nbsp; RFI 07: generator/mains — ongoing</div>'
   + '</div>'
 
