@@ -1050,6 +1050,13 @@ function clearForm() {
              padding:3px 9px;border-radius:5px;border:1px solid var(--border);
              background:var(--surface2);color:var(--text);margin-left:6px;user-select:none;">
     </span>
+    <button onclick="location.reload(true)"
+      title="Force-reload the page to pick up the latest published version"
+      style="display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:3px 9px;
+             border-radius:5px;border:1px solid var(--border);background:var(--surface2);
+             color:var(--muted);cursor:pointer;white-space:nowrap;font-family:inherit;">
+      ↺ Refresh
+    </button>
   </div>
 </div>
 
@@ -2654,10 +2661,12 @@ function drwFilter() {
 
 <script>
 // ═══════════════ DATA ═══════════════
-// LAST_UPDATED: date of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-26T00:00:00');
+// LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
+const LAST_UPDATED = new Date('2026-05-26T19:15:00'); // date + time of this push
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
+// DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
+const DATA_STAMP = '2026-05-26';
 // TEST FILE — TODAY runs live (real current date) so all countdowns stay current.
 const TODAY = new Date();
 
@@ -4929,6 +4938,20 @@ function cfgExport() {
 // Apply saved config to the live dashboard — call after any config change
 function applyProjectConfig() {
   var cfg = cfgLoad();
+
+  // ── Version bust: if stored config pre-dates this code deploy, refresh it ──
+  if (cfg && cfg._dataStamp !== DATA_STAMP) {
+    cfg.dataDate     = DATA_STAMP;
+    cfg.zoneProgress = {1:85,2:67,3:81,4:81,5:81,6:81,7:77,8:77,9:0,10:0,11:0,12:0};
+    if (!cfg.project) cfg.project = {};
+    cfg.project.agreedEnd = '2026-07-03';
+    cfg._dataStamp   = DATA_STAMP;
+    try {
+      var _a = projAll(), _aid = projActive();
+      if (_aid && _a[_aid]) { _a[_aid] = cfg; projSaveAll(_a); }
+    } catch(_e) {}
+  }
+
   window.PROJECT_CONFIG = cfg || {};
   var pc = (cfg && cfg.project) || {};
 
@@ -8383,7 +8406,7 @@ window.addEventListener('DOMContentLoaded', () => {
     // Header chips
     var _luEl = document.getElementById('lu-date');
     if (_luEl && typeof LAST_UPDATED !== 'undefined')
-      _luEl.textContent = LAST_UPDATED.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+      _luEl.textContent = LAST_UPDATED.toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
     var _cfEl = document.getElementById('cf-date');
     if (_cfEl) _cfEl.textContent = _dAof.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
   } catch(_e) {}
