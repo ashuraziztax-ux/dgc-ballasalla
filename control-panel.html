@@ -2702,7 +2702,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-26T20:30:00'); // date + time of this push
+const LAST_UPDATED = new Date('2026-05-26T20:45:00'); // date + time of this push
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -4258,8 +4258,8 @@ function printDailyLog() {
 const AFPS = [
   { num:1, issued:'2026-04-01', invoice:'2026-04-07', payment:null,         value:22984.59, net:0,         status:'combined', note:'AFP1 gross £22,984.59 absorbed into Dandara App.1 (SBI SC193064-x17) — NOT paid separately. Rolled into AFP2 certification.' },
   { num:2, issued:'2026-04-30', invoice:'2026-05-07', payment:'2026-05-12', value:164028.11, net:156739.46, status:'paid',     note:'AFP1+2 combined — SBI SC193064-x17. Ian Barnes certified £156,739.46 net (gross £164,028.11 | discount −£2,441.04 | retention −£4,847.61). Materials on site £47,815 accepted as goodwill. Received 12 May 2026.' },
-  { num:3, issued:'2026-05-22', invoice:'2026-05-29', payment:'2026-06-26', value:128109,    net:128109,    status:'pending',  note:'June groundworks (ex-tarmac) — QS estimate, not yet submitted to Dandara. ~£128k net est. Tarmac roadbase and kerbing carried to AFP4.' },
-  { num:4, issued:'2026-06-30', invoice:'2026-06-30', payment:'2026-07-28', value:0,         net:0,         status:'pending',  note:'Tarmac — submitted after road build complete. Value TBC. Per QS (Sophie, 17 May 2026): tarmac is a big chunk, better paid separately before final account.' },
+  { num:3, issued:'2026-05-22', invoice:'2026-05-29', payment:'2026-06-26', value:128109,    net:128109,    status:'submitted', note:'Submitted to Dandara 22 May 2026. June groundworks (excl. tarmac) — ~£128k net est. (QS: Sophie). Tarmac roadbase and kerbing carried to AFP4. Awaiting Dandara certification (target 26 Jun 2026).' },
+  { num:4, issued:'2026-06-30', invoice:'2026-06-30', payment:'2026-07-28', value:0,         net:0,         status:'estimate', note:'ESTIMATE ONLY — Tarmac package (HPM + TCQ). Value TBC once subcontractor quotes confirmed. Per QS Sophie (17 May 2026): tarmac better claimed separately before final account. Not yet submitted.' },
   { num:5, issued:'2026-07-15', invoice:'2026-07-15', payment:'2026-08-12', value:0,         net:0,         status:'pending',  note:'Final Account — remaining works + agreed EOT prelims. EOT-D–I (£16,167 est.) not yet submitted to Dandara. Value TBC.' },
   { num:6, issued:'2027-07-01', invoice:'2027-07-01', payment:'2027-07-29', value:6842,      net:6842,      status:'pending',  note:'Retention release — after 12-month defect period. 1.5% of EFA net ~£456,143 = ~£6,842. Per QS: retention reduces to 1.5% at final account issue, final 1.5% claimed back after defects period.' }
 ];
@@ -4278,7 +4278,8 @@ const SECTIONS = [
   { id:'J', zoneId:11, zoneName:'Zone J', label:'Soft Drain', x:37,   y:1010 },
 ];
 
-const SECTION_DEFAULTS = {'A':25,'B':69,'C':26,'D':23,'E':2,'F':0,'G':0,'H':0,'I':0,'J':0};
+// SECTION_DEFAULTS kept in sync with ZONE_DEFAULTS (A→Zone2, B→Zone3, C→Zone4, D→Zone5, E→Zone6, F→Zone7, G→Zone8, H→Zone9, I→Zone10, J→Zone11)
+const SECTION_DEFAULTS = {'A':67,'B':81,'C':81,'D':81,'E':81,'F':77,'G':77,'H':0,'I':0,'J':0};
 
 // Safe localStorage wrapper — mobile Safari private mode throws SecurityError
 function lsGet(key, fallback) {
@@ -4307,7 +4308,18 @@ let ZONE_DEFAULTS = {1:85,2:67,3:81,4:81,5:81,6:81,7:77,8:77,9:0,10:0,11:0,12:0}
 // Zone-specific constraint notes — shown in the EOT/overrun banner when a zone is past its programme date
 // but not yet complete. Add/update entries here when site conditions change.
 const ZONE_CONSTRAINTS = {
-  2: 'Third-party works obstructing access — remaining 25% not attributable to DGC. Document for EOT/variation claim.'
+  1: 'Site setup ongoing through contract duration — management, QS admin and road sweeper run to practical completion.',
+  2: 'Tarmac roadbase (HPM) and surface course (TCQ) outstanding — awaiting tarmac subcontractors, not attributable to DGC. EOT covers this delay. Plan% vs original dates only.',
+  3: 'Tarmac roadbase (HPM) and wearing course (TCQ) outstanding — same position as Zone 2. Drainage, services and kerbing 100% complete. Tarmac subcontractor programme TBC.',
+  4: 'Tarmac roadbase and pavement layers outstanding — HPM/TCQ subcontractors not yet on site. All drainage, subbase and kerbing complete. Awaiting tarmac programme.',
+  5: 'Final kerbing and tarmac outstanding — awaiting HPM/TCQ. Drainage 100% complete. DGC works ahead of original plan; delay is subcontractor-driven.',
+  6: 'Tarmac roadbase and surface outstanding — HPM/TCQ to follow. All DGC drainage, subbase and kerbing works complete to standard.',
+  7: 'Kerbing started (25% — ahead of original programme). Subbase, tarmac still to come. Lower Road drainage 100% complete. EOT covers extended programme.',
+  8: 'Lower Road drainage 100% complete. Kerbing, subbase and tarmac to follow. Remaining work is later-stage road build — not overdue under revised programme.',
+  9: 'Drain Run S4.5–S4.6 — starts 10 June 2026 with Gang C. Not yet started per original and revised programme. On track.',
+  10: 'Drain Run — starts 10 June 2026. Not yet started per programme. On track.',
+  11: 'Drain Run — starts 10 June 2026. Backdrop connection to existing MH at end. Not yet started per programme. On track.',
+  12: 'Demob and handover — scheduled to begin 29 June 2026. Not yet started. On track per revised programme.'
 };
 
 // ── Fortnightly plan vs achieved (updated each fortnight via apply script) ─────
@@ -4989,6 +5001,8 @@ function applyProjectConfig() {
     if (!cfg.project) cfg.project = {};
     cfg.project.agreedEnd = '2026-07-03';
     cfg._dataStamp   = DATA_STAMP;
+    // Also clear any stale slider overrides so ZONE_DEFAULTS takes effect
+    try { localStorage.removeItem('dgc_zone_progress'); } catch(_e2) {}
     try {
       var _a = projAll(), _aid = projActive();
       if (_aid && _a[_aid]) { _a[_aid] = cfg; projSaveAll(_a); }
