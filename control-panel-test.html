@@ -3441,8 +3441,8 @@ var MILESTONES = [
   {id:'ms2', date:'2026-06-02', lbl:'MOT 1 base course inspection (target)', cat:'inspection'},
   {id:'ms3', date:'2026-06-15', lbl:'All kerbs & drainage complete (target)', cat:'programme'},
   {id:'ms4', date:'2026-06-22', lbl:'Bitumac / tarmac all zones (target)',   cat:'programme'},
-  {id:'ms5', date:'2026-06-26', lbl:'Snagging & reinstatement complete',     cat:'programme'},
-  {id:'ms6', date:'2026-06-26', lbl:'Practical Completion — agreed deadline', cat:'handover'},
+  {id:'ms5', date:'2026-07-03', lbl:'Snagging & reinstatement complete',     cat:'programme'},
+  {id:'ms6', date:'2026-07-03', lbl:'Practical Completion — agreed deadline', cat:'handover'},
 ];
 
 function openQuickLog() {
@@ -3542,7 +3542,7 @@ function recordSnapshot(force) {
   if (!force && lsGet('dgc_snap_week','') === isoWeek) return; // already saved this week
   var snapshots = lsGet('dgc_snapshots', '[]') || [];
   snapshots = snapshots.filter(function(s){ return s.date !== today; });
-  var target = new Date('2026-06-26T00:00:00');
+  var target = new Date('2026-07-03T00:00:00');
   var totalDays = Math.round((target - new Date('2026-03-23T00:00:00')) / 86400000);
   var elapsed = Math.max(1, Math.round((TODAY - new Date('2026-03-23T00:00:00')) / 86400000));
   var planned = Math.min(100, Math.round(elapsed / totalDays * 100));
@@ -3934,7 +3934,7 @@ function buildEOTPanel() {
   el.innerHTML = '';
 
   var ORIGINAL_END = '2026-06-12';  // original programme end
-  var AGREED_END   = '2026-06-26';  // agreed with Dandara (includes EOT)
+  var AGREED_END   = '2026-07-03';  // agreed with Dandara (includes EOT) — updated per programme 26 May 2026
   var delays = loadDelayLog();
 
   var clientDays = delays.filter(function(d){ return d.category==='client'; })
@@ -4121,7 +4121,7 @@ function updateSectionProgress(id, val, lbl) {
   if(document.getElementById('tab-sitemap').classList.contains('active')) buildSiteMap();
 }
 
-let ZONE_DEFAULTS = {1:68,2:74,3:89,4:89,5:82,6:82,7:22,8:22,9:5,10:5,11:0,12:0}; // GanttPro export 15 May 2026: ~62% actual
+let ZONE_DEFAULTS = {1:85,2:67,3:81,4:81,5:81,6:81,7:77,8:77,9:0,10:0,11:0,12:0}; // GanttPro Macro Overview 26 May 2026: ~70% actual
 
 // Zone-specific constraint notes — shown in the EOT/overrun banner when a zone is past its programme date
 // but not yet complete. Add/update entries here when site conditions change.
@@ -4233,7 +4233,7 @@ function calcForecast() {
     var daysNeeded = rate > 0 ? Math.round(remaining/rate) : 9999;
     var fc = new Date(asOf.getTime());
     fc.setDate(fc.getDate()+daysNeeded);
-    var target = new Date('2026-06-26T00:00:00');
+    var target = new Date('2026-07-03T00:00:00');
     return { date:fc, pct:pct, rate:rate, late: fc>target,
              daysOff: Math.round(Math.abs(fc-target)/86400000),
              str: fc.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) };
@@ -4688,7 +4688,7 @@ function projEnsureDefaults() {
       retentionRate: 2.5,
       start: '2026-03-23',
       originalEnd: '2026-06-12',
-      agreedEnd: '2026-06-26',
+      agreedEnd: '2026-07-03',
       eotWDs: 5,
       qs: 'Ian Barnes',
       dgcQs: 'Sophie',
@@ -4696,8 +4696,8 @@ function projEnsureDefaults() {
       foreman: 'Ash',
       description: 'Parkfield drainage and groundwork with additional plots as separate work'
     },
-    dataDate: '2026-05-14',
-    zoneProgress: {1:32,2:75,3:82,4:82,5:72,6:72,7:22,8:22,9:5,10:5,11:0,12:0},
+    dataDate: '2026-05-26',
+    zoneProgress: {1:85,2:67,3:81,4:81,5:81,6:81,7:77,8:77,9:0,10:0,11:0,12:0},
     bankHolidays: ['2026-04-03','2026-04-06','2026-05-04','2026-05-25','2026-06-12'],
     tasks: [], drawings: [], documents: [], fileLocations: []
   };
