@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DGC — Ballasalla Phase 4 Control Panel v129</title>
+<title>DGC — Ballasalla Phase 4 Control Panel v132</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -1027,6 +1027,23 @@ function clearForm() {
   </div>
   <div class="header-status">
     <span class="today-badge" id="today-label"></span>
+    <!-- Last Updated / Correct From chips -->
+    <span id="last-updated-chip"
+      title="When Claude last updated and pushed the app"
+      style="display:inline-flex;align-items:center;gap:5px;font-size:10px;
+             padding:3px 9px;border-radius:5px;border:1px solid #f59e0b44;
+             background:#f59e0b12;color:#f59e0b;white-space:nowrap;">
+      <span style="font-size:9px;">✏️</span>
+      <span>Updated: <strong id="lu-date">—</strong></span>
+    </span>
+    <span id="correct-from-chip"
+      title="Date from which all figures are confirmed correct"
+      style="display:inline-flex;align-items:center;gap:5px;font-size:10px;
+             padding:3px 9px;border-radius:5px;border:1px solid #22c55e44;
+             background:#22c55e12;color:#22c55e;white-space:nowrap;">
+      <span style="font-size:9px;">✅</span>
+      <span>Correct from: <strong id="cf-date">—</strong></span>
+    </span>
     <span id="wx-chip" onclick="fetchRonalswayWeather(true)"
       title="Ronaldsway Airport weather — click to refresh"
       style="display:none;align-items:center;gap:4px;font-size:10px;cursor:pointer;
@@ -2637,11 +2654,12 @@ function drwFilter() {
 
 <script>
 // ═══════════════ DATA ═══════════════
+// LAST_UPDATED: date of the most recent Claude push — update this with every deploy.
+const LAST_UPDATED = new Date('2026-05-26T00:00:00');
+// DATA_AS_OF: date the site figures were last verified correct.
+const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
+// TEST FILE — TODAY runs live (real current date) so all countdowns stay current.
 const TODAY = new Date();
-// DATA_AS_OF: date of the most recent data upload — updated each fortnight.
-// calcForecast() uses this (not live TODAY) so the projected end date stays
-// stable between updates rather than drifting every calendar day.
-const DATA_AS_OF = new Date('2026-05-15T12:00:00'); // noon = BST-safe
 
 const ZONES = [
   { id:1,  wbs:'1',  name:'Site Setup',               shortName:'Setup',  budget:23807.29, start:'2026-03-23', end:'2026-06-12', color:'#64748b', type:'prelims' },
@@ -8351,9 +8369,10 @@ window.addEventListener('DOMContentLoaded', () => {
   try { fetchRonalswayWeather(); }   catch(e) {}
   try { buildDashboardRAG(); }       catch(e) {}
 
-  // ── Snapshot date banner: fill dynamically from DATA_AS_OF ───────────────
+  // ── Snapshot date banner + Last Updated / Correct From chips ─────────────
   try {
     var _dAof = (typeof DATA_AS_OF !== 'undefined') ? DATA_AS_OF : new Date();
+    // Snapshot banner
     var _snap = document.getElementById('snap-date-lbl');
     if (_snap) _snap.textContent = _dAof.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
     var _snapNext = document.getElementById('snap-next-lbl');
@@ -8361,6 +8380,12 @@ window.addEventListener('DOMContentLoaded', () => {
       var _nextRefresh = new Date(_dAof.getTime() + 14 * 86400000);
       _snapNext.textContent = _nextRefresh.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
     }
+    // Header chips
+    var _luEl = document.getElementById('lu-date');
+    if (_luEl && typeof LAST_UPDATED !== 'undefined')
+      _luEl.textContent = LAST_UPDATED.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    var _cfEl = document.getElementById('cf-date');
+    if (_cfEl) _cfEl.textContent = _dAof.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
   } catch(_e) {}
 
   // Safe setter — never throws, silently skips missing elements
