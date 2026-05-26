@@ -1199,7 +1199,7 @@ function clearForm() {
         <div class="prog-behind-box" style="text-align:center;padding:10px 16px;background:#ef444418;border:1px solid #ef444433;border-radius:10px;min-width:90px;">
           <div id="gap-label" style="font-size:9px;color:#ef4444;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">Gap</div>
           <div style="font-size:30px;font-weight:800;color:#ef4444;line-height:1;" id="kpi-gap-pct">—%</div>
-          <div style="font-size:9px;color:var(--muted);margin-top:2px;">vs revised plan</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:2px;">vs planned today</div>
         </div>
     
         <!-- Current Revised Plan -->
@@ -2696,7 +2696,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-26T23:45:00'); // date + time of this push
+const LAST_UPDATED = new Date('2026-05-27T00:15:00'); // date + time of this push
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -4251,7 +4251,7 @@ function printDailyLog() {
 const AFPS = [
   { num:1, issued:'2026-04-01', invoice:'2026-04-07', payment:null,         value:22984.59, net:0,         status:'combined', note:'AFP1 gross £22,984.59 absorbed into Dandara App.1 (SBI SC193064-x17) — NOT paid separately. Rolled into AFP2 certification.' },
   { num:2, issued:'2026-04-30', invoice:'2026-05-07', payment:'2026-05-12', value:164028.11, net:156739.46, status:'paid',     note:'AFP1+2 combined — SBI SC193064-x17. Ian Barnes certified £156,739.46 net (gross £164,028.11 | discount −£2,441.04 | retention −£4,847.61). Materials on site £47,815 accepted as goodwill. Received 12 May 2026.' },
-  { num:3, issued:'2026-05-22', invoice:'2026-05-29', payment:'2026-06-26', value:128109,    net:128109,    status:'submitted', note:'Submitted to Dandara 22 May 2026. June groundworks (excl. tarmac) — ~£128k net est. (QS: Sophie). Tarmac roadbase and kerbing carried to AFP4. Awaiting Dandara certification (target 26 Jun 2026).' },
+  { num:3, issued:'2026-05-22', invoice:'2026-05-29', payment:'2026-06-26', value:128109,    net:128109,    status:'submitted', note:'Submitted to Dandara 22 May 2026. Work measured to 29 May 2026. Breakdown: External Works £69,617 (28.3%) · Drainage £150,485 (96.2%) · Services £12,236 (100%) · Street Lighting £12,109 (100%) · DGC Prelims £31,582 (91.6%) · Less Discount −£8,965 · + Variations £14,148 · + Materials on Site £10,347. Cumulative gross: £293,658. Less 3% retention: −£8,810. Less AFP2 paid: −£156,739. Net claim AFP3: £128,109. Awaiting Dandara certification (target 26 Jun 2026). Not yet received.' },
   { num:4, issued:'2026-06-30', invoice:'2026-06-30', payment:'2026-07-28', value:0,         net:0,         status:'estimate', note:'ESTIMATE ONLY — HPM roadbase only (TCQ wearing course removed from contract scope 26 May 2026). Value TBC once HPM subcontractor quotes confirmed. Per QS Sophie (17 May 2026): tarmac better claimed separately before final account. Not yet submitted.' },
   { num:5, issued:'2026-07-15', invoice:'2026-07-15', payment:'2026-08-12', value:0,         net:0,         status:'pending',  note:'Final Account — remaining works + agreed EOT prelims. EOT-D–I (£16,167 est.) not yet submitted to Dandara. Value TBC.' },
   { num:6, issued:'2027-07-01', invoice:'2027-07-01', payment:'2027-07-29', value:6842,      net:6842,      status:'pending',  note:'Retention release — after 12-month defect period. 1.5% of EFA net ~£456,143 = ~£6,842. Per QS: retention reduces to 1.5% at final account issue, final 1.5% claimed back after defects period.' }
@@ -5981,7 +5981,7 @@ function computeDS() {
   // Read project config overrides first
   var _pc = (window.PROJECT_CONFIG && window.PROJECT_CONFIG.project) || {};
   var PROJECT_START  = parseDate((_pc.start        && _pc.start.trim())      || '2026-03-23');
-  var PROJECT_END    = parseDate((_pc.agreedEnd     && _pc.agreedEnd.trim())  || '2026-06-26');
+  var PROJECT_END    = parseDate((_pc.agreedEnd     && _pc.agreedEnd.trim())  || '2026-07-03');
   var ORIG_END       = parseDate((_pc.originalEnd   && _pc.originalEnd.trim())|| '2026-06-12');
   var _cfgDate = window.PROJECT_CONFIG && window.PROJECT_CONFIG.dataDate;
   var dataDate = _cfgDate
@@ -8844,7 +8844,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const progress     = (function(){ try{ return getOverallProgress(); }catch(e){ return 0; } })();
   const timePct      = (function(){ try{ return getTimeProgress(); }catch(e){ return 0; } })();
   const plannedPct   = (function(){ try{ return getPlannedProgress(); }catch(e){ return 0; } })();
-  const revisedPct   = (function(){ try{ return getRevisedPlanProgress(); }catch(e){ return 0; } })();
+  const revisedPct   = (window.DS && typeof window.DS.plannedPct === 'number') ? Math.round(window.DS.plannedPct) : (function(){ try{ return getTimeProgress(); }catch(e){ return 0; } })();
   const spendPct     = (function(){ try{ return getSpendProgress(); }catch(e){ return 0; } })();
 
   // In AFP mode: hero "certified" = AFP certified net % of contract; label changes
@@ -8861,7 +8861,7 @@ window.addEventListener('DOMContentLoaded', () => {
     var heroLabelRight = document.getElementById('hero-source-label-right');
     if(heroLabelRight) heroLabelRight.textContent = dataSource === 'afp'
       ? 'Physical work only (excl. MOS & variations)'
-      : 'Current Revised Plan';
+      : 'Planned Today (3 Jul deadline)';
   } catch(e) {}
 
   set('kpi-progress',      certifiedPct + '%');  // secondary row: AFP certified
@@ -9258,9 +9258,9 @@ function buildTwoWeekReport() {
     + '<div style="font-size:7.5pt;color:#64748b;">actual complete</div></div>');
   h.push('<div style="width:1px;background:#e2e8f0;align-self:stretch;"></div>');
   h.push('<div style="color:#1e293b">'
-    + '<div style="font-size:7.5pt;text-transform:uppercase;letter-spacing:.08em;">Revised Target</div>'
+    + '<div style="font-size:7.5pt;text-transform:uppercase;letter-spacing:.08em;">Planned Today</div>'
     + '<div style="font-size:22pt;font-weight:900;line-height:1;color:#0f172a;">' + plannedPct + '%</div>'
-    + '<div style="font-size:7.5pt;color:#64748b;">3 Jul 2026 (incl. EOT)</div></div>');
+    + '<div style="font-size:7.5pt;color:#64748b;">at 3 Jul 2026 deadline</div></div>');
   h.push('<div style="width:1px;background:#e2e8f0;align-self:stretch;"></div>');
   h.push('<div>'
     + '<div style="font-size:7.5pt;text-transform:uppercase;letter-spacing:.08em;">Variance</div>'
@@ -9474,7 +9474,7 @@ function buildFortnightlyReport() {
 
   // ── Programme ──────────────────────────────────────────────────────────────
   var actualPct  = getOverallProgress ? Math.round(getOverallProgress()) : 0;
-  var plannedPct = getRevisedPlanProgress ? Math.round(getRevisedPlanProgress()) : 0;
+  var plannedPct = (window.DS && typeof window.DS.plannedPct === 'number') ? Math.round(window.DS.plannedPct) : (getTimeProgress ? Math.round(getTimeProgress()) : 0);
   var gapPct     = actualPct - plannedPct;
   var overallStatus = gapPct >= 2  ? 'Ahead of Programme'
                     : gapPct <= -5 ? 'Behind Programme'
@@ -9647,7 +9647,7 @@ function buildFortnightlyReport() {
   h.push('<div class="status-banner" style="background:' + overallBg + ';border:1px solid ' + overallCol + '33;margin-top:12px;">');
   h.push('<div style="color:' + overallCol + '"><div class="lbl">Current Progress</div><div class="big">' + actualPct + '%</div><div style="font-size:7.5pt;color:#64748b;">actual complete</div></div>');
   h.push('<div style="width:1px;background:#e2e8f0;align-self:stretch;"></div>');
-  h.push('<div style="color:#1e293b"><div class="lbl">Revised Target</div><div class="big" style="color:#0f172a;">' + plannedPct + '%</div><div style="font-size:7.5pt;color:#64748b;">3 Jul 2026 (incl. EOT)</div></div>');
+  h.push('<div style="color:#1e293b"><div class="lbl">Planned Today</div><div class="big" style="color:#0f172a;">' + plannedPct + '%</div><div style="font-size:7.5pt;color:#64748b;">at 3 Jul 2026 deadline</div></div>');
   h.push('<div style="width:1px;background:#e2e8f0;align-self:stretch;"></div>');
   h.push('<div><div class="lbl">Variance</div><div style="font-size:16pt;font-weight:800;color:' + overallCol + ';">' + (gapPct>=0?'+':'') + gapPct + '%</div></div>');
   h.push('<div style="flex:1;text-align:right;">'
