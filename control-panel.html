@@ -2528,7 +2528,7 @@ const TODAY = new Date();
 // DATA_AS_OF: date of the most recent data upload — updated each fortnight.
 // calcForecast() uses this (not live TODAY) so the projected end date stays
 // stable between updates rather than drifting every calendar day.
-const DATA_AS_OF = new Date('2026-05-14T12:00:00'); // noon = BST-safe
+const DATA_AS_OF = new Date('2026-05-15T12:00:00'); // noon = BST-safe
 
 const ZONES = [
   { id:1,  wbs:'1',  name:'Site Setup',               shortName:'Setup',  budget:23807.29, start:'2026-03-23', end:'2026-06-12', color:'#64748b', type:'prelims' },
@@ -4120,7 +4120,7 @@ function updateSectionProgress(id, val, lbl) {
   if(document.getElementById('tab-sitemap').classList.contains('active')) buildSiteMap();
 }
 
-let ZONE_DEFAULTS = {1:32,2:75,3:82,4:82,5:72,6:72,7:22,8:22,9:5,10:5,11:0,12:0}; // QS confirmed 12 May 2026: ~55% actual, slightly ahead of revised programme (~53% planned)
+let ZONE_DEFAULTS = {1:68,2:74,3:89,4:89,5:82,6:82,7:22,8:22,9:5,10:5,11:0,12:0}; // GanttPro export 15 May 2026: ~62% actual
 
 // Zone-specific constraint notes — shown in the EOT/overrun banner when a zone is past its programme date
 // but not yet complete. Add/update entries here when site conditions change.
