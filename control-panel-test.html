@@ -2696,7 +2696,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-27T01:00:00'); // date + time of this push
+const LAST_UPDATED = new Date('2026-05-27T01:30:00'); // date + time of this push
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -2745,8 +2745,8 @@ let TASKS = [
   {wbs:'2.10',zone:2,name:'18A - Subbase (Type 1)',assigned:'Gang B',start:'2026-04-17',end:'2026-04-20',progress:0,budget:0},
   {wbs:'2.11',zone:2,name:'19A - Subbase Compaction',assigned:'Gang B',start:'2026-04-21',end:'2026-04-21',progress:0,budget:0},
   {wbs:'2.12',zone:2,name:'20A - Kerbs',assigned:'Gang B',start:'2026-04-22',end:'2026-04-23',progress:0,budget:0},
-  {wbs:'2.13',zone:2,name:'21A - Tarmac Roadbase',assigned:'HPM Subcontractor',start:'2026-04-24',end:'2026-04-24',progress:0,budget:0},
-  {wbs:'2.14',zone:2,name:'22A - Tarmac Pavement',assigned:'TCQ Subcontractor',start:'2026-04-27',end:'2026-04-27',progress:0,budget:0},
+  {wbs:'2.13',zone:2,name:'21A - Tarmac Roadbase',assigned:'Tarmac Subcontractor',start:'2026-04-24',end:'2026-04-24',progress:0,budget:0},
+  {wbs:'2.14',zone:2,name:'22A - Tarmac Pavement',assigned:'Subcontractor (scope removed)',start:'2026-04-27',end:'2026-04-27',progress:0,budget:0},
   {wbs:'2.15',zone:2,name:'25A - Dispose of excavated material to tip',assigned:'Gang B',start:'2026-04-28',end:'2026-04-28',progress:100,budget:0},
   {wbs:'2.16',zone:2,name:'Tidy, Inspect & Handover of Top Road Section',assigned:'Harry Harrison',start:'2026-04-29',end:'2026-04-29',progress:0,budget:0},
   {wbs:'3.1B',zone:3,name:'1B & 1C - Reduce Dig & deposit on temp spoil heaps',assigned:'Gang A',start:'2026-04-10',end:'2026-04-13',progress:100,budget:0},
@@ -2783,10 +2783,10 @@ let TASKS = [
   {wbs:'3.8C',zone:4,name:'19B & 19C - Subbase Compaction',assigned:'Gang B',start:'2026-05-13',end:'2026-05-13',progress:0,budget:0},
   {wbs:'3.9B',zone:3,name:'20B & 20C - Kerbs',assigned:'Gang B',start:'2026-05-14',end:'2026-05-18',progress:0,budget:0},
   {wbs:'3.9C',zone:4,name:'20B & 20C - Kerbs',assigned:'Gang B',start:'2026-05-14',end:'2026-05-18',progress:0,budget:0},
-  {wbs:'3.10B',zone:3,name:'21B & 21C - Tarmac Roadbase',assigned:'HPM Subcontractor',start:'2026-05-19',end:'2026-05-19',progress:0,budget:0},
-  {wbs:'3.10C',zone:4,name:'21B & 21C - Tarmac Roadbase',assigned:'HPM Subcontractor',start:'2026-05-19',end:'2026-05-19',progress:0,budget:0},
-  {wbs:'3.11B',zone:3,name:'22B & 22C - Tarmac Pavement',assigned:'TCQ Subcontractor',start:'2026-05-20',end:'2026-05-20',progress:0,budget:0},
-  {wbs:'3.11C',zone:4,name:'22B & 22C - Tarmac Pavement',assigned:'TCQ Subcontractor',start:'2026-05-20',end:'2026-05-20',progress:0,budget:0},
+  {wbs:'3.10B',zone:3,name:'21B & 21C - Tarmac Roadbase',assigned:'Tarmac Subcontractor',start:'2026-05-19',end:'2026-05-19',progress:0,budget:0},
+  {wbs:'3.10C',zone:4,name:'21B & 21C - Tarmac Roadbase',assigned:'Tarmac Subcontractor',start:'2026-05-19',end:'2026-05-19',progress:0,budget:0},
+  {wbs:'3.11B',zone:3,name:'22B & 22C - Tarmac Pavement',assigned:'Subcontractor (scope removed)',start:'2026-05-20',end:'2026-05-20',progress:0,budget:0},
+  {wbs:'3.11C',zone:4,name:'22B & 22C - Tarmac Pavement',assigned:'Subcontractor (scope removed)',start:'2026-05-20',end:'2026-05-20',progress:0,budget:0},
   {wbs:'4.1D',zone:5,name:'1D/1E1/1E2 - Reduce Dig & deposit on temp spoil heaps',assigned:'Gang A',start:'2026-04-14',end:'2026-04-15',progress:100,budget:0},
   {wbs:'4.1E',zone:6,name:'1D/1E1/1E2 - Reduce Dig & deposit on temp spoil heaps',assigned:'Gang A',start:'2026-04-14',end:'2026-04-15',progress:100,budget:0},
   {wbs:'4.2D',zone:5,name:'2D/2E1/2E2 - Setting Out for Drainage',assigned:'Paul Carey Site Engineer',start:'2026-04-15',end:'2026-04-15',progress:100,budget:0},
@@ -2833,10 +2833,10 @@ let TASKS = [
   {wbs:'4.9E',zone:6,name:'19D/19E1/19E2 - Subbase Compaction',assigned:'Gang B',start:'2026-05-18',end:'2026-05-19',progress:0,budget:0},
   {wbs:'4.10D',zone:5,name:'20D/20E1/20E2 - Kerbs',assigned:'Gang B',start:'2026-05-19',end:'2026-05-22',progress:0,budget:0},
   {wbs:'4.10E',zone:6,name:'20D/20E1/20E2 - Kerbs',assigned:'Gang B',start:'2026-05-19',end:'2026-05-22',progress:0,budget:0},
-  {wbs:'4.11D',zone:5,name:'21D/21E1/21E2 - Tarmac Roadbase',assigned:'HPM Subcontractor',start:'2026-05-22',end:'2026-05-25',progress:0,budget:0},
-  {wbs:'4.11E',zone:6,name:'21D/21E1/21E2 - Tarmac Roadbase',assigned:'HPM Subcontractor',start:'2026-05-22',end:'2026-05-25',progress:0,budget:0},
-  {wbs:'4.12D',zone:5,name:'22D/22E1/22E2 - Tarmac Pavement',assigned:'TCQ Subcontractor',start:'2026-05-25',end:'2026-05-26',progress:0,budget:0},
-  {wbs:'4.12E',zone:6,name:'22D/22E1/22E2 - Tarmac Pavement',assigned:'TCQ Subcontractor',start:'2026-05-25',end:'2026-05-26',progress:0,budget:0},
+  {wbs:'4.11D',zone:5,name:'21D/21E1/21E2 - Tarmac Roadbase',assigned:'Tarmac Subcontractor',start:'2026-05-22',end:'2026-05-25',progress:0,budget:0},
+  {wbs:'4.11E',zone:6,name:'21D/21E1/21E2 - Tarmac Roadbase',assigned:'Tarmac Subcontractor',start:'2026-05-22',end:'2026-05-25',progress:0,budget:0},
+  {wbs:'4.12D',zone:5,name:'22D/22E1/22E2 - Tarmac Pavement',assigned:'Subcontractor (scope removed)',start:'2026-05-25',end:'2026-05-26',progress:0,budget:0},
+  {wbs:'4.12E',zone:6,name:'22D/22E1/22E2 - Tarmac Pavement',assigned:'Subcontractor (scope removed)',start:'2026-05-25',end:'2026-05-26',progress:0,budget:0},
   {wbs:'5.1F',zone:7,name:'1F & 1G - Reduce dig & deposit on temp spoil heaps',assigned:'Gang A',start:'2026-04-15',end:'2026-04-16',progress:100,budget:0},
   {wbs:'5.1G',zone:8,name:'1F & 1G - Reduce dig & deposit on temp spoil heaps',assigned:'Gang A',start:'2026-04-15',end:'2026-04-16',progress:100,budget:0},
   {wbs:'5.2F',zone:7,name:'2F & 2G - Setting Out for Drainage',assigned:'Paul Carey Site Engineer',start:'2026-04-16',end:'2026-04-17',progress:100,budget:0},
@@ -2873,10 +2873,10 @@ let TASKS = [
   {wbs:'5.8G',zone:8,name:'19F & 19G - Subbase Compaction',assigned:'Gang A',start:'2026-06-10',end:'2026-06-10',progress:0,budget:0},
   {wbs:'5.9F',zone:7,name:'20F & 20G - Kerbs',assigned:'Gang A',start:'2026-06-11',end:'2026-06-15',progress:0,budget:0},
   {wbs:'5.9G',zone:8,name:'20F & 20G - Kerbs',assigned:'Gang A',start:'2026-06-11',end:'2026-06-15',progress:0,budget:0},
-  {wbs:'5.10F',zone:7,name:'21F & 21G - Tarmac Roadbase',assigned:'HPM Subcontractor',start:'2026-06-15',end:'2026-06-16',progress:0,budget:0},
-  {wbs:'5.10G',zone:8,name:'21F & 21G - Tarmac Roadbase',assigned:'HPM Subcontractor',start:'2026-06-15',end:'2026-06-16',progress:0,budget:0},
-  {wbs:'5.11F',zone:7,name:'22F & 22G - Tarmac Pavement',assigned:'TCQ Subcontractor',start:'2026-06-16',end:'2026-06-17',progress:0,budget:0},
-  {wbs:'5.11G',zone:8,name:'22F & 22G - Tarmac Pavement',assigned:'TCQ Subcontractor',start:'2026-06-16',end:'2026-06-17',progress:0,budget:0},
+  {wbs:'5.10F',zone:7,name:'21F & 21G - Tarmac Roadbase',assigned:'Tarmac Subcontractor',start:'2026-06-15',end:'2026-06-16',progress:0,budget:0},
+  {wbs:'5.10G',zone:8,name:'21F & 21G - Tarmac Roadbase',assigned:'Tarmac Subcontractor',start:'2026-06-15',end:'2026-06-16',progress:0,budget:0},
+  {wbs:'5.11F',zone:7,name:'22F & 22G - Tarmac Pavement',assigned:'Subcontractor (scope removed)',start:'2026-06-16',end:'2026-06-17',progress:0,budget:0},
+  {wbs:'5.11G',zone:8,name:'22F & 22G - Tarmac Pavement',assigned:'Subcontractor (scope removed)',start:'2026-06-16',end:'2026-06-17',progress:0,budget:0},
   {wbs:'6.1H',zone:9,name:'2H/2I/2J - Reduce dig into spoil heaps',assigned:'Gang A',start:'2026-04-16',end:'2026-04-17',progress:0,budget:0},
   {wbs:'6.1I',zone:10,name:'2H/2I/2J - Reduce dig into spoil heaps',assigned:'Gang A',start:'2026-04-16',end:'2026-04-17',progress:0,budget:0},
   {wbs:'6.1J',zone:11,name:'2H/2I/2J - Reduce dig into spoil heaps',assigned:'Gang A',start:'2026-04-16',end:'2026-04-17',progress:0,budget:0},
@@ -4252,7 +4252,7 @@ const AFPS = [
   { num:1, issued:'2026-04-01', invoice:'2026-04-07', payment:null,         value:22984.59, net:0,         status:'combined', note:'AFP1 gross £22,984.59 absorbed into Dandara App.1 (SBI SC193064-x17) — NOT paid separately. Rolled into AFP2 certification.' },
   { num:2, issued:'2026-04-30', invoice:'2026-05-07', payment:'2026-05-12', value:164028.11, net:156739.46, status:'paid',     note:'AFP1+2 combined — SBI SC193064-x17. Ian Barnes certified £156,739.46 net (gross £164,028.11 | discount −£2,441.04 | retention −£4,847.61). Materials on site £47,815 accepted as goodwill. Received 12 May 2026.' },
   { num:3, issued:'2026-05-22', invoice:'2026-05-29', payment:'2026-06-26', value:128109,    net:128109,    status:'submitted', note:'Submitted to Dandara 22 May 2026. Work measured to 29 May 2026. Breakdown: External Works £69,617 (28.3%) · Drainage £150,485 (96.2%) · Services £12,236 (100%) · Street Lighting £12,109 (100%) · DGC Prelims £31,582 (91.6%) · Less Discount −£8,965 · + Variations £14,148 · + Materials on Site £10,347. Cumulative gross: £293,658. Less 3% retention: −£8,810. Less AFP2 paid: −£156,739. Net claim AFP3: £128,109. Awaiting Dandara certification (target 26 Jun 2026). Not yet received.' },
-  { num:4, issued:'2026-06-30', invoice:'2026-06-30', payment:'2026-07-28', value:0,         net:0,         status:'estimate', note:'ESTIMATE ONLY — HPM roadbase only (TCQ wearing course removed from contract scope 26 May 2026). Value TBC once HPM subcontractor quotes confirmed. Per QS Sophie (17 May 2026): tarmac better claimed separately before final account. Not yet submitted.' },
+  { num:4, issued:'2026-06-30', invoice:'2026-06-30', payment:'2026-07-28', value:0,         net:0,         status:'estimate', note:'ESTIMATE ONLY — Tarmac roadbase package only (wearing course removed from contract scope 26 May 2026). Value TBC once tarmac subcontractor quotes confirmed. Per QS Sophie (17 May 2026): tarmac better claimed separately before final account. Not yet submitted.' },
   { num:5, issued:'2026-07-15', invoice:'2026-07-15', payment:'2026-08-12', value:0,         net:0,         status:'pending',  note:'Final Account — remaining works + agreed EOT prelims. EOT-D–I (£16,167 est.) not yet submitted to Dandara. Value TBC.' },
   { num:6, issued:'2027-07-01', invoice:'2027-07-01', payment:'2027-07-29', value:6842,      net:6842,      status:'pending',  note:'Retention release — after 12-month defect period. 1.5% of EFA net ~£456,143 = ~£6,842. Per QS: retention reduces to 1.5% at final account issue, final 1.5% claimed back after defects period.' }
 ];
@@ -4302,11 +4302,11 @@ let ZONE_DEFAULTS = {1:85,2:67,3:81,4:81,5:81,6:81,7:77,8:77,9:0,10:0,11:0,12:0}
 // but not yet complete. Add/update entries here when site conditions change.
 const ZONE_CONSTRAINTS = {
   1: 'Site setup ongoing through contract duration — management, QS admin and road sweeper run to practical completion.',
-  2: 'HPM roadbase (tarmac base layer) outstanding — awaiting HPM subcontractor. Wearing course (TCQ) has been removed from contract scope. Drainage, services and kerbing 100% complete. EOT covers tarmac delay — not attributable to DGC.',
-  3: 'HPM roadbase outstanding — same position as Zone 2. Drainage, services and kerbing 100% complete. Wearing course removed from scope. HPM subcontractor programme TBC.',
-  4: 'HPM roadbase outstanding — HPM subcontractor not yet on site. Wearing course removed from scope. All drainage, subbase and kerbing complete. Awaiting HPM tarmac programme.',
-  5: 'Final kerbing and HPM roadbase outstanding. Wearing course removed from scope. Drainage 100% complete. DGC works ahead of original plan; delay is HPM subcontractor-driven.',
-  6: 'HPM roadbase outstanding — HPM to follow. Wearing course removed from scope. All DGC drainage, subbase and kerbing works complete to standard.',
+  2: 'Tarmac roadbase (base layer) outstanding — awaiting tarmac subcontractor. Wearing course has been removed from contract scope. Drainage, services and kerbing 100% complete. EOT covers tarmac delay — not attributable to DGC.',
+  3: 'Tarmac roadbase outstanding — same position as Zone 2. Drainage, services and kerbing 100% complete. Wearing course removed from scope. Tarmac subcontractor programme TBC.',
+  4: 'Tarmac roadbase outstanding — tarmac subcontractor not yet on site. Wearing course removed from scope. All drainage, subbase and kerbing complete. Awaiting tarmac programme.',
+  5: 'Final kerbing and tarmac roadbase outstanding. Wearing course removed from scope. Drainage 100% complete. DGC works ahead of original plan; delay is tarmac subcontractor-driven.',
+  6: 'Tarmac roadbase outstanding — tarmac to follow. Wearing course removed from scope. All DGC drainage, subbase and kerbing works complete to standard.',
   7: 'Kerbing started (25% — ahead of original programme). Subbase, tarmac still to come. Lower Road drainage 100% complete. EOT covers extended programme.',
   8: 'Lower Road drainage 100% complete. Kerbing, subbase and tarmac to follow. Remaining work is later-stage road build — not overdue under revised programme.',
   9: 'Drain Run S4.5–S4.6 — starts 10 June 2026 with Gang C. Not yet started per original and revised programme. On track.',
@@ -6432,8 +6432,8 @@ function buildProgrammeV135() {
   // ── Scope change flag ─────────────────────────────────────────────────────
   + '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:11px;line-height:1.7;">'
   + '<div style="font-weight:800;color:#dc2626;margin-bottom:4px;font-size:12px;">SCOPE CHANGE — Action Required (QS)</div>'
-  + '<div style="color:#7f1d1d;"><strong>Pavement wearing course (TCQ) has been removed from this contract.</strong> The 100% figure below reflects the original programme scope. If GanttPro has not been updated to remove these tasks, the "% remaining" is overstated — DGC\'s true completion against revised scope is higher than shown.</div>'
-  + '<div style="color:#7f1d1d;margin-top:6px;font-size:10px;font-weight:700;">Action: Sophie (QS) to confirm revised programme removes all TCQ pavement tasks. If removed, ZONE_DEFAULTS and projected finish date should be recalculated.</div>'
+  + '<div style="color:#7f1d1d;"><strong>Pavement wearing course has been removed from this contract.</strong> The figure below reflects the original programme scope — if the programme has not been updated to remove these tasks, DGC\'s true completion against revised scope is higher than shown.</div>'
+  + '<div style="color:#7f1d1d;margin-top:6px;font-size:10px;font-weight:700;">Action: QS to confirm revised programme removes all wearing course / pavement tasks. If confirmed, ZONE_DEFAULTS and projected finish date should be recalculated.</div>'
   + '</div>'
 
   // ── EOT (Extension of Time) status block ──────────────────────────────────
@@ -6488,7 +6488,7 @@ function buildProgrammeV135() {
   +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px;">Work Remaining</div>'
   +   '<div style="font-size:22px;font-weight:900;color:#f59e0b;line-height:1.1;">'+(100-actualPct)+'%</div>'
   +   '<div style="font-size:11px;color:var(--muted);margin-top:4px;">of current programme scope</div>'
-  +   '<div style="font-size:10px;color:var(--muted);margin-top:6px;">HPM roadbase + Drain Run H–J</div>'
+  +   '<div style="font-size:10px;color:var(--muted);margin-top:6px;">Tarmac roadbase + Drain Run H–J</div>'
   + '</div>'
 
   // 4. Open issues
@@ -6513,10 +6513,10 @@ function buildProgrammeV135() {
   +   chartSVG
   + '</div>'
 
-  // ── What still can't be done (simplified, no TCQ) ─────────────────────────
+  // ── What still can't be done (simplified, wearing course removed) ────────
   + '<div style="background:#fef3c720;border:1px solid #d9770640;border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:11px;line-height:1.7;">'
   + '<div style="font-weight:700;color:#92400e;margin-bottom:6px;">What can\'t be completed yet</div>'
-  + '<div style="color:var(--text);"><strong>HPM roadbase (tarmac base layer)</strong> — subcontractor not yet mobilised. Sections A–E need HPM on site before road build can reach 100%.</div>'
+  + '<div style="color:var(--text);"><strong>Tarmac roadbase (base layer)</strong> — tarmac subcontractor not yet mobilised. Sections A–E need the tarmac package on site before road build can reach 100%.</div>'
   + '<div style="color:var(--text);"><strong>Drain Run H–J</strong> — Gang C starts <strong>10 June 2026</strong>. Sections H, I, J at 0%, on programme per revised dates.</div>'
   + '<div style="color:var(--text);font-size:10px;color:var(--muted);margin-top:6px;">RFI 04: 6F2 written approval needed before Section 5 starts &nbsp;·&nbsp; RFI 07: generator/mains — ongoing</div>'
   + '</div>'
@@ -9205,7 +9205,7 @@ function buildTwoWeekReport() {
       + ';font-weight:800;border-radius:4px;">' + overallStatus + '</td>'
     + '</tr>'
     + '<tr><td colspan="6" style="font-size:9px;color:#64748b;padding-top:4px;">'
-    + '* Plan% from last GanttPro upload (26 May 2026). EOT = zone past programme date, delay attributable to HPM subcontractor — not DGC. Overall % uses agreed deadline (3 Jul 2026).'
+    + '* Plan% from last GanttPro upload (26 May 2026). EOT = zone past programme date; tarmac delay is subcontractor-driven — not attributable to DGC. Overall % uses agreed deadline (3 Jul 2026).'
     + '</td></tr>';
 
   // ── Financial ──────────────────────────────────────────────────────────────
@@ -9590,7 +9590,7 @@ function buildFortnightlyReport() {
     + '<td style="text-align:center;background:' + totBg + ';color:' + totCol + ';font-weight:800;border-radius:4px;">' + totSts + '</td>'
     + '</tr>'
     + '<tr><td colspan="6" style="font-size:7pt;color:#64748b;padding-top:4px;">'
-    + '* Plan% from last GanttPro upload (26 May 2026). EOT = zone past programme date, delay attributable to HPM subcontractor — not DGC. Overall % uses agreed deadline (3 Jul 2026).'
+    + '* Plan% from last GanttPro upload (26 May 2026). EOT = zone past programme date; tarmac delay is subcontractor-driven — not attributable to DGC. Overall % uses agreed deadline (3 Jul 2026).'
     + '</td></tr>';
 
   // ── Works completed (last 14 days, tasks ending in period with progress) ───
@@ -10615,8 +10615,8 @@ var MAT_DEFAULTS = [
   {id:'m10', cat:'MH',        name:'Precast MH Rings/Slabs',  unit:'no.',  qty:'—', status:'ok',      note:''},
   {id:'m11', cat:'Road',      name:'Road Gullies',            unit:'no.',  qty:'—', status:'ok',      note:''},
   {id:'m12', cat:'Road',      name:'Kerb Units',              unit:'no.',  qty:'—', status:'ok',      note:'In progress — Top Road 53%, Mid Road 53%, Lower Road 25%'},
-  {id:'m13', cat:'Road',      name:'Tarmac Roadbase',         unit:'t',    qty:'—', status:'pending', note:'HPM subcontractor supply. Top Road & Mid Road outstanding.'},
-  {id:'m14', cat:'Road',      name:'Tarmac Wearing Course',   unit:'t',    qty:'—', status:'cancelled', note:'REMOVED FROM SCOPE — TCQ wearing course pavement work taken off contract 26 May 2026. Not required.'},
+  {id:'m13', cat:'Road',      name:'Tarmac Roadbase',         unit:'t',    qty:'—', status:'pending', note:'Tarmac subcontractor supply. Top Road & Mid Road outstanding.'},
+  {id:'m14', cat:'Road',      name:'Tarmac Wearing Course',   unit:'t',    qty:'—', status:'cancelled', note:'REMOVED FROM SCOPE — Wearing course / pavement taken off contract 26 May 2026. Not required.'},
   {id:'m15', cat:'Services',  name:'Duct (services)',         unit:'m',    qty:'—', status:'ok',      note:''},
   {id:'m16', cat:'Services',  name:'Tote Bags (V14)',         unit:'no.',  qty:'—', status:'ok',      note:'V14 complete — tote bags placed over all laterals.'},
 ];
