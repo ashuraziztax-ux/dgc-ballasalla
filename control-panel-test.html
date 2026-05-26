@@ -2703,7 +2703,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-26T20:45:00'); // date + time of this push
+const LAST_UPDATED = new Date('2026-05-26T22:00:00'); // date + time of this push
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -9813,15 +9813,19 @@ function escHtml(s) {
 var _rtExpandedRows = {};
 var _rtFilters = { category:'', status:'', dateFrom:'', dateTo:'' };
 
+// Load tickets — always fall back to DEFAULT_RISK_TICKETS if localStorage empty
+function rtLoadTickets() {
+  try {
+    var s = localStorage.getItem('dgc_risk_tickets');
+    return s ? JSON.parse(s) : DEFAULT_RISK_TICKETS;
+  } catch(e) { return DEFAULT_RISK_TICKETS; }
+}
+
 // Toggle expanded row in ticket log
 function rtToggleRow(rtNum) {
   _rtExpandedRows[rtNum] = !_rtExpandedRows[rtNum];
   var logEl = document.getElementById('rt-log-body');
-  if (logEl) {
-    var tickets = [];
-    try { tickets = JSON.parse(localStorage.getItem('dgc_risk_tickets')||'[]'); } catch(e) {}
-    logEl.innerHTML = buildRTLogHTML(tickets);
-  }
+  if (logEl) logEl.innerHTML = buildRTLogHTML(rtLoadTickets());
 }
 
 // Re-render log when filters change (without rebuilding the whole form)
@@ -9831,16 +9835,78 @@ function rtApplyFilters() {
   _rtFilters.dateFrom = (document.getElementById('rt-f-from')||{}).value||'';
   _rtFilters.dateTo   = (document.getElementById('rt-f-to')||{}).value||'';
   var logEl = document.getElementById('rt-log-body');
-  if (logEl) {
-    var tickets = [];
-    try { tickets = JSON.parse(localStorage.getItem('dgc_risk_tickets')||'[]'); } catch(e) {}
-    logEl.innerHTML = buildRTLogHTML(tickets);
-  }
+  if (logEl) logEl.innerHTML = buildRTLogHTML(rtLoadTickets());
 }
 
 function rtClearFilters() {
   _rtFilters = { category:'', status:'', dateFrom:'', dateTo:'' };
   rtApplyFilters();
+}
+
+// ── Viewer identity (who is viewing / commenting) ─────────────────────────
+var _rtViewer = { name:'', role:'' };
+function rtGetViewer() {
+  try {
+    var v = JSON.parse(localStorage.getItem('dgc_rt_viewer')||'null');
+    if (v && v.name) _rtViewer = v;
+  } catch(e) {}
+  return _rtViewer;
+}
+function rtSetViewer(name, role) {
+  _rtViewer = { name: (name||'').trim(), role: (role||'').trim() };
+  try { localStorage.setItem('dgc_rt_viewer', JSON.stringify(_rtViewer)); } catch(e) {}
+}
+function rtShowViewerPrompt() {
+  var v = rtGetViewer();
+  var panel = document.getElementById('rt-viewer-panel');
+  if (!panel) return;
+  document.getElementById('rt-viewer-name').value = v.name || '';
+  document.getElementById('rt-viewer-role').value = v.role || '';
+  panel.style.display = 'flex';
+  document.getElementById('rt-viewer-name').focus();
+}
+function rtSaveViewer() {
+  var n = (document.getElementById('rt-viewer-name')||{}).value||'';
+  var r = (document.getElementById('rt-viewer-role')||{}).value||'';
+  if (!n.trim()) { suToast('Please enter your name.', true); return; }
+  rtSetViewer(n, r);
+  document.getElementById('rt-viewer-panel').style.display = 'none';
+  var chip = document.getElementById('rt-viewer-chip');
+  if (chip) chip.innerHTML = _rtViewerChipHTML();
+  var logEl = document.getElementById('rt-log-body');
+  if (logEl) logEl.innerHTML = buildRTLogHTML(rtLoadTickets());
+  suToast('Signed in as ' + n.trim());
+}
+function _rtViewerChipHTML() {
+  var v = rtGetViewer();
+  if (v.name) {
+    return '<span style="font-size:11px;color:var(--text);">👤 <strong>' + escHtml(v.name) + '</strong>'
+      + (v.role ? ' <span style="color:var(--muted);font-size:10px;">— ' + escHtml(v.role) + '</span>' : '') + '</span>'
+      + '<button onclick="rtShowViewerPrompt()" style="padding:3px 9px;background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);font-size:10px;cursor:pointer;margin-left:8px;">Change</button>';
+  }
+  return '<button onclick="rtShowViewerPrompt()" class="btn btn-primary" style="padding:5px 14px;font-size:11px;font-weight:700;">✏️ Sign in to Comment</button>';
+}
+
+// ── Add a comment to a ticket ─────────────────────────────────────────────
+function rtAddComment(rtNum) {
+  var v = rtGetViewer();
+  if (!v.name) { rtShowViewerPrompt(); suToast('Sign in first to add a comment.', true); return; }
+  var textEl = document.getElementById('rt-comment-input-' + rtNum);
+  if (!textEl || !textEl.value.trim()) { suToast('Please type a comment first.', true); return; }
+  var commentText = textEl.value.trim();
+  var tickets = [];
+  try {
+    var s = localStorage.getItem('dgc_risk_tickets');
+    tickets = s ? JSON.parse(s) : JSON.parse(JSON.stringify(DEFAULT_RISK_TICKETS));
+  } catch(e) { tickets = JSON.parse(JSON.stringify(DEFAULT_RISK_TICKETS)); }
+  var ticket = tickets.find(function(t){ return t.rtNum === rtNum; });
+  if (!ticket) { suToast('Ticket not found.', true); return; }
+  if (!ticket.comments) ticket.comments = [];
+  ticket.comments.push({ author: v.name, role: v.role||'', timestamp: new Date().toISOString(), text: commentText });
+  localStorage.setItem('dgc_risk_tickets', JSON.stringify(tickets));
+  var logEl = document.getElementById('rt-log-body');
+  if (logEl) logEl.innerHTML = buildRTLogHTML(tickets);
+  suToast('Comment added ✓');
 }
 
 // Show inline editor for ticket number
@@ -10220,24 +10286,84 @@ function buildRTLogHTML(tickets) {
       + '</tr>');
     // Expanded detail row
     if (isExp) {
-      h.push('<tr style="background:#0f172a;"><td colspan="7" style="padding:16px 20px;border-bottom:2px solid var(--border)40;">');
-      h.push('<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 28px;font-size:11px;">');
-      function detRow(label, val) {
-        if (!val) return '';
-        return '<div><div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">' + label + '</div>'
-          + '<div style="color:var(--text);line-height:1.5;">' + val + '</div></div>';
+      var catColMap = {'Health & Safety':'#ef4444','Programme / Deadline':'#3b82f6','Financial':'#f59e0b','Quality':'#22c55e','Design / Information':'#8b5cf6','Logistics / Material':'#ec4899','Temporary Works':'#06b6d4','Other':'#64748b'};
+      var catBadges = (t.categories||[]).map(function(c){
+        var cc = catColMap[c]||'#64748b';
+        return '<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;background:'+cc+'20;border:1px solid '+cc+'40;color:'+cc+';">'+escHtml(c)+'</span>';
+      }).join(' ');
+      var comments = t.comments || [];
+      var vwr = rtGetViewer();
+
+      h.push('<tr><td colspan="7" style="padding:0;border-bottom:2px solid var(--border);">');
+      h.push('<div style="padding:16px 20px;background:var(--surface2);border-left:3px solid var(--accent);">');
+
+      h.push('<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:14px;">');
+      h.push('<div><div style="font-size:14px;font-weight:800;color:var(--accent);margin-bottom:5px;">RT-'+t.rtNum+'</div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:5px;">'+catBadges+'</div></div>');
+      h.push('<div style="text-align:right;font-size:11px;color:var(--muted);line-height:1.7;">'
+        + '<div>'+escHtml(t.date||'')+'</div>'
+        + '<div style="font-weight:600;color:var(--text);">'+escHtml(t.raisedBy||'')+'</div>'
+        + (t.role?'<div>'+escHtml(t.role)+'</div>':'')+'</div>');
+      h.push('</div>');
+
+      h.push('<div style="margin-bottom:12px;"><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">DESCRIPTION</div>'
+        + '<div style="font-size:12px;color:var(--text);line-height:1.6;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px;white-space:pre-wrap;">'+escHtml(t.description||'')+'</div></div>');
+      if (t.resolution) {
+        h.push('<div style="margin-bottom:12px;"><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">SUGGESTED RESOLUTION</div>'
+          + '<div style="font-size:12px;color:var(--text);line-height:1.6;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px;white-space:pre-wrap;">'+escHtml(t.resolution)+'</div></div>');
       }
-      h.push(detRow('Project / Site', escHtml(t.project||'')));
-      h.push(detRow('Role / Company', escHtml(t.role||'')));
-      h.push('<div style="grid-column:1/-1;">' + detRow('Full Description', '<span style="white-space:pre-wrap;">' + escHtml(t.description||'') + '</span>') + '</div>');
-      if (t.resolution) h.push('<div style="grid-column:1/-1;">' + detRow('Suggested Resolution', '<span style="white-space:pre-wrap;">' + escHtml(t.resolution) + '</span>') + '</div>');
-      h.push(detRow('PM Action Status', '<span style="color:'+sc+';font-weight:700;">' + escHtml(t.pmStatus||'—') + '</span>'));
-      if (t.pmNotes) h.push(detRow('PM Notes', escHtml(t.pmNotes)));
-      h.push(detRow('Signed By (PM)', escHtml(t.signedBy||'—')));
-      h.push(detRow('Sign Date', escHtml(t.signDate||'—')));
-      if (t.linkedCCE) h.push(detRow('Linked CCE', '<span style="color:#f59e0b;font-weight:700;">'
-        + escHtml(t.linkedCCE) + '</span>'));
-      if (t._imported) h.push(detRow('Imported at', new Date(t._importedAt||'').toLocaleString('en-GB')));
+
+      h.push('<div style="border:1px solid var(--border);border-radius:6px;padding:12px 14px;background:var(--surface);margin-bottom:16px;">');
+      h.push('<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin-bottom:8px;">PM RECORD</div>');
+      h.push('<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;font-size:11px;">');
+      function _rtField2(lbl,val){return '<div><div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px;">'+lbl+'</div>'+val+'</div>';}
+      h.push(_rtField2('STATUS','<span style="color:'+sc+';font-weight:700;">'+escHtml(t.pmStatus||'—')+'</span>'));
+      if(t.pmNotes) h.push(_rtField2('NOTES','<span style="color:var(--text);">'+escHtml(t.pmNotes)+'</span>'));
+      h.push(_rtField2('SIGNED BY','<span style="color:var(--text);">'+escHtml(t.signedBy||'—')+'</span>'));
+      h.push(_rtField2('DATE','<span style="color:var(--text);">'+escHtml(t.signDate||'—')+'</span>'));
+      if(t.linkedCCE) h.push(_rtField2('LINKED CCE','<span style="color:#f59e0b;font-weight:700;">'+escHtml(t.linkedCCE)+'</span>'));
+      h.push('</div></div>');
+
+      h.push('<div style="margin-top:4px;">');
+      h.push('<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:6px;">');
+      h.push('💬 COMMENTS <span style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;color:var(--text);">'+comments.length+'</span></div>');
+
+      if (comments.length === 0) {
+        h.push('<div style="text-align:center;padding:14px;color:var(--muted);font-size:11px;font-style:italic;border:1px dashed var(--border);border-radius:6px;margin-bottom:12px;">No comments yet — add one below.</div>');
+      } else {
+        h.push('<div style="margin-bottom:12px;">');
+        comments.forEach(function(cm, ci) {
+          var initials = (cm.author||'?').split(' ').map(function(w){return w[0]||'';}).join('').toUpperCase().slice(0,2);
+          var ts = '';
+          try { ts = new Date(cm.timestamp).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch(e){}
+          h.push('<div style="display:flex;gap:10px;margin-bottom:10px;'+(ci<comments.length-1?'padding-bottom:10px;border-bottom:1px solid var(--border);':'')+'">');
+          h.push('<div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#000;margin-top:2px;">'+escHtml(initials)+'</div>');
+          h.push('<div style="flex:1;min-width:0;">');
+          h.push('<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px;">');
+          h.push('<span style="font-size:12px;font-weight:700;color:var(--text);">'+escHtml(cm.author||'Unknown')+'</span>');
+          if(cm.role) h.push('<span style="font-size:10px;color:var(--muted);">'+escHtml(cm.role)+'</span>');
+          h.push('<span style="font-size:10px;color:var(--muted);margin-left:auto;white-space:nowrap;">'+escHtml(ts)+'</span>');
+          h.push('</div>');
+          h.push('<div style="font-size:12px;color:var(--text);line-height:1.5;white-space:pre-wrap;">'+escHtml(cm.text||'')+'</div>');
+          h.push('</div></div>');
+        });
+        h.push('</div>');
+      }
+
+      h.push('<div style="border:1px solid var(--border);border-radius:6px;padding:12px 14px;background:var(--surface);">');
+      h.push('<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;">ADD COMMENT</div>');
+      if (!vwr.name) {
+        h.push('<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Sign in to leave a comment on this ticket.</div>');
+        h.push('<button onclick="rtShowViewerPrompt()" class="btn btn-primary" style="padding:5px 14px;font-size:11px;font-weight:700;">✏️ Sign In</button>');
+      } else {
+        h.push('<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Commenting as: <strong style="color:var(--text);">'+escHtml(vwr.name)+(vwr.role?' — '+escHtml(vwr.role):'')+'</strong>'
+          +' <button onclick="rtShowViewerPrompt()" style="background:none;border:none;color:var(--muted);font-size:10px;cursor:pointer;text-decoration:underline;padding:0;">Change</button></div>');
+        h.push('<textarea id="rt-comment-input-'+t.rtNum+'" rows="3" placeholder="Type your comment here…" '
+          +'style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px;font-size:11px;box-sizing:border-box;line-height:1.5;resize:vertical;margin-bottom:8px;"></textarea>');
+        h.push('<button onclick="rtAddComment('+t.rtNum+')" class="btn btn-primary" style="padding:6px 16px;font-size:11px;font-weight:700;">💬 Post Comment</button>');
+      }
+      h.push('</div>');
+      h.push('</div>');
       h.push('</div></td></tr>');
     }
   });
@@ -10362,11 +10488,7 @@ function buildRiskTickets() {
   var body = document.getElementById('risks-body');
   if (!body) return;
 
-  var tickets = [];
-  try {
-    var _rtStored = localStorage.getItem('dgc_risk_tickets');
-    tickets = _rtStored ? JSON.parse(_rtStored) : DEFAULT_RISK_TICKETS;
-  } catch(e) { tickets = DEFAULT_RISK_TICKETS; }
+  var tickets = rtLoadTickets();
 
   // Sequence = max(existing rtNums)+1 OR stored seq, whichever is higher
   var maxExisting = tickets.reduce(function(m,t){ return Math.max(m, t.rtNum||0); }, 100999);
@@ -10380,6 +10502,25 @@ function buildRiskTickets() {
   var h = [];
   var inp = 'width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:11px;box-sizing:border-box;';
   var lbl = 'font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:3px;';
+
+  // ── Viewer identity strip & modal ─────────────────────────────────────────
+  var vwr0 = rtGetViewer();
+  h.push('<div style="max-width:700px;margin:0 auto 10px;padding:8px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">');
+  h.push('<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">VIEWING AS</div>');
+  h.push('<div id="rt-viewer-chip" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'+_rtViewerChipHTML()+'</div>');
+  h.push('</div>');
+  h.push('<div id="rt-viewer-panel" style="display:none;position:fixed;inset:0;z-index:9999;background:#0009;align-items:center;justify-content:center;">');
+  h.push('<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px 24px;width:320px;max-width:90vw;box-shadow:0 8px 32px #0006;">');
+  h.push('<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">Who are you?</div>');
+  h.push('<div style="font-size:11px;color:var(--muted);margin-bottom:14px;">Your name will appear on any comments you add to risk tickets.</div>');
+  h.push('<label style="'+lbl+'">Your Name</label><input id="rt-viewer-name" type="text" placeholder="e.g. Harry Harrison" style="'+inp+'margin-bottom:10px;"'
+    +' onkeydown="if(event.key===\'Enter\')rtSaveViewer();">');
+  h.push('<label style="'+lbl+'">Role / Company</label><input id="rt-viewer-role" type="text" placeholder="e.g. Site Manager — DGC" style="'+inp+'margin-bottom:14px;"'
+    +' onkeydown="if(event.key===\'Enter\')rtSaveViewer();">');
+  h.push('<div style="display:flex;gap:8px;">');
+  h.push('<button onclick="rtSaveViewer()" class="btn btn-primary" style="flex:1;padding:8px;font-size:12px;font-weight:700;">✓ Save</button>');
+  h.push('<button onclick="document.getElementById(\'rt-viewer-panel\').style.display=\'none\'" style="padding:8px 14px;background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:12px;cursor:pointer;">Cancel</button>');
+  h.push('</div></div></div>');
 
   // ── Form ──────────────────────────────────────────────────────────────────
   h.push('<div class="card" style="max-width:700px;margin:0 auto 16px;">');
@@ -10451,7 +10592,7 @@ function buildRiskTickets() {
   h.push('</div>');
 
   // PM Record
-  h.push('<div style="border:1px solid var(--border);border-radius:6px;padding:12px 14px;margin-bottom:12px;background:#0f172a;">');
+  h.push('<div style="border:1px solid var(--border);border-radius:6px;padding:12px 14px;margin-bottom:12px;background:var(--surface2);">');
   h.push('<div style="'+lbl+'margin-bottom:8px;color:var(--accent);">PM Record</div>');
   h.push('<div style="margin-bottom:8px;"><div style="font-size:10px;color:var(--muted);margin-bottom:5px;">Action Status</div>');
   h.push('<div style="display:flex;flex-wrap:wrap;gap:12px;">');
@@ -10523,10 +10664,14 @@ function saveRiskTicket() {
     pmNotes:     (document.getElementById('rt-pm-notes')   ||{}).value||'',
     signedBy:    (document.getElementById('rt-signed-by')  ||{}).value||'',
     signDate:    (document.getElementById('rt-sign-date')  ||{}).value||'',
-    savedAt:     new Date().toISOString()
+    savedAt:     new Date().toISOString(),
+    comments:    []
   };
   try {
-    var tickets = JSON.parse(localStorage.getItem('dgc_risk_tickets')||'[]');
+    var tickets = rtLoadTickets();
+    var stored = localStorage.getItem('dgc_risk_tickets');
+    if (!stored) tickets = JSON.parse(JSON.stringify(DEFAULT_RISK_TICKETS));
+    else try { tickets = JSON.parse(stored); } catch(e) { tickets = []; }
     // Check for duplicate RT number
     if (tickets.some(function(t){ return t.rtNum === seq; })) {
       suToast('RT-' + seq + ' already exists — edit the ticket number first.', true); return;
