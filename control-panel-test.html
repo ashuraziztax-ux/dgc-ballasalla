@@ -1078,7 +1078,7 @@ function clearForm() {
               background:#f59e0b14;border:1px solid #f59e0b44;">
     <span style="font-size:15px;">📋</span>
     <div style="font-size:11px;color:#f59e0b;line-height:1.5;">
-      <strong>📸 Snapshot as of 14 May 2026</strong> — figures current at last fortnightly update. Next refresh ~28 May 2026.
+      <strong>📸 Snapshot as of <span id="snap-date-lbl">26 May 2026</span></strong> — live programme data, updated fortnightly. Next refresh ~<span id="snap-next-lbl">9 Jun 2026</span>.
       Progress, KPIs and charts reflect this date.
     </div>
   </div>
@@ -1134,7 +1134,7 @@ function clearForm() {
         <div style="text-align:center;">
           <div style="font-size:9px;color:var(--muted);letter-spacing:.06em;margin-bottom:3px;text-transform:uppercase;">Time Elapsed</div>
           <div style="font-size:20px;font-weight:700;color:#60a5fa;" id="kpi-time-pct">—%</div>
-          <div style="font-size:8px;color:var(--muted);margin-bottom:4px;">23 Mar → 26 Jun</div>
+          <div style="font-size:8px;color:var(--muted);margin-bottom:4px;">23 Mar → 3 Jul</div>
           <div style="height:3px;background:#1e293b;border-radius:2px;"><div id="bar-time" style="height:3px;background:#60a5fa;border-radius:2px;width:0%;"></div></div>
         </div>
         <div style="text-align:center;" class="hide-client">
@@ -1215,7 +1215,7 @@ function clearForm() {
       <div>
         <div style="font-size:26px;font-weight:800;color:var(--accent);" id="pc-total-weeks">—</div>
         <div style="font-size:10px;font-weight:700;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">Total duration</div>
-        <div style="font-size:9px;color:var(--muted);margin-top:3px;">23 Mar → 26 Jun agreed</div>
+        <div style="font-size:9px;color:var(--muted);margin-top:3px;">23 Mar → 3 Jul agreed</div>
       </div>
       <div>
         <div style="font-size:26px;font-weight:800;color:#60a5fa;" id="pc-elapsed-weeks">—</div>
@@ -1225,10 +1225,10 @@ function clearForm() {
       <div>
         <div style="font-size:26px;font-weight:800;color:#f59e0b;" id="pc-cal-weeks-left">—</div>
         <div style="font-size:10px;font-weight:700;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">Left to deadline</div>
-        <div style="font-size:9px;color:var(--muted);margin-top:3px;">calendar weeks to 26 Jun</div>
+        <div style="font-size:9px;color:var(--muted);margin-top:3px;">calendar weeks to 3 Jul</div>
       </div>
       <div style="border-left:1px solid var(--border);padding-left:12px;">
-        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">Speed needed — 26 Jun</div>
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">Speed needed — 3 Jul</div>
         <div style="font-size:20px;font-weight:800;line-height:1.2;" id="pc-forecast-plan">—</div>
         <div style="font-size:9px;color:var(--muted);margin-top:4px;">of plan speed needed<br><span id="pc-plan-rem" style="color:var(--muted);"></span></div>
       </div>
@@ -1612,7 +1612,7 @@ function clearForm() {
             <td>AFP 3 <span style="font-size:9px;font-style:normal;font-weight:600;color:#f59e0b;background:#f59e0b18;border:1px solid #f59e0b44;padding:1px 5px;border-radius:8px;vertical-align:middle;">ESTIMATE</span></td>
             <td>~22 May 2026</td>
             <td>~29 May 2026</td>
-            <td style="color:#f59e0b;">~26 Jun 2026</td>
+            <td style="color:#f59e0b;">~3 Jul 2026</td>
             <td style="color:#f59e0b;">~£128,109 net</td>
             <td><span class="chip pending">Not submitted</span></td>
           </tr>
@@ -1699,7 +1699,7 @@ function clearForm() {
       <div style="text-align:center;padding:12px;background:#f59e0b18;border-radius:8px;border:1px solid #f59e0b55;">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#f59e0b;margin-bottom:4px;">Net New Payment</div>
         <div style="font-size:28px;font-weight:800;color:#f59e0b;line-height:1;">£128,109</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:3px;">due ~26 Jun 2026</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px;">due ~3 Jul 2026</div>
       </div>
     </div>
 
@@ -3144,9 +3144,10 @@ function buildVelocityPanel() {
   var bannerSub = document.createElement('div');
   bannerSub.style.cssText = 'font-size:11px;color:var(--muted);border-top:1px solid ' + bannerBdr + ';padding-top:8px;display:flex;gap:18px;flex-wrap:wrap;';
   var sub1 = document.createElement('span');
+  var _dlDisp = (window.DS && window.DS.PROJECT_END instanceof Date) ? window.DS.PROJECT_END.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '3 Jul 2026';
   sub1.innerHTML = PROG_VIEW === 'adjusted'
-    ? '<b style="color:var(--text);">Agreed deadline:</b> 26 Jun 2026 &nbsp;·&nbsp; <b style="color:var(--text);">Efficiency:</b> ' + effPct + '% of plan pace &nbsp;·&nbsp; remaining calendar days stretched ×' + dragFactor.toFixed(2)
-    : '<b style="color:var(--text);">Agreed deadline:</b> 26 Jun 2026 (QS updated programme, 12 May 2026 — includes all variations &amp; EOT)';
+    ? '<b style="color:var(--text);">Agreed deadline:</b> ' + _dlDisp + ' &nbsp;·&nbsp; <b style="color:var(--text);">Efficiency:</b> ' + effPct + '% of plan pace &nbsp;·&nbsp; remaining calendar days stretched ×' + dragFactor.toFixed(2)
+    : '<b style="color:var(--text);">Agreed deadline:</b> ' + _dlDisp + ' (GanttPro 26 May 2026 — includes all variations &amp; EOT)';
   var sub2 = document.createElement('span');
   sub2.innerHTML = '<b style="color:var(--text);">Time remaining:</b> ' + weeksToTarget + ' weeks (' + daysToTarget + ' calendar days)';
   bannerSub.appendChild(sub1);
@@ -4431,7 +4432,7 @@ function getCertifiedPct() {
 // Programme start 23 Mar (includes variation/prelim weeks). Main drainage works from 8 Apr.
 function getTimeProgress() {
   const start = parseDate('2026-03-23');
-  const end   = parseDate('2026-06-26');
+  const end   = (window.DS && window.DS.PROJECT_END instanceof Date) ? window.DS.PROJECT_END : parseDate('2026-07-03');
   const total = daysBetween(start, end);
   const elapsed = Math.min(Math.max(daysBetween(start, TODAY), 0), total);
   return Math.round(elapsed / total * 100);
@@ -6041,9 +6042,9 @@ function buildDataTab() {
 function buildProgrammeClock() {
   try {
     var start    = parseDate('2026-03-23');
-    var deadline = parseDate('2026-06-26');
     // ── Read core metrics from single source of truth ─────────────────────
     var _DS = window.DS || {};
+    var deadline = (_DS.PROJECT_END instanceof Date) ? _DS.PROJECT_END : parseDate('2026-07-03');
     var totalDays  = _DS.totalCalDays  || daysBetween(start, deadline);
     var elapsedDays= _DS.elapsedCalDays|| Math.max(0, daysBetween(start, TODAY));
     var actualPct  = _DS.actualPct     || 0;
@@ -6558,7 +6559,7 @@ function buildProgrammeHeader() {
   // Calendar-day planned% — canonical DS value, same as Velocity Panel + Forecast tab
   var plannedPct = (window.DS && window.DS.plannedPct) || 0;
 
-  var agreedDL   = parseDate('2026-06-26');
+  var agreedDL   = (window.DS && window.DS.PROJECT_END instanceof Date) ? window.DS.PROJECT_END : parseDate('2026-07-03');
   var totalProgWDs = (window.DS && window.DS.totalProgWDs) || 65;
 
   // Working-day helpers (IoM 2026 bank holidays)
@@ -6639,9 +6640,10 @@ function buildProgrammeHeader() {
           var _dlCol  = _dlDays <= 0 ? '#f87171' : _dlDays <= 14 ? '#f59e0b' : 'var(--text)';
           var _dlLbl  = _dlDays <= 0 ? Math.abs(_dlDays) + ' days overrun'
                         : _dlDays + ' calendar days left';
+          var _dlStr = _dl.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
           return '<div style="background:var(--surface2);border-radius:8px;padding:13px;text-align:center;">'
             + '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">Contract Deadline</div>'
-            + '<div style="font-size:16px;font-weight:900;color:' + _dlCol + ';">26 Jun 2026</div>'
+            + '<div style="font-size:16px;font-weight:900;color:' + _dlCol + ';">' + _dlStr + '</div>'
             + '<div style="font-size:9px;color:' + _dlCol + ';font-weight:700;margin-top:3px;">' + _dlLbl + '</div>'
             + '</div>';
         })()
@@ -8117,7 +8119,9 @@ function showTab(name, btn) {
     var daysLate = typeof DS.daysLateEarly === 'number' ? DS.daysLateEarly : null;
     var certPct  = typeof DS.actualPct    === 'number' ? DS.actualPct    : null;
     var planPct  = typeof DS.plannedPct   === 'number' ? DS.plannedPct   : null;
-    var deadline = '26 Jun 2026';
+    var deadline = (DS.PROJECT_END instanceof Date)
+      ? DS.PROJECT_END.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})
+      : '3 Jul 2026';
 
     var ragCol, ragDot, ragLabel, ragDetail;
     if (daysLate === null) {
@@ -8347,6 +8351,18 @@ window.addEventListener('DOMContentLoaded', () => {
   try { fetchRonalswayWeather(); }   catch(e) {}
   try { buildDashboardRAG(); }       catch(e) {}
 
+  // ── Snapshot date banner: fill dynamically from DATA_AS_OF ───────────────
+  try {
+    var _dAof = (typeof DATA_AS_OF !== 'undefined') ? DATA_AS_OF : new Date();
+    var _snap = document.getElementById('snap-date-lbl');
+    if (_snap) _snap.textContent = _dAof.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    var _snapNext = document.getElementById('snap-next-lbl');
+    if (_snapNext) {
+      var _nextRefresh = new Date(_dAof.getTime() + 14 * 86400000);
+      _snapNext.textContent = _nextRefresh.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    }
+  } catch(_e) {}
+
   // Safe setter — never throws, silently skips missing elements
   function set(id, val) { try { const el = document.getElementById(id); if(el) el.textContent = val; } catch(e){} }
   function setW(id, pct) { try { const el = document.getElementById(id); if(el) el.style.width = Math.min(pct,100) + '%'; } catch(e){} }
@@ -8362,11 +8378,11 @@ window.addEventListener('DOMContentLoaded', () => {
   try {
     var _pill = document.getElementById('job-status-pill');
     if (_pill) {
-      var _comp = parseDate('2026-06-26');
+      var _comp = (window.DS && window.DS.PROJECT_END instanceof Date) ? window.DS.PROJECT_END : parseDate('2026-07-03');
       if (TODAY > _comp) {
         _pill.textContent = 'Complete';
         _pill.style.background = '#22c55e20'; _pill.style.color = '#16a34a'; _pill.style.borderColor = '#16a34a40';
-      } else if (TODAY >= parseDate('2026-06-20')) {
+      } else if (TODAY >= parseDate('2026-06-27')) {
         _pill.textContent = 'Closing Out';
         _pill.style.background = '#a78bfa20'; _pill.style.color = '#7c3aed'; _pill.style.borderColor = '#7c3aed40';
       }
@@ -8462,8 +8478,10 @@ window.addEventListener('DOMContentLoaded', () => {
   } catch(e) {}
 
   try {
-    const completion = parseDate('2026-06-26');
+    const completion = (window.DS && window.DS.PROJECT_END instanceof Date) ? window.DS.PROJECT_END : parseDate('2026-07-03');
     set('kpi-days', daysBetween(TODAY, completion));
+    const dSubEl = document.getElementById('kpi-days-sub');
+    if (dSubEl) dSubEl.textContent = 'to agreed completion ' + completion.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
   } catch(e) {}
 
   try {
@@ -8497,7 +8515,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   try {
     const IOM_BH = ['2026-04-03','2026-04-06','2026-05-04','2026-05-25','2026-06-12'];
-    const completion = parseDate('2026-06-26');
+    const completion = (window.DS && window.DS.PROJECT_END instanceof Date) ? window.DS.PROJECT_END : parseDate('2026-07-03');
     let wdCount = 0, cursor = new Date(TODAY);
     while(cursor <= completion) {
       const dow = cursor.getDay(), ds = cursor.toISOString().slice(0,10);
@@ -10290,7 +10308,7 @@ function buildAlerts() {
 function buildTimeline() {
   var IOM_BH = ['2026-04-03','2026-04-06','2026-05-04','2026-05-25','2026-06-12'];
   var START   = parseDate('2026-03-23');
-  var AGREED  = parseDate('2026-06-26');
+  var AGREED  = (window.DS && window.DS.PROJECT_END instanceof Date) ? window.DS.PROJECT_END : parseDate('2026-07-03');
 
   // Count working days between two dates
   function wdBetween(a, b) {
@@ -10632,7 +10650,7 @@ function buildReport() {
   const rptProgress = document.getElementById('rpt-progress');
   if(rptProgress) rptProgress.textContent = getOverallProgress() + '%';
   const rptDays = document.getElementById('rpt-days');
-  if(rptDays) rptDays.textContent = daysBetween(TODAY, parseDate('2026-06-26'));
+  if(rptDays) rptDays.textContent = daysBetween(TODAY, (window.DS && window.DS.PROJECT_END instanceof Date) ? window.DS.PROJECT_END : parseDate('2026-07-03'));
   const rptZones = document.getElementById('rpt-zones-table');
   if(rptZones) {
     const stcol = { complete:'#22c55e', active:'#f59e0b', late:'#ef4444', upcoming:'#64748b' };
