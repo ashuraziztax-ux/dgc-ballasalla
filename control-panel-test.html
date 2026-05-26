@@ -2696,7 +2696,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-27T00:30:00'); // date + time of this push
+const LAST_UPDATED = new Date('2026-05-27T01:00:00'); // date + time of this push
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -4427,6 +4427,12 @@ function calcForecast() {
 }
 
 function getZonePlannedPct(zoneId) {
+  // Cap: on the ADJUSTED programme (EOT to 3 Jul), plan% cannot exceed DS.plannedPct.
+  // GanttPro task dates reflect the pre-EOT / pre-resequencing programme — so zones A-E
+  // appear 100% planned by 26 May even though the adjusted programme hasn't reached that point.
+  // Fix: cap all zone plan% at the overall programme plan% (63%) for incomplete zones.
+  var dsCap = (window.DS && typeof window.DS.plannedPct === 'number') ? Math.round(window.DS.plannedPct) : 100;
+
   // Duration-weighted task-schedule planned %:
   // For each task in the zone, how much of its duration should be done by TODAY?
   // This matches GanttPro's methodology rather than naive calendar interpolation.
@@ -4442,17 +4448,17 @@ function getZonePlannedPct(zoneId) {
       else if (TODAY > s)  { doneDur += Math.round((TODAY - s) / 86400000); } // partial
       // TODAY <= s: 0 done (task not started yet per programme)
     });
-    if (totalDur > 0) return Math.round(doneDur / totalDur * 100);
+    if (totalDur > 0) return Math.min(Math.round(doneDur / totalDur * 100), dsCap);
   }
   // Fallback: calendar interpolation using zone dates
   var z = ZONES.find(function(z){ return z.id===zoneId; });
   if (!z) return 0;
   var s = parseDate(z.start), e = parseDate(z.end);
   if (TODAY < s) return 0;
-  if (TODAY > e) return 100;
+  if (TODAY > e) return Math.min(100, dsCap);
   var total = Math.max(1, Math.round((e-s)/86400000));
   var elapsed = Math.round((TODAY-s)/86400000);
-  return Math.round(elapsed/total*100);
+  return Math.min(Math.round(elapsed/total*100), dsCap);
 }
 
 function getZoneRAG(zoneId) {
@@ -6266,8 +6272,8 @@ function buildProgrammeV135() {
 
   // ── SVG velocity chart ────────────────────────────────────────────────────
   // Simple line chart: planned line (linear) vs actual (data point + projection)
-  var chartW = 600, chartH = 140;
-  var padL = 36, padR = 20, padT = 10, padB = 28;
+  var chartW = 640, chartH = 155;
+  var padL = 36, padR = 44, padT = 14, padB = 34;
   var innerW = chartW - padL - padR, innerH = chartH - padT - padB;
   var totalMs = deadline.getTime() - projStart.getTime();
   function xPos(date) { return padL + Math.max(0, Math.min(1, (date.getTime() - projStart.getTime()) / totalMs)) * innerW; }
@@ -6283,24 +6289,52 @@ function buildProgrammeV135() {
   var actualLine = 'M'+padL+','+(padT+innerH)+' L'+data_x+','+data_y;
   // Projection dashed: from data point to projected finish
   var projLine = 'M'+data_x+','+data_y+' L'+proj_x+','+padT;
-  // Month tick labels
-  var months = ['Mar','Apr','May','Jun','Jul'];
-  var monthDates = [new Date('2026-03-23'),new Date('2026-04-15'),new Date('2026-05-15'),new Date('2026-06-15'),new Date('2026-07-03')];
-  var ticks = months.map(function(m,i){
-    var mx = xPos(monthDates[i]);
-    return '<text x="'+mx+'" y="'+(padT+innerH+18)+'" text-anchor="middle" font-size="9" fill="var(--muted)">'+m+'</text>'
-      +'<line x1="'+mx+'" y1="'+(padT+innerH)+'" x2="'+mx+'" y2="'+(padT+innerH+4)+'" stroke="var(--border)" stroke-width="1"/>';
+  // Calendar tick marks: 1st of each month (major) + 15th of each month (minor)
+  // Only ticks that fall within the project window (23 Mar – 3 Jul 2026)
+  var calTicks = [
+    {d:new Date('2026-04-01'), lbl:'1 Apr',  major:true},
+    {d:new Date('2026-04-15'), lbl:'15',      major:false},
+    {d:new Date('2026-05-01'), lbl:'1 May',  major:true},
+    {d:new Date('2026-05-15'), lbl:'15',      major:false},
+    {d:new Date('2026-06-01'), lbl:'1 Jun',  major:true},
+    {d:new Date('2026-06-15'), lbl:'15',      major:false},
+    {d:new Date('2026-07-01'), lbl:'1 Jul',  major:true}
+  ];
+  var ticks = calTicks.map(function(t){
+    var mx = xPos(t.d);
+    var tickH = t.major ? 6 : 3;
+    var ty = padT + innerH + (t.major ? 14 : 13);
+    var tStyle = t.major
+      ? 'text-anchor="middle" font-size="9" fill="var(--muted)"'
+      : 'text-anchor="middle" font-size="8" fill="var(--muted)" opacity="0.65"';
+    return '<line x1="'+mx+'" y1="'+(padT+innerH)+'" x2="'+mx+'" y2="'+(padT+innerH+tickH)+'" stroke="var(--border)" stroke-width="'+(t.major?1:0.7)+'"/>'
+      + (t.major ? '<line x1="'+mx+'" y1="'+padT+'" x2="'+mx+'" y2="'+(padT+innerH)+'" stroke="var(--border)" stroke-width="0.4" stroke-dasharray="2,4" opacity="0.5"/>' : '')
+      + '<text x="'+mx+'" y="'+ty+'" '+tStyle+'>'+t.lbl+'</text>';
+  }).join('');
+  // Y-axis grid lines at 25% and 75%
+  var gridLines25 = '<line x1="'+padL+'" y1="'+yPos(25)+'" x2="'+(padL+innerW)+'" y2="'+yPos(25)+'" stroke="var(--border)" stroke-width="0.4" stroke-dasharray="2,4" opacity="0.6"/>';
+  var gridLines75 = '<line x1="'+padL+'" y1="'+yPos(75)+'" x2="'+(padL+innerW)+'" y2="'+yPos(75)+'" stroke="var(--border)" stroke-width="0.4" stroke-dasharray="2,4" opacity="0.6"/>';
+  // Right Y-axis labels
+  var rightX = padL + innerW + 6;
+  var rightYLabels = [0,25,50,75,100].map(function(p){
+    return '<text x="'+rightX+'" y="'+(yPos(p)+4)+'" text-anchor="start" font-size="9" fill="var(--muted)">'+p+'%</text>';
   }).join('');
   var chartSVG = '<svg viewBox="0 0 '+chartW+' '+chartH+'" style="width:100%;max-width:'+chartW+'px;height:auto;display:block;">'
-    // Grid
+    // Grid axes
     +'<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(padT+innerH)+'" stroke="var(--border)" stroke-width="1"/>'
     +'<line x1="'+padL+'" y1="'+(padT+innerH)+'" x2="'+(padL+innerW)+'" y2="'+(padT+innerH)+'" stroke="var(--border)" stroke-width="1"/>'
-    // Y axis labels
-    +'<text x="'+(padL-4)+'" y="'+(padT+4)+'" text-anchor="end" font-size="9" fill="var(--muted)">100%</text>'
-    +'<text x="'+(padL-4)+'" y="'+(padT+innerH/2+4)+'" text-anchor="end" font-size="9" fill="var(--muted)">50%</text>'
-    +'<text x="'+(padL-4)+'" y="'+(padT+innerH+4)+'" text-anchor="end" font-size="9" fill="var(--muted)">0%</text>'
-    // 50% grid line
+    // Left Y axis labels (0, 25, 50, 75, 100)
+    +'<text x="'+(padL-4)+'" y="'+(yPos(100)+4)+'" text-anchor="end" font-size="9" fill="var(--muted)">100%</text>'
+    +'<text x="'+(padL-4)+'" y="'+(yPos(75)+4)+'" text-anchor="end" font-size="9" fill="var(--muted)">75%</text>'
+    +'<text x="'+(padL-4)+'" y="'+(yPos(50)+4)+'" text-anchor="end" font-size="9" fill="var(--muted)">50%</text>'
+    +'<text x="'+(padL-4)+'" y="'+(yPos(25)+4)+'" text-anchor="end" font-size="9" fill="var(--muted)">25%</text>'
+    +'<text x="'+(padL-4)+'" y="'+(yPos(0)+4)+'" text-anchor="end" font-size="9" fill="var(--muted)">0%</text>'
+    // Right Y axis labels
+    + rightYLabels
+    // 25%, 50%, 75% horizontal grid lines
+    + gridLines25
     +'<line x1="'+padL+'" y1="'+(padT+innerH/2)+'" x2="'+(padL+innerW)+'" y2="'+(padT+innerH/2)+'" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="3,3"/>'
+    + gridLines75
     // Plan line
     +'<path d="'+planLine+'" stroke="#94a3b8" stroke-width="1.5" fill="none" stroke-dasharray="5,3"/>'
     // Actual line (solid green)
@@ -6321,12 +6355,12 @@ function buildProgrammeV135() {
     // X ticks
     + ticks
     // Legend
-    +'<rect x="'+padL+'" y="'+(padT+innerH+20)+'" width="10" height="2" fill="#22c55e"/>'
-    +'<text x="'+(padL+13)+'" y="'+(padT+innerH+25)+'" font-size="9" fill="var(--muted)">Actual</text>'
-    +'<rect x="'+(padL+60)+'" y="'+(padT+innerH+20)+'" width="10" height="2" fill="#94a3b8"/>'
-    +'<text x="'+(padL+73)+'" y="'+(padT+innerH+25)+'" font-size="9" fill="var(--muted)">Planned</text>'
-    +'<rect x="'+(padL+130)+'" y="'+(padT+innerH+20)+'" width="10" height="2" fill="#22c55e" opacity="0.5"/>'
-    +'<text x="'+(padL+143)+'" y="'+(padT+innerH+25)+'" font-size="9" fill="var(--muted)">Projected</text>'
+    +'<rect x="'+padL+'" y="'+(padT+innerH+22)+'" width="10" height="2" fill="#22c55e"/>'
+    +'<text x="'+(padL+13)+'" y="'+(padT+innerH+27)+'" font-size="9" fill="var(--muted)">Actual</text>'
+    +'<rect x="'+(padL+60)+'" y="'+(padT+innerH+22)+'" width="10" height="2" fill="#94a3b8"/>'
+    +'<text x="'+(padL+73)+'" y="'+(padT+innerH+27)+'" font-size="9" fill="var(--muted)">Planned</text>'
+    +'<rect x="'+(padL+130)+'" y="'+(padT+innerH+22)+'" width="10" height="2" fill="#22c55e" opacity="0.5"/>'
+    +'<text x="'+(padL+143)+'" y="'+(padT+innerH+27)+'" font-size="9" fill="var(--muted)">Projected</text>'
     +'</svg>';
 
   // ── Financial summary (admin only) ───────────────────────────────────────
@@ -6401,6 +6435,31 @@ function buildProgrammeV135() {
   + '<div style="color:#7f1d1d;"><strong>Pavement wearing course (TCQ) has been removed from this contract.</strong> The 100% figure below reflects the original programme scope. If GanttPro has not been updated to remove these tasks, the "% remaining" is overstated — DGC\'s true completion against revised scope is higher than shown.</div>'
   + '<div style="color:#7f1d1d;margin-top:6px;font-size:10px;font-weight:700;">Action: Sophie (QS) to confirm revised programme removes all TCQ pavement tasks. If removed, ZONE_DEFAULTS and projected finish date should be recalculated.</div>'
   + '</div>'
+
+  // ── EOT (Extension of Time) status block ──────────────────────────────────
+  + (function(){
+      var origEnd = '12 Jun 2026', agreedEnd = '3 Jul 2026', eotWDs = 5;
+      var eotCalDays = Math.round((new Date('2026-07-03') - new Date('2026-06-12')) / 86400000);
+      return '<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid #38bdf8;border-radius:8px;padding:12px 14px;margin-bottom:14px;">'
+        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">'
+        + '<div>'
+        +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px;">Extension of Time (EOT)</div>'
+        +   '<div style="display:flex;gap:24px;flex-wrap:wrap;">'
+        +     '<div><div style="font-size:9px;color:var(--muted);">Original end</div><div style="font-size:14px;font-weight:700;color:var(--text);">'+origEnd+'</div></div>'
+        +     '<div style="color:var(--muted);padding-top:10px;">&#8594;</div>'
+        +     '<div><div style="font-size:9px;color:var(--muted);">Agreed end (with EOT)</div><div style="font-size:14px;font-weight:800;color:#38bdf8;">'+agreedEnd+'</div></div>'
+        +     '<div><div style="font-size:9px;color:var(--muted);">EOT applied</div><div style="font-size:14px;font-weight:700;color:#22c55e;">+'+eotWDs+' working days</div><div style="font-size:9px;color:var(--muted);">(+'+eotCalDays+' calendar days)</div></div>'
+        +   '</div>'
+        + '</div>'
+        + '<div style="font-size:10px;color:var(--muted);max-width:260px;line-height:1.6;border-left:1px solid var(--border);padding-left:12px;">'
+        +   '<strong style="color:var(--text);">How EOT works in this app:</strong><br>'
+        +   'EOT is <em>added at the end</em> — the completion date moves later, but individual task dates stay as-is in GanttPro. '
+        +   'If EOT is distributed through the programme (tasks shifted forward), a new GanttPro upload is needed to reflect that here. '
+        +   'To update: export GanttPro → re-upload via Admin tab.'
+        + '</div>'
+        + '</div>'
+        + '</div>';
+    })()
 
   // ── KPI cards row ─────────────────────────────────────────────────────────
   + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:18px;">'
