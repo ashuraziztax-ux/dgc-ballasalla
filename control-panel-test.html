@@ -2696,7 +2696,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-27T00:15:00'); // date + time of this push
+const LAST_UPDATED = new Date('2026-05-27T00:30:00'); // date + time of this push
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -9101,33 +9101,36 @@ function buildTwoWeekReport() {
 
   // ── Zone rows + OVERALL (consistent weighted calc) ───────────────────────
   var zoneRows = '';
-  var _totBud = 0, _wgtPlan = 0, _wgtAct = 0;
+  var _totBud = 0, _wgtAct = 0;
   ZONES.forEach(function(z) {
     var act = getZoneProgress(z.id);
     var pln = Math.round(getZonePlannedPct ? getZonePlannedPct(z.id) : 0);
     var bud = z.budget || 0;
-    _totBud += bud; _wgtPlan += bud * pln; _wgtAct += bud * act;
+    _totBud += bud; _wgtAct += bud * act;
     var gap = act - pln;
-    var rag   = gap >= 2 ? '#16a34a' : gap <= -5 ? '#dc2626' : '#d97706';
-    var ragBg = gap >= 2 ? '#f0fdf4' : gap <= -5 ? '#fef2f2' : '#fffbeb';
-    var ragLbl= gap >= 2 ? 'Ahead'   : gap <= -5 ? 'Behind'  : 'On Track';
+    var hasConstraint = typeof ZONE_CONSTRAINTS !== 'undefined' && ZONE_CONSTRAINTS[z.id];
+    var isEOT = pln >= 100 && act < 100 && hasConstraint;
+    var rag   = isEOT ? '#d97706' : gap >= 2 ? '#16a34a' : gap <= -5 ? '#dc2626' : '#d97706';
+    var ragBg = isEOT ? '#fffbeb' : gap >= 2 ? '#f0fdf4' : gap <= -5 ? '#fef2f2' : '#fffbeb';
+    var ragLbl= isEOT ? 'EOT'     : gap >= 2 ? 'Ahead'   : gap <= -5 ? 'Behind'  : 'On Track';
+    var gapStr= isEOT ? 'EOT*'    : (gap >= 0 ? '+' : '') + gap + '%';
     var val = bud > 0 ? '£' + Math.round(bud/1000) + 'k' : '—';
     var _plnTd = (pln >= 100 && act < 100)
-      ? '<td style="text-align:right;color:#d97706;" title="Plan% from original programme dates. ' + act + '% physical complete.">' + pln + '%*</td>'
+      ? '<td style="text-align:right;color:#d97706;" title="Plan% from last GanttPro upload. ' + (hasConstraint||'Outstanding work carried forward under EOT.') + '">' + pln + '%*</td>'
       : '<td style="text-align:right;">' + pln + '%</td>';
     zoneRows += '<tr>'
-      + '<td style="font-weight:600;white-space:nowrap;">Z' + z.id + ' ' + (z.shortName||z.name) + '</td>'
+      + '<td style="font-weight:600;white-space:nowrap;">' + (z.shortName||z.name) + '</td>'
       + '<td style="color:#64748b;">' + val + '</td>'
       + _plnTd
       + '<td style="text-align:right;font-weight:700;">' + act + '%</td>'
-      + '<td style="text-align:right;color:' + (gap>=0?'#16a34a':'#dc2626') + ';font-weight:600;">'
-        + (gap>=0?'+':'') + gap + '%</td>'
+      + '<td style="text-align:right;color:' + (isEOT?'#d97706':gap>=0?'#16a34a':'#dc2626') + ';font-weight:600;">' + gapStr + '</td>'
       + '<td style="text-align:center;background:' + ragBg + ';color:' + rag
         + ';font-weight:700;border-radius:4px;padding:1px 6px;">' + ragLbl + '</td>'
       + '</tr>';
   });
-  var plannedPct = _totBud > 0 ? Math.round(_wgtPlan / _totBud) : 0;
-  var actualPct  = _totBud > 0 ? Math.round(_wgtAct  / _totBud) : 0;
+  // Overall: use canonical DS.plannedPct (anchored to agreed deadline 3 Jul), not task-weighted avg
+  var plannedPct = (window.DS && typeof window.DS.plannedPct === 'number') ? Math.round(window.DS.plannedPct) : Math.round(getTimeProgress ? getTimeProgress() : 0);
+  var actualPct  = _totBud > 0 ? Math.round(_wgtAct / _totBud) : 0;
   var gapPct     = actualPct - plannedPct;
   var overallStatus = gapPct >= 2  ? 'Ahead of Programme'
                     : gapPct <= -5 ? 'Behind Programme'
@@ -9138,10 +9141,13 @@ function buildTwoWeekReport() {
     + '<td colspan="2">OVERALL</td>'
     + '<td style="text-align:right;">' + plannedPct + '%</td>'
     + '<td style="text-align:right;">' + actualPct + '%</td>'
-    + '<td style="text-align:right;color:' + overallCol + ';"><' + (gapPct>=0?'+':'') + gapPct + '%</td>'
+    + '<td style="text-align:right;color:' + overallCol + ';">' + (gapPct>=0?'+':'') + gapPct + '%</td>'
     + '<td style="text-align:center;background:' + overallBg + ';color:' + overallCol
       + ';font-weight:800;border-radius:4px;">' + overallStatus + '</td>'
-    + '</tr>';
+    + '</tr>'
+    + '<tr><td colspan="6" style="font-size:9px;color:#64748b;padding-top:4px;">'
+    + '* Plan% from last GanttPro upload (26 May 2026). EOT = zone past programme date, delay attributable to HPM subcontractor — not DGC. Overall % uses agreed deadline (3 Jul 2026).'
+    + '</td></tr>';
 
   // ── Financial ──────────────────────────────────────────────────────────────
   var contractSum   = (typeof CONTRACT_SUM !== 'undefined') ? CONTRACT_SUM : 450142;
@@ -9490,28 +9496,29 @@ function buildFortnightlyReport() {
     var act    = getZoneProgress(z.id);
     var pln    = Math.round(getZonePlannedPct ? getZonePlannedPct(z.id) : 0);
     var gap    = act - pln;
-    var rag    = gap >= 2 ? '#16a34a' : gap <= -5 ? '#dc2626' : '#d97706';
-    var ragBg  = gap >= 2 ? '#f0fdf4' : gap <= -5 ? '#fef2f2' : '#fffbeb';
-    var ragLbl = gap >= 2 ? 'Ahead'   : gap <= -5 ? 'Behind'  : 'On Track';
-    var gapStr = (gap >= 0 ? '+' : '') + gap + '%';
+    var hasConstraint = typeof ZONE_CONSTRAINTS !== 'undefined' && ZONE_CONSTRAINTS[z.id];
+    var isEOT = pln >= 100 && act < 100 && hasConstraint;
+    var rag    = isEOT ? '#d97706' : gap >= 2 ? '#16a34a' : gap <= -5 ? '#dc2626' : '#d97706';
+    var ragBg  = isEOT ? '#fffbeb' : gap >= 2 ? '#f0fdf4' : gap <= -5 ? '#fef2f2' : '#fffbeb';
+    var ragLbl = isEOT ? 'EOT'     : gap >= 2 ? 'Ahead'   : gap <= -5 ? 'Behind'  : 'On Track';
+    var gapStr = isEOT ? 'EOT*'    : (gap >= 0 ? '+' : '') + gap + '%';
     var val    = bud > 0 ? '£' + Math.round(bud/1000) + 'k' : '—';
     totalBudget += bud;
     totalSpent  += bud * act / 100;
     var _plnTd2 = (pln >= 100 && act < 100)
-      ? '<td style="text-align:right;color:#d97706;" title="Plan% from original programme dates. ' + act + '% physical complete. ' + ((typeof ZONE_CONSTRAINTS !== 'undefined' && ZONE_CONSTRAINTS[z.id]) || 'Outstanding work carried forward under EOT.') + '">' + pln + '%*</td>'
+      ? '<td style="text-align:right;color:#d97706;" title="Plan% from last GanttPro upload. ' + (hasConstraint||'Outstanding work carried forward under EOT.') + '">' + pln + '%*</td>'
       : '<td style="text-align:right;">' + pln + '%</td>';
     zoneRows += '<tr>'
-      + '<td style="font-weight:600;white-space:nowrap;">Z' + z.id + ' ' + (z.shortName||z.name) + '</td>'
+      + '<td style="font-weight:600;white-space:nowrap;">' + (z.shortName||z.name) + '</td>'
       + '<td style="color:#64748b;">' + val + '</td>'
       + _plnTd2
       + '<td style="text-align:right;font-weight:700;">' + act + '%</td>'
-      + '<td style="text-align:right;color:' + (gap>=0?'#16a34a':'#dc2626') + ';font-weight:600;">' + gapStr + '</td>'
+      + '<td style="text-align:right;color:' + (isEOT?'#d97706':gap>=0?'#16a34a':'#dc2626') + ';font-weight:600;">' + gapStr + '</td>'
       + '<td style="text-align:center;background:' + ragBg + ';color:' + rag + ';font-weight:700;border-radius:4px;padding:1px 6px;">' + ragLbl + '</td>'
       + '</tr>';
   });
-  // Totals row — derived from same zone figures (consistent maths)
   var totAct = totalBudget > 0 ? Math.round(totalSpent/totalBudget*100) : 0;
-  var totPln = totalBudget > 0 ? Math.round(_wgtPlan2/totalBudget) : 0;
+  var totPln = (window.DS && typeof window.DS.plannedPct === 'number') ? Math.round(window.DS.plannedPct) : Math.round(getTimeProgress ? getTimeProgress() : 0);
   var totGap = totAct - totPln;
   var totSts = totGap >= 2  ? 'Ahead of Programme' : totGap <= -5 ? 'Behind Programme' : 'On Programme';
   var totCol = totGap >= 2 ? '#16a34a' : totGap <= -5 ? '#dc2626' : '#d97706';
@@ -9522,7 +9529,10 @@ function buildFortnightlyReport() {
     + '<td style="text-align:right;">' + totAct + '%</td>'
     + '<td style="text-align:right;color:' + totCol + ';">' + (totGap>=0?'+':'') + totGap + '%</td>'
     + '<td style="text-align:center;background:' + totBg + ';color:' + totCol + ';font-weight:800;border-radius:4px;">' + totSts + '</td>'
-    + '</tr>';
+    + '</tr>'
+    + '<tr><td colspan="6" style="font-size:7pt;color:#64748b;padding-top:4px;">'
+    + '* Plan% from last GanttPro upload (26 May 2026). EOT = zone past programme date, delay attributable to HPM subcontractor — not DGC. Overall % uses agreed deadline (3 Jul 2026).'
+    + '</td></tr>';
 
   // ── Works completed (last 14 days, tasks ending in period with progress) ───
   var completedRows = '';
