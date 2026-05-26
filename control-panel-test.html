@@ -939,6 +939,7 @@ function clearForm() {
   <button class="no-client" onclick="showTab('gantt',this)">Gantt Chart</button>
   <button class="no-client" onclick="showTab('daily',this)">Daily Log</button>
   <button onclick="showTab('drawings',this)">&#128196; Drawings</button>
+  <button class="no-client" onclick="showTab('materials',this)">&#128230; Materials</button>
   <button class="admin-only" onclick="showTab('staffhours',this)">Staff Hours</button>
   <button class="admin-only" onclick="showTab('financial',this)">Financials</button>
   <button class="admin-only" onclick="showTab('delays',this)">Delays</button>
@@ -2119,6 +2120,11 @@ function clearForm() {
 
 <div id="tab-data" class="tab-content admin-only">
   <p style="padding:20px;color:var(--muted);font-size:12px;">Loading data layer…</p>
+</div>
+
+<!-- ══════════════════════════════ MATERIALS ══════════════════════════════ -->
+<div id="tab-materials" class="tab-content no-client">
+  <div id="materials-body"></div>
 </div>
 
 <div id="tab-risks" class="tab-content">
@@ -6784,6 +6790,7 @@ function showTab(name, btn) {
   if(name === 'gantt')    { try { buildGantt(); } catch(e) { console.error('buildGantt error:', e); var gb=document.getElementById('gantt-body'); if(gb) gb.innerHTML='<tr><td colspan="4" style="padding:20px;color:#ef4444;font-size:12px;">&#9888; Chart error: '+e.message+' — check console for details.</td></tr>'; } }
   if(name === 'financial'){ try { buildFinancialChart(); } catch(e){} }
   if(name === 'report')   buildTwoWeekReport();
+  if(name === 'materials') buildMaterials();
   if(name === 'risks')    buildRiskTickets();
   if(name === 'sitemap')  buildSiteMap();
   if(name === 'staffhours') buildStaffHours();
@@ -9803,6 +9810,119 @@ function buildRTLogHTML(tickets) {
   });
   h.push('</tbody></table></div>');
   return h.join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// MATERIALS TAB
+// Key materials for Ballasalla Phase 4. Status + notes stored
+// in localStorage under 'dgc_materials'. Pre-seeded on first load.
+// ══════════════════════════════════════════════════════════════
+var MAT_DEFAULTS = [
+  // id, category, name, unit, qtyTotal, notes
+  {id:'m01', cat:'Pipe',      name:'SW Pipe 225mm',           unit:'m',    qty:'—', status:'ok',      note:''},
+  {id:'m02', cat:'Pipe',      name:'SW Pipe 150mm (gullies)', unit:'m',    qty:'—', status:'ok',      note:''},
+  {id:'m03', cat:'Pipe',      name:'FW Pipe 150mm',           unit:'m',    qty:'—', status:'ok',      note:''},
+  {id:'m04', cat:'Pipe',      name:'FW Tails 110mm',          unit:'m',    qty:'—', status:'ok',      note:''},
+  {id:'m05', cat:'Aggregate', name:'Type 1 Subbase',          unit:'t',    qty:'—', status:'ok',      note:''},
+  {id:'m06', cat:'Aggregate', name:'6F2 Capping Layer',       unit:'t',    qty:'—', status:'warning', note:'RFI 04 open — supply constraint. No substitution without Dandara written approval.'},
+  {id:'m07', cat:'Aggregate', name:'10mm Rounded Bedding',    unit:'t',    qty:'—', status:'warning', note:'RT 101318 — shortage flagged. Check before Lower Road backfill.'},
+  {id:'m08', cat:'Geotextile','name':'Terram (Geotextile)',   unit:'m²',   qty:'—', status:'ok',      note:''},
+  {id:'m09', cat:'Concrete',  name:'Ready Mix (Manholes)',    unit:'m³',   qty:'—', status:'ok',      note:''},
+  {id:'m10', cat:'MH',        name:'Precast MH Rings/Slabs',  unit:'no.',  qty:'—', status:'ok',      note:''},
+  {id:'m11', cat:'Road',      name:'Road Gullies',            unit:'no.',  qty:'—', status:'ok',      note:''},
+  {id:'m12', cat:'Road',      name:'Kerb Units',              unit:'no.',  qty:'—', status:'ok',      note:'In progress — Top Road 53%, Mid Road 53%, Lower Road 25%'},
+  {id:'m13', cat:'Road',      name:'Tarmac Roadbase',         unit:'t',    qty:'—', status:'pending', note:'HPM subcontractor supply. Top Road & Mid Road outstanding.'},
+  {id:'m14', cat:'Road',      name:'Tarmac Wearing Course',   unit:'t',    qty:'—', status:'pending', note:'TCQ subcontractor supply.'},
+  {id:'m15', cat:'Services',  name:'Duct (services)',         unit:'m',    qty:'—', status:'ok',      note:''},
+  {id:'m16', cat:'Services',  name:'Tote Bags (V14)',         unit:'no.',  qty:'—', status:'ok',      note:'V14 complete — tote bags placed over all laterals.'},
+];
+
+var MAT_STATUS = {
+  ok:      {lbl:'OK / On Site',   col:'#22c55e', bg:'#dcfce7'},
+  warning: {lbl:'Issue / Watch',  col:'#d97706', bg:'#fef3c7'},
+  pending: {lbl:'Not Yet Needed', col:'#64748b', bg:'#f1f5f9'},
+  low:     {lbl:'Running Low',    col:'#ef4444', bg:'#fee2e2'},
+  ordered: {lbl:'On Order',       col:'#3b82f6', bg:'#dbeafe'},
+};
+
+function matLoad() {
+  return lsGet('dgc_materials', null) || MAT_DEFAULTS.map(function(m){ return Object.assign({},m); });
+}
+function matSave(data) { lsSet('dgc_materials', data); }
+
+function buildMaterials() {
+  var el = document.getElementById('materials-body');
+  if (!el) return;
+  var mats = matLoad();
+
+  // Group by category
+  var cats = {};
+  mats.forEach(function(m){ if(!cats[m.cat]) cats[m.cat]=[];  cats[m.cat].push(m); });
+
+  var html = [];
+  html.push('<div style="padding:16px;max-width:960px;">');
+  html.push('<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;">');
+  html.push('<div style="font-size:17px;font-weight:800;color:var(--text);">&#128230; Materials Register</div>');
+  html.push('<div style="display:flex;gap:8px;flex-wrap:wrap;">');
+  Object.entries(MAT_STATUS).forEach(function(kv){
+    html.push('<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;background:'+kv[1].bg+';color:'+kv[1].col+';">'+kv[1].lbl+'</span>');
+  });
+  html.push('</div></div>');
+
+  // Warning banner for open issues
+  var warnings = mats.filter(function(m){ return m.status==='warning' || m.status==='low'; });
+  if (warnings.length) {
+    html.push('<div style="background:#fef3c7;border:1px solid #d97706;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#92400e;">');
+    html.push('<strong>⚠ ' + warnings.length + ' material issue(s) to watch:</strong> ');
+    html.push(warnings.map(function(m){ return m.name; }).join(' · '));
+    html.push('</div>');
+  }
+
+  Object.keys(cats).forEach(function(cat) {
+    html.push('<div style="margin-bottom:16px;">');
+    html.push('<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#38bdf8;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border);">'+cat+'</div>');
+    html.push('<div style="display:grid;gap:8px;">');
+    cats[cat].forEach(function(m) {
+      var st = MAT_STATUS[m.status] || MAT_STATUS.ok;
+      html.push('<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid '+st.col+';border-radius:8px;padding:10px 14px;display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;" id="mrow-'+m.id+'">');
+      // Name + status badge
+      html.push('<div style="flex:1;min-width:200px;">');
+      html.push('<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">');
+      html.push('<span style="font-size:13px;font-weight:600;color:var(--text);">'+m.name+'</span>');
+      html.push('<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:'+st.bg+';color:'+st.col+';">'+st.lbl+'</span>');
+      html.push('</div>');
+      if (m.note) html.push('<div style="font-size:11px;color:var(--muted);">'+m.note+'</div>');
+      html.push('</div>');
+      // Controls
+      html.push('<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">');
+      // Status select
+      html.push('<select onchange="matUpdate(\''+m.id+'\',\'status\',this.value)" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);">');
+      Object.entries(MAT_STATUS).forEach(function(kv){
+        html.push('<option value="'+kv[0]+'"'+(m.status===kv[0]?' selected':'')+'>'+kv[1].lbl+'</option>');
+      });
+      html.push('</select>');
+      // Note edit
+      html.push('<input type="text" value="'+m.note.replace(/"/g,'&quot;')+'" placeholder="Add note…" onblur="matUpdate(\''+m.id+'\',\'note\',this.value)" style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);width:220px;">');
+      html.push('</div>');
+      html.push('</div>');
+    });
+    html.push('</div></div>');
+  });
+
+  html.push('<div style="margin-top:12px;font-size:10px;color:var(--muted);">Changes saved automatically · <a href="#" onclick="matReset();return false;" style="color:var(--muted);">Reset to defaults</a></div>');
+  html.push('</div>');
+  el.innerHTML = html.join('');
+}
+
+function matUpdate(id, field, val) {
+  var mats = matLoad();
+  var m = mats.find(function(x){ return x.id===id; });
+  if (m) { m[field] = val; matSave(mats); buildMaterials(); }
+}
+function matReset() {
+  if (!confirm('Reset materials register to defaults?')) return;
+  lsSet('dgc_materials', null);
+  buildMaterials();
 }
 
 function buildRiskTickets() {
