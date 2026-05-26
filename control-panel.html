@@ -1184,7 +1184,7 @@ function clearForm() {
           <div>
             <div class="kpi-label">Days Remaining</div>
             <div class="kpi-value" id="kpi-days">—</div>
-            <div class="kpi-sub" id="kpi-days-sub">to agreed completion 26 Jun</div>
+            <div class="kpi-sub" id="kpi-days-sub">to agreed completion 3 Jul</div>
           </div>
           <div>
             <div class="kpi-label">Working Days Left</div>
@@ -1783,7 +1783,7 @@ function clearForm() {
       <div>&bull; QS to update BoQ/cashflow once programme zones revised to new layout.</div>
       <div>&bull; <strong style="color:var(--accent2)">Contract sum discrepancy:</strong> Signed contract £450,000 vs BoQ total £450,142.39 &mdash; £142 gap. Reconcile at final account.</div>
       <div>&bull; <strong style="color:var(--orange)">Main contractor&rsquo;s discount:</strong> BoQ includes -£10,800.75 Dandara discount &ldquo;to be omitted at FA&rdquo; &mdash; track and exclude from final settlement.</div>
-      <div>&bull; <strong style="color:var(--muted)">Defects period:</strong> 12 months from PC (agreed 26 Jun 2026). Estimated defects end: <strong>26 Jun 2027</strong>. Final retention release (~£1,960) due at defects end.</div>
+      <div>&bull; <strong style="color:var(--muted)">Defects period:</strong> 12 months from PC (agreed 3 Jul 2026). Estimated defects end: <strong>3 Jul 2027</strong>. Final retention release (~£1,960) due at defects end.</div>
     </div>
   </div>
 </div>
@@ -4101,7 +4101,7 @@ function buildEOTPanel() {
   var note = document.createElement('div');
   note.style.cssText = 'font-size:10px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px solid var(--border);';
   note.textContent = 'EOT = Extension of Time. Client-instructed delays = grounds for formal EOT claim. '
-    + 'Agreed end date (26 Jun) confirmed verbally with Dandara — ensure formal written confirmation obtained before final account.';
+    + 'Agreed end date (3 Jul) confirmed per GanttPro export 26 May 2026 — ensure formal written confirmation obtained before final account.';
   el.appendChild(note);
 }
 
@@ -6393,7 +6393,7 @@ function buildForecastTab() {
   var kpis = [
     { lbl:'Actual complete',  val: overallPct.toFixed(1)+'%',  col:'var(--text)' },
     { lbl:'Efficiency',       val: efficiencyPct+'% of plan',  col: effKpiCol },
-    { lbl:'vs 26 Jun',        val: avdTxt,                     col: avdCol },
+    { lbl:'vs 3 Jul',        val: avdTxt,                     col: avdCol },
     { lbl:'Realistic end',    val: dragDiff === 0 ? 'On time' : (dragDiff > 0 ? '+'+dragDiff+' days' : dragDiff+' days'),
                               col: dragDiff > 0 ? '#f87171' : dragDiff < 0 ? '#4ade80' : 'var(--text)' },
     { lbl:'In dispute',       val: inDisputeWDs.toFixed(1)+' working days',    col:'#f97316', adminOnly: true },
@@ -6416,7 +6416,7 @@ function buildForecastTab() {
   var note = document.createElement('div');
   note.style.cssText = 'margin-top:12px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);';
   note.innerHTML =
-    'Extension of Time (EOT) baked into 26 Jun: <b style="color:var(--text);">'+eotWDs.toFixed(1)+' working days</b>'
+    'Extension of Time (EOT) baked into 3 Jul: <b style="color:var(--text);">'+eotWDs.toFixed(1)+' working days</b>'
     +' &nbsp;·&nbsp; Agreed &amp; signed: <b style="color:#f59e0b;">'+agreedSignedWDs.toFixed(1)+' working days</b>'
     +' &nbsp;·&nbsp; In dispute: <b style="color:#f97316;">'+inDisputeWDs.toFixed(1)+' working days</b>'
     +' &nbsp;·&nbsp; Absorbed: <b style="color:#6366f1;">'+absorbedWDs.toFixed(1)+' working days</b>'
@@ -6473,7 +6473,7 @@ function buildEfficiencyTab() {
     +   '<div style="font-size:9px;color:var(--muted);margin-top:2px;">plan pace vs actual pace</div>'
     + '</div>'
     + '<div style="background:var(--surface2);border-radius:8px;padding:12px;text-align:center;">'
-    +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">Realistic vs 26 Jun</div>'
+    +   '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">Realistic vs 3 Jul</div>'
     +   '<div style="font-size:20px;font-weight:900;color:' + (latest ? (latest.diff > 0 ? '#f87171' : latest.diff < 0 ? '#4ade80' : 'var(--text)') : 'var(--muted)') + ';">' + (latest ? (latest.diff === 0 ? 'On time' : (latest.diff > 0 ? '+'+latest.diff+' days' : latest.diff+' days')) : '—') + '</div>'
     +   '<div style="font-size:9px;color:var(--muted);margin-top:2px;">' + (latest ? latest.end : '') + '</div>'
     + '</div>'
@@ -6528,7 +6528,7 @@ function buildEfficiencyTab() {
       + '<th style="text-align:center;padding:6px 8px;color:var(--muted);font-weight:700;">Actual %</th>'
       + '<th style="text-align:center;padding:6px 8px;color:var(--muted);font-weight:700;">Plan %</th>'
       + '<th style="text-align:center;padding:6px 8px;color:var(--muted);font-weight:700;">Drag ×</th>'
-      + '<th style="text-align:right;padding:6px 8px;color:var(--muted);font-weight:700;white-space:nowrap;">vs 26 Jun</th>'
+      + '<th style="text-align:right;padding:6px 8px;color:var(--muted);font-weight:700;white-space:nowrap;">vs 3 Jul</th>'
       + '</tr></thead><tbody>';
 
     log.forEach(function(r, i) {
@@ -6649,7 +6649,7 @@ function buildProgrammeHeader() {
     +   '<div style="background:var(--surface2);border-radius:8px;padding:13px;text-align:center;border:1px solid ' + diffCol(dragDiff) + '30;">'
     +     '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">Expected End Date</div>'
     +     '<div style="font-size:16px;font-weight:900;color:' + diffCol(dragDiff) + ';">' + fd(dragEnd) + '</div>'
-    +     '<div style="font-size:9px;color:' + diffCol(dragDiff) + ';font-weight:700;margin-top:3px;">' + diffTxt(dragDiff) + ' vs 26 Jun</div>'
+    +     '<div style="font-size:9px;color:' + diffCol(dragDiff) + ';font-weight:700;margin-top:3px;">' + diffTxt(dragDiff) + ' vs 3 Jul</div>'
     +   '</div>'
     // Contract Deadline countdown (replaces old WD-pace tile which gave contradictory date v117)
     +   (function(){
@@ -8214,7 +8214,7 @@ function showTab(name, btn) {
     { nr:'10', ref:'RT 101308 / CCE 101233', desc:'Concrete found at Plot 10 & MH F4.2 — breaking required',       amt:1513.86,   status:'certified',   notes:'', eot:'' },
     { nr:'11', ref:'RT 101310 / CCE 101234', desc:'Asbestos found — double bagged, sealed, to DC skips',           amt:341.88,    status:'certified',   notes:'', eot:'' },
     { nr:'12', ref:'RT 101008 / CCE 101228', desc:'300mm scanning — 22.04 to 30.04 (7 days)',                      amt:1508.70,   status:'certified',   notes:'Follow-on from Var 5', eot:'' },
-    { nr:'13', ref:'RT 101008 / CCE 101228', desc:'300mm scanning — 01.05 to end of excavation (estimated)',       amt:3017.40,   status:'estimated',   notes:'Ongoing — period and final total TBC', eot:'' },
+    { nr:'13', ref:'RT 101008 / CCE 101228', desc:'300mm scanning — 01.05 to end of excavation (estimated)',       amt:2954.50,   status:'estimated',   notes:'Ongoing — period and final total TBC', eot:'' },
     { nr:'14', ref:'RT 101313',              desc:'Tote bags over services/laterals for next contractor',           amt:921.79,    status:'estimated',   notes:'H&S officer instruction — estimated', eot:'' },
     { nr:'15', ref:'—',                      desc:'Omit edgings (top road only) — est. 294m @ £18.93',             amt:-5565.42,  status:'estimated',   notes:'Estimated — top road section only', eot:'' },
     { nr:'16', ref:'—',                      desc:'Omit footpath (top road only) — est. 221m² @ £66.47',           amt:-14689.87, status:'estimated',   notes:'Estimated — top road section only', eot:'' },
@@ -8224,8 +8224,8 @@ function showTab(name, btn) {
     { nr:'A',  ref:'EoT-1', desc:'EoT 1 — 1 week additional prelims (24.03–30.03.2026)',                           amt:4506.05,   status:'certified',   notes:'Revised completion: 19 Jun 2026', eot:'5 days' },
     { nr:'B',  ref:'EoT-2', desc:'EoT 2 — 4.5 days additional prelims (31.03–08.04.2026)',                         amt:5576.90,   status:'certified',   notes:'Revised completion: 26 Jun 2026', eot:'4.5 days' },
     { nr:'C',  ref:'EoT-3', desc:'EoT 3 — 0.5 days (09.04–21.04.2026)',                                            amt:685.47,    status:'certified',   notes:'Revised completion: 26 Jun 2026', eot:'0.5 days' },
-    { nr:'D',  ref:'EoT-4', desc:'EoT 4 — 1 day (13.04.2026) — NOT YET SUBMITTED',                                amt:2955.40,   status:'not-claimed', notes:'Entitlement to be reconciled at completion', eot:'1 day' },
-    { nr:'E',  ref:'EoT-5', desc:'EoT 5 — 1 day (14–15.04.2026) — NOT YET SUBMITTED',                             amt:4433.10,   status:'not-claimed', notes:'Entitlement to be reconciled at completion', eot:'1 day' },
+    { nr:'D',  ref:'EoT-4', desc:'EoT 4 — 1 day (13.04.2026) — NOT YET SUBMITTED',                                amt:1477.70,   status:'not-claimed', notes:'Entitlement to be reconciled at completion', eot:'1 day' },
+    { nr:'E',  ref:'EoT-5', desc:'EoT 5 — 1 day (14–15.04.2026) — NOT YET SUBMITTED',                             amt:1477.70,   status:'not-claimed', notes:'Entitlement to be reconciled at completion', eot:'1 day' },
     { nr:'F',  ref:'EoT-6', desc:'EoT 6 — 0.5 days (23.04.2026) — NOT YET SUBMITTED',                             amt:771.72,    status:'not-claimed', notes:'Entitlement to be reconciled at completion', eot:'0.5 days' },
     { nr:'G',  ref:'EoT-7', desc:'EoT 7 — 2 days (22.04–01.05.2026) — NOT YET SUBMITTED',                         amt:2440.40,   status:'not-claimed', notes:'Entitlement to be reconciled at completion', eot:'2 days' },
     { nr:'H',  ref:'EoT-8', desc:'EoT 8 — 4 days (01.05–ongoing) — NOT YET SUBMITTED',                            amt:4880.80,   status:'not-claimed', notes:'Entitlement to be reconciled at completion', eot:'4 days' },
@@ -8833,7 +8833,7 @@ function buildTwoWeekReport() {
   h.push('<div style="color:#1e293b">'
     + '<div style="font-size:7.5pt;text-transform:uppercase;letter-spacing:.08em;">Revised Target</div>'
     + '<div style="font-size:22pt;font-weight:900;line-height:1;color:#0f172a;">' + plannedPct + '%</div>'
-    + '<div style="font-size:7.5pt;color:#64748b;">26 Jun 2026 (incl. EOT)</div></div>');
+    + '<div style="font-size:7.5pt;color:#64748b;">3 Jul 2026 (incl. EOT)</div></div>');
   h.push('<div style="width:1px;background:#e2e8f0;align-self:stretch;"></div>');
   h.push('<div>'
     + '<div style="font-size:7.5pt;text-transform:uppercase;letter-spacing:.08em;">Variance</div>'
@@ -8897,7 +8897,7 @@ function buildTwoWeekReport() {
   h.push('<tr><td>Original programme</td><td style="text-align:right;">—</td><td style="text-align:right;">12 Jun 2026</td></tr>');
   h.push('<tr style="background:#f0fdf4;"><td style="font-weight:700;color:#16a34a;">Agreed EOT 1</td>'
     + '<td style="text-align:right;font-weight:700;color:#16a34a;">+' + eotDays + ' WDs</td>'
-    + '<td style="text-align:right;font-weight:700;color:#16a34a;">26 Jun 2026</td></tr>');
+    + '<td style="text-align:right;font-weight:700;color:#16a34a;">3 Jul 2026</td></tr>');
   h.push('</table>');
   h.push('</div>'); // right panel
   h.push('</div>'); // rpt-two
@@ -9220,12 +9220,12 @@ function buildFortnightlyReport() {
   h.push('<div class="status-banner" style="background:' + overallBg + ';border:1px solid ' + overallCol + '33;margin-top:12px;">');
   h.push('<div style="color:' + overallCol + '"><div class="lbl">Current Progress</div><div class="big">' + actualPct + '%</div><div style="font-size:7.5pt;color:#64748b;">actual complete</div></div>');
   h.push('<div style="width:1px;background:#e2e8f0;align-self:stretch;"></div>');
-  h.push('<div style="color:#1e293b"><div class="lbl">Revised Target</div><div class="big" style="color:#0f172a;">' + plannedPct + '%</div><div style="font-size:7.5pt;color:#64748b;">26 Jun 2026 (incl. EOT)</div></div>');
+  h.push('<div style="color:#1e293b"><div class="lbl">Revised Target</div><div class="big" style="color:#0f172a;">' + plannedPct + '%</div><div style="font-size:7.5pt;color:#64748b;">3 Jul 2026 (incl. EOT)</div></div>');
   h.push('<div style="width:1px;background:#e2e8f0;align-self:stretch;"></div>');
   h.push('<div><div class="lbl">Variance</div><div style="font-size:16pt;font-weight:800;color:' + overallCol + ';">' + (gapPct>=0?'+':'') + gapPct + '%</div></div>');
   h.push('<div style="flex:1;text-align:right;">'
     + '<span class="tag" style="background:' + overallCol + ';color:#fff;">' + overallStatus + '</span>'
-    + '<br><span style="font-size:7.5pt;color:#64748b;display:block;margin-top:4px;">Revised completion: 26 Jun 2026</span>'
+    + '<br><span style="font-size:7.5pt;color:#64748b;display:block;margin-top:4px;">Revised completion: 3 Jul 2026</span>'
     + '<br><span style="font-size:7pt;color:#94a3b8;display:block;margin-top:2px;">Last updated: ' + reportDate + '</span>'
     + '</div>');
   h.push('</div>');
@@ -9306,7 +9306,7 @@ function buildFortnightlyReport() {
     + 'border-bottom:2px solid #1e3a5f;">Completion Outlook</td></tr>');
   h.push('<tr>'
     + '<td>Agreed completion date</td>'
-    + '<td style="text-align:right;font-weight:700;color:#16a34a;">26 Jun 2026</td></tr>');
+    + '<td style="text-align:right;font-weight:700;color:#16a34a;">3 Jul 2026</td></tr>');
   h.push('<tr>'
     + '<td>Current programme forecast</td>'
     + '<td style="text-align:right;font-weight:700;color:' + (_cfo&&_cfo.late?'#dc2626':'#16a34a') + ';">'
@@ -9339,7 +9339,7 @@ function buildFortnightlyReport() {
   h.push('<table>');
   h.push('<tr><th>Event</th><th style="text-align:right;">WDs Added</th><th style="text-align:right;">Completion</th></tr>');
   h.push('<tr><td>Original programme</td><td style="text-align:right;">—</td><td style="text-align:right;">12 Jun 2026</td></tr>');
-  h.push('<tr style="background:#f0fdf4;"><td style="font-weight:700;color:#16a34a;">Agreed EOT 1</td><td style="text-align:right;font-weight:700;color:#16a34a;">+' + eotDays + ' WDs</td><td style="text-align:right;font-weight:700;color:#16a34a;">26 Jun 2026</td></tr>');
+  h.push('<tr style="background:#f0fdf4;"><td style="font-weight:700;color:#16a34a;">Agreed EOT 1</td><td style="text-align:right;font-weight:700;color:#16a34a;">+' + eotDays + ' WDs</td><td style="text-align:right;font-weight:700;color:#16a34a;">3 Jul 2026</td></tr>');
   h.push('</table>');
   h.push('</div>'); // end right panel
   h.push('</div>'); // end two-col
@@ -9478,14 +9478,14 @@ function buildFortnightlyReport() {
   h.push('<tr>');
   h.push('<td><span class="' + (zones6Act < 5 ? 'rag-r' : 'rag-a') + '">' + (zones6Act < 5 ? 'RED' : 'AMB') + '</span></td>');
   h.push('<td>Zones H/I/J drainage runs not started. Programme end now tracking to 3 Jul</td>');
-  h.push('<td>Programme overrun beyond EOT (26 Jun)</td>');
+  h.push('<td>Programme overrun beyond EOT (3 Jul)</td>');
   h.push('<td>Confirm resource plan &amp; start date; consider second EOT claim if required</td>');
   h.push('<td>SM + QS</td></tr>');
 
   h.push('<tr>');
   h.push('<td><span class="rag-a">AMB</span></td>');
   h.push('<td>Sections F/G surface works (kerbs, tarmac) pushed to late June. Tarmac pavement due 25 Jun</td>');
-  h.push('<td>Critical path risk to 26 Jun completion</td>');
+  h.push('<td>Critical path risk to 3 Jul completion</td>');
   h.push('<td>Maintain drainage progress; pre-order tarmac; coordinate gang resource</td>');
   h.push('<td>Site Manager</td></tr>');
 
@@ -10297,7 +10297,7 @@ function buildAlerts() {
   var ALERTS = [
     { id:'qs-contract-gap', type:'warning', icon:'&#x1F4CB;', msg:'<strong>QS flag:</strong> Signed contract £450,000 vs BoQ total £450,142.39 &mdash; £142 gap to reconcile at final account. BoQ also contains -£10,800.75 Dandara discount &ldquo;to be omitted at FA&rdquo; &mdash; ensure excluded from final settlement.', adminOnly:true, isQuestion:false },
     { id:'afp1-received',   type:'info',    icon:'&#x2705;',  msg:'<strong>Payment confirmed:</strong> Dandara App. 1 (DGC AFP1+2 combined) &mdash; &pound;156,739.46 received 12 May 2026. Certified by Ian Barnes (Self-Billing Invoice SC193064-x17). Next: AFP 3 ~22 May.', adminOnly:true, isQuestion:false },
-    { id:'programme-warn',  type:'warning', icon:'&#x26A0;&#xFE0F;',  msg:'<strong>Programme position:</strong> Kerbs (0%), Tarmac (0%), Type 1 subbase (0%) not started across any zone per AFP 2. Behind programme &mdash; partly late start (not slippage), partly slower progress in places. Agreed revised completion with Dandara: <strong>26 Jun 2026</strong>. Formal EOT to be raised when closer.', adminOnly:false, isQuestion:false },
+    { id:'programme-warn',  type:'warning', icon:'&#x26A0;&#xFE0F;',  msg:'<strong>Programme position:</strong> Kerbs (0%), Tarmac (0%), Type 1 subbase (0%) not started across any zone per AFP 2. Behind programme &mdash; partly late start (not slippage), partly slower progress in places. Agreed revised completion with Dandara: <strong>3 Jul 2026</strong> (confirmed in GanttPro export 26 May 2026 — ensure written variation signed).', adminOnly:false, isQuestion:false },
     { id:'eot-d-to-i',     type:'warning', icon:'&#x23F1;',  msg:'<strong>EoT D&ndash;I not yet submitted:</strong> &pound;16,167 in Extension of Time prelims (6 events, 10 days) are assessed but not formally raised with Dandara. Submit before Final Account. See Final A/c tab for breakdown.', adminOnly:true, isQuestion:false }
   ];
 
@@ -10691,7 +10691,7 @@ function buildReport() {
   }
   const rptNarr = document.getElementById('rpt-programme-narrative');
   if(rptNarr) {
-    rptNarr.innerHTML = 'Revised completion date agreed with Dandara: <strong>26 Jun 2026</strong>. ' +
+    rptNarr.innerHTML = 'Revised completion date agreed with Dandara: <strong>3 Jul 2026</strong>. ' +
       'The programme position reflects a combination of a delayed start to works (not programme slippage) and some slower progress in certain sections. ' +
       'DGC has raised 7 EOT variations (A–G) for additional prelim weeks. Formal extension of time to be raised when closer — may not be required if time is recovered. ' +
       'Kerbs, tarmac and Type 1 subbase not yet started in any zone as of AFP 2 (30 Apr 2026).';
@@ -10843,7 +10843,7 @@ function buildGantt() {
   }
   const minDate    = new Date(Math.min.apply(null, allDates));
   const maxDate    = new Date(Math.max.apply(null, allDates));
-  // Ensure timeline extends at least 2 weeks past agreed completion (26 Jun 2026)
+  // Ensure timeline extends at least 2 weeks past agreed completion (3 Jul 2026)
   var _ganttFloor  = new Date('2026-07-10T00:00:00');
   const ganttCeil  = new Date(Math.max(maxDate.getTime(), _ganttFloor.getTime()));
   const totalDays  = daysBetween(minDate, ganttCeil) + 5;
@@ -11194,7 +11194,7 @@ var SH_PRICED = {
 
 // PROJECT_START and PROJECT_END already in scope as global dates
 var SH_PROJ_START = new Date(2026, 2, 23); // 23 Mar 2026 (Monday)
-var SH_PROJ_END   = new Date(2026, 5, 29); // 26 Jun 2026
+var SH_PROJ_END   = new Date(2026, 6, 3); // 3 Jul 2026
 
 function shTimeToHours(t) {
   var p = t.split(':');
@@ -11383,7 +11383,7 @@ function shRebuild() {
       'h</div><div class="lbl">Test productive h/man/wk<br><span style="font-size:9px;color:var(--muted);">gross &minus; 60 min</span></div></div>' +
       '<div class="sh-kpi"><div class="val" style="color:#4ade80;">' + costPerMan +
       'h</div><div class="lbl">Test cost h/man/wk<br><span style="font-size:9px;color:var(--muted);">DGC pays gross &minus; 30 min</span></div></div>' +
-      '<div class="sh-kpi"><div class="val" style="color:' + _agrCol + ';font-size:18px;">26 Jun 2026</div>' +
+      '<div class="sh-kpi"><div class="val" style="color:' + _agrCol + ';font-size:18px;">3 Jul 2026</div>' +
       '<div class="lbl">Agreed completion date</div></div>' +
       '<div class="sh-kpi"><div class="val" style="color:' + _curCol + ';font-size:18px;">' + currentExpStr +
       '</div><div class="lbl">Current expected completion<br><span style="font-size:9px;color:var(--muted);">at current rate &amp; hours</span></div></div>' +
@@ -12154,8 +12154,8 @@ function closeZoneHealth() {
     <div class="ph-title">Retention Release Schedule</div>
     <div class="ph-kpi-row" style="grid-template-columns:1fr 1fr 1fr;">
       <div class="ph-kpi"><div class="k-val">£11,253</div><div class="k-lbl">Total Retention Held</div></div>
-      <div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">£5,627</div><div class="k-lbl">Half Release — Practical Completion<br><span style="font-size:10px;color:var(--muted);">~26 Jun 2026</span></div></div>
-      <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">£5,626</div><div class="k-lbl">Full Release — 12 months PC<br><span style="font-size:10px;color:var(--muted);">~26 Jun 2027</span></div></div>
+      <div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">£5,627</div><div class="k-lbl">Half Release — Practical Completion<br><span style="font-size:10px;color:var(--muted);">~3 Jul 2026</span></div></div>
+      <div class="ph-kpi"><div class="k-val" style="color:#4ade80;">£5,626</div><div class="k-lbl">Full Release — 12 months PC<br><span style="font-size:10px;color:var(--muted);">~3 Jul 2027</span></div></div>
     </div>
   </div>
 
@@ -12375,7 +12375,7 @@ function closeZoneHealth() {
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;text-align:center;">
         <div><div style="font-size:18px;font-weight:800;color:#4ade80;">57%</div><div style="font-size:9px;color:var(--muted);">Complete</div></div>
-        <div><div style="font-size:18px;font-weight:800;color:var(--text);">26 Jun</div><div style="font-size:9px;color:var(--muted);">Deadline</div></div>
+        <div><div style="font-size:18px;font-weight:800;color:var(--text);">3 Jul</div><div style="font-size:9px;color:var(--muted);">Deadline</div></div>
         <div><div style="font-size:18px;font-weight:800;color:#4ade80;">1d ahead</div><div style="font-size:9px;color:var(--muted);">vs plan</div></div>
       </div>
       <div style="height:6px;background:var(--surface2);border-radius:3px;"><div style="height:6px;background:#4ade80;border-radius:3px;width:57%;"></div></div>
@@ -12648,7 +12648,7 @@ function closeZoneHealth() {
     <div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">6 / 10</div><div class="k-lbl">Handover Items Complete</div></div>
     <div class="ph-kpi"><div class="k-val" style="color:#f59e0b;">60%</div><div class="k-lbl">Handover Readiness</div></div>
     <div class="ph-kpi"><div class="k-val" style="color:#f87171;">4</div><div class="k-lbl">Items Outstanding</div></div>
-    <div class="ph-kpi"><div class="k-val">26 Jun 2026</div><div class="k-lbl">Target PC Date</div></div>
+    <div class="ph-kpi"><div class="k-val">3 Jul 2026</div><div class="k-lbl">Target PC Date</div></div>
   </div>
 
   <!-- Checklist -->
@@ -12730,7 +12730,7 @@ function closeZoneHealth() {
     </div>
     <div style="margin-top:10px;font-size:10px;color:var(--muted);">
       <strong>Retention held:</strong> £11,253 &nbsp;·&nbsp;
-      <strong>Half release at PC:</strong> £5,627 (est. 26 Jun 2026) &nbsp;·&nbsp;
+      <strong>Half release at PC:</strong> £5,627 (est. 3 Jul 2026) &nbsp;·&nbsp;
       <strong>Full release 12 months after PC:</strong> £5,626 (est. Jun 2027)
     </div>
   </div>
