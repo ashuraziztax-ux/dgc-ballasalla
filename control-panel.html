@@ -3486,7 +3486,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-27T22:30:00'); // v163 — AFP3 status fix, dark mode pv5/efficiency, efficiency hero, state banner, typography & polish
+const LAST_UPDATED = new Date('2026-05-27T23:30:00'); // v164 — chart labels plain English, explanation boxes below chart, efficiency tab language rewritten
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -7073,8 +7073,8 @@ function buildProgrammeV135() {
 
   // ── SVG velocity chart ────────────────────────────────────────────────────
   // Simple line chart: planned line (linear) vs actual (data point + projection)
-  var chartW = 640, chartH = 155;
-  var padL = 36, padR = 44, padT = 14, padB = 34;
+  var chartW = 640, chartH = 168;
+  var padL = 36, padR = 44, padT = 14, padB = 48;
   var innerW = chartW - padL - padR, innerH = chartH - padT - padB;
   var totalMs = deadline.getTime() - projStart.getTime();
   function xPos(date) { return padL + Math.max(0, Math.min(1, (date.getTime() - projStart.getTime()) / totalMs)) * innerW; }
@@ -7122,56 +7122,59 @@ function buildProgrammeV135() {
   var rightYLabels = [0,25,50,75,100].map(function(p){
     return '<text x="'+rightX+'" y="'+(yPos(p)+4)+'" text-anchor="start" font-size="9" fill="var(--muted)">'+p+'%</text>';
   }).join('');
+  // ── Finish date label positions: spread them if they're close together ───────
+  var proj_x_lbl      = proj_x;
+  var planSpeed_x_lbl = planSpeed_x;
+  // If both finish dots are within 40px of each other, offset labels vertically
+  var dotsClose = Math.abs(proj_x - planSpeed_x) < 45;
+
   var chartSVG = '<svg viewBox="0 0 '+chartW+' '+chartH+'" style="width:100%;max-width:'+chartW+'px;height:auto;display:block;">'
     // Grid axes
     +'<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(padT+innerH)+'" stroke="var(--border)" stroke-width="1"/>'
     +'<line x1="'+padL+'" y1="'+(padT+innerH)+'" x2="'+(padL+innerW)+'" y2="'+(padT+innerH)+'" stroke="var(--border)" stroke-width="1"/>'
-    // Left Y axis labels (0, 25, 50, 75, 100)
+    // Left Y axis labels
     +'<text x="'+(padL-4)+'" y="'+(yPos(100)+4)+'" text-anchor="end" font-size="9" fill="var(--muted)">100%</text>'
     +'<text x="'+(padL-4)+'" y="'+(yPos(75)+4)+'" text-anchor="end" font-size="9" fill="var(--muted)">75%</text>'
     +'<text x="'+(padL-4)+'" y="'+(yPos(50)+4)+'" text-anchor="end" font-size="9" fill="var(--muted)">50%</text>'
     +'<text x="'+(padL-4)+'" y="'+(yPos(25)+4)+'" text-anchor="end" font-size="9" fill="var(--muted)">25%</text>'
     +'<text x="'+(padL-4)+'" y="'+(yPos(0)+4)+'" text-anchor="end" font-size="9" fill="var(--muted)">0%</text>'
-    // Right Y axis labels
     + rightYLabels
-    // 25%, 50%, 75% horizontal grid lines
     + gridLines25
     +'<line x1="'+padL+'" y1="'+(padT+innerH/2)+'" x2="'+(padL+innerW)+'" y2="'+(padT+innerH/2)+'" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="3,3"/>'
     + gridLines75
-    // Plan line
+    // ── Grey dashed = contract programme (0% at start → 100% at deadline as originally agreed) ──
     +'<path d="'+planLine+'" stroke="#94a3b8" stroke-width="1.5" fill="none" stroke-dasharray="5,3"/>'
-    // Actual line (solid green)
+    // ── Green solid = work actually done to date ──
     +'<path d="'+actualLine+'" stroke="#22c55e" stroke-width="2.5" fill="none" stroke-linecap="round"/>'
-    // Projection dashed green
+    // ── Green dashed = projection at current actual rate ──
     +'<path d="'+projLine+'" stroke="#22c55e" stroke-width="1.5" fill="none" stroke-dasharray="4,3" opacity="0.6"/>'
-    // Today vertical line
+    // Today marker
     +'<line x1="'+today_x+'" y1="'+padT+'" x2="'+today_x+'" y2="'+(padT+innerH)+'" stroke="var(--accent)" stroke-width="1" stroke-dasharray="3,3" opacity="0.7"/>'
     +'<text x="'+today_x+'" y="'+(padT-2)+'" text-anchor="middle" font-size="8" fill="var(--accent)">today</text>'
-    // Actual dot
+    // Actual position dot
     +'<circle cx="'+data_x+'" cy="'+data_y+'" r="5" fill="#22c55e" stroke="#fff" stroke-width="1.5"/>'
-    +'<text x="'+(data_x+7)+'" y="'+(data_y+4)+'" font-size="9" font-weight="700" fill="#22c55e">'+actualPct+'%</text>'
-    // Plan dot at data date
+    +'<text x="'+(data_x+7)+'" y="'+(data_y+4)+'" font-size="9" font-weight="700" fill="#22c55e">'+actualPct+'% done</text>'
+    // Planned position dot (where programme said we should be)
     +'<circle cx="'+data_x+'" cy="'+plan_y+'" r="3.5" fill="#94a3b8" stroke="#fff" stroke-width="1"/>'
-    +'<text x="'+(data_x+7)+'" y="'+(plan_y+4)+'" font-size="9" fill="#94a3b8">'+plannedPct+'%</text>'
-    // Programme speed projection — amber dashed line + dot + date label
+    +'<text x="'+(data_x+7)+'" y="'+(plan_y+4)+'" font-size="9" fill="#94a3b8">'+plannedPct+'% planned</text>'
+    // ── Amber = if remaining work done at contracted daily rate ──
     +'<path d="'+planSpeedLine+'" stroke="#f59e0b" stroke-width="1.5" fill="none" stroke-dasharray="6,3" opacity="0.85"/>'
     +'<circle cx="'+planSpeed_x+'" cy="'+padT+'" r="3.5" fill="#f59e0b" stroke="#fff" stroke-width="1.5"/>'
-    +'<text x="'+planSpeed_x+'" y="20" text-anchor="middle" font-size="7.5" font-weight="700" fill="#f59e0b">📋 '+planSpeedFinish.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+'</text>'
-    // Current pace projection — green dashed line + dot + date label (at top, y=11 so above amber)
+    +'<text x="'+planSpeed_x_lbl+'" y="'+(dotsClose ? 25 : 20)+'" text-anchor="middle" font-size="8" font-weight="700" fill="#f59e0b">'+planSpeedFinish.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+'</text>'
+    // ── Green finish = if remaining work done at current actual rate ──
     +'<line x1="'+proj_x+'" y1="'+(padT+2)+'" x2="'+proj_x+'" y2="'+(padT+innerH)+'" stroke="'+projCol+'" stroke-width="0.8" stroke-dasharray="2,3" opacity="0.3"/>'
     +'<circle cx="'+proj_x+'" cy="'+padT+'" r="4.5" fill="'+projCol+'" stroke="#fff" stroke-width="2"/>'
-    +'<text x="'+proj_x+'" y="11" text-anchor="middle" font-size="7.5" font-weight="700" fill="'+projCol+'">🏁 '+projFinish.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+'</text>'
-    // X ticks
+    +'<text x="'+proj_x_lbl+'" y="12" text-anchor="middle" font-size="8" font-weight="700" fill="'+projCol+'">'+projFinish.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+'</text>'
     + ticks
-    // Legend
-    +'<rect x="'+padL+'" y="'+(padT+innerH+22)+'" width="10" height="2" fill="#22c55e"/>'
-    +'<text x="'+(padL+13)+'" y="'+(padT+innerH+27)+'" font-size="9" fill="var(--muted)">Actual</text>'
-    +'<rect x="'+(padL+58)+'" y="'+(padT+innerH+22)+'" width="10" height="2" fill="#94a3b8"/>'
-    +'<text x="'+(padL+71)+'" y="'+(padT+innerH+27)+'" font-size="9" fill="var(--muted)">Planned (deadline)</text>'
-    +'<rect x="'+(padL+180)+'" y="'+(padT+innerH+22)+'" width="10" height="2" fill="#f59e0b"/>'
-    +'<text x="'+(padL+193)+'" y="'+(padT+innerH+27)+'" font-size="9" fill="var(--muted)">Prog. speed · '+planSpeedFinStr+'</text>'
-    +'<rect x="'+(padL+330)+'" y="'+(padT+innerH+22)+'" width="10" height="2" fill="#22c55e" opacity="0.6"/>'
-    +'<text x="'+(padL+343)+'" y="'+(padT+innerH+27)+'" font-size="9" fill="var(--muted)">Current pace · '+projFinStr+'</text>'
+    // ── Legend: plain English, no abbreviations ──
+    +'<rect x="'+padL+'" y="'+(padT+innerH+22)+'" width="12" height="3" fill="#22c55e" rx="1"/>'
+    +'<text x="'+(padL+15)+'" y="'+(padT+innerH+27)+'" font-size="9" fill="var(--muted)">Work done so far</text>'
+    +'<rect x="'+(padL+108)+'" y="'+(padT+innerH+22)+'" width="12" height="3" fill="#94a3b8" rx="1" opacity="0.6" stroke-dasharray="3,2"/>'
+    +'<text x="'+(padL+123)+'" y="'+(padT+innerH+27)+'" font-size="9" fill="var(--muted)">Original contract schedule</text>'
+    +'<rect x="'+(padL+268)+'" y="'+(padT+innerH+22)+'" width="12" height="3" fill="#f59e0b" rx="1"/>'
+    +'<text x="'+(padL+283)+'" y="'+(padT+innerH+27)+'" font-size="9" fill="var(--muted)">Finish at contracted rate — '+planSpeedFinStr+'</text>'
+    +'<rect x="'+padL+'" y="'+(padT+innerH+35)+'" width="12" height="3" fill="'+projCol+'" rx="1"/>'
+    +'<text x="'+(padL+15)+'" y="'+(padT+innerH+40)+'" font-size="9" fill="var(--muted)">Finish at our actual speed — '+projFinStr+'</text>'
     +'</svg>';
 
   // ── Financial summary (admin only) ───────────────────────────────────────
@@ -7313,15 +7316,42 @@ function buildProgrammeV135() {
   + '</div>' // end KPI grid
 
   // ── Velocity chart ────────────────────────────────────────────────────────
-  + '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:18px;">'
-  +   '<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:6px;">'
-  +     '<div style="font-size:12px;font-weight:700;color:var(--text);">Progress Velocity Chart</div>'
-  +     '<div style="font-size:11px;color:var(--muted);">📋 Prog speed: <strong style="color:#f59e0b;">'+planSpeedFinStr+'</strong> ('+( planSpeedEarly > 0 ? planSpeedEarly+'d early' : Math.abs(planSpeedEarly)+'d late')+') &nbsp;·&nbsp; 🏁 Current pace: <strong style="color:'+projCol+';">'+projFinStr+'</strong> ('+projLabel+')</div>'
-  +   '</div>'
-  +   '<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">'
-  +     '━ Green = actual done &nbsp;·&nbsp; ╌ Grey = planned pace &nbsp;·&nbsp; ╌ Green dashed = projected at current velocity'
+  + '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:18px;">'
+  +   '<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px;">Progress Chart — Three Completion Scenarios</div>'
+  +   '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5;">'
+  +     'The green solid line is work actually done. The grey dashed line is the original contract schedule from day one. '
+  +     'The two coloured dots at the top show two possible finish dates, both calculated from where we are now ('+(actualPct)+'% done).'
   +   '</div>'
   +   chartSVG
+  // Plain English explanation below chart
+  +   '<div style="margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">'
+  +     '<div style="padding:10px 12px;border-radius:8px;border:1px solid #f59e0b33;background:#fef9ee;">'
+  +       '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#d97706;margin-bottom:4px;">Amber dot — contracted rate</div>'
+  +       '<div style="font-size:12px;color:#92400e;line-height:1.5;">'
+  +         'If the remaining <strong>'+(100-actualPct)+'%</strong> is completed at the same daily rate '
+  +         'that the contract programme required (<strong>'+(planRatePerDay*100).toFixed(2)+'%</strong> per day), '
+  +         'we finish <strong>'+planSpeedFinStr+'</strong>.'
+  +         (planSpeedEarly > 0 ? ' That is <strong style="color:#16a34a;">'+planSpeedEarly+' days early</strong>.' : ' That is '+Math.abs(planSpeedEarly)+' days late.')
+  +       '</div>'
+  +     '</div>'
+  +     '<div style="padding:10px 12px;border-radius:8px;border:1px solid #22c55e33;background:#f0fdf4;">'
+  +       '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#16a34a;margin-bottom:4px;">Green dot — our actual speed</div>'
+  +       '<div style="font-size:12px;color:#166534;line-height:1.5;">'
+  +         'If the remaining <strong>'+(100-actualPct)+'%</strong> is completed at our current measured rate '
+  +         '(<strong>'+(ratePerDay*100).toFixed(2)+'%</strong> per day), '
+  +         'we finish <strong>'+projFinStr+'</strong>.'
+  +         (daysEarly > 0 ? ' That is <strong style="color:#16a34a;">'+daysEarly+' days early</strong>.' : ' That is '+Math.abs(daysEarly)+' days late.')
+  +       '</div>'
+  +     '</div>'
+  +     '<div style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);">'
+  +       '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:4px;">Why amber is later than green</div>'
+  +       '<div style="font-size:12px;color:var(--muted);line-height:1.5;">'
+  +         'We are running <strong style="color:#22c55e;">'+Math.round((ratePerDay/planRatePerDay-1)*100)+'% faster</strong> than the contract required. '
+  +         'Amber shows what happens if we slowed down to the contracted speed. '
+  +         'Green shows what happens if we keep our current pace. Both beat the deadline.'
+  +       '</div>'
+  +     '</div>'
+  +   '</div>'
   + '</div>'
 
   // ── What still can't be done (simplified, wearing course removed) ────────
@@ -7828,43 +7858,43 @@ function buildEfficiencyTab() {
   // CARD 1 — Three Scenarios
   // ════════════════════════════════════════
   el.appendChild(mkCard(
-    '<div class="card-title" style="margin-bottom:12px;">Three Completion Scenarios</div>'
-    +'<div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.55;">'
-    +'Three honest answers to "when do we finish?" — each uses a different assumption about pace. '
-    +'The gap between ② and ③ is the value of running above programme efficiency.'
+    '<div class="card-title" style="margin-bottom:12px;">Three Possible Finish Dates</div>'
+    +'<div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">'
+    +'All three are calculated from where we stand today: <strong style="color:var(--text);">'+actualPct+'% of the work done</strong>, with <strong style="color:var(--text);">'+remaining+'% still to go</strong>. '
+    +'The first is fixed by contract. The second uses the daily rate the programme was priced at. '
+    +'The third uses our actual measured speed. Both the second and third are earlier than the first because we are running ahead of programme.'
     +'</div>'
     +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px;">'
 
-    // ① Agreed deadline
+    // ① Contract deadline
     +'<div style="padding:14px;border-radius:10px;border:2px solid #94a3b855;background:var(--surface2);text-align:center;">'
-    +'<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px;">① Agreed Deadline</div>'
+    +'<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px;">① Contract Deadline</div>'
     +'<div style="font-size:20px;font-weight:900;color:var(--text);">3 Jul 2026</div>'
-    +'<div style="font-size:11px;color:var(--muted);margin-top:5px;line-height:1.4;">Contracted end date<br>(post-EOT with Dandara)</div>'
-    +'<div style="margin-top:8px;font-size:11px;font-weight:700;color:#94a3b8;">Fixed — the Bible</div>'
+    +'<div style="font-size:11px;color:var(--muted);margin-top:5px;line-height:1.4;">The agreed end date<br>from the signed contract<br>(includes extension of time)</div>'
+    +'<div style="margin-top:8px;font-size:11px;font-weight:700;color:#94a3b8;">Fixed. Must be met.</div>'
     +'</div>'
 
-    // ② Programme speed
+    // ② If we slowed to contracted daily rate
     +'<div style="padding:14px;border-radius:10px;border:2px solid #f59e0b66;background:#fef9ee;text-align:center;">'
-    +'<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#d97706;margin-bottom:6px;">② At Programme Speed</div>'
+    +'<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#d97706;margin-bottom:6px;">② If we slowed to contracted rate</div>'
     +'<div style="font-size:20px;font-weight:900;color:#d97706;">'+fmtFinE(finPlan)+'</div>'
-    +'<div style="font-size:11px;color:#92400e;margin-top:5px;line-height:1.4;">Remaining '+remaining+'% done<br>at contracted planned pace</div>'
-    +'<div style="margin-top:8px;font-size:11px;font-weight:700;color:'+earlyCol(earlyP)+';">'+earlyStr(earlyP)+' vs deadline</div>'
+    +'<div style="font-size:11px;color:#92400e;margin-top:5px;line-height:1.4;">The remaining '+remaining+'% completed<br>at the daily rate the original<br>programme was priced at</div>'
+    +'<div style="margin-top:8px;font-size:11px;font-weight:700;color:'+earlyCol(earlyP)+';">'+earlyStr(earlyP)+' vs contract deadline</div>'
     +'</div>'
 
-    // ③ Current pace
+    // ③ If we keep going at today's speed
     +'<div style="padding:14px;border-radius:10px;border:2px solid #22c55e66;background:#f0fdf4;text-align:center;">'
-    +'<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#16a34a;margin-bottom:6px;">③ At Current Pace</div>'
+    +'<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#16a34a;margin-bottom:6px;">③ If we keep today\'s speed</div>'
     +'<div style="font-size:20px;font-weight:900;color:#16a34a;">'+fmtFinE(finCurrent)+'</div>'
-    +'<div style="font-size:11px;color:#166534;margin-top:5px;line-height:1.4;">Remaining '+remaining+'% done<br>at our actual measured rate</div>'
-    +'<div style="margin-top:8px;font-size:11px;font-weight:700;color:'+earlyCol(earlyC)+';">'+earlyStr(earlyC)+' vs deadline</div>'
+    +'<div style="font-size:11px;color:#166534;margin-top:5px;line-height:1.4;">The remaining '+remaining+'% completed<br>at our actual measured rate<br>as of today</div>'
+    +'<div style="margin-top:8px;font-size:11px;font-weight:700;color:'+earlyCol(earlyC)+';">'+earlyStr(earlyC)+' vs contract deadline</div>'
     +'</div>'
 
     +'</div>'
-    +'<div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px;line-height:1.6;">'
-    +'<strong style="color:var(--text);">Overall efficiency: '+efficiency+'%</strong>'
-    +' &nbsp;·&nbsp; Running '+(Math.abs(efficiency-100))+'% '+(efficiency>=100?'faster':'slower')+' than the programme planned'
-    +' &nbsp;·&nbsp; Actual rate: '+(actualRate*100).toFixed(2)+'%/day'
-    +' &nbsp;·&nbsp; Plan rate: '+(planRate*100).toFixed(2)+'%/day'
+    +'<div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px;line-height:1.7;">'
+    +'<strong style="color:var(--text);">Why ② is later than ③:</strong> We are running '+Math.abs(efficiency-100)+'% <em>faster</em> than the programme required. '
+    +'So our actual speed (③) gets us there sooner than the contracted speed (②) would. Both beat the deadline.'
+    +'<br><span style="color:var(--muted);">Actual daily rate: '+(actualRate*100).toFixed(2)+'% of the project per day &nbsp;·&nbsp; Contracted daily rate: '+(planRate*100).toFixed(2)+'% of the project per day &nbsp;·&nbsp; Overall efficiency: '+efficiency+'%</span>'
     +'</div>'
   ));
 
