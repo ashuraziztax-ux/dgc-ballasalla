@@ -919,6 +919,88 @@ input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 input[type=number] { -moz-appearance: textfield; }
 /* ════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════
+   v159 — AFP Card Redesign
+   ═══════════════════════════════════════════ */
+.afp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+@media(max-width:600px) { .afp-grid { grid-template-columns: 1fr 1fr; } }
+@media(max-width:420px) { .afp-grid { grid-template-columns: 1fr; } }
+.afp-card {
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  padding: 14px 15px 12px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  user-select: none;
+}
+.afp-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+.afp-card--paid  { border-color: #22c55e44; background: #f0fdf4; }
+.afp-card--pending { border-color: #f59e0b44; }
+.afp-card--future { border-color: #cbd5e133; opacity: 0.78; }
+.afp-card__header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+}
+.afp-card__num { font-size: 13px; font-weight: 800; color: var(--text); letter-spacing: 0.01em; }
+.afp-card__badge {
+  font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.afp-card__badge--paid     { background: #dcfce7; color: #16a34a; border: 1px solid #86efac; }
+.afp-card__badge--pending  { background: #fef3c7; color: #d97706; border: 1px solid #fcd34d; }
+.afp-card__badge--future   { background: #f1f5f9; color: #94a3b8; border: 1px solid #cbd5e1; }
+.afp-card__amount {
+  font-size: 26px; font-weight: 800; line-height: 1.05; margin-bottom: 2px;
+}
+.afp-card--paid .afp-card__amount { color: #16a34a; }
+.afp-card--pending .afp-card__amount { color: #d97706; }
+.afp-card--future .afp-card__amount { color: #94a3b8; }
+.afp-card__sublabel { font-size: 11px; color: var(--muted); margin-bottom: 6px; line-height: 1.3; }
+.afp-card__note {
+  font-size: 11px; color: var(--muted); font-style: italic; padding: 4px 8px;
+  background: rgba(34,197,94,0.06); border-left: 2px solid #86efac;
+  border-radius: 0 5px 5px 0; margin-bottom: 6px; line-height: 1.35;
+}
+.afp-card__expand-hint {
+  font-size: 11px; color: var(--muted); text-align: right;
+  margin-top: 6px; transition: color 0.15s;
+}
+.afp-card:hover .afp-card__expand-hint { color: var(--accent); }
+.afp-card__detail { margin-top: 2px; }
+.afp-detail-sep { height: 1px; background: var(--border); margin: 10px 0; }
+.afp-detail-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 12px; padding: 3px 0; color: var(--text);
+}
+.afp-detail-row span:first-child { color: var(--muted); }
+.afp-detail-row--deduct span:last-child { color: #f97316; }
+.afp-detail-row--total {
+  font-weight: 700; font-size: 13px;
+  border-top: 1px solid var(--border); padding-top: 7px; margin-top: 3px;
+}
+.afp-detail-row--total span:first-child { color: var(--text); }
+.afp-detail-info {
+  font-size: 11px; color: var(--muted); margin-top: 7px; line-height: 1.45;
+}
+.afp-detail-warn {
+  font-size: 11px; color: #ea580c; margin-top: 7px; line-height: 1.4;
+  padding: 5px 8px; background: #fff7ed; border-radius: 5px;
+  border-left: 2px solid #fb923c;
+}
+.afp-summary-bar { display:flex; gap:0; border-radius:6px; overflow:hidden; height:7px; margin-bottom:10px; background:var(--border); }
+.afp-summary-legend {
+  display:flex; gap:14px; font-size:11px; color:var(--muted);
+  flex-wrap:wrap; margin-bottom:14px; align-items:center;
+}
+.afp-legend-dot {
+  width:9px; height:9px; border-radius:2px; display:inline-block; margin-right:4px; vertical-align:middle;
+}
 </style>
 </head>
 <body>
@@ -954,6 +1036,15 @@ function checkPw(){
   }
 }
 
+
+function toggleAfpCard(el){
+  var detail = el.querySelector('.afp-card__detail');
+  var hint   = el.querySelector('.afp-card__expand-hint');
+  if(!detail) return;
+  var open = detail.style.display !== 'none';
+  detail.style.display = open ? 'none' : 'block';
+  if(hint) hint.textContent = open ? 'Tap for breakdown ↓' : 'Close ↑';
+}
 
 function toggleNavMore(e){
   e.stopPropagation();
@@ -2030,98 +2121,145 @@ function gpExportCSV(){
     </div>
   </div>
 
-  <div class="grid-2">
-    <div class="card">
-      <div class="card-title">Application for Payment Schedule</div>
-      <table class="payment-table">
-        <thead>
-          <tr>
-            <th>Valuation</th>
-            <th>Issue Date</th>
-            <th>Invoice Date</th>
-            <th>Payment Due</th>
-            <th>Value</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>AFP 1</td>
-            <td>1 Apr 2026</td>
-            <td>7 Apr 2026</td>
-            <td class="paid" style="font-size:12px;">Combined → App.1</td>
-            <td class="paid" style="font-size:12px;">Rolled into AFP 2</td>
-            <td><span class="chip paid" title="Dandara combined DGC AFP1 and AFP2 into one Self-Billing Invoice SC193064-x17">App. 1</span></td>
-          </tr>
-          <tr>
-            <td>AFP 2 (Dandara App. 1)</td>
-            <td>30 Apr 2026</td>
-            <td>7 May 2026</td>
-            <td class="paid">12 May 2026</td>
-            <td class="paid">£156,739.46 net</td>
-            <td><span class="chip paid">Received 12 May</span></td>
-          </tr>
-          <tr style="background:#1e2130;">
-            <td colspan="2" style="font-size:11px;color:var(--muted);">Dandara App. 1 — Self-Billing Invoice SC193064-x17</td>
-            <td colspan="2" style="font-size:11px;color:var(--muted);">Gross certified £164,028.11 (Contract work £116,213 + Materials on site £47,815) | Less Dandara discount &minus;£2,441.04 | Less retention &minus;£4,847.61 | = <strong style="color:#4ade80;">£156,739.46 net received 12 May 2026</strong> | Certified by Ian Barnes. 35% complete at certification.</td>
-            <td></td><td></td>
-          </tr>
-          <tr style="opacity:0.75;font-style:italic;">
-            <td>AFP 3 <span style="font-size:9px;font-style:normal;font-weight:600;color:#f59e0b;background:#f59e0b18;border:1px solid #f59e0b44;padding:1px 5px;border-radius:8px;vertical-align:middle;">ESTIMATE</span></td>
-            <td>~22 May 2026</td>
-            <td>~29 May 2026</td>
-            <td style="color:#f59e0b;">~3 Jul 2026</td>
-            <td style="color:#f59e0b;">~£128,109 net</td>
-            <td><span class="chip pending">Not submitted</span></td>
-          </tr>
-          <tr style="background:#1e2130;">
-            <td colspan="2" style="font-size:11px;color:var(--muted);font-style:italic;">AFP 3 — QS estimate only, not yet submitted to Dandara</td>
-            <td colspan="2" style="font-size:11px;color:var(--muted);">Gross cumulative claim: ~£293,658 (65.2%) | Less 3% retention: ~&minus;£8,810 | Less AFP 1&amp;2: &minus;£156,739 | = <strong style="color:#f59e0b;">~£128,109 net est.</strong> | These figures are <em>not certified</em> — see Predicted AFP 3 card below for full breakdown</td>
-            <td></td><td></td>
-          </tr>
-          <tr style="opacity:0.75;font-style:italic;">
-            <td>AFP 4 — Tarmac <span style="font-size:9px;font-style:normal;font-weight:600;color:#f59e0b;background:#f59e0b18;border:1px solid #f59e0b44;padding:1px 5px;border-radius:8px;vertical-align:middle;">ESTIMATE</span></td>
-            <td>~30 Jun 2026</td>
-            <td>~30 Jun 2026</td>
-            <td style="color:#f59e0b;">~28 Jul 2026</td>
-            <td style="color:#f59e0b;">TBC</td>
-            <td><span class="chip pending">Not submitted</span></td>
-          </tr>
-          <tr style="opacity:0.75;font-style:italic;">
-            <td>AFP 5 — Final Account <span style="font-size:9px;font-style:normal;font-weight:600;color:#f59e0b;background:#f59e0b18;border:1px solid #f59e0b44;padding:1px 5px;border-radius:8px;vertical-align:middle;">ESTIMATE</span></td>
-            <td>~Jul 2026</td>
-            <td>~Jul 2026</td>
-            <td style="color:#f59e0b;">~Aug 2026</td>
-            <td style="color:#f59e0b;">TBC (remaining + agreed EOT)</td>
-            <td><span class="chip pending">Not submitted</span></td>
-          </tr>
-          <tr style="opacity:0.6;font-style:italic;">
-            <td>AFP 6 — Retention Release</td>
-            <td>~Jul 2027</td>
-            <td>~Jul 2027</td>
-            <td style="color:var(--muted);">~Aug 2027</td>
-            <td style="color:var(--muted);">~£6,842 est. (1.5% EFA net)</td>
-            <td><span class="chip pending">12-mo defects</span></td>
-          </tr>
-          <tr style="background:var(--surface2);">
-            <td colspan="4"><strong>Contract Sum (per AFP 2)</strong></td>
-            <td><strong>£450,142</strong></td>
-            <td></td>
-          </tr>
-        </tbody>
-      </table>
-      <div style="margin-top:12px; font-size:11px; color:var(--muted);">2.5% retention applied by Ian Barnes on AFP1+2 (contract rate is 3%). Per QS (Sophie, 17 May 2026): retention reduces to 1.5% when final account is issued — half released at FA, remaining 1.5% after 12-month defect period (~Jul 2027). Total schedule extended to <strong style="color:var(--text);">6 AFPs</strong>: AFP3 June groundworks | AFP4 Tarmac | AFP5 Final Account | AFP6 Retention. Payment terms: 28 days from invoice.</div>
+  <!-- AFP Schedule — v159: expandable cards, no ugly table rows -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+      <span>Application for Payment Schedule</span>
+      <span style="font-size:12px;font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0;">Contract Sum: <strong style="color:var(--text);">£450,142</strong></span>
     </div>
 
-    <div class="card">
-      <div class="card-title">Budget by Zone</div>
-      <table class="payment-table">
-        <thead>
-          <tr><th>Zone</th><th>Budget</th><th>% of Total</th><th>Status</th></tr>
-        </thead>
-        <tbody id="budget-zone-table"></tbody>
-      </table>
+    <!-- Progress bar: paid vs estimated vs TBC -->
+    <div class="afp-summary-bar">
+      <div style="width:34.8%;background:#22c55e;" title="Paid: £156,739"></div>
+      <div style="width:28.5%;background:#f59e0b;" title="AFP 3 est: ~£128,109"></div>
+      <div style="width:36.7%;background:#e2e8f0;" title="AFP 4–6: TBC"></div>
     </div>
+    <div class="afp-summary-legend">
+      <span><span class="afp-legend-dot" style="background:#22c55e;"></span>Paid: £156,739 (34.8%)</span>
+      <span><span class="afp-legend-dot" style="background:#f59e0b;"></span>Pending est: ~£128,109 (AFP 3)</span>
+      <span><span class="afp-legend-dot" style="background:#e2e8f0;border:1px solid #cbd5e1;"></span>TBC: AFP 4 · 5 · 6</span>
+    </div>
+
+    <!-- 6 AFP cards -->
+    <div class="afp-grid">
+
+      <!-- AFP 1 + 2 — PAID -->
+      <div class="afp-card afp-card--paid" onclick="toggleAfpCard(this)">
+        <div class="afp-card__header">
+          <span class="afp-card__num">AFP 1 + 2</span>
+          <span class="afp-card__badge afp-card__badge--paid">✓ PAID</span>
+        </div>
+        <div class="afp-card__amount">£156,739</div>
+        <div class="afp-card__sublabel">net received · 12 May 2026</div>
+        <div class="afp-card__note">Dandara combined AFP 1 &amp; 2 into one Self-Billing Invoice (App. 1)</div>
+        <div class="afp-card__expand-hint">Tap for breakdown ↓</div>
+        <div class="afp-card__detail" style="display:none;">
+          <div class="afp-detail-sep"></div>
+          <div class="afp-detail-row"><span>AFP 1 gross (absorbed)</span><span>£22,985</span></div>
+          <div class="afp-detail-row"><span>AFP 2 gross certified</span><span>£164,028</span></div>
+          <div class="afp-detail-row afp-detail-row--deduct"><span>Less Dandara discount</span><span>−£2,441</span></div>
+          <div class="afp-detail-row afp-detail-row--deduct"><span>Less retention (2.5%)</span><span>−£4,848</span></div>
+          <div class="afp-detail-row afp-detail-row--total"><span>Net received</span><span style="color:#16a34a;">£156,739</span></div>
+          <div class="afp-detail-info">Invoice SC193064-x17 · Certified by Ian Barnes · 35% complete at certification · Paid 12 May 2026</div>
+          <div class="afp-detail-warn">⚠ Contract rate is 3% retention — Ian Barnes applied 2.5%. Difference ~£1,500 to recover at final account.</div>
+        </div>
+      </div>
+
+      <!-- AFP 3 — PENDING ESTIMATE -->
+      <div class="afp-card afp-card--pending" onclick="toggleAfpCard(this)">
+        <div class="afp-card__header">
+          <span class="afp-card__num">AFP 3</span>
+          <span class="afp-card__badge afp-card__badge--pending">Estimate</span>
+        </div>
+        <div class="afp-card__amount">~£128,109</div>
+        <div class="afp-card__sublabel">net estimate · not submitted · due ~3 Jul 2026</div>
+        <div class="afp-card__expand-hint">Tap for breakdown ↓</div>
+        <div class="afp-card__detail" style="display:none;">
+          <div class="afp-detail-sep"></div>
+          <div class="afp-detail-row"><span>External Works (28.3%)</span><span>£69,617</span></div>
+          <div class="afp-detail-row"><span>Drainage (96.2%)</span><span>£150,485</span></div>
+          <div class="afp-detail-row"><span>Services (100%)</span><span>£12,236</span></div>
+          <div class="afp-detail-row"><span>Street Lighting (100%)</span><span>£12,109</span></div>
+          <div class="afp-detail-row"><span>DGC Prelims (91.6%)</span><span>£31,582</span></div>
+          <div class="afp-detail-row afp-detail-row--deduct"><span>Less discount</span><span>−£8,965</span></div>
+          <div class="afp-detail-row"><span>Variations</span><span>+£14,148</span></div>
+          <div class="afp-detail-row"><span>Materials on site</span><span>+£10,347</span></div>
+          <div class="afp-detail-row" style="border-top:1px solid var(--border);padding-top:6px;margin-top:3px;"><span>Gross cumulative</span><span>£293,658</span></div>
+          <div class="afp-detail-row afp-detail-row--deduct"><span>Less 3% retention</span><span>−£8,810</span></div>
+          <div class="afp-detail-row afp-detail-row--deduct"><span>Less AFP 1+2 paid</span><span>−£156,739</span></div>
+          <div class="afp-detail-row afp-detail-row--total"><span>Net due</span><span style="color:#d97706;">~£128,109</span></div>
+          <div class="afp-detail-info">QS draft only (Sophie) · Not yet submitted to Dandara · Gross cumulative = 65.2% of contract</div>
+        </div>
+      </div>
+
+      <!-- AFP 4 — Tarmac ESTIMATE -->
+      <div class="afp-card afp-card--pending" onclick="toggleAfpCard(this)">
+        <div class="afp-card__header">
+          <span class="afp-card__num">AFP 4</span>
+          <span class="afp-card__badge afp-card__badge--pending">Estimate</span>
+        </div>
+        <div class="afp-card__amount">TBC</div>
+        <div class="afp-card__sublabel">tarmac package · target ~30 Jun 2026</div>
+        <div class="afp-card__expand-hint">Tap for details ↓</div>
+        <div class="afp-card__detail" style="display:none;">
+          <div class="afp-detail-sep"></div>
+          <div class="afp-detail-info">Tarmac roadbase only (wearing course removed from DGC scope 26 May 2026). Subcontracted. Value TBC pending subcontractor quote and scope confirmation with Dandara.</div>
+          <div class="afp-detail-info" style="margin-top:6px;">Submit ~30 Jun 2026 · Payment due ~28 Jul 2026 (28-day terms)</div>
+        </div>
+      </div>
+
+      <!-- AFP 5 — Final Account ESTIMATE -->
+      <div class="afp-card afp-card--pending" onclick="toggleAfpCard(this)">
+        <div class="afp-card__header">
+          <span class="afp-card__num">AFP 5</span>
+          <span class="afp-card__badge afp-card__badge--pending">Estimate</span>
+        </div>
+        <div class="afp-card__amount">TBC</div>
+        <div class="afp-card__sublabel">final account · ~Jul 2026</div>
+        <div class="afp-card__expand-hint">Tap for details ↓</div>
+        <div class="afp-card__detail" style="display:none;">
+          <div class="afp-detail-sep"></div>
+          <div class="afp-detail-info">Final account claim. Includes all remaining certified works plus:</div>
+          <div class="afp-detail-info" style="margin-top:5px;">
+            • EOT claims D–I: ~£16,167 (not yet submitted to Dandara)<br>
+            • 110mm lateral dispute: ~147m excess (significant value TBC)<br>
+            • Any remaining unagreed variations
+          </div>
+          <div class="afp-detail-info" style="margin-top:6px;">Submit ~Jul 2026 · Payment due ~Aug 2026</div>
+        </div>
+      </div>
+
+      <!-- AFP 6 — Retention Release -->
+      <div class="afp-card afp-card--future" onclick="toggleAfpCard(this)">
+        <div class="afp-card__header">
+          <span class="afp-card__num">AFP 6</span>
+          <span class="afp-card__badge afp-card__badge--future">Retention</span>
+        </div>
+        <div class="afp-card__amount">~£6,842</div>
+        <div class="afp-card__sublabel">retention release · ~Jul 2027</div>
+        <div class="afp-card__expand-hint">Tap for details ↓</div>
+        <div class="afp-card__detail" style="display:none;">
+          <div class="afp-detail-sep"></div>
+          <div class="afp-detail-info">Remaining 1.5% retention held by Dandara during 12-month defects period. Half retention (1.5%) released at final account (AFP 5). This release (~1.5%) falls due ~Jul 2027 once defects period expires.</div>
+          <div class="afp-detail-info" style="margin-top:6px;">Est. ~£6,842 based on current contract sum · Release date: ~Jul 2027</div>
+        </div>
+      </div>
+
+    </div><!-- /afp-grid -->
+
+    <div style="font-size:11px;color:var(--muted);line-height:1.55;border-top:1px solid var(--border);padding-top:10px;">
+      Payment terms: 28 days from invoice. Retention: 3% contract rate (2.5% applied on AFP 1+2 — difference to recover at FA). Half retention released at final account; remainder after 12-month defects period (~Jul 2027).
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">Budget by Zone</div>
+    <table class="payment-table">
+      <thead>
+        <tr><th>Zone</th><th>Budget</th><th>% of Total</th><th>Status</th></tr>
+      </thead>
+      <tbody id="budget-zone-table"></tbody>
+    </table>
   </div>
 
   <!-- AFP 3 Predicted Breakdown -->
@@ -3271,7 +3409,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-27T14:00:00'); // v158 — 10-persona visual overhaul
+const LAST_UPDATED = new Date('2026-05-27T16:30:00'); // v159 — AFP schedule redesign: 6 expandable cards
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
