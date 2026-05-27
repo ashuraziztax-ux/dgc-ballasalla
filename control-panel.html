@@ -1156,16 +1156,14 @@ function setMode(m) {
   try { buildAlerts(); } catch(e) {}
 }
 
-// Early restore — set body class before render to avoid FOUC
+// Early restore — always open in client + light mode (v161 default)
 (function(){
   try {
-    var saved = sessionStorage.getItem('dgc_mode') || 'client';
-    VIEW_MODE = saved;
-    isAdmin   = (saved === 'admin');
-    document.body.classList.remove('admin-mode','client-mode');
-    if (saved === 'admin')  document.body.classList.add('admin-mode');
-    if (saved === 'client') document.body.classList.add('client-mode');
-  } catch(e) { document.body.classList.remove('admin-mode'); }
+    VIEW_MODE = 'client';
+    isAdmin   = false;
+    document.body.classList.remove('admin-mode','client-mode','dark-theme');
+    document.body.classList.add('client-mode');
+  } catch(e) {}
 })();
 // ══════════════════════════════════════════════════════
 // VOICE DIARY — recording, AI cleanup, save/load
@@ -6908,12 +6906,10 @@ function toggleTheme() {
   var isDark = !document.body.classList.contains('dark-theme');
   applyTheme(isDark);
 }
-// Load saved theme on startup (called from DOMContentLoaded)
+// Load saved theme on startup — always open in light mode (v161 default)
 function loadSavedTheme() {
   try {
-    var saved = localStorage.getItem('dgc_dark_theme');
-    // Default is light (dark-theme = false)
-    applyTheme(saved === '1');
+    applyTheme(false); // always start light; user can switch via button
   } catch(e) {}
 }
 
