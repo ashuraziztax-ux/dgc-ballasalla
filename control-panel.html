@@ -497,6 +497,39 @@ body.dark-theme {
 body.dark-theme .header { background: #0f1117 !important; border-color: #2e3347 !important; }
 body.dark-theme .nav { background: #0f1117 !important; border-color: #2e3347 !important; }
 body.dark-theme #info-strip { background: #0f1117; border-color: #2e3347; }
+/* ── Dark mode: AFP cards ── */
+body.dark-theme .afp-card { background: var(--surface2) !important; border-color: var(--border) !important; }
+body.dark-theme .afp-card--paid { background: rgba(34,197,94,0.07) !important; border-color: rgba(34,197,94,0.2) !important; }
+body.dark-theme .afp-card--pending { background: rgba(245,158,11,0.05) !important; }
+body.dark-theme .afp-card--future { background: var(--surface2) !important; }
+body.dark-theme .afp-card__note { background: rgba(34,197,94,0.05) !important; }
+body.dark-theme .afp-detail-warn { background: rgba(251,146,60,0.08) !important; color: #fb923c; }
+body.dark-theme .afp-summary-bar { background: #2e3347; }
+/* ── Dark mode: table rows with hardcoded light backgrounds ── */
+body.dark-theme tr[style*="background:#fffbeb"] { background: rgba(245,158,11,0.07) !important; }
+body.dark-theme tr[style*="background:#f0fdf4"] { background: rgba(34,197,94,0.07) !important; }
+body.dark-theme tr[style*="background:#fff7ed"] { background: rgba(251,146,60,0.07) !important; }
+/* ── Dark mode: setup tab form containers ── */
+body.dark-theme #tab-setup input[type="text"],
+body.dark-theme #tab-setup input[type="number"],
+body.dark-theme #tab-setup input[type="date"],
+body.dark-theme #tab-setup select,
+body.dark-theme #tab-setup textarea {
+  background: var(--surface2) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+/* ── Dark mode: catch inline white backgrounds ── */
+body.dark-theme [style*="background:#ffffff"],
+body.dark-theme [style*="background: #ffffff"],
+body.dark-theme [style*="background:white"],
+body.dark-theme [style*="background: white"] {
+  background: var(--surface) !important;
+}
+body.dark-theme [style*="background:#f8fafc"],
+body.dark-theme [style*="background:#f1f5f9"] {
+  background: var(--surface2) !important;
+}
 /* Site map container: white bg on light, dark on dark theme */
 #tab-sitemap .card { background: #ffffff; }
 body.dark-theme #tab-sitemap .card { background: #1a1d27; }
@@ -741,11 +774,7 @@ body.dark-theme #tab-sitemap .card { background: #1a1d27; }
 .sh-status-warn { color:#f59e0b; font-size:12px; font-weight:700; }
 
 
-.nav-more-item { display:block !important; text-align:left; width:100%; padding:8px 14px !important; border-radius:5px; font-size:12.5px !important; opacity:1 !important; }
-.nav-more-item:hover { background:#2e3347; color:#e2e8f0 !important; }
-.nav-more-item.active { color:var(--accent) !important; background:rgba(245,158,11,0.1); }
-#nav-more-btn:hover { color:#e2e8f0 !important; }
-.nav-more-item::after { display:none !important; }
+/* nav-more removed in v160 — all preview tabs now inline */
 /* ════════════════════════════════════════
    v158 — Visual & UX Overhaul
    ════════════════════════════════════════ */
@@ -898,8 +927,7 @@ td { font-size: 13px !important; }
 .modal-overlay { backdrop-filter: blur(4px); }
 .modal-card { border-radius: 16px !important; box-shadow: 0 24px 60px rgba(0,0,0,0.4) !important; }
 
-/* Light mode body improvements */
-body:not(.dark-mode) .card { background: #fff; }
+/* Light mode body improvements — note: dark mode class is .dark-theme not .dark-mode */
 
 /* Tab transition */
 .tab-content { animation: tabFadeIn 0.12s ease; }
@@ -1081,29 +1109,7 @@ function toggleAfpCard(el){
   if(hint) hint.textContent = open ? 'Tap for breakdown ↓' : 'Close ↑';
 }
 
-function toggleNavMore(e){
-  e.stopPropagation();
-  var p=document.getElementById('nav-more-panel');
-  var b=document.getElementById('nav-more-btn');
-  if(!p) return;
-  var open = p.style.display==='flex'||p.style.display==='block';
-  p.style.display = open ? 'none' : 'flex';
-  p.style.flexDirection = 'column';
-  b.style.color = open ? '#64748b' : '#f59e0b';
-  b.textContent = open ? 'More ▼' : 'Less ▲';
-  if(!open){
-    function closeMore(ev){
-      var wrap=document.getElementById('nav-more-wrap');
-      if(wrap&&!wrap.contains(ev.target)){
-        p.style.display='none';
-        b.style.color='#64748b';
-        b.textContent='More ▼';
-        document.removeEventListener('click',closeMore);
-      }
-    }
-    setTimeout(function(){document.addEventListener('click',closeMore);},20);
-  }
-}
+/* toggleNavMore removed v160 — all tabs now inline */
 // ── 3-STATE MODE: user / admin / client ──────────────────────────────────────
 var VIEW_MODE = 'client';
 var isAdmin = false; // legacy compatibility
@@ -1668,18 +1674,19 @@ function gpExportCSV(){
   <button class="active admin-only" onclick="showTab('dashboard',this)">Dashboard</button>
   <button class="admin-only" onclick="showTab('data',this)">&#128202; Data</button>
   <button class="admin-only" onclick="showTab('setup',this)">&#9881; Setup</button>
-  <span class="nav-sep"></span><span id="nav-more-wrap" style="display:inline-flex;align-items:center;position:relative;"><button id="nav-more-btn" onclick="toggleNavMore(event)" style="color:#64748b;font-size:12px;padding:10px 12px;background:none;border:none;cursor:pointer;white-space:nowrap;transition:color 0.15s;">More &#9660;</button><div id="nav-more-panel" style="display:none;position:absolute;top:100%;left:0;background:#1a1d27;border:1px solid #2e3347;border-radius:8px;padding:6px;min-width:160px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,0.4);"><button class="admin-only preview-tab nav-more-item" onclick="showTab('hs',this)">H&amp;S</button>
-  <button class="admin-only preview-tab nav-more-item" onclick="showTab('valuations',this)">Valuations</button>
-  <button class="admin-only preview-tab nav-more-item" onclick="showTab('plant',this)">Plant</button>
-  <button class="admin-only preview-tab nav-more-item" onclick="showTab('documents',this)">Documents</button>
-  <button class="admin-only preview-tab nav-more-item" onclick="showTab('cashflow',this)">Cash Flow</button>
-  <button class="admin-only preview-tab nav-more-item" onclick="showTab('finalac',this)">Final A/c</button>
-  <button class="admin-only preview-tab nav-more-item" onclick="showTab('field',this)">Field</button>
-  <button class="admin-only preview-tab nav-more-item" onclick="showTab('portfolio',this)">Portfolio</button>
-  <button class="admin-only preview-tab nav-more-item" onclick="showTab('waste',this)">Waste &amp; Spoil</button>
-  <button class="admin-only preview-tab nav-more-item" onclick="showTab('doi',this)">DOI / Licences</button>
-  <button class="admin-only preview-tab nav-more-item" onclick="showTab('tender',this)">Tender / Quote</button>
-  <button class="admin-only preview-tab nav-more-item" onclick="showTab('handover',this)">Handover</button></div></span>
+  <span class="nav-sep"></span>
+  <button class="admin-only preview-tab" onclick="showTab('hs',this)">H&amp;S</button>
+  <button class="admin-only preview-tab" onclick="showTab('valuations',this)">Valuations</button>
+  <button class="admin-only preview-tab" onclick="showTab('plant',this)">Plant</button>
+  <button class="admin-only preview-tab" onclick="showTab('documents',this)">Documents</button>
+  <button class="admin-only preview-tab" onclick="showTab('cashflow',this)">Cash Flow</button>
+  <button class="admin-only preview-tab" onclick="showTab('finalac',this)">Final A/c</button>
+  <button class="admin-only preview-tab" onclick="showTab('field',this)">Field</button>
+  <button class="admin-only preview-tab" onclick="showTab('portfolio',this)">Portfolio</button>
+  <button class="admin-only preview-tab" onclick="showTab('waste',this)">Waste &amp; Spoil</button>
+  <button class="admin-only preview-tab" onclick="showTab('doi',this)">DOI / Licences</button>
+  <button class="admin-only preview-tab" onclick="showTab('tender',this)">Tender / Quote</button>
+  <button class="admin-only preview-tab" onclick="showTab('handover',this)">Handover</button>
 </div>
 
 <div id="state-banner"></div>
@@ -3444,7 +3451,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-27T16:30:00'); // v159 — AFP schedule redesign: 6 expandable cards
+const LAST_UPDATED = new Date('2026-05-27T18:00:00'); // v160 — nav More removed, AFP rows fixed, dark mode backgrounds fixed
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -10129,10 +10136,11 @@ function buildTwoWeekReport() {
   h.push('<div class="rpt-sec">AFP Schedule</div>');
   h.push('<table class="rpt-tbl">');
   h.push('<tr><th><abbr data-tooltip="Application for Payment — interim payment claim submitted to the client">AFP</abbr></th><th>Description</th><th style="text-align:right;">Net Value</th></tr>');
-  h.push('<tr><td>AFP 1</td><td>Drainage works to end April</td><td style="text-align:right;">£' + (22984.59).toLocaleString('en-GB',{minimumFractionDigits:2}) + '</td></tr>');
-  h.push('<tr><td style="font-weight:700;">AFP 2</td><td style="font-weight:700;">Certified</td><td style="text-align:right;font-weight:700;">£156,739</td></tr>');
-  h.push('<tr style="background:#fffbeb;"><td style="font-weight:700;color:#d97706;">AFP 3</td><td style="color:#d97706;">Submit ~22 May, forecast to 29 May</td><td style="text-align:right;color:#d97706;font-weight:700;">TBC &mdash; confirm with QS</td></tr>');
-  h.push('<tr><td>AFP 4</td><td>Final account &amp; retention release</td><td style="text-align:right;color:#94a3b8;">TBC</td></tr>');
+  h.push('<tr style="background:rgba(34,197,94,0.08);"><td style="font-weight:700;color:#16a34a;">AFP 1+2</td><td style="color:#16a34a;">Groundworks to Apr — <strong>PAID 12 May 2026</strong></td><td style="text-align:right;font-weight:700;color:#16a34a;">£156,739</td></tr>');
+  h.push('<tr style="background:#fffbeb;"><td style="font-weight:700;color:#d97706;">AFP 3</td><td style="color:#d97706;">Groundworks to May — not yet submitted</td><td style="text-align:right;color:#d97706;font-weight:700;">~£128,109</td></tr>');
+  h.push('<tr><td style="color:var(--muted);">AFP 4</td><td style="color:var(--muted);">Tarmac package — target ~30 Jun 2026</td><td style="text-align:right;color:#94a3b8;">TBC</td></tr>');
+  h.push('<tr><td style="color:var(--muted);">AFP 5</td><td style="color:var(--muted);">Final account + EOT claims — ~Jul 2026</td><td style="text-align:right;color:#94a3b8;">TBC</td></tr>');
+  h.push('<tr><td style="color:var(--muted);">AFP 6</td><td style="color:var(--muted);">Retention release — ~Jul 2027</td><td style="text-align:right;color:#94a3b8;">~£6,842</td></tr>');
   h.push('</table>');
   h.push('<div class="rpt-sec" style="margin-top:10px;">Extension of Time</div>');
   h.push('<table class="rpt-tbl">');
@@ -10579,10 +10587,11 @@ function buildFortnightlyReport() {
   h.push('<div class="sec-label">AFP Schedule</div>');
   h.push('<table>');
   h.push('<tr><th>AFP</th><th>Description</th><th style="text-align:right;">Net Value</th></tr>');
-  h.push('<tr><td>AFP 1</td><td>Drainage works to end April</td><td style="text-align:right;">£' + (22984.59).toLocaleString('en-GB',{minimumFractionDigits:2}) + '</td></tr>');
-  h.push('<tr><td style="font-weight:700;">AFP 2</td><td style="font-weight:700;">Certified</td><td style="text-align:right;font-weight:700;">£156,739</td></tr>');
-  h.push('<tr style="background:#fffbeb;"><td style="font-weight:700;color:#d97706;">AFP 3</td><td style="color:#d97706;">Submit ~22 May, forecast to 29 May</td><td style="text-align:right;color:#d97706;font-weight:700;">' + nextAFPValue + '</td></tr>');
-  h.push('<tr><td>AFP 4</td><td>Final account &amp; retention release</td><td style="text-align:right;color:#94a3b8;">TBC</td></tr>');
+  h.push('<tr style="background:#f0fdf4;"><td style="font-weight:700;color:#16a34a;">AFP 1+2</td><td style="color:#16a34a;">Groundworks to Apr — PAID 12 May 2026</td><td style="text-align:right;font-weight:700;color:#16a34a;">£156,739</td></tr>');
+  h.push('<tr style="background:#fffbeb;"><td style="font-weight:700;color:#d97706;">AFP 3</td><td style="color:#d97706;">Groundworks to May — not yet submitted</td><td style="text-align:right;color:#d97706;font-weight:700;">~£128,109</td></tr>');
+  h.push('<tr><td style="color:#64748b;">AFP 4</td><td style="color:#64748b;">Tarmac package — ~30 Jun 2026</td><td style="text-align:right;color:#94a3b8;">TBC</td></tr>');
+  h.push('<tr><td style="color:#64748b;">AFP 5</td><td style="color:#64748b;">Final account + EOT — ~Jul 2026</td><td style="text-align:right;color:#94a3b8;">TBC</td></tr>');
+  h.push('<tr><td style="color:#64748b;">AFP 6</td><td style="color:#64748b;">Retention release — ~Jul 2027</td><td style="text-align:right;color:#94a3b8;">~£6,842</td></tr>');
   h.push('</table>');
 
   h.push('<div class="sec-label" style="margin-top:10px;">Extension of Time</div>');
