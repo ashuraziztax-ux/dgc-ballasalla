@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DGC — Ballasalla Phase 4 | Site Control</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23f59e0b'/><text x='50' y='70' font-family='system-ui,sans-serif' font-size='60' font-weight='900' text-anchor='middle' fill='%231a1d27'>D</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -152,7 +153,7 @@ body.client-mode .dashboard-secondary-row { display: none !important; }
 
 /* CARDS */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
-.card-title { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; font-weight: 600; }
+.card-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 14px; font-weight: 800; }
 
 /* ZONE CARDS */
 .zone-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; margin-bottom: 20px; }
@@ -533,6 +534,18 @@ body.dark-theme [style*="background:#f1f5f9"] {
 /* Site map container: white bg on light, dark on dark theme */
 #tab-sitemap .card { background: #ffffff; }
 body.dark-theme #tab-sitemap .card { background: #1a1d27; }
+/* ── Dark mode: Programme section cards & bars (hardcoded #fff in CSS class) ── */
+body.dark-theme .pv5-bar-section { background: var(--surface) !important; border-color: var(--border) !important; }
+body.dark-theme .pv5-section-card { background: var(--surface) !important; border-color: var(--border) !important; }
+body.dark-theme .pv5-section-name { color: var(--text) !important; }
+body.dark-theme .pv5-snap-banner { background: rgba(245,158,11,0.08) !important; border-color: rgba(245,158,11,0.2) !important; color: #fbbf24 !important; }
+/* ── Dark mode: Efficiency scenario cards (amber/green inline bg) ── */
+body.dark-theme div[style*="background:#fef9ee"] { background: rgba(245,158,11,0.07) !important; }
+body.dark-theme div[style*="background:#f0fdf4"] { background: rgba(34,197,94,0.07) !important; }
+/* ── Dark mode: section cards with hardcoded light text colors ── */
+body.dark-theme .pv5-section-sub { color: var(--muted) !important; }
+body.dark-theme .pv5-bar-label { color: var(--muted) !important; }
+body.dark-theme .pv5-bar-track { background: var(--border) !important; }
 
 /* ══════ v130 — Comprehensive Mobile Layout ══════ */
 
@@ -651,6 +664,30 @@ body.dark-theme #tab-sitemap .card { background: #1a1d27; }
 .alert.info    { border-left: 3px solid var(--accent2) !important; }
 .alert.success { border-left: 3px solid var(--green) !important; }
 
+/* ─── v163: Quality polish ─── */
+/* Card border-radius upgrade */
+.card { border-radius: 12px !important; }
+.kpi-card { border-radius: 10px !important; }
+.zone-card { border-radius: 10px !important; }
+/* Better card hover lift */
+.zone-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.afp-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.07); }
+/* Improved focus rings */
+button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+/* Smoother tab animation (overrides earlier 0.12s) */
+.tab-content { animation: tabFadeIn 0.14s ease !important; }
+/* Scrollbar thin style (webkit) */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+/* Better button base */
+.nav button { transition: color 0.12s, border-bottom-color 0.12s; }
+/* Snap banner DGC branding accent */
+.pv5-snap-banner strong { color: var(--accent); }
+
 /* ─── v8: Voice diary ─── */
 #diary-text { transition: border-color 0.2s; }
 #diary-text:focus { border-color: var(--accent) !important; outline: none; }
@@ -661,8 +698,8 @@ body.dark-theme #tab-sitemap .card { background: #1a1d27; }
 .gp-gang-row { display:grid; grid-template-columns:130px 90px 58px 36px auto; gap:5px; align-items:center; margin-bottom:6px; }
 .gp-gang-label { font-size:11px; font-weight:700; color:var(--text); white-space:nowrap; }
 .gp-gang-row select, .gp-gang-row input[type="number"], .gp-gang-row input[type="text"] {
-  font-size:11px; background:var(--surface2); border:1px solid var(--border); border-radius:5px;
-  color:var(--text); padding:4px 6px; width:100%; box-sizing:border-box; font-family:var(--font); }
+  font-size:12px; background:var(--surface2); border:1px solid var(--border); border-radius:6px;
+  color:var(--text); padding:7px 8px; width:100%; box-sizing:border-box; font-family:var(--font); min-height:36px; }
 .gp-unit-badge { font-size:12px; color:var(--muted); font-weight:700; text-align:center; line-height:1; padding-top:2px; }
 .gp-dis-wrap { display:flex; align-items:center; gap:4px; font-size:12px; color:var(--muted); white-space:nowrap; }
 .gp-dis-wrap input[type="checkbox"] { width:14px; height:14px; cursor:pointer; accent-color:var(--accent); }
@@ -2171,12 +2208,12 @@ function gpExportCSV(){
     <!-- Progress bar: paid vs estimated vs TBC -->
     <div class="afp-summary-bar">
       <div style="width:34.8%;background:#22c55e;" title="Paid: £156,739"></div>
-      <div style="width:28.5%;background:#f59e0b;" title="AFP 3 est: ~£128,109"></div>
+      <div style="width:28.5%;background:#f59e0b;" title="AFP 3 submitted: £128,109 — awaiting cert."></div>
       <div style="width:36.7%;background:#e2e8f0;" title="AFP 4–6: TBC"></div>
     </div>
     <div class="afp-summary-legend">
       <span><span class="afp-legend-dot" style="background:#22c55e;"></span>Paid: £156,739 (34.8%)</span>
-      <span><span class="afp-legend-dot" style="background:#f59e0b;"></span>Pending est: ~£128,109 (AFP 3)</span>
+      <span><span class="afp-legend-dot" style="background:#f59e0b;"></span>AFP 3 submitted: £128,109 (awaiting cert.)</span>
       <span><span class="afp-legend-dot" style="background:#e2e8f0;border:1px solid #cbd5e1;"></span>TBC: AFP 4 · 5 · 6</span>
     </div>
 
@@ -2205,14 +2242,14 @@ function gpExportCSV(){
         </div>
       </div>
 
-      <!-- AFP 3 — PENDING ESTIMATE -->
+      <!-- AFP 3 — SUBMITTED AWAITING CERT -->
       <div class="afp-card afp-card--pending" onclick="toggleAfpCard(this)">
         <div class="afp-card__header">
           <span class="afp-card__num">AFP 3</span>
-          <span class="afp-card__badge afp-card__badge--pending">Estimate</span>
+          <span class="afp-card__badge afp-card__badge--pending">⏳ Awaiting Cert.</span>
         </div>
-        <div class="afp-card__amount">~£128,109</div>
-        <div class="afp-card__sublabel">net estimate · not submitted · due ~3 Jul 2026</div>
+        <div class="afp-card__amount">£128,109</div>
+        <div class="afp-card__sublabel">submitted 22 May 2026 · cert. target 26 Jun</div>
         <div class="afp-card__expand-hint">Tap for breakdown ↓</div>
         <div class="afp-card__detail" style="display:none;">
           <div class="afp-detail-sep"></div>
@@ -2227,8 +2264,8 @@ function gpExportCSV(){
           <div class="afp-detail-row" style="border-top:1px solid var(--border);padding-top:6px;margin-top:3px;"><span>Gross cumulative</span><span>£293,658</span></div>
           <div class="afp-detail-row afp-detail-row--deduct"><span>Less 3% retention</span><span>−£8,810</span></div>
           <div class="afp-detail-row afp-detail-row--deduct"><span>Less AFP 1+2 paid</span><span>−£156,739</span></div>
-          <div class="afp-detail-row afp-detail-row--total"><span>Net due</span><span style="color:#d97706;">~£128,109</span></div>
-          <div class="afp-detail-info">QS draft only (Sophie) · Not yet submitted to Dandara · Gross cumulative = 65.2% of contract</div>
+          <div class="afp-detail-row afp-detail-row--total"><span>Net due</span><span style="color:#d97706;">£128,109</span></div>
+          <div class="afp-detail-info">Submitted to Dandara 22 May 2026 · Measured to 29 May · Awaiting Ian Barnes certification · Target cert. 26 Jun 2026 · EOT claims D–I (~£16,167) carried to AFP 5</div>
         </div>
       </div>
 
@@ -2305,10 +2342,10 @@ function gpExportCSV(){
   <!-- AFP 3 Predicted Breakdown -->
   <div class="card admin-only" style="margin-top:16px;">
     <div class="card-title" style="display:flex;align-items:center;gap:10px;">
-      Predicted AFP 3
+      AFP 3 — Submitted
       <span style="font-size:12px;font-weight:500;color:#f59e0b;background:#f59e0b18;border:1px solid #f59e0b44;
                    padding:2px 8px;border-radius:10px;text-transform:none;letter-spacing:0;">
-        QS Draft — not yet submitted
+        ⏳ Awaiting Dandara Certification
       </span>
       <span style="font-size:12px;font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:auto;">
         Work to 29 May 2026
@@ -3449,7 +3486,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-27T21:00:00'); // v162 — three-line velocity chart, efficiency tab rebuild
+const LAST_UPDATED = new Date('2026-05-27T22:30:00'); // v163 — AFP3 status fix, dark mode pv5/efficiency, efficiency hero, state banner, typography & polish
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -5548,15 +5585,18 @@ function buildStateBanner() {
   var diffTxt = diff === 0 ? '<span style="color:#4ade80;font-weight:700;">on time</span>'
     : diff > 0 ? '<span style="color:#f87171;font-weight:700;">' + diff + ' day' + (diff===1?'':'s') + ' behind schedule</span>'
     : '<span style="color:#4ade80;font-weight:700;">' + Math.abs(diff) + ' day' + (Math.abs(diff)===1?'':'s') + ' ahead of schedule</span>';
+  var sbBdr = diff < 0 ? '#22c55e' : diff > 0 ? '#ef4444' : '#f59e0b';
   el.innerHTML =
-    '<div style="background:var(--surface);border-bottom:2px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">'
-    + '<div style="flex:1;min-width:200px;">'
-    + '<span style="font-size:13px;font-weight:700;color:var(--text);">' + name + '</span>'
-    + '<span style="font-size:12px;color:var(--muted);"> &mdash; '
-    + Math.round(actual) + '% complete &nbsp;&middot;&nbsp; Deadline ' + dlStr + ' &nbsp;&middot;&nbsp; ' + diffTxt
-    + '</span>'
+    '<div style="background:var(--surface);border-bottom:3px solid '+sbBdr+';padding:10px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">'
+    + '<div style="flex:1;min-width:200px;display:flex;align-items:center;gap:12px;">'
+    + '<div style="width:38px;height:38px;border-radius:50%;background:'+sbBdr+'18;border:2px solid '+sbBdr+'44;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+    + '<span style="font-size:14px;font-weight:900;color:'+sbBdr+';">' + Math.round(actual) + '</span>'
     + '</div>'
-    + (ddStr ? '<div style="font-size:12px;color:var(--muted);white-space:nowrap;flex-shrink:0;">Data as of ' + ddStr + '</div>' : '')
+    + '<div>'
+    + '<div style="font-size:13px;font-weight:800;color:var(--text);">' + name + ' &nbsp;<span style="font-size:11px;font-weight:500;color:var(--muted);">— ' + Math.round(actual) + '% complete</span></div>'
+    + '<div style="font-size:11px;color:var(--muted);margin-top:1px;">Deadline ' + dlStr + ' &nbsp;&middot;&nbsp; ' + diffTxt + (ddStr ? ' &nbsp;&middot;&nbsp; Data as of <strong>' + ddStr + '</strong>' : '') + '</div>'
+    + '</div>'
+    + '</div>'
     + '</div>';
   el.classList.add('sb-visible');
 }
@@ -7747,6 +7787,33 @@ function buildEfficiencyTab() {
     } catch(e) {}
   }
   effLog = effLog.slice().reverse();
+
+  // ── Efficiency hero ──────────────────────────────────────────────────────
+  var effHeroCol = efficiency >= 110 ? '#22c55e' : efficiency >= 95 ? '#f59e0b' : '#ef4444';
+  var effHeroBg  = efficiency >= 110 ? 'rgba(34,197,94,0.06)' : efficiency >= 95 ? 'rgba(245,158,11,0.06)' : 'rgba(239,68,68,0.06)';
+  var effHeroBdr = efficiency >= 110 ? 'rgba(34,197,94,0.2)' : efficiency >= 95 ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)';
+  var effHeroMsg = efficiency >= 110 ? 'Running ahead of programme' : efficiency >= 100 ? 'On programme pace' : efficiency >= 95 ? 'Slightly behind programme' : 'Behind — needs attention';
+  var heroDiv = document.createElement('div');
+  heroDiv.style.cssText = 'background:'+effHeroBg+';border:1px solid '+effHeroBdr+';border-radius:14px;padding:24px 28px;margin-bottom:16px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;';
+  heroDiv.innerHTML =
+    '<div style="flex:0 0 auto;text-align:center;">'
+    +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px;">Overall Efficiency</div>'
+    +'<div style="font-size:64px;font-weight:900;color:'+effHeroCol+';line-height:1;">'+efficiency+'%</div>'
+    +'<div style="font-size:12px;font-weight:700;color:'+effHeroCol+';margin-top:4px;">'+effHeroMsg+'</div>'
+    +'</div>'
+    +'<div style="flex:1;min-width:180px;border-left:1px solid var(--border);padding-left:24px;">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
+    +'<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:3px;">Actual Progress</div>'
+    +'<div style="font-size:22px;font-weight:900;color:var(--text);">'+actualPct+'%</div></div>'
+    +'<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:3px;">Planned (today)</div>'
+    +'<div style="font-size:22px;font-weight:900;color:var(--muted);">'+plannedPct+'%</div></div>'
+    +'<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:3px;">Days Elapsed</div>'
+    +'<div style="font-size:22px;font-weight:900;color:var(--text);">'+daysElapsedE+'</div></div>'
+    +'<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:3px;">Remaining Work</div>'
+    +'<div style="font-size:22px;font-weight:900;color:var(--text);">'+remaining+'%</div></div>'
+    +'</div>'
+    +'</div>';
+  el.appendChild(heroDiv);
 
   // ── Card helper ───────────────────────────────────────────────────────────
   function mkCard(content, mb) {
@@ -10300,7 +10367,7 @@ function buildTwoWeekReport() {
   h.push('<table class="rpt-tbl">');
   h.push('<tr><th><abbr data-tooltip="Application for Payment — interim payment claim submitted to the client">AFP</abbr></th><th>Description</th><th style="text-align:right;">Net Value</th></tr>');
   h.push('<tr style="background:rgba(34,197,94,0.08);"><td style="font-weight:700;color:#16a34a;">AFP 1+2</td><td style="color:#16a34a;">Groundworks to Apr — <strong>PAID 12 May 2026</strong></td><td style="text-align:right;font-weight:700;color:#16a34a;">£156,739</td></tr>');
-  h.push('<tr style="background:#fffbeb;"><td style="font-weight:700;color:#d97706;">AFP 3</td><td style="color:#d97706;">Groundworks to May — not yet submitted</td><td style="text-align:right;color:#d97706;font-weight:700;">~£128,109</td></tr>');
+  h.push('<tr style="background:#fffbeb;"><td style="font-weight:700;color:#d97706;">AFP 3</td><td style="color:#d97706;">Groundworks to May — Submitted 22 May 2026 · Awaiting cert. (target 26 Jun)</td><td style="text-align:right;color:#d97706;font-weight:700;">£128,109</td></tr>');
   h.push('<tr><td style="color:var(--muted);">AFP 4</td><td style="color:var(--muted);">Tarmac package — target ~30 Jun 2026</td><td style="text-align:right;color:#94a3b8;">TBC</td></tr>');
   h.push('<tr><td style="color:var(--muted);">AFP 5</td><td style="color:var(--muted);">Final account + EOT claims — ~Jul 2026</td><td style="text-align:right;color:#94a3b8;">TBC</td></tr>');
   h.push('<tr><td style="color:var(--muted);">AFP 6</td><td style="color:var(--muted);">Retention release — ~Jul 2027</td><td style="text-align:right;color:#94a3b8;">~£6,842</td></tr>');
@@ -10751,7 +10818,7 @@ function buildFortnightlyReport() {
   h.push('<table>');
   h.push('<tr><th>AFP</th><th>Description</th><th style="text-align:right;">Net Value</th></tr>');
   h.push('<tr style="background:#f0fdf4;"><td style="font-weight:700;color:#16a34a;">AFP 1+2</td><td style="color:#16a34a;">Groundworks to Apr — PAID 12 May 2026</td><td style="text-align:right;font-weight:700;color:#16a34a;">£156,739</td></tr>');
-  h.push('<tr style="background:#fffbeb;"><td style="font-weight:700;color:#d97706;">AFP 3</td><td style="color:#d97706;">Groundworks to May — not yet submitted</td><td style="text-align:right;color:#d97706;font-weight:700;">~£128,109</td></tr>');
+  h.push('<tr style="background:#fffbeb;"><td style="font-weight:700;color:#d97706;">AFP 3</td><td style="color:#d97706;">Groundworks to May — Submitted 22 May 2026 · Awaiting cert. (target 26 Jun)</td><td style="text-align:right;color:#d97706;font-weight:700;">£128,109</td></tr>');
   h.push('<tr><td style="color:#64748b;">AFP 4</td><td style="color:#64748b;">Tarmac package — ~30 Jun 2026</td><td style="text-align:right;color:#94a3b8;">TBC</td></tr>');
   h.push('<tr><td style="color:#64748b;">AFP 5</td><td style="color:#64748b;">Final account + EOT — ~Jul 2026</td><td style="text-align:right;color:#94a3b8;">TBC</td></tr>');
   h.push('<tr><td style="color:#64748b;">AFP 6</td><td style="color:#64748b;">Retention release — ~Jul 2027</td><td style="text-align:right;color:#94a3b8;">~£6,842</td></tr>');
