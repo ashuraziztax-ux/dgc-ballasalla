@@ -921,6 +921,41 @@ input[type=number] { -moz-appearance: textfield; }
 /* ════════════════════════════════════════ */
 
 /* ═══════════════════════════════════════════
+   v159 — Setup Tab: light-mode input fix
+   All inputs/selects/textareas inside the
+   Setup tab were hardcoded with dark navy
+   backgrounds (#1e293b / #0f172a).
+   Override them all to use surface vars.
+   ═══════════════════════════════════════════ */
+#tab-setup input[type="text"],
+#tab-setup input[type="number"],
+#tab-setup input[type="date"],
+#tab-setup input[type="email"],
+#tab-setup input[type="url"],
+#tab-setup input[type="time"],
+#tab-setup select,
+#tab-setup textarea {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+#tab-setup input:focus,
+#tab-setup select:focus,
+#tab-setup textarea:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.1) !important;
+  outline: none !important;
+}
+/* Container divs inside setup that had hardcoded dark backgrounds */
+#tab-setup div[style*="background:#0f172a"],
+#tab-setup div[style*="background:#1e293b"] {
+  background: var(--surface) !important;
+}
+#tab-setup div[style*="background:#0f172a"] {
+  border-color: var(--border) !important;
+}
+
+/* ═══════════════════════════════════════════
    v159 — AFP Card Redesign
    ═══════════════════════════════════════════ */
 .afp-grid {
@@ -5994,7 +6029,7 @@ function buildSetupTab() {
 
   // Dropdown — all projects + "— New Project —" at end
   h.push('<select id="proj-switcher" onchange="projSwitchOrNew(this.value)" '
-    + 'style="flex:1;min-width:200px;padding:7px 10px;background:#1e293b;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-weight:700;">');
+    + 'style="flex:1;min-width:200px;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-weight:700;">');
   _projKeys.forEach(function(k) {
     var n = (_allProj[k] && _allProj[k]._name) || k;
     h.push('<option value="' + k + '"' + (k === _activeId && !_setupIsNew ? ' selected' : '') + '>' + n + '</option>');
@@ -6004,13 +6039,13 @@ function buildSetupTab() {
 
   // Duplicate Project
   h.push('<button onclick="projDuplicateQuiet()" title="Copy this project as a new entry" '
-    + 'style="padding:7px 14px;background:#1e293b;border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap;">Duplicate Project</button>');
+    + 'style="padding:7px 14px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap;">Duplicate Project</button>');
 
   // Delete Project (two-step confirm, disabled if only one project)
   var _canDelete = _projKeys.length > 1 && !_setupIsNew;
   h.push('<button id="proj-delete-btn" onclick="projDeleteWithConfirm(\'' + _activeId + '\')" '
     + (!_canDelete ? 'disabled ' : '')
-    + 'style="padding:7px 14px;background:#1e293b;border:1px solid #dc262640;color:#dc2626;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap;'
+    + 'style="padding:7px 14px;background:var(--surface);border:1px solid #dc262640;color:#dc2626;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap;'
     + (!_canDelete ? 'opacity:0.4;cursor:not-allowed;' : '') + '">'
     + 'Delete Project</button>');
 
@@ -6162,8 +6197,8 @@ function buildSetupTab() {
   // ── Actions
   h.push('<div style="display:flex;gap:10px;flex-wrap:wrap;padding:4px 0 20px;">');
   h.push('<button onclick="saveSetupForm()" style="padding:10px 22px;background:#16a34a;border:1px solid #16a34a;color:#fff;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;">💾 Save &amp; Apply</button>');
-  h.push('<button onclick="cfgExport()" style="padding:10px 22px;background:#1e293b;border:1px solid #38bdf8;color:#38bdf8;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">📤 Export JSON</button>');
-  h.push('<label style="padding:10px 22px;background:#1e293b;border:1px solid #64748b;color:#94a3b8;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">📥 Import JSON<input type="file" accept=".json" style="display:none;" onchange="handleConfigImport(this.files[0])"></label>');
+  h.push('<button onclick="cfgExport()" style="padding:10px 22px;background:var(--surface);border:1px solid #38bdf8;color:#38bdf8;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">📤 Export JSON</button>');
+  h.push('<label style="padding:10px 22px;background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">📥 Import JSON<input type="file" accept=".json" style="display:none;" onchange="handleConfigImport(this.files[0])"></label>');
   h.push('<button onclick="resetProjectConfig()" style="padding:10px 22px;background:none;border:1px solid #ef4444;color:#ef4444;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">⚠ Reset to Blank</button>');
   h.push('</div>');
 
@@ -6174,7 +6209,7 @@ function buildSetupTab() {
     + '<div><div style="font-size:14px;font-weight:800;color:var(--text);">Sanity Check</div>'
     + '<div style="font-size:12px;color:var(--muted);margin-top:2px;">Runs automatically on save — flags crossed dates, missing data and inconsistencies</div></div>'
     + '<button onclick="var c=cfgLoad()||{};var i=runValidation(c);renderValidationPanel(i);" '
-    + 'style="margin-left:auto;padding:5px 14px;background:#1e293b;border:1px solid var(--border);color:var(--muted);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">↻ Re-check</button>'
+    + 'style="margin-left:auto;padding:5px 14px;background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">↻ Re-check</button>'
     + '</div>'
     + '<div id="su-validation" style="font-size:12px;color:var(--muted);">Save the form to run validation.</div>'
   ));
