@@ -3514,7 +3514,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-29T15:00:00'); // v172 — Heat map auto-saves to Obsidian file every 5 min + on close, File System Access API with IndexedDB persistence
+const LAST_UPDATED = new Date('2026-05-29T16:00:00'); // v173 — Heat map: smooth radial gradients, paused during viewing, per-mode filter (All/Client/Site Team/Admin)
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -10104,16 +10104,19 @@ function showTab(name, btn) {
 // ════════════════════════════════════════════════════════════════════
 
 // ════════════════════════════════════════════════════════════════════════════
-// HEAT MAP TRACKER — v170 — records usage patterns for UX analytics
+// HEAT MAP TRACKER — v173 — records usage patterns for UX analytics
 // Data stored in localStorage key: dgc_heatmap
+// Per-mode data structure: all / client / user / admin
 // ════════════════════════════════════════════════════════════════════════════
 var HM = (function() {
   var GRID_W = 40, GRID_H = 20;
-  var currentTab = 'programme';
+  var MODES = ['all','client','user','admin'];
+  var currentTab  = 'programme';
   var sessionStart = Date.now();
-  var tabStart = Date.now();
+  var tabStart     = Date.now();
   var _overlayActive = false;
-  var _renderTimer = null;
+  var _activeFilter  = 'all';   // which mode to display in overlay
+  var _snapshot      = null;    // frozen copy of data at overlay-open time
 
   function getData() {
     try { return JSON.parse(localStorage.getItem('dgc_heatmap') || '{}'); } catch(e) { return {}; }
@@ -10121,32 +10124,53 @@ var HM = (function() {
   function saveData(d) {
     try { localStorage.setItem('dgc_heatmap', JSON.stringify(d)); } catch(e) {}
   }
+
+  // Ensure tab has per-mode buckets; migrate old flat structure if needed
   function ensureTab(d, tab) {
     if (!d.tabs) d.tabs = {};
-    if (!d.tabs[tab]) d.tabs[tab] = { grid: new Array(GRID_W * GRID_H).fill(0), clicks: [], timeMs: 0, visits: 0 };
-    if (!d.tabs[tab].grid || d.tabs[tab].grid.length !== GRID_W * GRID_H) {
-      d.tabs[tab].grid = new Array(GRID_W * GRID_H).fill(0);
+    if (!d.tabs[tab]) d.tabs[tab] = {};
+    var td = d.tabs[tab];
+    // Migrate old flat structure (grid was directly on td)
+    if (Array.isArray(td.grid)) {
+      td.all = { grid: td.grid, clicks: td.clicks||[], timeMs: td.timeMs||0, visits: td.visits||0 };
+      MODES.slice(1).forEach(function(m){ td[m] = { grid: new Array(GRID_W*GRID_H).fill(0), clicks: [], timeMs: 0, visits: 0 }; });
+      delete td.grid; delete td.clicks; delete td.timeMs; delete td.visits;
     }
+    MODES.forEach(function(m) {
+      if (!td[m]) td[m] = { grid: new Array(GRID_W*GRID_H).fill(0), clicks: [], timeMs: 0, visits: 0 };
+      if (!td[m].grid || td[m].grid.length !== GRID_W*GRID_H) td[m].grid = new Array(GRID_W*GRID_H).fill(0);
+    });
     return d;
   }
 
+  function currentMode() {
+    return (typeof VIEW_MODE !== 'undefined') ? (VIEW_MODE||'user') : 'user';
+  }
+
   function recordMouse(x, y) {
-    var gx = Math.min(GRID_W - 1, Math.floor((x / window.innerWidth) * GRID_W));
-    var gy = Math.min(GRID_H - 1, Math.floor((y / window.innerHeight) * GRID_H));
+    if (_overlayActive) return; // don't pollute data while viewing it
+    var gx = Math.min(GRID_W-1, Math.floor((x/window.innerWidth)*GRID_W));
+    var gy = Math.min(GRID_H-1, Math.floor((y/window.innerHeight)*GRID_H));
     var d = getData(); d = ensureTab(d, currentTab);
-    d.tabs[currentTab].grid[gy * GRID_W + gx] = (d.tabs[currentTab].grid[gy * GRID_W + gx] || 0) + 1;
+    var m = currentMode();
+    d.tabs[currentTab].all.grid[gy*GRID_W+gx]++;
+    if (d.tabs[currentTab][m]) d.tabs[currentTab][m].grid[gy*GRID_W+gx]++;
     saveData(d);
   }
 
   function recordClick(x, y) {
-    var xp = Math.round(x / window.innerWidth * 100) / 100;
-    var yp = Math.round(y / window.innerHeight * 100) / 100;
+    if (_overlayActive) return; // don't pollute data while viewing it
+    var xp = Math.round(x/window.innerWidth*100)/100;
+    var yp = Math.round(y/window.innerHeight*100)/100;
     var d = getData(); d = ensureTab(d, currentTab);
-    var found = false;
-    (d.tabs[currentTab].clicks || []).forEach(function(c) {
-      if (Math.abs(c.x - xp) < 0.04 && Math.abs(c.y - yp) < 0.04) { c.count = (c.count||1)+1; found = true; }
-    });
-    if (!found) d.tabs[currentTab].clicks.push({ x: xp, y: yp, count: 1 });
+    var m = currentMode();
+    function addClick(arr, xp, yp) {
+      var found = false;
+      arr.forEach(function(c){ if(Math.abs(c.x-xp)<0.04&&Math.abs(c.y-yp)<0.04){c.count=(c.count||1)+1;found=true;} });
+      if (!found) arr.push({x:xp, y:yp, count:1});
+    }
+    addClick(d.tabs[currentTab].all.clicks, xp, yp);
+    if (d.tabs[currentTab][m]) addClick(d.tabs[currentTab][m].clicks, xp, yp);
     saveData(d);
   }
 
@@ -10154,28 +10178,25 @@ var HM = (function() {
     var now = Date.now(), elapsed = now - tabStart;
     if (elapsed > 300 && elapsed < 7200000) {
       var d = getData(); d = ensureTab(d, currentTab);
-      d.tabs[currentTab].timeMs = (d.tabs[currentTab].timeMs || 0) + elapsed;
-      d.tabs[currentTab].visits = (d.tabs[currentTab].visits || 0) + 1;
+      var m = currentMode();
+      d.tabs[currentTab].all.timeMs  += elapsed; d.tabs[currentTab].all.visits++;
+      if (d.tabs[currentTab][m]) { d.tabs[currentTab][m].timeMs += elapsed; d.tabs[currentTab][m].visits++; }
       saveData(d);
     }
     currentTab = newTab; tabStart = now;
+    if (_overlayActive) { _snapshot = getData(); _renderCanvas(); _renderPanel(); }
   }
 
   function endSession() {
     var d = getData(); if (!d.sessions) d.sessions = [];
-    d.sessions.push({
-      date: new Date().toISOString().slice(0, 10),
-      durationMs: Date.now() - sessionStart,
-      lastTab: currentTab,
-      mode: (typeof VIEW_MODE !== 'undefined') ? VIEW_MODE : '?'
-    });
+    d.sessions.push({ date: new Date().toISOString().slice(0,10), durationMs: Date.now()-sessionStart, lastTab: currentTab, mode: currentMode() });
     if (d.sessions.length > 300) d.sessions = d.sessions.slice(-300);
     saveData(d);
   }
 
-  // ── Overlay ──────────────────────────────────────────────────────────────
+  // ── Overlay elements ───────────────────────────────────────────────────────
   function getCanvas() { return document.getElementById('hm-canvas'); }
-  function getPanel() { return document.getElementById('hm-side-panel'); }
+  function getPanel()  { return document.getElementById('hm-side-panel'); }
 
   function createOverlayElements() {
     if (document.getElementById('hm-canvas')) return;
@@ -10185,111 +10206,191 @@ var HM = (function() {
     document.body.appendChild(c);
     var p = document.createElement('div');
     p.id = 'hm-side-panel';
-    p.style.cssText = 'position:fixed;right:0;top:0;bottom:0;width:260px;background:rgba(15,17,23,0.97);border-left:2px solid #f59e0b;z-index:9992;padding:14px;font-size:11px;color:#e2e8f0;overflow-y:auto;display:none;font-family:system-ui,sans-serif;';
+    p.style.cssText = 'position:fixed;right:0;top:0;bottom:0;width:260px;background:rgba(15,17,23,0.97);border-left:2px solid #f59e0b;z-index:9992;padding:14px 12px;font-size:11px;color:#e2e8f0;overflow-y:auto;display:none;font-family:system-ui,sans-serif;';
     document.body.appendChild(p);
   }
 
-  function renderCanvas() {
+  // ── Canvas rendering — smooth radial gradient heat map ───────────────────
+  function _getDisplayData() {
+    var src = _snapshot || getData();
+    var td = src.tabs && src.tabs[currentTab];
+    if (!td) return { grid: null, clicks: [] };
+    var bucket = td[_activeFilter];
+    if (!bucket || !bucket.grid) return { grid: null, clicks: [] };
+    return { grid: bucket.grid, clicks: bucket.clicks || [] };
+  }
+
+  function _renderCanvas() {
     var canvas = getCanvas();
-    if (!canvas || !_overlayActive) return;
-    canvas.width = window.innerWidth;
+    if (!canvas) return;
+    canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
     var ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    var d = getData();
-    var td = d.tabs && d.tabs[currentTab];
-    var cellW = canvas.width / GRID_W, cellH = canvas.height / GRID_H;
-    if (td && td.grid && td.grid.length) {
-      var maxV = Math.max.apply(null, td.grid) || 1;
-      for (var row = 0; row < GRID_H; row++) {
-        for (var col = 0; col < GRID_W; col++) {
-          var v = (td.grid[row * GRID_W + col] || 0) / maxV;
-          if (v < 0.02) continue;
-          // Colour gradient: blue→cyan→green→yellow→orange→red
-          var r, g, b;
-          if (v < 0.25)      { r=0;   g=Math.round(v/0.25*255);   b=255; }
-          else if (v < 0.5)  { r=0;   g=255; b=Math.round((0.5-v)/0.25*255); }
-          else if (v < 0.75) { r=Math.round((v-0.5)/0.25*255); g=255; b=0; }
-          else               { r=255; g=Math.round((1-v)/0.25*255); b=0; }
-          ctx.fillStyle = 'rgba('+r+','+g+','+b+','+(0.1+v*0.55)+')';
-          ctx.fillRect(col*cellW, row*cellH, cellW, cellH);
-        }
+
+    var dd = _getDisplayData();
+    if (!dd.grid) {
+      // No data message
+      ctx.fillStyle = 'rgba(245,158,11,0.9)';
+      ctx.font = 'bold 14px system-ui';
+      ctx.textAlign = 'left';
+      var msg = _activeFilter === 'all'
+        ? 'No heat map data yet for "'+currentTab+'" — use the app normally and come back'
+        : 'No "'+_activeFilter+'" mode data for "'+currentTab+'" — try switching the filter to All';
+      ctx.fillText(msg, 20, canvas.height/2);
+      return;
+    }
+
+    var grid = dd.grid;
+    var maxV = Math.max.apply(null, grid) || 1;
+    var cellW = canvas.width / GRID_W;
+    var cellH = canvas.height / GRID_H;
+    var blobR = Math.max(cellW, cellH) * 2.8; // radius of each heat blob — overlaps for smooth merging
+
+    // Use additive blending so overlapping blobs accumulate naturally
+    ctx.globalCompositeOperation = 'screen';
+
+    for (var row = 0; row < GRID_H; row++) {
+      for (var col = 0; col < GRID_W; col++) {
+        var raw = grid[row * GRID_W + col] || 0;
+        var v   = raw / maxV;
+        if (v < 0.015) continue;
+
+        var cx = (col + 0.5) * cellW;
+        var cy = (row + 0.5) * cellH;
+
+        // Colour map: cold=blue, medium=cyan/green, warm=yellow, hot=red
+        var r, g, b;
+        if (v < 0.2)       { r=0;   g=Math.round(v/0.2*120);   b=220; }
+        else if (v < 0.45) { r=0;   g=200; b=Math.round((0.45-v)/0.25*220); }
+        else if (v < 0.7)  { r=Math.round((v-0.45)/0.25*255); g=220; b=0; }
+        else               { r=255; g=Math.round((1-v)/0.3*180); b=0; }
+
+        var alpha = 0.08 + v * 0.38;
+        var grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, blobR);
+        grad.addColorStop(0,   'rgba('+r+','+g+','+b+','+Math.min(0.85, alpha*2.2)+')');
+        grad.addColorStop(0.4, 'rgba('+r+','+g+','+b+','+alpha+')');
+        grad.addColorStop(1,   'rgba('+r+','+g+','+b+',0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(Math.max(0,cx-blobR), Math.max(0,cy-blobR), blobR*2, blobR*2);
       }
     }
-    // Draw click dots
-    if (td && td.clicks) {
-      td.clicks.forEach(function(c) {
-        var cx = c.x * canvas.width, cy = c.y * canvas.height;
-        var radius = Math.min(24, 7 + (c.count||1) * 4);
-        var grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-        grad.addColorStop(0, 'rgba(255,255,255,0.95)');
-        grad.addColorStop(0.4, 'rgba(245,158,11,0.7)');
-        grad.addColorStop(1, 'rgba(245,158,11,0)');
-        ctx.fillStyle = grad;
-        ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI*2); ctx.fill();
-        if (c.count > 1) {
-          ctx.fillStyle = '#1a1d27'; ctx.font = 'bold 9px system-ui'; ctx.textAlign = 'center';
-          ctx.fillText(c.count, cx, cy+3);
-        }
-      });
-    }
-    // No data hint
-    if (!td || !td.grid || !td.grid.length) {
-      ctx.fillStyle = 'rgba(245,158,11,0.7)'; ctx.font = 'bold 13px system-ui'; ctx.textAlign = 'left';
-      ctx.fillText('No heat map data yet for "'+currentTab+'" — hover your mouse around to start recording', 20, 80);
-    }
-    renderPanel(d);
+
+    // Restore to normal for click dots
+    ctx.globalCompositeOperation = 'source-over';
+
+    // Click dots — bright, distinct markers
+    dd.clicks.forEach(function(c) {
+      var cx = c.x * canvas.width, cy = c.y * canvas.height;
+      var cnt = c.count || 1;
+      var radius = Math.min(28, 10 + cnt * 3);
+      // Outer glow
+      var glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius*2);
+      glow.addColorStop(0,   'rgba(255,255,255,0.25)');
+      glow.addColorStop(1,   'rgba(255,255,255,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(cx, cy, radius*2, 0, Math.PI*2); ctx.fill();
+      // White ring
+      ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,0.88)';
+      ctx.fill();
+      ctx.strokeStyle = cnt > 3 ? '#ef4444' : '#f59e0b';
+      ctx.lineWidth = 2.5; ctx.stroke();
+      // Count label
+      ctx.fillStyle = '#1a1d27';
+      ctx.font = 'bold '+(cnt>9?9:10)+'px system-ui';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(cnt > 99 ? '99+' : String(cnt), cx, cy);
+    });
+    ctx.textBaseline = 'alphabetic';
   }
 
-  function renderPanel(d) {
+  function _filterBtn(label, key) {
+    var active = _activeFilter === key;
+    var cols = { all:'#f59e0b', client:'#38bdf8', user:'#a78bfa', admin:'#f87171' };
+    var col = cols[key] || '#94a3b8';
+    return '<button onclick="HM.setFilter(\''+key+'\')" style="flex:1;padding:5px 4px;border-radius:5px;border:1px solid '+(active?col:'#2e3347')+';background:'+(active?col+'22':'transparent')+';color:'+(active?col:'#64748b')+';font-size:10px;font-weight:'+(active?'800':'600')+';cursor:pointer;transition:all 0.15s;">'+label+'</button>';
+  }
+
+  function _renderPanel() {
     var panel = getPanel(); if (!panel) return;
-    d = d || getData();
+    var d = _snapshot || getData();
     var tabs = d.tabs || {}, sessions = d.sessions || [];
-    var entries = Object.keys(tabs).map(function(t) {
-      return { tab: t, timeMs: tabs[t].timeMs||0, visits: tabs[t].visits||0 };
-    }).sort(function(a,b){ return b.timeMs - a.timeMs; });
-    var totalMs = entries.reduce(function(s,e){ return s+e.timeMs; }, 0);
-    function fmtMs(ms) { var s=Math.round(ms/1000); return s>=60?Math.floor(s/60)+'m '+(s%60)+'s':s+'s'; }
-    var h = '<div style="font-size:13px;font-weight:800;color:#f59e0b;margin-bottom:2px;">🔴 LIVE HEAT MAP</div>'
-      + '<div style="font-size:9px;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em;">UX Analytics — Ballasalla Phase 4</div>'
-      + '<div style="margin-bottom:10px;padding:8px 10px;background:#1a1d27;border-radius:6px;border:1px solid #2e3347;">'
-      + '<div style="font-size:9px;color:#94a3b8;margin-bottom:2px;">Now viewing</div>'
-      + '<div style="font-size:13px;font-weight:800;color:#e2e8f0;">'+currentTab+'</div>'
-      + '</div>'
-      + '<div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Sessions recorded</div>'
-      + '<div style="font-size:26px;font-weight:900;color:#f59e0b;margin-bottom:10px;">'+sessions.length+'</div>'
-      + '<div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Time per tab</div>';
-    entries.slice(0, 10).forEach(function(e) {
-      var pct = totalMs > 0 ? Math.round(e.timeMs/totalMs*100) : 0;
+    function fmtMs(ms){var s=Math.round(ms/1000);return s>=60?Math.floor(s/60)+'m '+(s%60)+'s':s+'s';}
+
+    // Build time-per-tab from 'all' bucket
+    var entries = Object.keys(tabs).map(function(t){
+      var bucket = tabs[t].all || tabs[t];  // fallback for old data
+      return { tab:t, timeMs:bucket.timeMs||0, visits:bucket.visits||0 };
+    }).sort(function(a,b){return b.timeMs-a.timeMs;});
+    var totalMs = entries.reduce(function(s,e){return s+e.timeMs;},0);
+
+    var h = ''
+      +'<div style="font-size:13px;font-weight:800;color:#f59e0b;margin-bottom:2px;">🔴 HEAT MAP VIEW</div>'
+      +'<div style="font-size:9px;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">Historical data only — recording paused</div>'
+
+      // Tab chip
+      +'<div style="padding:8px 10px;background:#1a1d27;border-radius:6px;border:1px solid #2e3347;margin-bottom:10px;">'
+      +'<div style="font-size:9px;color:#94a3b8;margin-bottom:1px;">Currently viewing tab</div>'
+      +'<div style="font-size:13px;font-weight:800;color:#e2e8f0;">'+currentTab+'</div>'
+      +'</div>'
+
+      // Filter buttons
+      +'<div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Filter by user mode</div>'
+      +'<div style="display:flex;gap:4px;margin-bottom:10px;">'
+      +_filterBtn('All',_activeFilter==='all'?'all':'all')
+      +_filterBtn('Client','client')
+      +_filterBtn('Site Team','user')
+      +_filterBtn('Admin','admin')
+      +'</div>'
+
+      // Sessions
+      +'<div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Total sessions</div>'
+      +'<div style="font-size:26px;font-weight:900;color:#f59e0b;margin-bottom:10px;">'+sessions.length+'</div>'
+
+      // Tab time bars
+      +'<div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Time per tab (all modes)</div>';
+
+    entries.slice(0,8).forEach(function(e){
+      var pct = totalMs>0?Math.round(e.timeMs/totalMs*100):0;
+      var isCurrent = e.tab === currentTab;
       h += '<div style="margin-bottom:5px;">'
-        + '<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px;">'
-        + '<span style="color:#e2e8f0;font-weight:600;">'+e.tab+'</span>'
-        + '<span style="color:#64748b;">'+fmtMs(e.timeMs)+' · '+e.visits+'×</span>'
-        + '</div>'
-        + '<div style="background:#2e3347;border-radius:2px;height:5px;">'
-        + '<div style="background:linear-gradient(90deg,#f59e0b,#22c55e);height:5px;border-radius:2px;width:'+pct+'%;"></div>'
-        + '</div></div>';
+        +'<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px;">'
+        +'<span style="color:'+(isCurrent?'#f59e0b':'#e2e8f0')+';font-weight:'+(isCurrent?'800':'500')+';">'+e.tab+'</span>'
+        +'<span style="color:#64748b;">'+fmtMs(e.timeMs)+' · '+e.visits+'×</span>'
+        +'</div>'
+        +'<div style="background:#2e3347;border-radius:2px;height:5px;">'
+        +'<div style="background:'+(isCurrent?'#f59e0b':'linear-gradient(90deg,#38bdf8,#22c55e)')+';height:5px;border-radius:2px;width:'+pct+'%;transition:width 0.3s;"></div>'
+        +'</div></div>';
     });
+
+    // Last session
     if (sessions.length) {
       var last = sessions[sessions.length-1];
       h += '<div style="margin-top:10px;font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Last session</div>'
-        + '<div style="font-size:10px;color:#64748b;line-height:1.7;">'+last.date+'<br>Duration: '+fmtMs(last.durationMs||0)+'<br>Left on: '+last.lastTab+'<br>Mode: '+last.mode+'</div>';
+        +'<div style="font-size:10px;color:#64748b;line-height:1.7;">'+last.date+'<br>'+fmtMs(last.durationMs||0)+' · left on: <strong style="color:#e2e8f0;">'+last.lastTab+'</strong><br>Mode: '+last.mode+'</div>';
     }
-    h += '<div style="margin-top:12px;">'
-      + '<div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Legend</div>'
-      + '<div style="display:flex;gap:4px;align-items:center;font-size:9px;color:#94a3b8;">'
-      + '<div style="width:12px;height:12px;background:#0000ff;border-radius:2px;"></div> Cold &nbsp;'
-      + '<div style="width:12px;height:12px;background:#00ff00;border-radius:2px;"></div> Medium &nbsp;'
-      + '<div style="width:12px;height:12px;background:#ff0000;border-radius:2px;"></div> Hot'
-      + '</div>'
-      + '<div style="margin-top:4px;font-size:9px;color:#64748b;">⬤ White dot = click (number = times clicked)</div>'
-      + '</div>'
-      + '<div style="margin-top:14px;border-top:1px solid #2e3347;padding-top:10px;">'
-      + '<button onclick="HM.toggleOverlay()" style="width:100%;padding:7px;background:#ef444418;border:1px solid #ef444450;color:#f87171;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;margin-bottom:6px;">✕ Close Heat Map</button>'
-      + '<button onclick="HM.setupAutoSave()" style="width:100%;padding:7px;background:#22c55e18;border:1px solid #22c55e50;color:#4ade80;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;margin-bottom:4px;">📂 Set Up Auto-Save</button>'
-      + '<button onclick="HM.downloadOnce()" style="width:100%;padding:7px;background:#38bdf818;border:1px solid #38bdf850;color:#38bdf8;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;">⬇ Download Once</button>'
-      + '</div>';
+
+    // Legend + controls
+    h += '<div style="margin-top:12px;padding-top:10px;border-top:1px solid #2e3347;">'
+      +'<div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Legend</div>'
+      +'<div style="display:flex;align-items:center;gap:5px;font-size:9px;color:#94a3b8;margin-bottom:3px;">'
+      +'<div style="width:40px;height:8px;border-radius:4px;background:linear-gradient(90deg,#0000dc,#00c8ff,#00ff00,#ffff00,#ff0000);"></div>'
+      +'<span>cold → hot</span>'
+      +'</div>'
+      +'<div style="font-size:9px;color:#64748b;margin-bottom:10px;">⬤ White circle = click · number = how many times</div>'
+      +'<button onclick="HM.toggleOverlay()" style="width:100%;padding:7px;background:#ef444418;border:1px solid #ef444450;color:#f87171;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;margin-bottom:5px;">✕ Close</button>'
+      +'<button onclick="HM.setupAutoSave()" style="width:100%;padding:7px;background:#22c55e18;border:1px solid #22c55e50;color:#4ade80;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;margin-bottom:5px;">📂 Auto-Save to Obsidian</button>'
+      +'<button onclick="HM.downloadOnce()" style="width:100%;padding:7px;background:#38bdf818;border:1px solid #38bdf850;color:#38bdf8;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;">⬇ Download Once</button>'
+      +'</div>';
+
     panel.innerHTML = h;
+  }
+
+  function setFilter(f) {
+    _activeFilter = f;
+    _renderCanvas();
+    _renderPanel();
   }
 
   function toggleOverlay() {
@@ -10297,14 +10398,15 @@ var HM = (function() {
     createOverlayElements();
     var canvas = getCanvas(), panel = getPanel();
     if (_overlayActive) {
-      canvas.style.opacity = '0.75';
-      panel.style.display = 'block';
-      renderCanvas();
-      _renderTimer = setInterval(renderCanvas, 600);
+      _snapshot = getData(); // freeze data at open time — don't update while viewing
+      canvas.style.opacity = '0.82';
+      panel.style.display  = 'block';
+      _renderCanvas();
+      _renderPanel();
     } else {
       canvas.style.opacity = '0';
-      panel.style.display = 'none';
-      if (_renderTimer) { clearInterval(_renderTimer); _renderTimer = null; }
+      panel.style.display  = 'none';
+      _snapshot = null;
     }
     // Update control panel button
     var btn = document.getElementById('hm-toggle-btn');
@@ -10320,42 +10422,58 @@ var HM = (function() {
   function buildMarkdown() {
     var d = getData(); var tabs = d.tabs||{}; var sessions = d.sessions||[];
     function fmtMs(ms){var s=Math.round(ms/1000);return s>=60?Math.floor(s/60)+'m '+(s%60)+'s':s+'s';}
+    function asciiGrid(grid) {
+      if (!grid||!grid.length) return '(no data)';
+      var maxV=Math.max.apply(null,grid)||1; var rows=[];
+      for(var r=0;r<GRID_H;r+=2){ var row='';
+        for(var c=0;c<GRID_W;c+=2){var v=(grid[r*GRID_W+c]||0)/maxV; row+=v>0.75?'█':v>0.5?'▓':v>0.25?'▒':v>0.08?'░':'·';}
+        rows.push(row); }
+      return rows.join('\n');
+    }
+    var tabEntries = Object.keys(tabs).sort(function(a,b){
+      var ba=(tabs[b].all||tabs[b]).timeMs||0, aa=(tabs[a].all||tabs[a]).timeMs||0; return ba-aa; });
     var lines = [];
     lines.push('# User Heat Map — Ballasalla Phase 4 Control Panel');
     lines.push('*Last updated: '+new Date().toLocaleString('en-GB',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})+'*');
-    lines.push('*Total sessions recorded: '+sessions.length+' · Auto-saved every 5 minutes*');
+    lines.push('*Sessions: '+sessions.length+' · Auto-saved every 5 minutes*');
     lines.push('');
     lines.push('---');
+    lines.push('## Tab Usage — All Modes Combined');
     lines.push('');
-    lines.push('## Tab Usage Summary');
-    lines.push('');
-    var tabEntries = Object.keys(tabs).sort(function(a,b){return(tabs[b].timeMs||0)-(tabs[a].timeMs||0);});
     lines.push('| Tab | Visits | Total Time | Avg per Visit |');
     lines.push('|---|---|---|---|');
     tabEntries.forEach(function(t){
-      var td=tabs[t]; var avg=(td.visits||0)>0?Math.round((td.timeMs||0)/(td.visits||1)):0;
-      lines.push('| '+t+' | '+(td.visits||0)+' | '+fmtMs(td.timeMs||0)+' | '+fmtMs(avg)+' |');
+      var b=(tabs[t].all||tabs[t]); var avg=b.visits>0?Math.round(b.timeMs/b.visits):0;
+      lines.push('| '+t+' | '+b.visits+' | '+fmtMs(b.timeMs)+' | '+fmtMs(avg)+' |');
     });
     lines.push('');
-    lines.push('## Heat Map by Tab (ASCII Grid)');
+    lines.push('## Tab Usage by Mode');
+    lines.push('');
+    ['client','user','admin'].forEach(function(mode){
+      var modeEntries = tabEntries.filter(function(t){ return tabs[t][mode] && (tabs[t][mode].visits||0)>0; });
+      if (!modeEntries.length) return;
+      lines.push('### '+mode.charAt(0).toUpperCase()+mode.slice(1)+' mode');
+      lines.push('| Tab | Visits | Time |');
+      lines.push('|---|---|---|');
+      modeEntries.forEach(function(t){
+        var b=tabs[t][mode]; lines.push('| '+t+' | '+(b.visits||0)+' | '+fmtMs(b.timeMs||0)+' |');
+      });
+      lines.push('');
+    });
+    lines.push('## Heat Maps (ASCII) — All Modes');
     lines.push('█=hottest ▓=hot ▒=warm ░=cool ·=cold');
     lines.push('');
     tabEntries.forEach(function(t){
-      var td=tabs[t]; if(!td.grid||!td.grid.length) return;
-      lines.push('### '+t+' ('+( td.visits||0)+' visits · '+fmtMs(td.timeMs||0)+')');
+      var allB = tabs[t].all||tabs[t]; if(!allB.grid||!allB.grid.length) return;
+      lines.push('### '+t);
       lines.push('```');
-      var maxV=Math.max.apply(null,td.grid)||1;
-      for(var r=0;r<GRID_H;r+=2){
-        var row='';
-        for(var c=0;c<GRID_W;c+=2){var v=(td.grid[r*GRID_W+c]||0)/maxV; row+=v>0.75?'█':v>0.5?'▓':v>0.25?'▒':v>0.08?'░':'·';}
-        lines.push(row);
-      }
+      lines.push(asciiGrid(allB.grid));
       lines.push('```');
-      if(td.clicks&&td.clicks.length){
+      if(allB.clicks&&allB.clicks.length){
         lines.push('');
         lines.push('**Top click zones:**');
-        td.clicks.slice().sort(function(a,b){return(b.count||1)-(a.count||1);}).slice(0,5).forEach(function(c){
-          lines.push('- ('+Math.round(c.x*100)+'% across, '+Math.round(c.y*100)+'% down) — '+( c.count||1)+' click'+(c.count>1?'s':''));
+        allB.clicks.slice().sort(function(a,b){return(b.count||1)-(a.count||1);}).slice(0,5).forEach(function(c){
+          lines.push('- ('+Math.round(c.x*100)+'% across, '+Math.round(c.y*100)+'% down) — '+(c.count||1)+' click'+((c.count||1)>1?'s':''));
         });
       }
       lines.push('');
@@ -10510,6 +10628,7 @@ var HM = (function() {
   return {
     switchTab:          switchTab,
     toggleOverlay:      toggleOverlay,
+    setFilter:          setFilter,
     setupAutoSave:      setupAutoSave,
     disconnectAutoSave: disconnectAutoSave,
     downloadOnce:       downloadOnce,
