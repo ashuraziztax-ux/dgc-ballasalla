@@ -3486,7 +3486,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-29T12:00:00'); // v169 — self-explaining design applied across Progress Report, Risk Tickets, Programme tab
+const LAST_UPDATED = new Date('2026-05-29T13:00:00'); // v170 — App Intelligence layer: 6 capability skills, confidence levels, auto-generated insights from logged data
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -7817,6 +7817,204 @@ function buildEfficiencyTab() {
     } catch(e) {}
   }
   effLog = effLog.slice().reverse();
+
+  // ── Intelligence layer — calculate what the app knows and how confident it is ─
+  var allLogData2 = lsGet('dgc_log', {}) || {};
+  var allDates2   = Object.keys(allLogData2).sort();
+  var totalGangDays = 0, totalDisruptedDays = 0;
+  var actMap2 = {}, gangMap2 = {};
+  allDates2.forEach(function(dk) {
+    var dd = allLogData2[dk];
+    if (!dd || !Array.isArray(dd.gangOutput)) return;
+    dd.gangOutput.forEach(function(row) {
+      if (!row || !row.activity || !(parseFloat(row.qty) > 0)) return;
+      totalGangDays++;
+      if (row.disrupted) totalDisruptedDays++;
+      var aKey = row.activity + '§' + (row.unit||'?');
+      if (!actMap2[aKey]) actMap2[aKey] = {label:row.activity, total:0, days:0, disrupted:0};
+      actMap2[aKey].total += parseFloat(row.qty);
+      actMap2[aKey].days++;
+      if (row.disrupted) actMap2[aKey].disrupted++;
+      if (!gangMap2[row.team]) gangMap2[row.team] = {days:0, disrupted:0};
+      gangMap2[row.team].days++;
+      if (row.disrupted) gangMap2[row.team].disrupted++;
+    });
+  });
+  var effLogLen  = (lsGet('dgc_eff_log','[]') || []).length;
+  var normDays   = totalGangDays - totalDisruptedDays;
+  var actCount   = Object.keys(actMap2).length;
+  var gangCount  = Object.keys(gangMap2).length;
+
+  // Skill definitions — each has a name, what it unlocks, and a threshold
+  var SKILLS = [
+    {
+      id:'velocity', name:'Project Velocity Forecast',
+      desc:'How fast the work is progressing and when it will finish.',
+      detail:'Calculated from actual % complete ÷ days elapsed. Accurate from day 1 — improves as more weeks pass.',
+      unlocked: daysElapsedE >= 7,
+      confidence: daysElapsedE >= 60 ? 'high' : daysElapsedE >= 28 ? 'medium' : 'building',
+      confidenceLabel: daysElapsedE >= 60 ? daysElapsedE+' days of data — strong trend' : daysElapsedE >= 28 ? daysElapsedE+' days — maturing' : daysElapsedE+' days — early estimate',
+      next: daysElapsedE < 28 ? 'Log '+Math.max(0,28-daysElapsedE)+' more days to reach medium confidence' : null
+    },
+    {
+      id:'measured_mile', name:'Measured Mile Baseline',
+      desc:'Your non-disrupted daily output rate per activity — the gold standard for disruption claims.',
+      detail:'Requires non-disrupted daily gang output logs. The more non-disrupted days logged, the more defensible the baseline.',
+      unlocked: normDays >= 5,
+      confidence: normDays >= 30 ? 'high' : normDays >= 10 ? 'medium' : normDays >= 3 ? 'building' : 'locked',
+      confidenceLabel: normDays >= 30 ? normDays+' non-disrupted gang-days — legally defensible' : normDays >= 10 ? normDays+' non-disrupted days — building' : normDays+' non-disrupted days — needs more',
+      next: normDays < 30 ? 'Log '+(30-normDays)+' more non-disrupted gang-days to reach full confidence' : null
+    },
+    {
+      id:'gang_compare', name:'Gang-Level Comparison',
+      desc:'Which gang is fastest on which activity, and by how much.',
+      detail:'Compares output per gang per day across activities. Needs at least 5 days logged per gang.',
+      unlocked: gangCount >= 2 && totalGangDays >= 10,
+      confidence: gangCount >= 3 && totalGangDays >= 30 ? 'high' : gangCount >= 2 && totalGangDays >= 10 ? 'medium' : 'building',
+      confidenceLabel: gangCount >= 2 ? gangCount+' gangs tracked · '+totalGangDays+' gang-days logged' : 'Need data from 2+ gangs',
+      next: gangCount < 2 ? 'Log output for at least 2 gangs to unlock comparison' : totalGangDays < 10 ? 'Log '+(10-totalGangDays)+' more gang-days' : null
+    },
+    {
+      id:'disruption_loss', name:'Disruption Loss Calculation',
+      desc:'How much productivity was lost on disrupted days vs your Measured Mile baseline.',
+      detail:'Compares disrupted-day output to non-disrupted baseline to calculate proven productivity loss — the foundation of a disruption claim.',
+      unlocked: normDays >= 10 && totalDisruptedDays >= 3,
+      confidence: normDays >= 20 && totalDisruptedDays >= 5 ? 'high' : normDays >= 10 && totalDisruptedDays >= 3 ? 'medium' : 'building',
+      confidenceLabel: totalDisruptedDays+' disrupted days · '+normDays+' normal days baseline',
+      next: totalDisruptedDays < 3 ? 'Need at least 3 disrupted days logged to calculate loss' : normDays < 10 ? 'Need '+( 10-normDays)+' more non-disrupted baseline days' : null
+    },
+    {
+      id:'forecast_accuracy', name:'Forecast Accuracy Tracking',
+      desc:'How accurate DGC\'s forecasts have been — comparing what was predicted at each AFP to what actually happened.',
+      detail:'Each time the efficiency tab is visited, it logs the forecast. Over multiple AFP cycles, it shows whether forecasts are improving.',
+      unlocked: effLogLen >= 3,
+      confidence: effLogLen >= 10 ? 'high' : effLogLen >= 5 ? 'medium' : 'building',
+      confidenceLabel: effLogLen+' efficiency readings recorded',
+      next: effLogLen < 3 ? 'Visit this tab on '+(3-effLogLen)+' more separate occasions to begin tracking' : null
+    },
+    {
+      id:'activity_rates', name:'Activity Rate Library',
+      desc:'A reference library of your actual production rates per activity type — used for pricing future jobs.',
+      detail:'Builds from daily gang output logs. Once you have 5+ days per activity, rates become reliable enough to use in future tenders.',
+      unlocked: actCount >= 3,
+      confidence: actCount >= 6 && totalGangDays >= 40 ? 'high' : actCount >= 3 && totalGangDays >= 15 ? 'medium' : 'building',
+      confidenceLabel: actCount+' activity types tracked · '+totalGangDays+' gang-days of data',
+      next: actCount < 3 ? 'Log at least 3 different activity types' : totalGangDays < 15 ? (15-totalGangDays)+' more days to reach medium confidence' : null
+    }
+  ];
+
+  var confCols = { high:'#22c55e', medium:'#f59e0b', building:'#94a3b8', locked:'#e2e8f0' };
+  var confBgs  = { high:'rgba(34,197,94,0.07)', medium:'rgba(245,158,11,0.07)', building:'rgba(148,163,184,0.07)', locked:'rgba(226,232,240,0.05)' };
+  var confLabels = { high:'● High confidence', medium:'◐ Building', building:'○ Early data', locked:'○ Locked' };
+
+  // ── Skills panel ──────────────────────────────────────────────────────────
+  var unlockedCount = SKILLS.filter(function(s){return s.unlocked;}).length;
+  var highConfCount = SKILLS.filter(function(s){return s.confidence==='high';}).length;
+  var skillsHtml =
+    '<div style="margin-bottom:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
+    +'<div style="flex:1;">'
+    +'<div style="font-size:13px;font-weight:800;color:var(--text);">App Intelligence — What This App Has Learned</div>'
+    +'<div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5;">'
+    +'The more you log each day, the smarter this app gets. Each capability below improves automatically as data accumulates — '
+    +'no setup required. Right now <strong style="color:var(--text);">'+unlockedCount+' of '+SKILLS.length+' capabilities</strong> are active, '
+    +'with <strong style="color:#22c55e;">'+highConfCount+' at high confidence</strong>.'
+    +'</div></div>'
+    +'<div style="text-align:center;flex-shrink:0;padding:10px 16px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);">'
+    +'<div style="font-size:28px;font-weight:900;color:var(--accent);">'+Math.round(unlockedCount/SKILLS.length*100)+'%</div>'
+    +'<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">Capabilities Active</div>'
+    +'</div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">'
+    + SKILLS.map(function(s) {
+        var col = s.unlocked ? confCols[s.confidence] : '#cbd5e1';
+        var bg  = s.unlocked ? confBgs[s.confidence]  : 'transparent';
+        var lbl = s.unlocked ? confLabels[s.confidence] : '○ Locked — needs more data';
+        return '<div style="border:1px solid '+col+'44;border-radius:10px;padding:12px 14px;background:'+bg+';opacity:'+(s.unlocked?1:0.7)+';">'
+          +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">'
+          +'<div style="font-size:12px;font-weight:800;color:var(--text);">'+s.name+'</div>'
+          +'<span style="font-size:9px;font-weight:700;white-space:nowrap;color:'+col+';flex-shrink:0;">'+lbl+'</span>'
+          +'</div>'
+          +'<div style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:6px;">'+s.desc+'</div>'
+          +'<div style="font-size:10px;color:'+col+';font-weight:600;">'+s.confidenceLabel+'</div>'
+          +(s.next ? '<div style="font-size:10px;color:var(--muted);margin-top:4px;font-style:italic;">→ '+s.next+'</div>' : '')
+          +'</div>';
+      }).join('')
+    +'</div>';
+
+  var skillsDiv = document.createElement('div');
+  skillsDiv.className = 'card';
+  skillsDiv.style.marginBottom = '16px';
+  skillsDiv.innerHTML = skillsHtml;
+  el.appendChild(skillsDiv);
+
+  // ── Auto-generated insights from data ─────────────────────────────────────
+  var insights = [];
+  // Velocity insight
+  insights.push({
+    icon:'📈', col:'#22c55e',
+    title: 'Running '+(Math.abs(efficiency-100))+'% '+(efficiency>=100?'faster':'slower')+' than the programme required',
+    body: 'The programme was priced assuming '+( planRate*100).toFixed(2)+'% of the project per calendar day. '
+      +'You are actually delivering '+(actualRate*100).toFixed(2)+'% per day. '
+      +(efficiency>=100 ? 'At this pace you finish '+(Math.round((deadlineE - new Date(TODAY.getTime() + (remaining/Math.max(0.001,actualRate))*86400000))/86400000))+' days before the deadline.' : 'Action needed to recover to programme.')
+  });
+  // Measured Mile insight (if enough data)
+  if (normDays >= 5) {
+    var actKeys2 = Object.keys(actMap2);
+    var topAct = actKeys2.sort(function(a,b){return actMap2[b].days-actMap2[a].days;})[0];
+    if (topAct) {
+      var ta = actMap2[topAct];
+      var normRate = ta.days > ta.disrupted ? (ta.total / (ta.days - ta.disrupted)).toFixed(1) : '—';
+      insights.push({
+        icon:'🏗️', col:'#38bdf8',
+        title: 'Measured Mile: '+normRate+' '+ta.unit.split('§')[0]+'/gang/day for '+ta.label,
+        body: 'Based on '+(ta.days - ta.disrupted)+' non-disrupted gang-days. This is your baseline output rate for this activity — '
+          +'use it to demonstrate productivity loss on disrupted days in any future claim against Dandara.'
+      });
+    }
+  }
+  // Disruption insight
+  if (totalGangDays >= 5) {
+    var disPct = Math.round(totalDisruptedDays/totalGangDays*100);
+    insights.push({
+      icon: disPct > 20 ? '⚠️' : '✅', col: disPct > 20 ? '#f59e0b' : '#22c55e',
+      title: disPct+'% of gang-days have been disrupted ('+(totalDisruptedDays)+' of '+totalGangDays+')',
+      body: disPct > 20
+        ? 'Over 1 in 5 gang-days is being disrupted. If these are Dandara-instructed delays, you have grounds for an Extension of Time and disruption cost claim. Make sure each disrupted day has a reason logged.'
+        : 'Disruption rate is low — the majority of days are progressing normally. This is a good Measured Mile baseline.'
+    });
+  }
+  // Forecast accuracy (if enough readings)
+  if (effLogLen >= 3) {
+    insights.push({
+      icon:'🎯', col:'#a78bfa',
+      title: 'Tracking forecast accuracy across '+effLogLen+' efficiency readings',
+      body: 'Every time this tab is visited, the forecast finish date is recorded. As readings accumulate, the Historical Log below shows whether the forecast is converging (becoming more accurate) or drifting. A stable forecast over 5+ readings means high confidence.'
+    });
+  }
+  // Data quality encouragement if sparse
+  if (totalGangDays < 10) {
+    insights.push({
+      icon:'💡', col:'#f59e0b',
+      title: 'Log daily gang output to unlock the full intelligence layer',
+      body: 'Only '+totalGangDays+' gang-output days logged so far. Once you reach 10 days, gang comparison unlocks. At 30 days, the Measured Mile baseline becomes legally defensible for SCL disruption claims. Takes 2 minutes per day in the Daily Log tab.'
+    });
+  }
+
+  if (insights.length) {
+    var insHtml = '<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px;">What the App Has Learned So Far</div>'
+      + insights.map(function(ins){
+          return '<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">'
+            +'<span style="font-size:20px;flex-shrink:0;line-height:1.4;">'+ins.icon+'</span>'
+            +'<div><div style="font-size:12px;font-weight:700;color:'+ins.col+';margin-bottom:3px;">'+ins.title+'</div>'
+            +'<div style="font-size:11px;color:var(--muted);line-height:1.55;">'+ins.body+'</div></div>'
+            +'</div>';
+        }).join('');
+    var insDiv = document.createElement('div');
+    insDiv.className = 'card';
+    insDiv.style.marginBottom = '16px';
+    insDiv.innerHTML = insHtml;
+    el.appendChild(insDiv);
+  }
 
   // ── Efficiency hero ──────────────────────────────────────────────────────
   var effHeroCol = efficiency >= 110 ? '#22c55e' : efficiency >= 95 ? '#f59e0b' : '#ef4444';
