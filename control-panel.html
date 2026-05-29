@@ -3486,7 +3486,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-29T10:30:00'); // v166 — Reset to Official button on risk tickets toolbar
+const LAST_UPDATED = new Date('2026-05-29T10:45:00'); // v167 — ?reset=tickets URL parameter auto-clears edited risk tickets
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -10072,6 +10072,13 @@ window.addEventListener('DOMContentLoaded', () => {
       // Wipe old hardcoded seed — progress now auto-derived from TASKS array
       lsSet('dgc_zone_progress', {_v45migrated:true});
       lsSet('dgc_prog_live', null);
+    }
+  } catch(e) {}
+  // URL parameter: ?reset=tickets — clears edited risk tickets and reloads clean
+  try {
+    if (window.location.search.includes('reset=tickets')) {
+      localStorage.removeItem('dgc_risk_tickets');
+      window.history.replaceState({}, '', window.location.pathname);
     }
   } catch(e) {}
   try { setMode(VIEW_MODE); }    catch(e) {}
