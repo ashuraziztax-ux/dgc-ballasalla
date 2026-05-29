@@ -3486,7 +3486,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-29T11:00:00'); // v168 — Financial Position: Total Collected + Remaining to Collect. Retention fixed to 3%.
+const LAST_UPDATED = new Date('2026-05-29T12:00:00'); // v169 — self-explaining design applied across Progress Report, Risk Tickets, Programme tab
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -7049,7 +7049,7 @@ function buildProgrammeV135() {
 
   // ── Snap banner ───────────────────────────────────────────────────────────
   var snapBanner = dataStr
-    ? '<div class="pv5-snap-banner"><span>Progress figures correct as at: <strong>' + dataStr + '</strong> · Updated fortnightly · Deadline: <strong>' + dlStr + '</strong></span></div>'
+    ? '<div class="pv5-snap-banner"><span>These figures show the physical progress of work on site as of <strong>' + dataStr + '</strong>. They are updated every fortnight from site surveys and GanttPro data. The agreed contract deadline is <strong>' + dlStr + '</strong>.</span></div>'
     : '';
 
   // ── Section cards ─────────────────────────────────────────────────────────
@@ -10369,6 +10369,7 @@ function buildTwoWeekReport() {
   // Left: Financial
   h.push('<div>');
   h.push('<div class="rpt-sec">Financial Position</div>');
+  h.push('<div style="font-size:8pt;color:#64748b;margin-bottom:6px;line-height:1.5;">The contract with Dandara is worth £' + contractSum.toLocaleString() + '. This section shows how much has been paid, how much is awaiting payment, and how much is still to bill.</div>');
   h.push('<table class="rpt-tbl">');
   h.push('<tr><td style="font-weight:600;">Contract Sum</td><td style="text-align:right;font-weight:800;">£' + contractSum.toLocaleString() + '</td></tr>');
   h.push('<tr><td>Certified to Date (AFP1+2 net)</td><td style="text-align:right;font-weight:700;color:#0369a1;">£' + afp2Net.toLocaleString() + '</td></tr>');
@@ -10406,18 +10407,20 @@ function buildTwoWeekReport() {
 
   // Right: AFP + EOT
   h.push('<div>');
-  h.push('<div class="rpt-sec">AFP Schedule</div>');
+  h.push('<div class="rpt-sec">Payment Schedule — Applications for Payment</div>');
+  h.push('<div style="font-size:8pt;color:#64748b;margin-bottom:6px;line-height:1.5;">An Application for Payment (AFP) is a formal interim invoice submitted to Dandara. Dandara certifies it and pays within 28 days. <strong style="color:#16a34a;">Green = paid and in the bank. Amber = submitted and awaiting Dandara\'s certification.</strong></div>');
   h.push('<table class="rpt-tbl">');
-  h.push('<tr><th><abbr data-tooltip="Application for Payment — interim payment claim submitted to the client">AFP</abbr></th><th>Description</th><th style="text-align:right;">Net Value</th></tr>');
+  h.push('<tr><th>Payment</th><th>Description</th><th style="text-align:right;">Net Value</th></tr>');
   h.push('<tr style="background:rgba(34,197,94,0.08);"><td style="font-weight:700;color:#16a34a;">AFP 1+2</td><td style="color:#16a34a;">Groundworks to Apr — <strong>PAID 12 May 2026</strong></td><td style="text-align:right;font-weight:700;color:#16a34a;">£156,739</td></tr>');
   h.push('<tr style="background:#fffbeb;"><td style="font-weight:700;color:#d97706;">AFP 3</td><td style="color:#d97706;">Groundworks to May — Submitted 22 May 2026 · Awaiting cert. (target 26 Jun)</td><td style="text-align:right;color:#d97706;font-weight:700;">£128,109</td></tr>');
   h.push('<tr><td style="color:var(--muted);">AFP 4</td><td style="color:var(--muted);">Tarmac package — target ~30 Jun 2026</td><td style="text-align:right;color:#94a3b8;">TBC</td></tr>');
   h.push('<tr><td style="color:var(--muted);">AFP 5</td><td style="color:var(--muted);">Final account + EOT claims — ~Jul 2026</td><td style="text-align:right;color:#94a3b8;">TBC</td></tr>');
   h.push('<tr><td style="color:var(--muted);">AFP 6</td><td style="color:var(--muted);">Retention release — ~Jul 2027</td><td style="text-align:right;color:#94a3b8;">~£6,842</td></tr>');
   h.push('</table>');
-  h.push('<div class="rpt-sec" style="margin-top:10px;">Extension of Time</div>');
+  h.push('<div class="rpt-sec" style="margin-top:10px;">Extension of Time — Deadline Extension</div>');
+  h.push('<div style="font-size:8pt;color:#64748b;margin-bottom:6px;line-height:1.5;">An Extension of Time (EOT) moves the agreed completion date forward when delays outside DGC\'s control occur. The 3 July 2026 deadline already includes an agreed EOT of +5 working days (+21 calendar days) from the original 12 June 2026 end date.</div>');
   h.push('<table class="rpt-tbl">');
-  h.push('<tr><th>Event</th><th style="text-align:right;">WDs Added</th><th style="text-align:right;">Completion</th></tr>');
+  h.push('<tr><th>Event</th><th style="text-align:right;">Working Days Added</th><th style="text-align:right;">New Deadline</th></tr>');
   h.push('<tr><td>Original programme</td><td style="text-align:right;">—</td><td style="text-align:right;">12 Jun 2026</td></tr>');
   h.push('<tr style="background:#f0fdf4;"><td style="font-weight:700;color:#16a34a;">Agreed EOT 1</td>'
     + '<td style="text-align:right;font-weight:700;color:#16a34a;">+' + eotDays + ' WDs</td>'
@@ -10427,16 +10430,17 @@ function buildTwoWeekReport() {
   h.push('</div>'); // rpt-two
 
   // ── Zone table ─────────────────────────────────────────────────────────────
-  h.push('<div class="rpt-sec" style="margin-top:14px;">Zone Programme Status</div>');
+  h.push('<div class="rpt-sec" style="margin-top:14px;">Section Progress — Each Part of the Site</div>');
+  h.push('<div style="font-size:8pt;color:#64748b;margin-bottom:6px;line-height:1.5;">Each zone is a physical section of the site. "Plan %" is what the programme said should be done by today. "Actual %" is what is physically complete. A positive variance means ahead of schedule on that section.</div>');
   h.push('<table class="rpt-tbl">');
-  h.push('<tr><th>Zone</th><th>Value</th><th style="text-align:right;">Plan %</th>'
-    + '<th style="text-align:right;">Actual %</th><th style="text-align:right;">Var</th>'
+  h.push('<tr><th>Zone</th><th>Budget Value</th><th style="text-align:right;">Programme says</th>'
+    + '<th style="text-align:right;">Actually done</th><th style="text-align:right;">Ahead / Behind</th>'
     + '<th style="text-align:center;">Status</th></tr>');
   h.push(zoneRows);
   h.push('</table>');
 
   // ── 14-Day plan ────────────────────────────────────────────────────────────
-  h.push('<div class="rpt-sec" style="margin-top:14px;">14-Day Site Plan</div>');
+  h.push('<div class="rpt-sec" style="margin-top:14px;">What Happened and What\'s Next — 14 Day Window</div>');
   h.push('<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">');
 
   // Last 14 days
@@ -10800,6 +10804,7 @@ function buildFortnightlyReport() {
   // Left: Financial Position (incl. Billing vs Progress)
   h.push('<div class="panel">');
   h.push('<div class="sec-label">Financial Position</div>');
+  h.push('<div style="font-size:8pt;color:#64748b;margin-bottom:6px;line-height:1.5;">The contract with Dandara is worth £' + contractSum.toLocaleString() + '. This section shows how much has been paid, how much is awaiting payment, and how much is still to bill.</div>');
   h.push('<table>');
   h.push('<tr><td style="font-weight:600;">Contract Sum</td><td style="text-align:right;font-weight:800;">£' + contractSum.toLocaleString() + '</td></tr>');
   h.push('<tr><td>Certified to Date (AFP1+2 net)</td><td style="text-align:right;font-weight:700;color:#0369a1;">£' + afp2Net.toLocaleString() + '</td></tr>');
@@ -10863,9 +10868,10 @@ function buildFortnightlyReport() {
 
   // Right: AFP Schedule (top) + Extension of Time
   h.push('<div class="panel">');
-  h.push('<div class="sec-label">AFP Schedule</div>');
+  h.push('<div class="sec-label">Payment Schedule — Applications for Payment</div>');
+  h.push('<div style="font-size:8pt;color:#64748b;margin-bottom:6px;line-height:1.5;">An Application for Payment (AFP) is a formal interim invoice submitted to Dandara. Dandara certifies it and pays within 28 days. <strong style="color:#16a34a;">Green = paid and in the bank. Amber = submitted and awaiting Dandara\'s certification.</strong></div>');
   h.push('<table>');
-  h.push('<tr><th>AFP</th><th>Description</th><th style="text-align:right;">Net Value</th></tr>');
+  h.push('<tr><th>Payment</th><th>Description</th><th style="text-align:right;">Net Value</th></tr>');
   h.push('<tr style="background:#f0fdf4;"><td style="font-weight:700;color:#16a34a;">AFP 1+2</td><td style="color:#16a34a;">Groundworks to Apr — PAID 12 May 2026</td><td style="text-align:right;font-weight:700;color:#16a34a;">£156,739</td></tr>');
   h.push('<tr style="background:#fffbeb;"><td style="font-weight:700;color:#d97706;">AFP 3</td><td style="color:#d97706;">Groundworks to May — Submitted 22 May 2026 · Awaiting cert. (target 26 Jun)</td><td style="text-align:right;color:#d97706;font-weight:700;">£128,109</td></tr>');
   h.push('<tr><td style="color:#64748b;">AFP 4</td><td style="color:#64748b;">Tarmac package — ~30 Jun 2026</td><td style="text-align:right;color:#94a3b8;">TBC</td></tr>');
@@ -10873,9 +10879,10 @@ function buildFortnightlyReport() {
   h.push('<tr><td style="color:#64748b;">AFP 6</td><td style="color:#64748b;">Retention release — ~Jul 2027</td><td style="text-align:right;color:#94a3b8;">~£6,842</td></tr>');
   h.push('</table>');
 
-  h.push('<div class="sec-label" style="margin-top:10px;">Extension of Time</div>');
+  h.push('<div class="sec-label" style="margin-top:10px;">Extension of Time — Deadline Extension</div>');
+  h.push('<div style="font-size:8pt;color:#64748b;margin-bottom:6px;line-height:1.5;">An Extension of Time (EOT) moves the agreed completion date forward when delays outside DGC\'s control occur. The 3 July 2026 deadline already includes an agreed EOT of +5 working days (+21 calendar days) from the original 12 June 2026 end date.</div>');
   h.push('<table>');
-  h.push('<tr><th>Event</th><th style="text-align:right;">WDs Added</th><th style="text-align:right;">Completion</th></tr>');
+  h.push('<tr><th>Event</th><th style="text-align:right;">Working Days Added</th><th style="text-align:right;">New Deadline</th></tr>');
   h.push('<tr><td>Original programme</td><td style="text-align:right;">—</td><td style="text-align:right;">12 Jun 2026</td></tr>');
   h.push('<tr style="background:#f0fdf4;"><td style="font-weight:700;color:#16a34a;">Agreed EOT 1</td><td style="text-align:right;font-weight:700;color:#16a34a;">+' + eotDays + ' WDs</td><td style="text-align:right;font-weight:700;color:#16a34a;">3 Jul 2026</td></tr>');
   h.push('</table>');
@@ -10918,7 +10925,7 @@ function buildFortnightlyReport() {
     var _rateCol    = function(r){ return r>=75?'#16a34a':r>=50?'#d97706':'#dc2626'; };
 
     // ── Section header ──────────────────────────────────────────────────────
-    h.push('<div class="sec-label" style="margin-top:14px;">14-Day Site Plan</div>');
+    h.push('<div class="sec-label" style="margin-top:14px;">What Happened and What\'s Next — 14 Day Window</div>');
 
     // ── Two-column grid: last period | next period ─────────────────────────
     h.push('<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:0;">');
@@ -11495,6 +11502,11 @@ function buildRTLogHTML(tickets) {
     + 'title="Clear any locally saved changes and restore the official ticket list">↩ Reset to Official</button>');
   if (lastSync) h.push('<span style="font-size:9px;color:var(--muted);white-space:nowrap;">Last synced: ' + new Date(lastSync).toLocaleString('en-GB') + '</span>');
   h.push('</div>');
+  h.push('<div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">'
+    + '<strong style="color:var(--text);">Risk tickets</strong> are a formal record of anything that could affect programme, cost, safety or quality. '
+    + 'Each one is raised on site by DGC staff, reviewed by the project manager, and where necessary forwarded to Dandara as a variation or notification. '
+    + 'They form part of the contemporaneous record used in delay and disruption claims.'
+    + '</div>');
 
   if (!tickets.length) {
     h.push('<div style="padding:28px;text-align:center;color:var(--muted);font-size:12px;font-style:italic;">No tickets raised yet</div>');
