@@ -3486,7 +3486,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-27T23:30:00'); // v164 — chart labels plain English, explanation boxes below chart, efficiency tab language rewritten
+const LAST_UPDATED = new Date('2026-05-29T10:00:00'); // v165 — RT 101326 added (concrete slabs Plot 11 foundation, 28 May 2026)
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -11437,9 +11437,23 @@ var DEFAULT_RISK_TICKETS = [
     resolution:'Ash (DGC) spoke with Paul (Dandara) arranging tractor and bowser to suppress dust.',
     pmStatus:'Deferred / monitor', pmNotes:'',
     signedBy:'David Smith', signDate:'2026-04-24', linkedCCE:''
+  },
+  {
+    rtNum:101326, date:'2026-05-28', project:'Ballasalla Phase 4 / DB4',
+    raisedBy:'David Smith', role:'PM-DGC',
+    categories:['Financial','Design / Information'],
+    description:'Plot 11 — 2x large slabs of concrete found in the foundation excavation. This will create a large void area that will need to be filled with concrete. Financial and design impact — constitutes a variation.',
+    resolution:'Continue dig. Ensure adequate additional concrete is ordered to fill the void created by the slab removal.',
+    pmStatus:'Action taken',
+    pmNotes:'RT forwarded to Ian Barnes (Dandara QS) by Sophie (DGC QS) on 29 May 2026 as a formal variation notice. Dandara asked to confirm how variations on the slab works package are to be handled going forward (separate variation schedule proposed). Timesheets and plant records requested from David Smith — to follow. Document also filed on DGC SharePoint.',
+    signedBy:'David Smith', signDate:'2026-05-28', linkedCCE:'',
+    comments:[
+      {author:'Sophie (QS)', date:'2026-05-29', text:'Forwarded to Ian Barnes and Kalyan Chudasama (Dandara) as variation. Requested timesheets and plant details from David to support the variation claim.'},
+      {author:'Sophie (QS)', date:'2026-05-29', text:'Asked Ian Barnes: variation schedule preferred — separate schedule issued as and when additional works arise?'}
+    ]
   }
 ];
-// Next RT sequence: 101312
+// Next RT sequence: 101327
 // ─────────────────────────────────────────────────────────────────────────────
 // Build the log HTML (used by buildRiskTickets and rtApplyFilters/rtToggleRow)
 function buildRTLogHTML(tickets) {
