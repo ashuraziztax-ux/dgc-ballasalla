@@ -1739,6 +1739,31 @@ function gpExportCSV(){
       Progress, KPIs and charts reflect this date.
     </div>
   </div>
+  <!-- ── Admin Control Panel ── -->
+  <div id="admin-control-panel" class="card admin-only" style="margin-bottom:16px;border:2px solid var(--accent);">
+    <div class="card-title" style="color:var(--accent);">⚙ Admin Control Panel</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;">
+      <!-- Heat Map Module -->
+      <div style="padding:14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:800;color:var(--text);margin-bottom:4px;">User Heat Map</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px;">Records where users hover and click on every page. Builds up over time into a picture of how the app is actually being used.</div>
+        <div id="hm-live-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;"></div>
+        <button id="hm-toggle-btn" onclick="HM.toggleOverlay()" style="width:100%;padding:9px 14px;border-radius:8px;border:1px solid #f59e0b;background:rgba(245,158,11,0.12);color:#f59e0b;font-size:12px;font-weight:800;cursor:pointer;margin-bottom:6px;transition:all 0.15s;">🔵 Heat Map OFF — Click to Activate</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <button onclick="HM.exportObsidian()" style="padding:7px;border-radius:6px;border:1px solid #22c55e44;background:rgba(34,197,94,0.08);color:#22c55e;font-size:11px;font-weight:700;cursor:pointer;">⬇ Export</button>
+          <button onclick="HM.clearData();buildAdminControlPanel();" style="padding:7px;border-radius:6px;border:1px solid #ef444444;background:rgba(239,68,68,0.08);color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;">🗑 Clear Data</button>
+        </div>
+      </div>
+      <!-- Testing Mode -->
+      <div style="padding:14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:800;color:var(--text);margin-bottom:4px;">Testing Mode</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px;">When the heat map is ON, navigate to any tab — a colour overlay shows the hot zones on that page. White dots show where people have clicked. The side panel shows live session analytics.</div>
+        <div style="padding:10px 12px;border-radius:8px;background:#f59e0b10;border:1px solid #f59e0b30;font-size:11px;color:#92400e;line-height:1.5;">
+          <strong style="color:#d97706;">How to use:</strong> Click "Heat Map ON" above, then navigate to any tab. The colour gradient shows mouse traffic — red = most used, blue = least used. Come back here to export the data to Obsidian.
+        </div>
+      </div>
+    </div>
+  </div>
   <div id="rag-status-bar" style="margin-bottom:10px;"></div>
   <div id="alerts-area" style="margin-bottom:14px;"></div>
 
@@ -3486,7 +3511,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-29T13:00:00'); // v170 — App Intelligence layer: 6 capability skills, confidence levels, auto-generated insights from logged data
+const LAST_UPDATED = new Date('2026-05-29T14:00:00'); // v171 — User Heat Map tracking system with live overlay, analytics panel, and Obsidian export
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -7482,6 +7507,27 @@ function buildProgrammeClock() {
   } catch(e) { console.warn('buildProgrammeClock:', e); }
 }
 
+function buildAdminControlPanel() {
+  var el = document.getElementById('hm-live-stats');
+  if (!el) return;
+  try {
+    var stats = HM.getLiveStats();
+    el.innerHTML =
+      '<div style="padding:8px;border-radius:6px;background:var(--surface);border:1px solid var(--border);text-align:center;">'
+      +'<div style="font-size:18px;font-weight:900;color:var(--accent);">'+stats.sessions+'</div>'
+      +'<div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;">Sessions</div>'
+      +'</div>'
+      +'<div style="padding:8px;border-radius:6px;background:var(--surface);border:1px solid var(--border);text-align:center;">'
+      +'<div style="font-size:18px;font-weight:900;color:var(--accent);">'+stats.totalVisits+'</div>'
+      +'<div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;">Tab Visits</div>'
+      +'</div>'
+      +'<div style="padding:8px;border-radius:6px;background:var(--surface);border:1px solid var(--border);text-align:center;grid-column:span 2;">'
+      +'<div style="font-size:12px;font-weight:800;color:var(--text);">Most visited: <span style="color:var(--accent);">'+stats.topTab+'</span></div>'
+      +'<div style="font-size:9px;color:var(--muted);">'+stats.tabCount+' tabs tracked</div>'
+      +'</div>';
+  } catch(e) {}
+}
+
 // ═══════════════════════ FORECAST TAB (v34) ═══════════════════════
 function buildForecastTab() {
   var el = document.getElementById('forecast-panel');
@@ -8609,6 +8655,7 @@ function initGanttDropZone() {
 
 function showTab(name, btn) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  try { HM.switchTab(name); } catch(e) {}
   document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   if(btn) btn.classList.add('active');
@@ -10053,6 +10100,319 @@ function showTab(name, btn) {
 })();
 // ════════════════════════════════════════════════════════════════════
 
+// ════════════════════════════════════════════════════════════════════════════
+// HEAT MAP TRACKER — v170 — records usage patterns for UX analytics
+// Data stored in localStorage key: dgc_heatmap
+// ════════════════════════════════════════════════════════════════════════════
+var HM = (function() {
+  var GRID_W = 40, GRID_H = 20;
+  var currentTab = 'programme';
+  var sessionStart = Date.now();
+  var tabStart = Date.now();
+  var _overlayActive = false;
+  var _renderTimer = null;
+
+  function getData() {
+    try { return JSON.parse(localStorage.getItem('dgc_heatmap') || '{}'); } catch(e) { return {}; }
+  }
+  function saveData(d) {
+    try { localStorage.setItem('dgc_heatmap', JSON.stringify(d)); } catch(e) {}
+  }
+  function ensureTab(d, tab) {
+    if (!d.tabs) d.tabs = {};
+    if (!d.tabs[tab]) d.tabs[tab] = { grid: new Array(GRID_W * GRID_H).fill(0), clicks: [], timeMs: 0, visits: 0 };
+    if (!d.tabs[tab].grid || d.tabs[tab].grid.length !== GRID_W * GRID_H) {
+      d.tabs[tab].grid = new Array(GRID_W * GRID_H).fill(0);
+    }
+    return d;
+  }
+
+  function recordMouse(x, y) {
+    var gx = Math.min(GRID_W - 1, Math.floor((x / window.innerWidth) * GRID_W));
+    var gy = Math.min(GRID_H - 1, Math.floor((y / window.innerHeight) * GRID_H));
+    var d = getData(); d = ensureTab(d, currentTab);
+    d.tabs[currentTab].grid[gy * GRID_W + gx] = (d.tabs[currentTab].grid[gy * GRID_W + gx] || 0) + 1;
+    saveData(d);
+  }
+
+  function recordClick(x, y) {
+    var xp = Math.round(x / window.innerWidth * 100) / 100;
+    var yp = Math.round(y / window.innerHeight * 100) / 100;
+    var d = getData(); d = ensureTab(d, currentTab);
+    var found = false;
+    (d.tabs[currentTab].clicks || []).forEach(function(c) {
+      if (Math.abs(c.x - xp) < 0.04 && Math.abs(c.y - yp) < 0.04) { c.count = (c.count||1)+1; found = true; }
+    });
+    if (!found) d.tabs[currentTab].clicks.push({ x: xp, y: yp, count: 1 });
+    saveData(d);
+  }
+
+  function switchTab(newTab) {
+    var now = Date.now(), elapsed = now - tabStart;
+    if (elapsed > 300 && elapsed < 7200000) {
+      var d = getData(); d = ensureTab(d, currentTab);
+      d.tabs[currentTab].timeMs = (d.tabs[currentTab].timeMs || 0) + elapsed;
+      d.tabs[currentTab].visits = (d.tabs[currentTab].visits || 0) + 1;
+      saveData(d);
+    }
+    currentTab = newTab; tabStart = now;
+  }
+
+  function endSession() {
+    var d = getData(); if (!d.sessions) d.sessions = [];
+    d.sessions.push({
+      date: new Date().toISOString().slice(0, 10),
+      durationMs: Date.now() - sessionStart,
+      lastTab: currentTab,
+      mode: (typeof VIEW_MODE !== 'undefined') ? VIEW_MODE : '?'
+    });
+    if (d.sessions.length > 300) d.sessions = d.sessions.slice(-300);
+    saveData(d);
+  }
+
+  // ── Overlay ──────────────────────────────────────────────────────────────
+  function getCanvas() { return document.getElementById('hm-canvas'); }
+  function getPanel() { return document.getElementById('hm-side-panel'); }
+
+  function createOverlayElements() {
+    if (document.getElementById('hm-canvas')) return;
+    var c = document.createElement('canvas');
+    c.id = 'hm-canvas';
+    c.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9990;opacity:0;transition:opacity 0.4s;';
+    document.body.appendChild(c);
+    var p = document.createElement('div');
+    p.id = 'hm-side-panel';
+    p.style.cssText = 'position:fixed;right:0;top:0;bottom:0;width:260px;background:rgba(15,17,23,0.97);border-left:2px solid #f59e0b;z-index:9992;padding:14px;font-size:11px;color:#e2e8f0;overflow-y:auto;display:none;font-family:system-ui,sans-serif;';
+    document.body.appendChild(p);
+  }
+
+  function renderCanvas() {
+    var canvas = getCanvas();
+    if (!canvas || !_overlayActive) return;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    var d = getData();
+    var td = d.tabs && d.tabs[currentTab];
+    var cellW = canvas.width / GRID_W, cellH = canvas.height / GRID_H;
+    if (td && td.grid && td.grid.length) {
+      var maxV = Math.max.apply(null, td.grid) || 1;
+      for (var row = 0; row < GRID_H; row++) {
+        for (var col = 0; col < GRID_W; col++) {
+          var v = (td.grid[row * GRID_W + col] || 0) / maxV;
+          if (v < 0.02) continue;
+          // Colour gradient: blue→cyan→green→yellow→orange→red
+          var r, g, b;
+          if (v < 0.25)      { r=0;   g=Math.round(v/0.25*255);   b=255; }
+          else if (v < 0.5)  { r=0;   g=255; b=Math.round((0.5-v)/0.25*255); }
+          else if (v < 0.75) { r=Math.round((v-0.5)/0.25*255); g=255; b=0; }
+          else               { r=255; g=Math.round((1-v)/0.25*255); b=0; }
+          ctx.fillStyle = 'rgba('+r+','+g+','+b+','+(0.1+v*0.55)+')';
+          ctx.fillRect(col*cellW, row*cellH, cellW, cellH);
+        }
+      }
+    }
+    // Draw click dots
+    if (td && td.clicks) {
+      td.clicks.forEach(function(c) {
+        var cx = c.x * canvas.width, cy = c.y * canvas.height;
+        var radius = Math.min(24, 7 + (c.count||1) * 4);
+        var grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+        grad.addColorStop(0, 'rgba(255,255,255,0.95)');
+        grad.addColorStop(0.4, 'rgba(245,158,11,0.7)');
+        grad.addColorStop(1, 'rgba(245,158,11,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI*2); ctx.fill();
+        if (c.count > 1) {
+          ctx.fillStyle = '#1a1d27'; ctx.font = 'bold 9px system-ui'; ctx.textAlign = 'center';
+          ctx.fillText(c.count, cx, cy+3);
+        }
+      });
+    }
+    // No data hint
+    if (!td || !td.grid || !td.grid.length) {
+      ctx.fillStyle = 'rgba(245,158,11,0.7)'; ctx.font = 'bold 13px system-ui'; ctx.textAlign = 'left';
+      ctx.fillText('No heat map data yet for "'+currentTab+'" — hover your mouse around to start recording', 20, 80);
+    }
+    renderPanel(d);
+  }
+
+  function renderPanel(d) {
+    var panel = getPanel(); if (!panel) return;
+    d = d || getData();
+    var tabs = d.tabs || {}, sessions = d.sessions || [];
+    var entries = Object.keys(tabs).map(function(t) {
+      return { tab: t, timeMs: tabs[t].timeMs||0, visits: tabs[t].visits||0 };
+    }).sort(function(a,b){ return b.timeMs - a.timeMs; });
+    var totalMs = entries.reduce(function(s,e){ return s+e.timeMs; }, 0);
+    function fmtMs(ms) { var s=Math.round(ms/1000); return s>=60?Math.floor(s/60)+'m '+(s%60)+'s':s+'s'; }
+    var h = '<div style="font-size:13px;font-weight:800;color:#f59e0b;margin-bottom:2px;">🔴 LIVE HEAT MAP</div>'
+      + '<div style="font-size:9px;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em;">UX Analytics — Ballasalla Phase 4</div>'
+      + '<div style="margin-bottom:10px;padding:8px 10px;background:#1a1d27;border-radius:6px;border:1px solid #2e3347;">'
+      + '<div style="font-size:9px;color:#94a3b8;margin-bottom:2px;">Now viewing</div>'
+      + '<div style="font-size:13px;font-weight:800;color:#e2e8f0;">'+currentTab+'</div>'
+      + '</div>'
+      + '<div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Sessions recorded</div>'
+      + '<div style="font-size:26px;font-weight:900;color:#f59e0b;margin-bottom:10px;">'+sessions.length+'</div>'
+      + '<div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Time per tab</div>';
+    entries.slice(0, 10).forEach(function(e) {
+      var pct = totalMs > 0 ? Math.round(e.timeMs/totalMs*100) : 0;
+      h += '<div style="margin-bottom:5px;">'
+        + '<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px;">'
+        + '<span style="color:#e2e8f0;font-weight:600;">'+e.tab+'</span>'
+        + '<span style="color:#64748b;">'+fmtMs(e.timeMs)+' · '+e.visits+'×</span>'
+        + '</div>'
+        + '<div style="background:#2e3347;border-radius:2px;height:5px;">'
+        + '<div style="background:linear-gradient(90deg,#f59e0b,#22c55e);height:5px;border-radius:2px;width:'+pct+'%;"></div>'
+        + '</div></div>';
+    });
+    if (sessions.length) {
+      var last = sessions[sessions.length-1];
+      h += '<div style="margin-top:10px;font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Last session</div>'
+        + '<div style="font-size:10px;color:#64748b;line-height:1.7;">'+last.date+'<br>Duration: '+fmtMs(last.durationMs||0)+'<br>Left on: '+last.lastTab+'<br>Mode: '+last.mode+'</div>';
+    }
+    h += '<div style="margin-top:12px;">'
+      + '<div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Legend</div>'
+      + '<div style="display:flex;gap:4px;align-items:center;font-size:9px;color:#94a3b8;">'
+      + '<div style="width:12px;height:12px;background:#0000ff;border-radius:2px;"></div> Cold &nbsp;'
+      + '<div style="width:12px;height:12px;background:#00ff00;border-radius:2px;"></div> Medium &nbsp;'
+      + '<div style="width:12px;height:12px;background:#ff0000;border-radius:2px;"></div> Hot'
+      + '</div>'
+      + '<div style="margin-top:4px;font-size:9px;color:#64748b;">⬤ White dot = click (number = times clicked)</div>'
+      + '</div>'
+      + '<div style="margin-top:14px;border-top:1px solid #2e3347;padding-top:10px;">'
+      + '<button onclick="HM.toggleOverlay()" style="width:100%;padding:7px;background:#ef444418;border:1px solid #ef444450;color:#f87171;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;margin-bottom:6px;">✕ Close Heat Map</button>'
+      + '<button onclick="HM.exportObsidian()" style="width:100%;padding:7px;background:#22c55e18;border:1px solid #22c55e50;color:#4ade80;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;">⬇ Export to Obsidian</button>'
+      + '</div>';
+    panel.innerHTML = h;
+  }
+
+  function toggleOverlay() {
+    _overlayActive = !_overlayActive;
+    createOverlayElements();
+    var canvas = getCanvas(), panel = getPanel();
+    if (_overlayActive) {
+      canvas.style.opacity = '0.75';
+      panel.style.display = 'block';
+      renderCanvas();
+      _renderTimer = setInterval(renderCanvas, 600);
+    } else {
+      canvas.style.opacity = '0';
+      panel.style.display = 'none';
+      if (_renderTimer) { clearInterval(_renderTimer); _renderTimer = null; }
+    }
+    // Update control panel button
+    var btn = document.getElementById('hm-toggle-btn');
+    if (btn) {
+      btn.textContent = _overlayActive ? '🔴 Heat Map ON — Click to Hide' : '🔵 Heat Map OFF — Click to Activate';
+      btn.style.background = _overlayActive ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.12)';
+      btn.style.borderColor = _overlayActive ? '#ef4444' : '#f59e0b';
+      btn.style.color = _overlayActive ? '#f87171' : '#f59e0b';
+    }
+  }
+
+  function exportObsidian() {
+    var d = getData(); var tabs = d.tabs || {}; var sessions = d.sessions || [];
+    function fmtMs(ms) { var s=Math.round(ms/1000); return s>=60?Math.floor(s/60)+'m '+(s%60)+'s':s+'s'; }
+    var lines = [];
+    lines.push('# User Heat Map — Ballasalla Phase 4 Control Panel');
+    lines.push('*Exported: '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})+'*');
+    lines.push('*Total sessions recorded: '+sessions.length+'*');
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+    lines.push('## Tab Usage Summary');
+    lines.push('');
+    var tabEntries = Object.keys(tabs).sort(function(a,b){return (tabs[b].timeMs||0)-(tabs[a].timeMs||0);});
+    lines.push('| Tab | Visits | Total Time | Avg per Visit |');
+    lines.push('|---|---|---|---|');
+    tabEntries.forEach(function(t) {
+      var td = tabs[t];
+      var avg = (td.visits||0) > 0 ? Math.round((td.timeMs||0)/(td.visits||1)) : 0;
+      lines.push('| '+t+' | '+(td.visits||0)+' | '+fmtMs(td.timeMs||0)+' | '+fmtMs(avg)+' |');
+    });
+    lines.push('');
+    lines.push('## Heat Map by Tab (ASCII Grid — 20×10 sample)');
+    lines.push('█=hottest ▓=hot ▒=warm ░=cool ·=cold');
+    lines.push('');
+    tabEntries.forEach(function(t) {
+      var td = tabs[t];
+      if (!td.grid || !td.grid.length) return;
+      lines.push('### '+t+' ('+( td.visits||0)+' visits · '+fmtMs(td.timeMs||0)+')');
+      lines.push('```');
+      var maxV = Math.max.apply(null, td.grid) || 1;
+      for (var r=0; r<GRID_H; r+=2) {
+        var row = '';
+        for (var c=0; c<GRID_W; c+=2) {
+          var v = (td.grid[r*GRID_W+c]||0)/maxV;
+          row += v>0.75?'█':v>0.5?'▓':v>0.25?'▒':v>0.08?'░':'·';
+        }
+        lines.push(row);
+      }
+      lines.push('```');
+      if (td.clicks && td.clicks.length) {
+        lines.push('');
+        lines.push('**Top click zones:**');
+        var sorted = td.clicks.slice().sort(function(a,b){return(b.count||1)-(a.count||1);});
+        sorted.slice(0,5).forEach(function(c){
+          lines.push('- Position ('+Math.round(c.x*100)+'% across, '+Math.round(c.y*100)+'% down) — clicked '+(c.count||1)+' time'+(c.count>1?'s':''));
+        });
+      }
+      lines.push('');
+    });
+    lines.push('## Session History (most recent 30)');
+    lines.push('');
+    lines.push('| Date | Duration | Left on Tab | Mode |');
+    lines.push('|---|---|---|---|');
+    sessions.slice(-30).reverse().forEach(function(s) {
+      lines.push('| '+s.date+' | '+fmtMs(s.durationMs||0)+' | '+s.lastTab+' | '+s.mode+' |');
+    });
+    lines.push('');
+    lines.push('---');
+    lines.push('*→ See: `App Dev/Design Principle — Self-Explaining UI.md`*');
+    var md = lines.join('\n');
+    // Download as .md file
+    var blob = new Blob([md], {type:'text/markdown'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href=url;
+    a.download = 'DGC-HeatMap-B4-'+new Date().toISOString().slice(0,10)+'.md';
+    a.click(); URL.revokeObjectURL(url);
+  }
+
+  function clearData() {
+    if (confirm('Clear all heat map tracking data? This cannot be undone.')) {
+      localStorage.removeItem('dgc_heatmap');
+      alert('Heat map data cleared.');
+    }
+  }
+
+  function getLiveStats() {
+    var d = getData(); var tabs = d.tabs||{}; var sessions = d.sessions||[];
+    var topTab = Object.keys(tabs).sort(function(a,b){return(tabs[b].visits||0)-(tabs[a].visits||0);})[0] || '—';
+    var totalVisits = Object.values(tabs).reduce(function(s,t){return s+(t.visits||0);},0);
+    return { sessions:sessions.length, topTab:topTab, totalVisits:totalVisits, tabCount:Object.keys(tabs).length };
+  }
+
+  // ── Init ─────────────────────────────────────────────────────────────────
+  var _mouseTick = 0;
+  document.addEventListener('mousemove', function(e) {
+    var now = Date.now(); if (now - _mouseTick < 100) return; _mouseTick = now;
+    recordMouse(e.clientX, e.clientY);
+  }, {passive:true});
+  document.addEventListener('click', function(e) { recordClick(e.clientX, e.clientY); }, {passive:true});
+  window.addEventListener('beforeunload', endSession);
+
+  return {
+    switchTab: switchTab,
+    toggleOverlay: toggleOverlay,
+    exportObsidian: exportObsidian,
+    clearData: clearData,
+    getLiveStats: getLiveStats,
+    isOverlayActive: function(){ return _overlayActive; }
+  };
+})();
+
 // ═══════════════════════ INIT ═══════════════════════
 window.addEventListener('DOMContentLoaded', () => {
   // ── Migrate legacy single-project config → multi-project store ─────────────
@@ -10282,6 +10642,7 @@ window.addEventListener('DOMContentLoaded', () => {
   try { setMode(VIEW_MODE); }    catch(e) {}
   try { buildProgrammeClock(); } catch(e) {}
   try { buildAlerts(); }         catch(e) {}
+  try { buildAdminControlPanel(); } catch(e) {}
 
   // Mobile: add 'scroll to attention' hint on narrow screens
   try {
