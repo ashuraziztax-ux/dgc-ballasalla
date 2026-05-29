@@ -3486,7 +3486,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-29T10:45:00'); // v167 — ?reset=tickets URL parameter auto-clears edited risk tickets
+const LAST_UPDATED = new Date('2026-05-29T11:00:00'); // v168 — Financial Position: Total Collected + Remaining to Collect. Retention fixed to 3%.
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -10238,7 +10238,7 @@ function buildTwoWeekReport() {
   var afp2Net       = 156739;
   var certPct       = Math.round(afp2Net / contractSum * 100);
   var forecastFAC   = contractSum;
-  var retentionHeld = Math.round(afp2Net * 0.05);
+  var retentionHeld = Math.round(afp2Net * 0.03); // 3% per contract
   var eotDays       = (typeof EOT_WORKING_DAYS !== 'undefined') ? EOT_WORKING_DAYS : 5;
   var _billingGap   = certPct - actualPct;
   var _billingLbl   = Math.abs(_billingGap) <= 5 ? 'Balanced'
@@ -10373,7 +10373,13 @@ function buildTwoWeekReport() {
   h.push('<tr><td style="font-weight:600;">Contract Sum</td><td style="text-align:right;font-weight:800;">£' + contractSum.toLocaleString() + '</td></tr>');
   h.push('<tr><td>Certified to Date (AFP1+2 net)</td><td style="text-align:right;font-weight:700;color:#0369a1;">£' + afp2Net.toLocaleString() + '</td></tr>');
   h.push('<tr><td>% of Contract Certified</td><td style="text-align:right;">' + certPct + '%</td></tr>');
-  h.push('<tr><td>Retention Held (est. 5%)</td><td style="text-align:right;color:#dc2626;">£' + retentionHeld.toLocaleString() + '</td></tr>');
+  h.push('<tr><td>Retention Held (est. 3%)</td><td style="text-align:right;color:#dc2626;">£' + retentionHeld.toLocaleString() + '</td></tr>');
+  h.push('<tr style="background:#f0fdf4;border-top:2px solid #22c55e44;">'
+    + '<td style="font-weight:700;color:#16a34a;">&#10003; Total Collected (paid to bank)</td>'
+    + '<td style="text-align:right;font-weight:900;color:#16a34a;font-size:10pt;">£' + afp2Net.toLocaleString() + '</td></tr>');
+  h.push('<tr style="background:#fef9ee;border-bottom:2px solid #f59e0b44;">'
+    + '<td style="font-weight:700;color:#92400e;">Remaining to Collect</td>'
+    + '<td style="text-align:right;font-weight:900;color:#d97706;font-size:10pt;">£' + (contractSum - afp2Net).toLocaleString() + '</td></tr>');
   h.push('<tr style="border-top:2px solid #e2e8f0;"><td colspan="2" style="font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;padding-top:7px;padding-bottom:2px;">Billing vs Progress</td></tr>');
   h.push('<tr><td>Certified (money claimed)</td><td style="text-align:right;">' + certPct + '%</td></tr>');
   h.push('<tr><td>Work Complete (physical progress)</td><td style="text-align:right;font-weight:700;">' + actualPct + '%</td></tr>');
@@ -10663,7 +10669,7 @@ function buildFortnightlyReport() {
   var afp2Net       = 156739;          // AFP1 + AFP2 certified net to date
   var certPct       = Math.round(afp2Net / contractSum * 100);
   var forecastFAC   = contractSum;     // variations TBC
-  var retentionHeld = Math.round(afp2Net * 0.05);
+  var retentionHeld = Math.round(afp2Net * 0.03); // 3% per contract
   var nextAFPDate   = '22 May 2026 (est.)';
   var nextAFPValue  = 'TBC — to be confirmed by QS';
 
@@ -10798,7 +10804,13 @@ function buildFortnightlyReport() {
   h.push('<tr><td style="font-weight:600;">Contract Sum</td><td style="text-align:right;font-weight:800;">£' + contractSum.toLocaleString() + '</td></tr>');
   h.push('<tr><td>Certified to Date (AFP1+2 net)</td><td style="text-align:right;font-weight:700;color:#0369a1;">£' + afp2Net.toLocaleString() + '</td></tr>');
   h.push('<tr><td>% of Contract Certified</td><td style="text-align:right;">' + certPct + '%</td></tr>');
-  h.push('<tr><td>Retention Held (est. 5%)</td><td style="text-align:right;color:#dc2626;">£' + retentionHeld.toLocaleString() + '</td></tr>');
+  h.push('<tr><td>Retention Held (est. 3%)</td><td style="text-align:right;color:#dc2626;">£' + retentionHeld.toLocaleString() + '</td></tr>');
+  h.push('<tr style="background:#f0fdf4;border-top:2px solid #22c55e44;">'
+    + '<td style="font-weight:700;color:#16a34a;">&#10003; Total Collected (paid to bank)</td>'
+    + '<td style="text-align:right;font-weight:900;color:#16a34a;font-size:10pt;">£' + afp2Net.toLocaleString() + '</td></tr>');
+  h.push('<tr style="background:#fef9ee;border-bottom:2px solid #f59e0b44;">'
+    + '<td style="font-weight:700;color:#92400e;">Remaining to Collect</td>'
+    + '<td style="text-align:right;font-weight:900;color:#d97706;font-size:10pt;">£' + (contractSum - afp2Net).toLocaleString() + '</td></tr>');
   // ── Billing vs Progress ────────────────────────────────────────────────
   var _billingGap = certPct - actualPct;
   var _billingLbl = Math.abs(_billingGap) <= 5 ? 'Balanced'
