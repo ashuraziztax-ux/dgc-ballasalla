@@ -3486,7 +3486,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-29T10:00:00'); // v165 — RT 101326 added (concrete slabs Plot 11 foundation, 28 May 2026)
+const LAST_UPDATED = new Date('2026-05-29T10:30:00'); // v166 — Reset to Official button on risk tickets toolbar
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -11471,6 +11471,9 @@ function buildRTLogHTML(tickets) {
     + '🔄 Sync / Import Tickets'
     + '<input type="file" accept=".json,.csv" multiple style="display:none;" onchange="rtImportTickets(this.files);this.value=\'\';">'
     + '</label>');
+  h.push('<button onclick="if(confirm(\'Reset all tickets to the built-in defaults? Any manually edited tickets will be lost.\')){localStorage.removeItem(\'dgc_risk_tickets\');buildRiskTickets();}" '
+    + 'style="padding:5px 12px;background:transparent;border:1px solid #ef444440;border-radius:4px;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;" '
+    + 'title="Clear any locally saved changes and restore the official ticket list">↩ Reset to Official</button>');
   if (lastSync) h.push('<span style="font-size:9px;color:var(--muted);white-space:nowrap;">Last synced: ' + new Date(lastSync).toLocaleString('en-GB') + '</span>');
   h.push('</div>');
 
