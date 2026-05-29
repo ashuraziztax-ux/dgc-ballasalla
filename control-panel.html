@@ -1748,10 +1748,13 @@ function gpExportCSV(){
         <div style="font-size:11px;font-weight:800;color:var(--text);margin-bottom:4px;">User Heat Map</div>
         <div style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px;">Records where users hover and click on every page. Builds up over time into a picture of how the app is actually being used.</div>
         <div id="hm-live-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;"></div>
-        <button id="hm-toggle-btn" onclick="HM.toggleOverlay()" style="width:100%;padding:9px 14px;border-radius:8px;border:1px solid #f59e0b;background:rgba(245,158,11,0.12);color:#f59e0b;font-size:12px;font-weight:800;cursor:pointer;margin-bottom:6px;transition:all 0.15s;">🔵 Heat Map OFF — Click to Activate</button>
+        <button id="hm-toggle-btn" onclick="HM.toggleOverlay()" style="width:100%;padding:9px 14px;border-radius:8px;border:1px solid #f59e0b;background:rgba(245,158,11,0.12);color:#f59e0b;font-size:12px;font-weight:800;cursor:pointer;margin-bottom:8px;transition:all 0.15s;">🔵 Heat Map OFF — Click to Activate</button>
+        <!-- Auto-save status -->
+        <div id="hm-auto-status" style="padding:8px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5;min-height:32px;transition:all 0.3s;">Not connected — click Set Up below</div>
+        <button onclick="HM.setupAutoSave()" style="width:100%;padding:8px 14px;border-radius:7px;border:1px solid #22c55e55;background:rgba(34,197,94,0.10);color:#22c55e;font-size:11px;font-weight:800;cursor:pointer;margin-bottom:6px;">📂 Set Up Auto-Save to Obsidian</button>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-          <button onclick="HM.exportObsidian()" style="padding:7px;border-radius:6px;border:1px solid #22c55e44;background:rgba(34,197,94,0.08);color:#22c55e;font-size:11px;font-weight:700;cursor:pointer;">⬇ Export</button>
-          <button onclick="HM.clearData();buildAdminControlPanel();" style="padding:7px;border-radius:6px;border:1px solid #ef444444;background:rgba(239,68,68,0.08);color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;">🗑 Clear Data</button>
+          <button onclick="HM.downloadOnce()" style="padding:7px;border-radius:6px;border:1px solid #38bdf855;background:rgba(56,189,248,0.08);color:#38bdf8;font-size:11px;font-weight:700;cursor:pointer;">⬇ Download Once</button>
+          <button onclick="HM.clearData();" style="padding:7px;border-radius:6px;border:1px solid #ef444444;background:rgba(239,68,68,0.08);color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;">🗑 Clear Data</button>
         </div>
       </div>
       <!-- Testing Mode -->
@@ -3511,7 +3514,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-29T14:00:00'); // v171 — User Heat Map tracking system with live overlay, analytics panel, and Obsidian export
+const LAST_UPDATED = new Date('2026-05-29T15:00:00'); // v172 — Heat map auto-saves to Obsidian file every 5 min + on close, File System Access API with IndexedDB persistence
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -10283,7 +10286,8 @@ var HM = (function() {
       + '</div>'
       + '<div style="margin-top:14px;border-top:1px solid #2e3347;padding-top:10px;">'
       + '<button onclick="HM.toggleOverlay()" style="width:100%;padding:7px;background:#ef444418;border:1px solid #ef444450;color:#f87171;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;margin-bottom:6px;">✕ Close Heat Map</button>'
-      + '<button onclick="HM.exportObsidian()" style="width:100%;padding:7px;background:#22c55e18;border:1px solid #22c55e50;color:#4ade80;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;">⬇ Export to Obsidian</button>'
+      + '<button onclick="HM.setupAutoSave()" style="width:100%;padding:7px;background:#22c55e18;border:1px solid #22c55e50;color:#4ade80;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;margin-bottom:4px;">📂 Set Up Auto-Save</button>'
+      + '<button onclick="HM.downloadOnce()" style="width:100%;padding:7px;background:#38bdf818;border:1px solid #38bdf850;color:#38bdf8;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;">⬇ Download Once</button>'
       + '</div>';
     panel.innerHTML = h;
   }
@@ -10312,70 +10316,159 @@ var HM = (function() {
     }
   }
 
-  function exportObsidian() {
-    var d = getData(); var tabs = d.tabs || {}; var sessions = d.sessions || [];
-    function fmtMs(ms) { var s=Math.round(ms/1000); return s>=60?Math.floor(s/60)+'m '+(s%60)+'s':s+'s'; }
+  // ── Generate markdown string ──────────────────────────────────────────────
+  function buildMarkdown() {
+    var d = getData(); var tabs = d.tabs||{}; var sessions = d.sessions||[];
+    function fmtMs(ms){var s=Math.round(ms/1000);return s>=60?Math.floor(s/60)+'m '+(s%60)+'s':s+'s';}
     var lines = [];
     lines.push('# User Heat Map — Ballasalla Phase 4 Control Panel');
-    lines.push('*Exported: '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})+'*');
-    lines.push('*Total sessions recorded: '+sessions.length+'*');
+    lines.push('*Last updated: '+new Date().toLocaleString('en-GB',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})+'*');
+    lines.push('*Total sessions recorded: '+sessions.length+' · Auto-saved every 5 minutes*');
     lines.push('');
     lines.push('---');
     lines.push('');
     lines.push('## Tab Usage Summary');
     lines.push('');
-    var tabEntries = Object.keys(tabs).sort(function(a,b){return (tabs[b].timeMs||0)-(tabs[a].timeMs||0);});
+    var tabEntries = Object.keys(tabs).sort(function(a,b){return(tabs[b].timeMs||0)-(tabs[a].timeMs||0);});
     lines.push('| Tab | Visits | Total Time | Avg per Visit |');
     lines.push('|---|---|---|---|');
-    tabEntries.forEach(function(t) {
-      var td = tabs[t];
-      var avg = (td.visits||0) > 0 ? Math.round((td.timeMs||0)/(td.visits||1)) : 0;
+    tabEntries.forEach(function(t){
+      var td=tabs[t]; var avg=(td.visits||0)>0?Math.round((td.timeMs||0)/(td.visits||1)):0;
       lines.push('| '+t+' | '+(td.visits||0)+' | '+fmtMs(td.timeMs||0)+' | '+fmtMs(avg)+' |');
     });
     lines.push('');
-    lines.push('## Heat Map by Tab (ASCII Grid — 20×10 sample)');
+    lines.push('## Heat Map by Tab (ASCII Grid)');
     lines.push('█=hottest ▓=hot ▒=warm ░=cool ·=cold');
     lines.push('');
-    tabEntries.forEach(function(t) {
-      var td = tabs[t];
-      if (!td.grid || !td.grid.length) return;
+    tabEntries.forEach(function(t){
+      var td=tabs[t]; if(!td.grid||!td.grid.length) return;
       lines.push('### '+t+' ('+( td.visits||0)+' visits · '+fmtMs(td.timeMs||0)+')');
       lines.push('```');
-      var maxV = Math.max.apply(null, td.grid) || 1;
-      for (var r=0; r<GRID_H; r+=2) {
-        var row = '';
-        for (var c=0; c<GRID_W; c+=2) {
-          var v = (td.grid[r*GRID_W+c]||0)/maxV;
-          row += v>0.75?'█':v>0.5?'▓':v>0.25?'▒':v>0.08?'░':'·';
-        }
+      var maxV=Math.max.apply(null,td.grid)||1;
+      for(var r=0;r<GRID_H;r+=2){
+        var row='';
+        for(var c=0;c<GRID_W;c+=2){var v=(td.grid[r*GRID_W+c]||0)/maxV; row+=v>0.75?'█':v>0.5?'▓':v>0.25?'▒':v>0.08?'░':'·';}
         lines.push(row);
       }
       lines.push('```');
-      if (td.clicks && td.clicks.length) {
+      if(td.clicks&&td.clicks.length){
         lines.push('');
         lines.push('**Top click zones:**');
-        var sorted = td.clicks.slice().sort(function(a,b){return(b.count||1)-(a.count||1);});
-        sorted.slice(0,5).forEach(function(c){
-          lines.push('- Position ('+Math.round(c.x*100)+'% across, '+Math.round(c.y*100)+'% down) — clicked '+(c.count||1)+' time'+(c.count>1?'s':''));
+        td.clicks.slice().sort(function(a,b){return(b.count||1)-(a.count||1);}).slice(0,5).forEach(function(c){
+          lines.push('- ('+Math.round(c.x*100)+'% across, '+Math.round(c.y*100)+'% down) — '+( c.count||1)+' click'+(c.count>1?'s':''));
         });
       }
       lines.push('');
     });
-    lines.push('## Session History (most recent 30)');
+    lines.push('## Session History (last 50)');
     lines.push('');
     lines.push('| Date | Duration | Left on Tab | Mode |');
     lines.push('|---|---|---|---|');
-    sessions.slice(-30).reverse().forEach(function(s) {
+    sessions.slice(-50).reverse().forEach(function(s){
       lines.push('| '+s.date+' | '+fmtMs(s.durationMs||0)+' | '+s.lastTab+' | '+s.mode+' |');
     });
     lines.push('');
     lines.push('---');
-    lines.push('*→ See: `App Dev/Design Principle — Self-Explaining UI.md`*');
-    var md = lines.join('\n');
-    // Download as .md file
-    var blob = new Blob([md], {type:'text/markdown'});
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a'); a.href=url;
+    lines.push('*→ `App Dev/Design Principle — Self-Explaining UI.md`*');
+    return lines.join('\n');
+  }
+
+  // ── IndexedDB: persist file handle across sessions ─────────────────────────
+  function _idbOpen(cb) {
+    try {
+      var req = indexedDB.open('dgc_hm_db', 1);
+      req.onupgradeneeded = function(e){ e.target.result.createObjectStore('fh'); };
+      req.onsuccess = function(e){ cb(null, e.target.result); };
+      req.onerror = function(){ cb('idb error'); };
+    } catch(e){ cb(e); }
+  }
+  function _idbSaveHandle(handle) {
+    _idbOpen(function(err, db){ if(err) return;
+      var tx = db.transaction('fh','readwrite'); tx.objectStore('fh').put(handle,'obs'); });
+  }
+  function _idbLoadHandle(cb) {
+    _idbOpen(function(err, db){ if(err) return cb(null);
+      var tx = db.transaction('fh','readonly');
+      var req = tx.objectStore('fh').get('obs');
+      req.onsuccess = function(){ cb(req.result||null); };
+      req.onerror = function(){ cb(null); };
+    });
+  }
+  function _idbClearHandle() {
+    _idbOpen(function(err, db){ if(err) return;
+      var tx = db.transaction('fh','readwrite'); tx.objectStore('fh').delete('obs'); });
+  }
+
+  // ── Auto-save engine ───────────────────────────────────────────────────────
+  var _fileHandle = null;
+  var _autoTimer  = null;
+  var _lastSaved  = null;
+
+  function _writeToFile(handle) {
+    if (!handle) return;
+    try {
+      handle.createWritable().then(function(w){
+        w.write(buildMarkdown()).then(function(){ w.close(); _lastSaved = new Date(); _updateAutoStatus(); });
+      }).catch(function(){});
+    } catch(e){}
+  }
+
+  function _startAutoTimer() {
+    if (_autoTimer) clearInterval(_autoTimer);
+    _autoTimer = setInterval(function(){ _writeToFile(_fileHandle); }, 5 * 60 * 1000);
+    _writeToFile(_fileHandle); // write immediately
+  }
+
+  function _updateAutoStatus() {
+    var el = document.getElementById('hm-auto-status');
+    if (!el) return;
+    if (_fileHandle && _lastSaved) {
+      el.style.background = 'rgba(34,197,94,0.10)';
+      el.style.borderColor = 'rgba(34,197,94,0.3)';
+      el.style.color = '#22c55e';
+      el.innerHTML = '✓ Auto-saving to Obsidian &nbsp;·&nbsp; Last: '
+        + _lastSaved.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})
+        + ' &nbsp;<button onclick="HM.disconnectAutoSave()" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:10px;text-decoration:underline;padding:0;">disconnect</button>';
+    } else if (_fileHandle) {
+      el.style.background = 'rgba(245,158,11,0.10)';
+      el.style.borderColor = 'rgba(245,158,11,0.3)';
+      el.style.color = '#f59e0b';
+      el.innerHTML = '⏳ Connecting to file…';
+    } else {
+      el.style.background = 'var(--surface2)';
+      el.style.borderColor = 'var(--border)';
+      el.style.color = 'var(--muted)';
+      el.innerHTML = 'Not connected — click Set Up below';
+    }
+  }
+
+  function setupAutoSave() {
+    if (!window.showSaveFilePicker) {
+      alert('Your browser does not support the File System Access API.\nUse the Download button instead, or try Chrome/Edge.');
+      return;
+    }
+    window.showSaveFilePicker({
+      suggestedName: 'DGC-HeatMap-B4.md',
+      types: [{ description: 'Markdown file', accept: {'text/markdown': ['.md']} }]
+    }).then(function(handle) {
+      _fileHandle = handle;
+      _idbSaveHandle(handle);
+      _startAutoTimer();
+      _updateAutoStatus();
+    }).catch(function(){ /* user cancelled */ });
+  }
+
+  function disconnectAutoSave() {
+    if (_autoTimer) { clearInterval(_autoTimer); _autoTimer = null; }
+    _fileHandle = null; _lastSaved = null;
+    _idbClearHandle();
+    _updateAutoStatus();
+  }
+
+  function downloadOnce() {
+    var blob = new Blob([buildMarkdown()], {type:'text/markdown'});
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a'); a.href=url;
     a.download = 'DGC-HeatMap-B4-'+new Date().toISOString().slice(0,10)+'.md';
     a.click(); URL.revokeObjectURL(url);
   }
@@ -10383,33 +10476,46 @@ var HM = (function() {
   function clearData() {
     if (confirm('Clear all heat map tracking data? This cannot be undone.')) {
       localStorage.removeItem('dgc_heatmap');
-      alert('Heat map data cleared.');
+      buildAdminControlPanel && buildAdminControlPanel();
     }
   }
 
   function getLiveStats() {
     var d = getData(); var tabs = d.tabs||{}; var sessions = d.sessions||[];
-    var topTab = Object.keys(tabs).sort(function(a,b){return(tabs[b].visits||0)-(tabs[a].visits||0);})[0] || '—';
-    var totalVisits = Object.values(tabs).reduce(function(s,t){return s+(t.visits||0);},0);
-    return { sessions:sessions.length, topTab:topTab, totalVisits:totalVisits, tabCount:Object.keys(tabs).length };
+    var topTab = Object.keys(tabs).sort(function(a,b){return(tabs[b].visits||0)-(tabs[a].visits||0);})[0]||'—';
+    var totalVisits = Object.keys(tabs).reduce(function(s,k){return s+(tabs[k].visits||0);},0);
+    return {sessions:sessions.length, topTab:topTab, totalVisits:totalVisits, tabCount:Object.keys(tabs).length};
   }
 
-  // ── Init ─────────────────────────────────────────────────────────────────
+  // ── Restore handle on startup ──────────────────────────────────────────────
+  _idbLoadHandle(function(handle) {
+    if (!handle) return;
+    _fileHandle = handle;
+    _startAutoTimer();
+    setTimeout(_updateAutoStatus, 800);
+  });
+
+  // ── Mouse / click / unload listeners ──────────────────────────────────────
   var _mouseTick = 0;
-  document.addEventListener('mousemove', function(e) {
-    var now = Date.now(); if (now - _mouseTick < 100) return; _mouseTick = now;
+  document.addEventListener('mousemove', function(e){
+    var now=Date.now(); if(now-_mouseTick<100) return; _mouseTick=now;
     recordMouse(e.clientX, e.clientY);
-  }, {passive:true});
-  document.addEventListener('click', function(e) { recordClick(e.clientX, e.clientY); }, {passive:true});
-  window.addEventListener('beforeunload', endSession);
+  },{passive:true});
+  document.addEventListener('click', function(e){ recordClick(e.clientX, e.clientY); },{passive:true});
+  window.addEventListener('beforeunload', function(){
+    endSession();
+    if (_fileHandle) _writeToFile(_fileHandle); // save on close too
+  });
 
   return {
-    switchTab: switchTab,
-    toggleOverlay: toggleOverlay,
-    exportObsidian: exportObsidian,
-    clearData: clearData,
-    getLiveStats: getLiveStats,
-    isOverlayActive: function(){ return _overlayActive; }
+    switchTab:          switchTab,
+    toggleOverlay:      toggleOverlay,
+    setupAutoSave:      setupAutoSave,
+    disconnectAutoSave: disconnectAutoSave,
+    downloadOnce:       downloadOnce,
+    clearData:          clearData,
+    getLiveStats:       getLiveStats,
+    isOverlayActive:    function(){ return _overlayActive; }
   };
 })();
 
