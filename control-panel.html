@@ -3516,7 +3516,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-31T12:30:00'); // v177 — Directors: fixed growth table % bug, all tests pass
+const LAST_UPDATED = new Date('2026-05-31T13:00:00'); // v178 — Directors: full board test, negative value guard, break-even text corrected to 7 people
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -15328,7 +15328,7 @@ function closeZoneHealth() {
     + '</div>'
     + '<div id="dir-health"></div>'
     + '<div style="margin-top:14px;padding:12px 14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.6;">'
-    + '<strong style="color:var(--text);">Break-even point: 6 people.</strong> With fewer than 6 on productive work, DGC loses money every month. Each person you add above 6 generates about <strong style="color:#22c55e;">£3,200/month</strong> more profit.'
+    + '<strong style="color:var(--text);">Break-even is around 7 people.</strong> At 6 people the company is nearly breaking even (−£451/month). At 7 people it turns profitable (+£2,765/month). Each person above 7 adds roughly <strong style="color:#22c55e;">£3,200/month</strong> more to the bottom line. The table above shows the exact figures.'
     + '</div>'
     + '</div>'
 
@@ -15375,7 +15375,7 @@ function closeZoneHealth() {
     var ohp    = parseFloat((document.getElementById('dir-ohp') ||{}).value) || 15;
     var name   = ((document.getElementById('dir-name')||{}).value || '').trim() || 'This job';
 
-    if (!value || !weeks || !people) {
+    if (!value || value <= 0 || !weeks || weeks <= 0 || !people || people <= 0) {
       el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">Fill in job value, weeks and number of people above ↑</div>';
       return;
     }
@@ -15560,7 +15560,7 @@ function closeZoneHealth() {
     var people = parseInt  ((document.getElementById('dir-p')  ||{}).value)||0;
     var ohp    = parseFloat((document.getElementById('dir-ohp')||{}).value)||15;
     var name   = ((document.getElementById('dir-name')||{}).value||'').trim()||'Unnamed job';
-    if (!value||!weeks||!people) { alert('Fill in the calculator first.'); return; }
+    if (!value||value<=0||!weeks||weeks<=0||!people||people<=0) { alert('Fill in the calculator first.'); return; }
     var ohpProfit = value*(ohp/100)/(1+ohp/100);
     var totalPW   = ohpProfit/weeks + people*AVG_WAGE_MARGIN_PW;
     var pmpw      = Math.round(totalPW/people);
