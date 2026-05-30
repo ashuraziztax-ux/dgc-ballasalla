@@ -15364,9 +15364,14 @@ function closeZoneHealth() {
     + '<div style="position:relative;height:240px;margin-bottom:20px;"><canvas id="dir-growth-chart"></canvas></div>'
 
     // Growth table (key milestones)
-    + '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;"><strong style="color:var(--text);">Key milestones:</strong></div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;"><strong style="color:var(--text);">Key milestones — this is all profit</strong> (money left over after paying all wages and all overheads):</div>'
     + '<div style="overflow-x:auto;">'
     + '<table style="border-collapse:collapse;font-size:12px;width:100%;">'
+    + '<thead><tr style="background:var(--surface2);">'
+    + '<th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--muted);font-weight:700;">Team size</th>'
+    + '<th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--muted);font-weight:700;">Monthly profit</th>'
+    + '<th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--muted);font-weight:700;">Annual profit</th>'
+    + '</tr></thead>'
     + [5,6,7,8,10,12,15,20,25,30,40].map(function(nn) {
         var r2=nn*PROFIT_PER_MAN_MTH, n2=r2-MONTHLY_OVERHEAD;
         var c2=n2>20000?'#22c55e':n2>5000?'#22c55e':n2>0?'#f59e0b':'#ef4444';
@@ -15374,7 +15379,7 @@ function closeZoneHealth() {
         return '<tr style="border-bottom:1px solid var(--border);'+(isCurrent?'background:rgba(245,158,11,0.08);':'')+'">'
           +'<td style="padding:6px 10px;font-weight:'+(isCurrent?'900':'500')+';'+(isCurrent?'color:#f59e0b;':'')+'">'+nn+' people'+(isCurrent?' ← you':'')+'</td>'
           +'<td style="padding:6px 10px;color:'+c2+';font-weight:800;">'+(n2>=0?'+':'')+fmt(n2)+'/month</td>'
-          +'<td style="padding:6px 10px;font-size:11px;color:var(--muted);">'+(n2>0?'+'+Math.round(n2/12000*10)/10+'k/year':'loss')+'</td>'
+          +'<td style="padding:6px 10px;font-size:11px;color:'+(n2>0?'#22c55e':'#ef4444')+';font-weight:700;">'+(function(){if(n2<=0)return'loss';var a=n2*12;if(a>=1000000)return'+£'+(a/1000000).toFixed(2)+'m profit/year';return'+£'+Math.round(a/1000)+'k profit/year';})()+'</td>'
           +'</tr>';
       }).join('')
     + '</table>'
