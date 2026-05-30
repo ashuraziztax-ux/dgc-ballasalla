@@ -3516,7 +3516,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-31T11:00:00'); // v175 — Directors: corrected benchmark to £742/man/week (actual wages), fixed margin rates
+const LAST_UPDATED = new Date('2026-05-31T12:00:00'); // v176 — Directors tab rebuilt: girlfriend-test UX, 3 inputs, live results, self-explaining
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -15249,414 +15249,329 @@ function closeZoneHealth() {
 // ═══════════════════════════════ DIRECTORS TAB ═══════════════════════════════
 (function() {
 
-  // ── Constants (recalculated May 2026 from actual wages) ───────────────────
-  // IoM NITP 12.8% on (wage - £3.73/hr free pay). Actual current wages used.
-  // Average site gang (Dean £19, Lee £13.50, Edan £15, Liam £15) — not £18.50/£16 old model
-  // Ganger (avg £16.50/hr wage): cost £18.28/hr. Charged £27.50. Margin £9.22/hr
-  // Groundworker (avg £14.25/hr wage): cost £15.71/hr. Charged £22.00. Margin £6.29/hr
-  // Note: David Smith and James Cosgrove at £26/hr cost £28.85/hr — MORE than ganger charge-out.
-  //       They are a drag on wage margins. Their value is in management/OH&P, not billable labour.
-  var BENCHMARK_PMPW   = 742;    // £/man/week — recalculated from ACTUAL wages on Ballasalla
-  var MONTHLY_OVERHEAD = 19747;  // £/month fixed costs (from Master Spreadsheet)
-  var BENCHMARK_PMPM   = 3216;   // £/man/month (742 × 4.333)
-  var GANGER_MARGIN_HR = 6.55;   // charge £27.50 − actual cost £20.95 (Dean £19/hr + NITP)
-  var GW_MARGIN_HR     = 5.56;   // charge £22.00 − actual cost £16.44 (avg £15/hr + NITP)
-  var HRS_PER_WEEK     = 45;
+  // ── Constants (May 2026 — from actual wages + IoM NITP 12.8%) ─────────────
+  // Avg wage margin per person per week (mix of gangers + GWs from real payroll):
+  //   Gangers (charged £27.50, cost ~£20.95 all-in): £6.55/hr × 45hrs = £295/wk
+  //   GWs (charged £22.00, cost ~£16.44 all-in):    £5.56/hr × 45hrs = £250/wk
+  //   Weighted avg (1/3 gangers, 2/3 GWs): ~£265/person/week
+  var AVG_WAGE_MARGIN_PW = 265;   // £ per productive person per week (blended)
+  var MONTHLY_OVERHEAD   = 19747; // £/month fixed costs (overhead wages + running costs)
+  var BENCHMARK_PMPW     = 742;   // £/man/week actual benchmark (Ballasalla, real wages)
+  var PROFIT_PER_MAN_MTH = 3216;  // £742 × 4.333 weeks/month
+  var HRS_PER_WEEK       = 45;
 
   // ── Helpers ────────────────────────────────────────────────────────────────
-  function fmt(n, dp) {
-    if (dp === undefined) dp = 0;
-    return '£' + n.toLocaleString('en-GB', {minimumFractionDigits: dp, maximumFractionDigits: dp});
+  function fmt(n) { return '£' + Math.round(n).toLocaleString('en-GB'); }
+  function clr(v, good, warn) {
+    good = good || BENCHMARK_PMPW; warn = warn || good * 0.8;
+    return v >= good ? '#22c55e' : v >= warn ? '#f59e0b' : '#ef4444';
   }
-  function fmtN(n, dp) {
-    if (dp === undefined) dp = 0;
-    return n.toLocaleString('en-GB', {minimumFractionDigits: dp, maximumFractionDigits: dp});
-  }
-  function clr(val, benchmark, warningPct) {
-    // returns a colour string: green / amber / red
-    if (warningPct === undefined) warningPct = 20;
-    if (val >= benchmark) return '#22c55e';
-    if (val >= benchmark * (1 - warningPct / 100)) return '#f59e0b';
-    return '#ef4444';
-  }
-  function loadBenchmarks() {
-    try {
-      var s = localStorage.getItem('dgc_benchmarks');
-      return s ? JSON.parse(s) : null;
-    } catch(e) { return null; }
-  }
-  function defaultBenchmarks() {
-    return [
-      { job:'Ballasalla Phase 4', type:'Developer drainage', ohp:'15%', weeks:16, crew:6, pmpw:871, notes:'Anchor benchmark' },
-      { job:'MU Flow Monitoring',  type:'Manx Utilities',     ohp:'15%', weeks:6.8, crew:2, pmpw:780, notes:'Smaller crew' }
-    ];
-  }
-  function saveBenchmarks(arr) {
-    try { localStorage.setItem('dgc_benchmarks', JSON.stringify(arr)); } catch(e) {}
-  }
+  function loadBM()   { try { var s=localStorage.getItem('dgc_bm'); return s?JSON.parse(s):null; } catch(e){return null;} }
+  function saveBM(a)  { try { localStorage.setItem('dgc_bm',JSON.stringify(a)); } catch(e){} }
+  function defaultBM(){ return [
+    {job:'Ballasalla Phase 4', type:'Drainage',  weeks:17, people:6, pmpw:742, notes:'Current contract'},
+    {job:'MU Flow Monitoring',  type:'Utilities', weeks:7,  people:2, pmpw:700, notes:'Smaller job'}
+  ];}
 
-  // ── Main build ─────────────────────────────────────────────────────────────
+  // ── Build ──────────────────────────────────────────────────────────────────
   window.buildDirectorsTab = function() {
     var el = document.getElementById('directors-panel');
     if (!el) return;
-    el.innerHTML = renderDirectorsHTML();
-    // set default inputs
-    ['dir-gangers','dir-groundworkers','dir-ohp'].forEach(function(id) {
-      // values are already set in the HTML value attrs — just fire recalc
-    });
-    calcDirectorsProfit();
-    renderBenchmarkTable();
-    bindCompanyHealth();
+    el.innerHTML = dirHTML();
+    dirCalc();
+    dirHealth();
+    dirRenderBM();
   };
 
-  // ── Render static shell ────────────────────────────────────────────────────
-  function renderDirectorsHTML() {
-    return [
-      '<div style="padding:0 0 24px;">',
+  // ── HTML shell ─────────────────────────────────────────────────────────────
+  function dirHTML() {
+    return '<div style="max-width:900px;">'
 
-      // ── Section header ─────────────────────────────────────────────────────
-      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">',
-        '<div style="background:#f59e0b;color:#1a1d27;border-radius:10px;padding:8px 14px;font-size:18px;font-weight:900;">DGC Directors</div>',
-        '<div style="color:#64748b;font-size:13px;">Financial intelligence for Ash &amp; Harry. These numbers help you price jobs correctly and know whether the company is healthy.</div>',
-      '</div>',
+    // ── HEADER ──
+    + '<div style="background:#1a1d27;border-radius:14px;padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">'
+    + '<div style="background:#f59e0b;color:#1a1d27;border-radius:8px;padding:6px 14px;font-size:16px;font-weight:900;">📊 Directors</div>'
+    + '<div style="color:#94a3b8;font-size:13px;line-height:1.5;">Private financial view for Ash and Harry. Type in a job and see if it\'s worth taking. Check the company health before hiring anyone new.</div>'
+    + '</div>'
 
-      // ══════════════════════════════════════════════════════════════════════
-      // SECTION 1 — JOB PROFITABILITY CALCULATOR
-      // ══════════════════════════════════════════════════════════════════════
-      '<div class="card" style="border-radius:12px;margin-bottom:20px;border:2px solid #f59e0b30;padding:20px;">',
-        '<div style="font-size:15px;font-weight:800;color:#1e293b;margin-bottom:4px;">&#128200; Job Profitability Calculator</div>',
-        '<div style="font-size:12px;color:#64748b;margin-bottom:16px;">Enter a job\'s details and see instantly what you\'ll make per man per week. Use this before you price any job, and again when you\'re negotiating with a client.</div>',
+    // ── CALCULATOR ──
+    + '<div class="card" style="border-radius:14px;margin-bottom:16px;padding:24px;border:2px solid rgba(245,158,11,0.3);">'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">Is this job worth taking?</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:20px;">Type in a job you\'ve been offered. The calculator tells you what you\'ll earn per person per week — and whether it\'s a good job or a thin one.</div>'
 
-        // Inputs grid
-        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px;">',
+    // Three main inputs — big, obvious
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px;">'
+    + dirBigInput('Job value', 'dir-v', 'number', '210000', '£ — what the client pays you')
+    + dirBigInput('Weeks on site', 'dir-w', 'number', '10', 'how long the job runs')
+    + dirBigInput('People on the job', 'dir-p', 'number', '3', 'total site workers')
+    + '</div>'
 
-          dirInput('Job name', 'dir-jobname', 'text', '', '"Example: Onchan Phase 2"', ''),
-          dirInput('Job value (£)', 'dir-value', 'number', '210000', 'What the client pays DGC', ''),
-          dirInput('OH&amp;P %', 'dir-ohp', 'number', '15', '15% is standard', ''),
-          dirInput('Duration (weeks)', 'dir-weeks', 'number', '10', '', ''),
-          dirInput('Gangers', 'dir-gangers', 'number', '1', 'Charged at £27.50/hr', ''),
-          dirInput('Groundworkers', 'dir-groundworkers', 'number', '2', 'Charged at £22.00/hr', ''),
+    // Advanced toggle
+    + '<details style="margin-bottom:16px;">'
+    + '<summary style="font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;user-select:none;padding:4px 0;">▸ Change profit % (default is 15%) or job name</summary>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">'
+    + dirSmInput('Job name (optional)', 'dir-name', 'text', '', 'e.g. Onchan drainage')
+    + dirSmInput('Profit % (OH&P)', 'dir-ohp', 'number', '15', '15% is standard for DGC')
+    + '</div>'
+    + '</details>'
 
-        '</div>',
+    // Results (live, no button)
+    + '<div id="dir-result"></div>'
+    + '</div>'
 
-        '<button onclick="calcDirectorsProfit()" style="background:#f59e0b;color:#1a1d27;border:none;border-radius:8px;padding:10px 22px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:18px;">Calculate</button>',
+    // ── COMPANY HEALTH ──
+    + '<div class="card" style="border-radius:14px;margin-bottom:16px;padding:24px;">'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">Is the company making money right now?</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Your fixed costs are £19,747 every month — no matter what. Rent, insurance, vans, management wages. This panel shows whether your current workforce is covering those costs.</div>'
+    + '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px;">'
+    + '<div style="font-size:13px;font-weight:700;color:var(--text);">How many people are on paid productive work right now?</div>'
+    + '<input id="health-n" type="number" min="0" max="30" value="8" oninput="dirHealth()" style="width:80px;padding:9px 12px;border-radius:10px;border:1px solid var(--border);font-size:22px;font-weight:900;text-align:center;background:var(--surface2);color:var(--text);">'
+    + '</div>'
+    + '<div id="dir-health"></div>'
+    + '<div style="margin-top:14px;padding:12px 14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.6;">'
+    + '<strong style="color:var(--text);">Break-even point: 6 people.</strong> With fewer than 6 on productive work, DGC loses money every month. Each person you add above 6 generates about <strong style="color:#22c55e;">£3,200/month</strong> more profit.'
+    + '</div>'
+    + '</div>'
 
-        // Results area
-        '<div id="dir-results"></div>',
+    // ── PAST JOBS ──
+    + '<details>'
+    + '<summary style="font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;user-select:none;padding:8px 0;">▸ Past jobs — how does this job compare?</summary>'
+    + '<div class="card" style="border-radius:14px;margin-top:10px;padding:20px;">'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">A good DGC job makes <strong style="color:var(--text);">£700–900 per person per week</strong> profit. Below £600 is thin. Above £900 is excellent. Save jobs here to build a reference library.</div>'
+    + '<div id="dir-bm"></div>'
+    + '<button onclick="dirSaveCurrent()" style="margin-top:12px;padding:8px 16px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">+ Save current calculator result</button>'
+    + '</div>'
+    + '</details>'
 
-        // What-if section
-        '<details style="margin-top:16px;" id="dir-whatif-details">',
-          '<summary style="font-size:13px;font-weight:700;color:#64748b;cursor:pointer;padding:8px 0;">',
-            '&#9654; What if the team is bigger or smaller?',
-          '</summary>',
-          '<div id="dir-whatif" style="margin-top:12px;"></div>',
-        '</details>',
-
-      '</div>',
-
-      // ══════════════════════════════════════════════════════════════════════
-      // SECTION 2 — COMPANY HEALTH PANEL
-      // ══════════════════════════════════════════════════════════════════════
-      '<div class="card" style="border-radius:12px;margin-bottom:20px;padding:20px;">',
-        '<div style="font-size:15px;font-weight:800;color:#1e293b;margin-bottom:4px;">&#128200; Company Health Panel</div>',
-        '<div style="font-size:12px;color:#64748b;margin-bottom:16px;">Fixed costs are £19,747/month — this panel shows whether the men you currently have on productive work are covering the lights.</div>',
-
-        '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">',
-          '<label style="font-size:13px;font-weight:600;color:#1e293b;">Men currently on productive work:</label>',
-          '<input id="health-men" type="number" min="0" max="30" value="6" oninput="calcCompanyHealth()" ',
-            'style="width:70px;padding:7px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:15px;font-weight:800;text-align:center;">',
-        '</div>',
-
-        '<div id="health-results"></div>',
-
-        '<div style="margin-top:16px;padding:10px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;font-size:11px;color:#64748b;">',
-          '<strong>Break-even headcount:</strong> £19,747 ÷ £3,396/man/month = <strong>5.8 men</strong> — you need at least 6 productive men just to cover the lights. Every man above 6 is building company profit.',
-        '</div>',
-      '</div>',
-
-      // ══════════════════════════════════════════════════════════════════════
-      // SECTION 3 — BENCHMARK LIBRARY
-      // ══════════════════════════════════════════════════════════════════════
-      '<div class="card" style="border-radius:12px;padding:20px;">',
-        '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:8px;">',
-          '<div style="font-size:15px;font-weight:800;color:#1e293b;">&#128218; Benchmark Library</div>',
-          '<button onclick="addCurrentToBenchmarks()" style="background:#1e293b;color:#f59e0b;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;">+ Add current calculator result</button>',
-        '</div>',
-        '<div style="font-size:12px;color:#64748b;margin-bottom:14px;">The benchmark is <strong>£871/man/week</strong> (Ballasalla Phase 4). Any job significantly below this is eating into company health. Any job above it is excellent work.</div>',
-        '<div id="benchmark-table-wrap"></div>',
-      '</div>',
-
-      '</div>' // end padding wrapper
-    ].join('');
+    + '</div>';
   }
 
-  function dirInput(label, id, type, defaultVal, helper, extra) {
-    return [
-      '<div>',
-        '<label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;display:block;margin-bottom:4px;">' + label + '</label>',
-        '<input id="' + id + '" type="' + type + '" value="' + defaultVal + '" ' + extra + ' oninput="calcDirectorsProfit()" ',
-          'style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:13px;background:#fff;">',
-        (helper ? '<div style="font-size:10px;color:#94a3b8;margin-top:3px;">' + helper + '</div>' : ''),
-      '</div>'
-    ].join('');
+  function dirBigInput(label, id, type, val, help) {
+    return '<div>'
+    + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:6px;">' + label + '</div>'
+    + '<input id="' + id + '" type="' + type + '" value="' + val + '" oninput="dirCalc()" '
+    + 'style="width:100%;padding:12px 14px;border-radius:10px;border:2px solid var(--border);font-size:22px;font-weight:900;background:var(--surface2);color:var(--text);text-align:center;">'
+    + '<div style="font-size:10px;color:var(--muted);margin-top:4px;text-align:center;">' + help + '</div>'
+    + '</div>';
   }
 
-  // ── Calculation ────────────────────────────────────────────────────────────
-  window.calcDirectorsProfit = function() {
-    var resultsEl = document.getElementById('dir-results');
-    var whatifEl  = document.getElementById('dir-whatif');
-    if (!resultsEl) return;
+  function dirSmInput(label, id, type, val, help) {
+    return '<div>'
+    + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:4px;">' + label + '</div>'
+    + '<input id="' + id + '" type="' + type + '" value="' + val + '" oninput="dirCalc()" '
+    + 'placeholder="' + (val||help) + '" '
+    + 'style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;background:var(--surface2);color:var(--text);">'
+    + (help ? '<div style="font-size:10px;color:var(--muted);margin-top:3px;">' + help + '</div>' : '')
+    + '</div>';
+  }
 
-    var jobName  = (document.getElementById('dir-jobname')        || {}).value || 'This job';
-    var value    = parseFloat((document.getElementById('dir-value')           || {}).value) || 0;
-    var ohp      = parseFloat((document.getElementById('dir-ohp')             || {}).value) || 15;
-    var weeks    = parseFloat((document.getElementById('dir-weeks')           || {}).value) || 1;
-    var gangers  = parseInt  ((document.getElementById('dir-gangers')         || {}).value) || 0;
-    var gws      = parseInt  ((document.getElementById('dir-groundworkers')   || {}).value) || 0;
-    var totalMen = gangers + gws;
+  // ── Main calculation ───────────────────────────────────────────────────────
+  window.dirCalc = function() {
+    var el = document.getElementById('dir-result');
+    if (!el) return;
 
-    if (value <= 0 || weeks <= 0 || totalMen <= 0) {
-      resultsEl.innerHTML = '<div style="color:#94a3b8;font-size:12px;padding:12px;">Enter a job value, duration and team size to see results.</div>';
-      if (whatifEl) whatifEl.innerHTML = '';
+    var value  = parseFloat((document.getElementById('dir-v')   ||{}).value) || 0;
+    var weeks  = parseFloat((document.getElementById('dir-w')   ||{}).value) || 0;
+    var people = parseInt  ((document.getElementById('dir-p')   ||{}).value) || 0;
+    var ohp    = parseFloat((document.getElementById('dir-ohp') ||{}).value) || 15;
+    var name   = ((document.getElementById('dir-name')||{}).value || '').trim() || 'This job';
+
+    if (!value || !weeks || !people) {
+      el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">Fill in job value, weeks and number of people above ↑</div>';
       return;
     }
 
-    // ── Core calculation ───────────────────────────────────────────────────
-    var ohpProfit        = value * (ohp / 100) / (1 + ohp / 100);   // "price × ohp/(1+ohp)"
-    var qsProfitPerWk    = ohpProfit / weeks;
-    var gangMarginPerWk  = (gangers * GANGER_MARGIN_HR * HRS_PER_WEEK) + (gws * GW_MARGIN_HR * HRS_PER_WEEK);
-    var totalWageMargin  = gangMarginPerWk * weeks;
-    var totalProfitPerWk = qsProfitPerWk + gangMarginPerWk;
-    var profitPerManWk   = totalProfitPerWk / totalMen;
-    var profitPerManMth  = profitPerManWk * 4.333;
-    var totalJobProfit   = ohpProfit + totalWageMargin;
-    var monthlyOhContrib = totalProfitPerWk * 4.333;
+    // OH&P profit: the markup embedded in the price
+    // e.g. 15% OH&P means prime cost + 15% = price
+    // so profit = price × 15/115
+    var ohpProfit   = value * (ohp / 100) / (1 + ohp / 100);
+    var ohpPerWk    = ohpProfit / weeks;
+    var wageMarginWk= people * AVG_WAGE_MARGIN_PW;   // avg £265/person/week wage margin
+    var totalPerWk  = ohpPerWk + wageMarginWk;
+    var perManWk    = totalPerWk / people;
+    var totalProfit = ohpProfit + (wageMarginWk * weeks);
+    var monthlyContrib = totalPerWk * 4.333;
+    var ohCoverPct  = Math.round(monthlyContrib / MONTHLY_OVERHEAD * 100);
 
-    // ── Colour ─────────────────────────────────────────────────────────────
-    var col  = clr(profitPerManWk, BENCHMARK_PMPW);
-    var pct  = Math.round(profitPerManWk / BENCHMARK_PMPW * 100);
-    var benchmarkLabel = profitPerManWk >= BENCHMARK_PMPW ? 'above' :
-                         profitPerManWk >= BENCHMARK_PMPW * 0.8 ? 'within 20% of' : 'below';
-    var ohCoverPct = Math.round(monthlyOhContrib / MONTHLY_OVERHEAD * 100);
+    var verdict, verdictCol, verdictBg;
+    if (perManWk >= 800)       { verdict='Excellent job — strong margin'; verdictCol='#22c55e'; verdictBg='rgba(34,197,94,0.08)'; }
+    else if (perManWk >= 650)  { verdict='Good job — worth doing';        verdictCol='#22c55e'; verdictBg='rgba(34,197,94,0.06)'; }
+    else if (perManWk >= 500)  { verdict='Tight — watch costs carefully'; verdictCol='#f59e0b'; verdictBg='rgba(245,158,11,0.08)'; }
+    else if (perManWk >= 300)  { verdict='Thin margin — negotiate harder';verdictCol='#ef4444'; verdictBg='rgba(239,68,68,0.06)'; }
+    else                       { verdict='Very thin — consider carefully'; verdictCol='#ef4444'; verdictBg='rgba(239,68,68,0.08)'; }
 
-    // ── Result cards ───────────────────────────────────────────────────────
-    var html = [
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px;">',
-
-        resultCard('Profit per man per week', fmt(profitPerManWk), col, 'The key number — compare to the £742 Ballasalla actual benchmark (recalculated from real wages May 2026)'),
-        resultCard('Total profit — whole job', fmt(totalJobProfit), '#3b82f6', 'OH&amp;P profit + wage margin over all ' + fmtN(weeks, 1) + ' weeks'),
-        resultCard('Profit per week (whole gang)', fmt(totalProfitPerWk), '#8b5cf6', 'What comes in every week across all ' + totalMen + ' men'),
-
-      '</div>',
-
-      // Plain-English working strip
-      '<div style="background:#f8fafc;border-radius:10px;padding:14px 16px;margin-bottom:14px;border-left:4px solid ' + col + ';">',
-        '<div style="font-size:12px;color:#1e293b;line-height:1.7;">',
-          '<strong>' + fmt(value) + ' job</strong> × ' + fmtN(ohp, 1) + '% OH&amp;P = <strong>' + fmt(ohpProfit) + '</strong> OH&amp;P profit.',
-          ' Over <strong>' + fmtN(weeks, 1) + ' weeks</strong> with <strong>' + totalMen + ' men</strong>',
-          ' (' + gangers + ' ganger' + (gangers !== 1 ? 's' : '') + ', ' + gws + ' groundworker' + (gws !== 1 ? 's' : '') + '),',
-          ' that\'s <strong>' + fmt(profitPerManWk) + '/man/week</strong> — ',
-          '<span style="color:' + col + ';font-weight:800;">' + benchmarkLabel + ' the Ballasalla actual benchmark of £742/man/week.</span>',
-        '</div>',
-      '</div>',
-
-      // Benchmark comparison bar
-      '<div style="margin-bottom:16px;">',
-        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin-bottom:6px;">',
-          'vs Ballasalla benchmark (£871/man/week)',
-        '</div>',
-        '<div style="background:#e2e8f0;border-radius:6px;height:16px;overflow:hidden;position:relative;">',
-          '<div style="width:' + Math.min(pct, 100) + '%;background:' + col + ';height:100%;border-radius:6px;transition:width 0.5s;"></div>',
-          (pct > 100 ? '<div style="position:absolute;top:0;left:min(' + Math.min(pct - 10, 90) + '%,90%);height:100%;width:2px;background:rgba(0,0,0,0.2);"></div>' : ''),
-        '</div>',
-        '<div style="display:flex;justify-content:space-between;font-size:10px;color:#94a3b8;margin-top:3px;">',
-          '<span>£0</span>',
-          '<span style="color:#64748b;font-weight:700;">Actual benchmark £742 (real wages)</span>',
-          '<span>' + fmt(profitPerManWk) + ' (' + pct + '%)</span>',
-        '</div>',
-      '</div>',
-
-      // Monthly overhead check
-      '<div style="background:' + (ohCoverPct >= 100 ? '#22c55e15' : ohCoverPct >= 50 ? '#f59e0b15' : '#ef444415') + ';border:1px solid ' + (ohCoverPct >= 100 ? '#22c55e40' : ohCoverPct >= 50 ? '#f59e0b40' : '#ef444440') + ';border-radius:10px;padding:12px 16px;">',
-        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin-bottom:6px;">Monthly overhead contribution</div>',
-        '<div style="font-size:12px;color:#1e293b;line-height:1.7;">',
-          'This job contributes <strong>' + fmt(monthlyOhContrib) + '/month</strong> toward the £19,747/month fixed overhead. ',
-          ohCoverPct >= 100
-            ? '<span style="color:#22c55e;font-weight:800;">Covers overheads in full — ' + fmt(monthlyOhContrib - MONTHLY_OVERHEAD) + ' to spare each month.</span>'
-            : '<span style="color:' + (ohCoverPct >= 50 ? '#f59e0b' : '#ef4444') + ';font-weight:800;">Covers ' + ohCoverPct + '% of overheads — you need other work running alongside to stay profitable.</span>',
-        '</div>',
-      '</div>',
-    ];
-
-    resultsEl.innerHTML = html.join('');
-
-    // ── What-if table ──────────────────────────────────────────────────────
-    if (whatifEl) {
-      var wRows = [2, 3, 4, 5].map(function(n) {
-        // Keep same ganger/GW ratio, scale to n total men
-        var scale = n / totalMen;
-        var g2 = Math.round(gangers * scale) || 0;
-        var w2 = Math.max(n - g2, 0);
-        var wageMargin2 = (g2 * GANGER_MARGIN_HR * HRS_PER_WEEK) + (w2 * GW_MARGIN_HR * HRS_PER_WEEK);
-        var totalPW2 = qsProfitPerWk + wageMargin2;
-        var pmpw2 = totalPW2 / n;
-        var c2 = clr(pmpw2, BENCHMARK_PMPW);
-        return '<tr>' +
-          '<td style="padding:8px 12px;font-weight:700;">' + n + ' men</td>' +
-          '<td style="padding:8px 12px;color:' + c2 + ';font-weight:800;">' + fmt(pmpw2) + '</td>' +
-          '<td style="padding:8px 12px;font-size:11px;color:#64748b;">' + (n === totalMen ? '&#9664; current' : '') + '</td>' +
-        '</tr>';
-      });
-
-      whatifEl.innerHTML = [
-        '<div style="font-size:12px;color:#64748b;margin-bottom:8px;">Same job value (' + fmt(value) + ') and duration (' + fmtN(weeks, 1) + ' wks) — different crew sizes. How does gang size change the return?</div>',
-        '<table style="border-collapse:collapse;width:100%;max-width:400px;">',
-          '<thead><tr style="background:#f8fafc;">',
-            '<th style="padding:8px 12px;text-align:left;font-size:11px;color:#64748b;text-transform:uppercase;">Gang size</th>',
-            '<th style="padding:8px 12px;text-align:left;font-size:11px;color:#64748b;text-transform:uppercase;">Profit/man/week</th>',
-            '<th style="padding:8px 12px;"></th>',
-          '</tr></thead>',
-          '<tbody>' + wRows.join('') + '</tbody>',
-        '</table>',
-      ].join('');
+    // What-if rows for 1 extra person at a time (current ± 2)
+    var wiRows = '';
+    for (var n = Math.max(1, people-1); n <= people+3; n++) {
+      var pmpw2 = (ohpPerWk + n * AVG_WAGE_MARGIN_PW) / n;
+      var c2 = clr(pmpw2);
+      var tag = n === people ? ' ← you entered this' : '';
+      wiRows += '<tr style="border-bottom:1px solid var(--border);">'
+        + '<td style="padding:7px 10px;font-weight:'+(n===people?'800':'500')+';">' + n + ' people' + tag + '</td>'
+        + '<td style="padding:7px 10px;font-weight:800;color:'+c2+';">' + fmt(pmpw2) + '/person/week</td>'
+        + '<td style="padding:7px 10px;font-size:11px;color:var(--muted);">' + fmt(pmpw2*4.333) + '/person/month</td>'
+        + '</tr>';
     }
+
+    el.innerHTML =
+    // Big verdict
+    '<div style="border-radius:12px;padding:20px 24px;background:'+verdictBg+';border:2px solid '+verdictCol+'40;margin-bottom:16px;text-align:center;">'
+    + '<div style="font-size:13px;font-weight:700;color:'+verdictCol+';text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">'+verdict+'</div>'
+    + '<div style="font-size:60px;font-weight:900;color:'+verdictCol+';line-height:1;margin-bottom:4px;">' + fmt(perManWk) + '</div>'
+    + '<div style="font-size:14px;color:var(--muted);">per person, per week</div>'
+    + '</div>'
+
+    // Three supporting numbers
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;">'
+    + dirNum('Total profit this job', fmt(totalProfit), 'OH&P + labour margin combined')
+    + dirNum('Profit every week', fmt(totalPerWk), 'across all '+people+' people')
+    + dirNum('Per person per month', fmt(perManWk*4.333), 'averaged across the job')
+    + '</div>'
+
+    // Plain-English workings
+    + '<div style="background:var(--surface2);border-radius:10px;padding:14px 16px;margin-bottom:14px;border-left:4px solid '+verdictCol+';font-size:12px;color:var(--muted);line-height:1.8;">'
+    + '<strong style="color:var(--text);">How we work this out:</strong><br>'
+    + name + ' is worth <strong style="color:var(--text);">' + fmt(value) + '</strong>. '
+    + 'Your ' + ohp + '% profit markup on that = <strong style="color:var(--text);">' + fmt(ohpProfit) + '</strong> OH&P profit over ' + weeks + ' weeks = <strong style="color:var(--text);">' + fmt(ohpPerWk) + '</strong>/week.<br>'
+    + 'The ' + people + ' people also earn a wage margin of <strong style="color:var(--text);">' + fmt(wageMarginWk) + '</strong>/week between them (the gap between what they cost you and what you charge for them).<br>'
+    + 'Total in: <strong style="color:var(--text);">' + fmt(totalPerWk) + '</strong>/week → divided by ' + people + ' people = <strong style="color:'+verdictCol+';font-weight:800;">' + fmt(perManWk) + '/person/week.</strong>'
+    + '</div>'
+
+    // Overhead check
+    + '<div style="background:'+(ohCoverPct>=100?'rgba(34,197,94,0.07)':ohCoverPct>=60?'rgba(245,158,11,0.07)':'rgba(239,68,68,0.07)')+';border:1px solid '+(ohCoverPct>=100?'#22c55e40':ohCoverPct>=60?'#f59e0b40':'#ef444440')+';border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:12px;line-height:1.6;">'
+    + '<strong style="color:var(--text);">Company overhead check:</strong> this job brings in <strong>' + fmt(monthlyContrib) + '/month</strong> toward your £19,747/month fixed costs. '
+    + (ohCoverPct >= 100
+      ? '<span style="color:#22c55e;font-weight:800;">Covers all overheads with ' + fmt(monthlyContrib-MONTHLY_OVERHEAD) + ' to spare.</span>'
+      : '<span style="color:'+(ohCoverPct>=60?'#f59e0b':'#ef4444')+';font-weight:800;">Covers '+ohCoverPct+'% of overheads — you need other jobs running alongside.</span>')
+    + '</div>'
+
+    // What-if table
+    + '<details>'
+    + '<summary style="font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;user-select:none;padding:4px 0;">▸ What if I put more or fewer people on this job?</summary>'
+    + '<div style="overflow-x:auto;margin-top:10px;">'
+    + '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+    + '<thead><tr style="background:var(--surface2);">'
+    + '<th style="padding:7px 10px;text-align:left;color:var(--muted);font-weight:700;font-size:11px;">Team size</th>'
+    + '<th style="padding:7px 10px;text-align:left;color:var(--muted);font-weight:700;font-size:11px;">Profit per person per week</th>'
+    + '<th style="padding:7px 10px;text-align:left;color:var(--muted);font-weight:700;font-size:11px;">Per person per month</th>'
+    + '</tr></thead>'
+    + '<tbody>' + wiRows + '</tbody>'
+    + '</table>'
+    + '<div style="font-size:11px;color:var(--muted);margin-top:8px;padding:8px;background:var(--surface2);border-radius:6px;">'
+    + 'Adding more people dilutes the OH&P profit per person but adds more wage margin. The sweet spot is usually the smallest team that can complete the job in the agreed time.'
+    + '</div>'
+    + '</div>'
+    + '</details>';
   };
 
-  function resultCard(label, value, colour, sub) {
-    return [
-      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;text-align:center;">',
-        '<div style="font-size:26px;font-weight:900;color:' + colour + ';margin-bottom:4px;">' + value + '</div>',
-        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#1e293b;margin-bottom:4px;">' + label + '</div>',
-        (sub ? '<div style="font-size:10px;color:#94a3b8;">' + sub + '</div>' : ''),
-      '</div>'
-    ].join('');
+  function dirNum(label, val, sub) {
+    return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;">'
+    + '<div style="font-size:22px;font-weight:900;color:var(--text);margin-bottom:3px;">' + val + '</div>'
+    + '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;">' + label + '</div>'
+    + (sub ? '<div style="font-size:10px;color:var(--muted);">' + sub + '</div>' : '')
+    + '</div>';
   }
 
   // ── Company health ─────────────────────────────────────────────────────────
-  function bindCompanyHealth() {
-    calcCompanyHealth();
-  }
-
-  window.calcCompanyHealth = function() {
-    var el = document.getElementById('health-results');
+  window.dirHealth = function() {
+    var el = document.getElementById('dir-health');
     if (!el) return;
-    var men = parseInt((document.getElementById('health-men') || {}).value) || 0;
-    var monthlyProfit   = men * BENCHMARK_PMPM;
-    var net             = monthlyProfit - MONTHLY_OVERHEAD;
-    var netCol          = net >= 0 ? '#22c55e' : net >= -5000 ? '#f59e0b' : '#ef4444';
-    var barPct          = Math.min(Math.round(monthlyProfit / MONTHLY_OVERHEAD * 100), 150);
+    var n   = parseInt((document.getElementById('health-n')||{}).value) || 0;
+    var rev = n * PROFIT_PER_MAN_MTH;
+    var net = rev - MONTHLY_OVERHEAD;
+    var col = net > 5000 ? '#22c55e' : net > 0 ? '#f59e0b' : '#ef4444';
+    var barW= Math.min(Math.round(rev/MONTHLY_OVERHEAD*100), 130);
 
-    el.innerHTML = [
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px;">',
-        healthCard('Monthly profit (before overheads)', fmt(monthlyProfit), '#3b82f6', men + ' men × £3,396/man/month'),
-        healthCard('Monthly fixed costs', fmt(MONTHLY_OVERHEAD), '#64748b', 'wages, plant, insurance, van, misc'),
-        healthCard('Monthly net', (net >= 0 ? '+' : '') + fmt(net), netCol, net >= 0 ? 'Profitable &#10003;' : 'Loss — need more productive work'),
-      '</div>',
-      '<div style="margin-bottom:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;">Monthly profit vs overhead</div>',
-      '<div style="background:#e2e8f0;border-radius:6px;height:14px;overflow:hidden;margin-bottom:4px;">',
-        '<div style="width:' + Math.min(barPct, 100) + '%;background:' + netCol + ';height:100%;border-radius:6px;transition:width 0.4s;"></div>',
-      '</div>',
-      '<div style="display:flex;justify-content:space-between;font-size:10px;color:#94a3b8;">',
-        '<span>£0</span>',
-        '<span style="color:#64748b;font-weight:700;">Break-even £19,747</span>',
-        '<span>' + fmt(monthlyProfit) + '</span>',
-      '</div>',
-    ].join('');
+    el.innerHTML =
+    // Big net number
+    '<div style="border-radius:12px;padding:20px;background:'+(net>0?'rgba(34,197,94,0.07)':'rgba(239,68,68,0.07)')+';border:2px solid '+col+'30;text-align:center;margin-bottom:14px;">'
+    + '<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:6px;">'+(net>0?'Monthly profit':'Monthly loss')+'</div>'
+    + '<div style="font-size:52px;font-weight:900;color:'+col+';line-height:1;">' + (net>=0?'+':'') + fmt(net) + '</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-top:6px;">with <strong style="color:var(--text);">' + n + '</strong> people on productive work</div>'
+    + '</div>'
+
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">'
+    + dirNum('Coming in from work', fmt(rev), n + ' people × £3,216/month')
+    + dirNum('Going out fixed costs', fmt(MONTHLY_OVERHEAD), 'overheads — same every month')
+    + '</div>'
+
+    // Bar
+    + '<div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;">How much of the fixed costs are covered?</div>'
+    + '<div style="background:var(--border);border-radius:6px;height:16px;overflow:hidden;margin-bottom:6px;">'
+    + '<div style="width:'+Math.min(barW,100)+'%;background:'+col+';height:100%;border-radius:6px;transition:width 0.3s;"></div>'
+    + '</div>'
+    + '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:14px;">'
+    + '<span>£0</span>'
+    + '<span style="font-weight:700;">£19,747 break-even (6 people)</span>'
+    + '<span>' + fmt(rev) + ' (' + Math.round(rev/MONTHLY_OVERHEAD*100) + '% covered)</span>'
+    + '</div>'
+
+    // Simple growth table
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;"><strong style="color:var(--text);">What adding one more person does:</strong></div>'
+    + '<div style="overflow-x:auto;">'
+    + '<table style="border-collapse:collapse;font-size:12px;width:100%;">'
+    + [6,7,8,9,10,12,15].map(function(nn) {
+        var r2=nn*PROFIT_PER_MAN_MTH, n2=r2-MONTHLY_OVERHEAD;
+        var c2=n2>5000?'#22c55e':n2>0?'#f59e0b':'#ef4444';
+        var tag = nn===n?' ← current':'';
+        return '<tr style="border-bottom:1px solid var(--border);">'
+          +'<td style="padding:6px 10px;font-weight:'+(nn===n?'800':'500')+';">' + nn + ' people'+tag+'</td>'
+          +'<td style="padding:6px 10px;color:'+c2+';font-weight:800;">'+(n2>=0?'+':'')+fmt(n2)+'/month</td>'
+          +'<td style="padding:6px 10px;font-size:11px;color:var(--muted);">'+(n2>0?'+'+fmt(n2/12000*100,0)+'% above break-even':'below break-even')+'</td>'
+          +'</tr>';
+      }).join('')
+    + '</table>'
+    + '</div>';
   };
 
-  function healthCard(label, value, colour, sub) {
-    return [
-      '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;text-align:center;">',
-        '<div style="font-size:22px;font-weight:900;color:' + colour + ';margin-bottom:4px;">' + value + '</div>',
-        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#1e293b;margin-bottom:4px;">' + label + '</div>',
-        (sub ? '<div style="font-size:10px;color:#94a3b8;">' + sub + '</div>' : ''),
-      '</div>'
-    ].join('');
-  }
-
-  // ── Benchmark table ────────────────────────────────────────────────────────
-  function renderBenchmarkTable() {
-    var el = document.getElementById('benchmark-table-wrap');
+  // ── Benchmark library ──────────────────────────────────────────────────────
+  function dirRenderBM() {
+    var el = document.getElementById('dir-bm');
     if (!el) return;
-    var rows = loadBenchmarks() || defaultBenchmarks();
-    var trs = rows.map(function(r, i) {
-      var col = clr(r.pmpw, BENCHMARK_PMPW);
-      return [
-        '<tr style="border-bottom:1px solid #e2e8f0;">',
-          '<td style="padding:9px 12px;font-weight:700;">' + (r.job || '') + '</td>',
-          '<td style="padding:9px 12px;color:#64748b;">' + (r.type || '') + '</td>',
-          '<td style="padding:9px 12px;">' + (r.ohp || '') + '</td>',
-          '<td style="padding:9px 12px;">' + (r.weeks || '') + '</td>',
-          '<td style="padding:9px 12px;">' + (r.crew || '') + '</td>',
-          '<td style="padding:9px 12px;font-weight:800;color:' + col + ';">' + fmt(r.pmpw) + '</td>',
-          '<td style="padding:9px 12px;font-size:11px;color:#94a3b8;">' + (r.notes || '') + '</td>',
-          '<td style="padding:9px 12px;">',
-            (i > 1 ? '<button onclick="removeBenchmark(' + i + ')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px;">&#10005;</button>' : ''),
-          '</td>',
-        '</tr>'
-      ].join('');
-    });
-
-    el.innerHTML = [
-      '<div style="overflow-x:auto;">',
-        '<table style="width:100%;border-collapse:collapse;font-size:12px;">',
-          '<thead><tr style="background:#f8fafc;">',
-            '<th style="padding:9px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;">Job</th>',
-            '<th style="padding:9px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;">Type</th>',
-            '<th style="padding:9px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;">OH&amp;P</th>',
-            '<th style="padding:9px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;">Weeks</th>',
-            '<th style="padding:9px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;">Crew</th>',
-            '<th style="padding:9px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;">Profit/man/week</th>',
-            '<th style="padding:9px 12px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;">Notes</th>',
-            '<th style="padding:9px 12px;"></th>',
-          '</tr></thead>',
-          '<tbody>' + trs.join('') + '</tbody>',
-        '</table>',
-      '</div>',
-    ].join('');
+    var rows = loadBM() || defaultBM();
+    el.innerHTML = '<div style="overflow-x:auto;"><table style="border-collapse:collapse;font-size:12px;width:100%;">'
+    + '<thead><tr style="background:var(--surface2);">'
+    + ['Job','Type','Weeks','People','Profit/person/week','Notes',''].map(function(h){
+        return '<th style="padding:7px 10px;text-align:left;font-weight:700;font-size:11px;color:var(--muted);text-transform:uppercase;">'+h+'</th>';
+      }).join('')
+    + '</tr></thead><tbody>'
+    + rows.map(function(r,i){
+        var col = clr(r.pmpw);
+        return '<tr style="border-bottom:1px solid var(--border);">'
+          +'<td style="padding:8px 10px;font-weight:700;">'+r.job+'</td>'
+          +'<td style="padding:8px 10px;color:var(--muted);">'+r.type+'</td>'
+          +'<td style="padding:8px 10px;">'+r.weeks+' wks</td>'
+          +'<td style="padding:8px 10px;">'+r.people+'</td>'
+          +'<td style="padding:8px 10px;font-weight:900;color:'+col+';">'+fmt(r.pmpw)+'</td>'
+          +'<td style="padding:8px 10px;font-size:11px;color:var(--muted);">'+r.notes+'</td>'
+          +'<td style="padding:8px 10px;">'+(i>1?'<button onclick="dirRemoveBM('+i+')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;">✕</button>':'')+'</td>'
+          +'</tr>';
+      }).join('')
+    + '</tbody></table></div>';
   }
 
-  window.removeBenchmark = function(idx) {
-    var rows = loadBenchmarks() || defaultBenchmarks();
-    rows.splice(idx, 1);
-    saveBenchmarks(rows);
-    renderBenchmarkTable();
+  window.dirRemoveBM = function(i) {
+    var rows = loadBM() || defaultBM();
+    rows.splice(i,1); saveBM(rows); dirRenderBM();
   };
 
-  window.addCurrentToBenchmarks = function() {
-    var jobName  = (document.getElementById('dir-jobname') || {}).value || 'Unnamed job';
-    var value    = parseFloat((document.getElementById('dir-value')         || {}).value) || 0;
-    var ohp      = parseFloat((document.getElementById('dir-ohp')           || {}).value) || 15;
-    var weeks    = parseFloat((document.getElementById('dir-weeks')         || {}).value) || 1;
-    var gangers  = parseInt  ((document.getElementById('dir-gangers')       || {}).value) || 0;
-    var gws      = parseInt  ((document.getElementById('dir-groundworkers') || {}).value) || 0;
-    var totalMen = gangers + gws;
-
-    if (value <= 0 || weeks <= 0 || totalMen <= 0) {
-      alert('Fill in the calculator first.');
-      return;
-    }
-
-    var ohpProfit        = value * (ohp / 100) / (1 + ohp / 100);
-    var qsProfitPerWk    = ohpProfit / weeks;
-    var gangMarginPerWk  = (gangers * GANGER_MARGIN_HR * HRS_PER_WEEK) + (gws * GW_MARGIN_HR * HRS_PER_WEEK);
-    var totalProfitPerWk = qsProfitPerWk + gangMarginPerWk;
-    var profitPerManWk   = totalProfitPerWk / totalMen;
-
-    var rows = loadBenchmarks() || defaultBenchmarks();
-    rows.push({
-      job: jobName,
-      type: 'Added from calculator',
-      ohp: ohp + '%',
-      weeks: weeks,
-      crew: totalMen,
-      pmpw: Math.round(profitPerManWk),
-      notes: 'Added ' + new Date().toLocaleDateString('en-GB')
-    });
-    saveBenchmarks(rows);
-    renderBenchmarkTable();
-    alert('Added "' + jobName + '" to the benchmark library.');
+  window.dirSaveCurrent = function() {
+    var value  = parseFloat((document.getElementById('dir-v')  ||{}).value)||0;
+    var weeks  = parseFloat((document.getElementById('dir-w')  ||{}).value)||0;
+    var people = parseInt  ((document.getElementById('dir-p')  ||{}).value)||0;
+    var ohp    = parseFloat((document.getElementById('dir-ohp')||{}).value)||15;
+    var name   = ((document.getElementById('dir-name')||{}).value||'').trim()||'Unnamed job';
+    if (!value||!weeks||!people) { alert('Fill in the calculator first.'); return; }
+    var ohpProfit = value*(ohp/100)/(1+ohp/100);
+    var totalPW   = ohpProfit/weeks + people*AVG_WAGE_MARGIN_PW;
+    var pmpw      = Math.round(totalPW/people);
+    var rows = loadBM()||defaultBM();
+    rows.push({job:name, type:'Added', weeks:weeks, people:people, pmpw:pmpw, notes:'Saved '+new Date().toLocaleDateString('en-GB')});
+    saveBM(rows); dirRenderBM();
   };
+
+  // legacy aliases so existing showTab patches still work
+  window.calcDirectorsProfit = window.dirCalc;
+  window.calcCompanyHealth   = window.dirHealth;
 
 })();
 </script>
