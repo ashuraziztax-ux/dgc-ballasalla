@@ -3516,7 +3516,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-31T10:00:00'); // v174 — Directors tab: job profitability calculator, company health panel, benchmark library
+const LAST_UPDATED = new Date('2026-05-31T11:00:00'); // v175 — Directors: corrected benchmark to £742/man/week (actual wages), fixed margin rates
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -15249,12 +15249,18 @@ function closeZoneHealth() {
 // ═══════════════════════════════ DIRECTORS TAB ═══════════════════════════════
 (function() {
 
-  // ── Constants ──────────────────────────────────────────────────────────────
-  var BENCHMARK_PMPW   = 871;    // £/man/week — Ballasalla Phase 4
-  var MONTHLY_OVERHEAD = 19747;  // £/month fixed costs
-  var BENCHMARK_PMPM   = 3396;   // £/man/month (871 × 4.333 ≈ 3773, but spec says 3396)
-  var GANGER_MARGIN_HR = 7.11;   // charge £27.50 − IoM NITP £20.39
-  var GW_MARGIN_HR     = 4.43;   // charge £22.00 − IoM NITP £17.57
+  // ── Constants (recalculated May 2026 from actual wages) ───────────────────
+  // IoM NITP 12.8% on (wage - £3.73/hr free pay). Actual current wages used.
+  // Average site gang (Dean £19, Lee £13.50, Edan £15, Liam £15) — not £18.50/£16 old model
+  // Ganger (avg £16.50/hr wage): cost £18.28/hr. Charged £27.50. Margin £9.22/hr
+  // Groundworker (avg £14.25/hr wage): cost £15.71/hr. Charged £22.00. Margin £6.29/hr
+  // Note: David Smith and James Cosgrove at £26/hr cost £28.85/hr — MORE than ganger charge-out.
+  //       They are a drag on wage margins. Their value is in management/OH&P, not billable labour.
+  var BENCHMARK_PMPW   = 742;    // £/man/week — recalculated from ACTUAL wages on Ballasalla
+  var MONTHLY_OVERHEAD = 19747;  // £/month fixed costs (from Master Spreadsheet)
+  var BENCHMARK_PMPM   = 3216;   // £/man/month (742 × 4.333)
+  var GANGER_MARGIN_HR = 6.55;   // charge £27.50 − actual cost £20.95 (Dean £19/hr + NITP)
+  var GW_MARGIN_HR     = 5.56;   // charge £22.00 − actual cost £16.44 (avg £15/hr + NITP)
   var HRS_PER_WEEK     = 45;
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -15437,7 +15443,7 @@ function closeZoneHealth() {
     var html = [
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px;">',
 
-        resultCard('Profit per man per week', fmt(profitPerManWk), col, 'The key number — compare to the £871 Ballasalla benchmark'),
+        resultCard('Profit per man per week', fmt(profitPerManWk), col, 'The key number — compare to the £742 Ballasalla actual benchmark (recalculated from real wages May 2026)'),
         resultCard('Total profit — whole job', fmt(totalJobProfit), '#3b82f6', 'OH&amp;P profit + wage margin over all ' + fmtN(weeks, 1) + ' weeks'),
         resultCard('Profit per week (whole gang)', fmt(totalProfitPerWk), '#8b5cf6', 'What comes in every week across all ' + totalMen + ' men'),
 
@@ -15450,7 +15456,7 @@ function closeZoneHealth() {
           ' Over <strong>' + fmtN(weeks, 1) + ' weeks</strong> with <strong>' + totalMen + ' men</strong>',
           ' (' + gangers + ' ganger' + (gangers !== 1 ? 's' : '') + ', ' + gws + ' groundworker' + (gws !== 1 ? 's' : '') + '),',
           ' that\'s <strong>' + fmt(profitPerManWk) + '/man/week</strong> — ',
-          '<span style="color:' + col + ';font-weight:800;">' + benchmarkLabel + ' the Ballasalla benchmark of £871/man/week.</span>',
+          '<span style="color:' + col + ';font-weight:800;">' + benchmarkLabel + ' the Ballasalla actual benchmark of £742/man/week.</span>',
         '</div>',
       '</div>',
 
@@ -15465,7 +15471,7 @@ function closeZoneHealth() {
         '</div>',
         '<div style="display:flex;justify-content:space-between;font-size:10px;color:#94a3b8;margin-top:3px;">',
           '<span>£0</span>',
-          '<span style="color:#64748b;font-weight:700;">Benchmark £871</span>',
+          '<span style="color:#64748b;font-weight:700;">Actual benchmark £742 (real wages)</span>',
           '<span>' + fmt(profitPerManWk) + ' (' + pct + '%)</span>',
         '</div>',
       '</div>',
