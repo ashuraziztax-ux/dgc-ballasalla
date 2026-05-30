@@ -3516,7 +3516,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-31T12:00:00'); // v176 — Directors tab rebuilt: girlfriend-test UX, 3 inputs, live results, self-explaining
+const LAST_UPDATED = new Date('2026-05-31T12:30:00'); // v177 — Directors: fixed growth table % bug, all tests pass
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -15516,7 +15516,7 @@ function closeZoneHealth() {
         return '<tr style="border-bottom:1px solid var(--border);">'
           +'<td style="padding:6px 10px;font-weight:'+(nn===n?'800':'500')+';">' + nn + ' people'+tag+'</td>'
           +'<td style="padding:6px 10px;color:'+c2+';font-weight:800;">'+(n2>=0?'+':'')+fmt(n2)+'/month</td>'
-          +'<td style="padding:6px 10px;font-size:11px;color:var(--muted);">'+(n2>0?'+'+fmt(n2/12000*100,0)+'% above break-even':'below break-even')+'</td>'
+          +'<td style="padding:6px 10px;font-size:11px;color:var(--muted);">'+(n2>0?Math.round(n2/MONTHLY_OVERHEAD*100)+'% above break-even':'below break-even')+'</td>'
           +'</tr>';
       }).join('')
     + '</table>'
