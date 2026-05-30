@@ -1648,6 +1648,11 @@ function gpExportCSV(){
       <span id="mode-btn-user"   onclick="setMode('user')"   style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Site Team</span>
       <span id="mode-btn-admin"  onclick="setMode('admin')"  style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Admin</span>
     </div>
+    <button class="admin-only" onclick="showTab('directors',document.getElementById('directors-nav-btn'))"
+      style="display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:8px;border:1px solid #f59e0b55;background:rgba(245,158,11,0.12);color:#f59e0b;font-size:11px;font-weight:800;cursor:pointer;font-family:var(--font);letter-spacing:0.3px;white-space:nowrap;transition:all 0.15s;"
+      onmouseover="this.style.background='rgba(245,158,11,0.22)'" onmouseout="this.style.background='rgba(245,158,11,0.12)'">
+      📊 Directors
+    </button>
   </div>
   <div class="header-status">
     <span class="today-badge" id="today-label"></span>
@@ -1720,8 +1725,7 @@ function gpExportCSV(){
   <button class="admin-only preview-tab" onclick="showTab('doi',this)">DOI / Licences</button>
   <button class="admin-only preview-tab" onclick="showTab('tender',this)">Tender / Quote</button>
   <button class="admin-only preview-tab" onclick="showTab('handover',this)">Handover</button>
-  <span class="nav-sep admin-only"></span>
-  <button class="admin-only" onclick="showTab('directors',this)" style="color:#f59e0b;font-weight:800;" id="directors-nav-btn">&#128202; Directors</button>
+  <button class="admin-only" id="directors-nav-btn" style="display:none;"></button>
 </div>
 
 <div id="state-banner"></div>
