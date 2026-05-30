@@ -3516,7 +3516,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-31T13:00:00'); // v178 — Directors: full board test, negative value guard, break-even text corrected to 7 people
+const LAST_UPDATED = new Date('2026-05-31T13:30:00'); // v179 — Directors: profit growth chart 1–40 people with break-even line
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -15505,22 +15505,119 @@ function closeZoneHealth() {
     + '<span>' + fmt(rev) + ' (' + Math.round(rev/MONTHLY_OVERHEAD*100) + '% covered)</span>'
     + '</div>'
 
-    // Simple growth table
-    + '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;"><strong style="color:var(--text);">What adding one more person does:</strong></div>'
+    // Growth chart — 1 to 40 people
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:10px;"><strong style="color:var(--text);">Monthly profit as you grow — 1 to 40 people</strong><br>The red zone is a loss. Cross the break-even line and every person above it is pure profit.</div>'
+    + '<div style="position:relative;height:240px;margin-bottom:20px;"><canvas id="dir-growth-chart"></canvas></div>'
+
+    // Growth table (key milestones)
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;"><strong style="color:var(--text);">Key milestones:</strong></div>'
     + '<div style="overflow-x:auto;">'
     + '<table style="border-collapse:collapse;font-size:12px;width:100%;">'
-    + [6,7,8,9,10,12,15].map(function(nn) {
+    + [5,6,7,8,10,12,15,20,25,30,40].map(function(nn) {
         var r2=nn*PROFIT_PER_MAN_MTH, n2=r2-MONTHLY_OVERHEAD;
-        var c2=n2>5000?'#22c55e':n2>0?'#f59e0b':'#ef4444';
-        var tag = nn===n?' ← current':'';
-        return '<tr style="border-bottom:1px solid var(--border);">'
-          +'<td style="padding:6px 10px;font-weight:'+(nn===n?'800':'500')+';">' + nn + ' people'+tag+'</td>'
+        var c2=n2>20000?'#22c55e':n2>5000?'#22c55e':n2>0?'#f59e0b':'#ef4444';
+        var isCurrent = nn===n;
+        return '<tr style="border-bottom:1px solid var(--border);'+(isCurrent?'background:rgba(245,158,11,0.08);':'')+'">'
+          +'<td style="padding:6px 10px;font-weight:'+(isCurrent?'900':'500')+';'+(isCurrent?'color:#f59e0b;':'')+'">'+nn+' people'+(isCurrent?' ← you':'')+'</td>'
           +'<td style="padding:6px 10px;color:'+c2+';font-weight:800;">'+(n2>=0?'+':'')+fmt(n2)+'/month</td>'
-          +'<td style="padding:6px 10px;font-size:11px;color:var(--muted);">'+(n2>0?Math.round(n2/MONTHLY_OVERHEAD*100)+'% above break-even':'below break-even')+'</td>'
+          +'<td style="padding:6px 10px;font-size:11px;color:var(--muted);">'+(n2>0?'+'+Math.round(n2/12000*10)/10+'k/year':'loss')+'</td>'
           +'</tr>';
       }).join('')
     + '</table>'
     + '</div>';
+
+    // Draw the chart after HTML is set
+    setTimeout(function() {
+      var canvas = document.getElementById('dir-growth-chart');
+      if (!canvas) return;
+      if (window._dirGrowthChart) { try { window._dirGrowthChart.destroy(); } catch(e){} }
+      var labels = [], dataVals = [], bgCols = [], borderCols = [];
+      var breakEvenN = MONTHLY_OVERHEAD / PROFIT_PER_MAN_MTH; // ~6.14
+      for (var i = 1; i <= 40; i++) {
+        labels.push(i);
+        var v2 = i * PROFIT_PER_MAN_MTH - MONTHLY_OVERHEAD;
+        dataVals.push(Math.round(v2));
+        var isHighlighted = i === n;
+        var col2 = v2 < 0 ? 'rgba(239,68,68,' + (isHighlighted?'0.9':'0.55') + ')'
+                          : v2 < 10000 ? 'rgba(245,158,11,' + (isHighlighted?'0.9':'0.6') + ')'
+                          : 'rgba(34,197,94,' + (isHighlighted?'0.9':'0.65') + ')';
+        bgCols.push(col2);
+        borderCols.push(isHighlighted ? '#f59e0b' : 'transparent');
+      }
+      try {
+        window._dirGrowthChart = new Chart(canvas, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Monthly net profit',
+              data: dataVals,
+              backgroundColor: bgCols,
+              borderColor: borderCols,
+              borderWidth: 2,
+              borderRadius: 3,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 400 },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  title: function(ctx) { return ctx[0].label + ' people on productive work'; },
+                  label: function(ctx) {
+                    var v3 = ctx.raw;
+                    return (v3 >= 0 ? '+' : '') + '£' + Math.abs(v3).toLocaleString('en-GB') + '/month' + (v3 < 0 ? ' (loss)' : ' profit');
+                  }
+                }
+              },
+              annotation: { annotations: {} }
+            },
+            scales: {
+              x: {
+                title: { display: true, text: 'People on productive work', color: '#64748b', font: { size: 11 } },
+                grid: { display: false },
+                ticks: { color: '#94a3b8', font: { size: 10 },
+                  callback: function(val, idx) { return [1,5,10,15,20,25,30,35,40].indexOf(idx+1) >= 0 ? idx+1 : ''; }
+                }
+              },
+              y: {
+                title: { display: true, text: 'Monthly net (£)', color: '#64748b', font: { size: 11 } },
+                grid: { color: 'rgba(148,163,184,0.15)' },
+                ticks: {
+                  color: '#94a3b8', font: { size: 10 },
+                  callback: function(v3) { return (v3>=0?'+':'') + '£' + (Math.abs(v3)/1000).toFixed(0) + 'k'; }
+                }
+              }
+            }
+          }
+        });
+        // Draw break-even line manually after chart renders
+        setTimeout(function() {
+          try {
+            var ch = window._dirGrowthChart;
+            var ctx2 = canvas.getContext('2d');
+            var yScale = ch.scales.y;
+            var xScale = ch.scales.x;
+            var yZero = yScale.getPixelForValue(0);
+            ctx2.save();
+            ctx2.setLineDash([6, 4]);
+            ctx2.strokeStyle = '#f59e0b';
+            ctx2.lineWidth = 2;
+            ctx2.beginPath();
+            ctx2.moveTo(xScale.left, yZero);
+            ctx2.lineTo(xScale.right, yZero);
+            ctx2.stroke();
+            ctx2.fillStyle = '#f59e0b';
+            ctx2.font = 'bold 10px system-ui';
+            ctx2.fillText('Break-even (~7 people)', xScale.left + 4, yZero - 5);
+            ctx2.restore();
+          } catch(e) {}
+        }, 100);
+      } catch(e) { console.warn('Chart failed:', e); }
+    }, 50);
   };
 
   // ── Benchmark library ──────────────────────────────────────────────────────
