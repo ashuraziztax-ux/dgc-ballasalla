@@ -15194,10 +15194,11 @@ function closeZoneHealth() {
       var s = localStorage.getItem('dgc_jobs');
       if (s) return JSON.parse(s);
     } catch(e) {}
-    // Default: pre-loaded with current contracts
+    // Default: current active contracts (edit and save to update)
     return [
-      { id:1, name:'Ballasalla Phase 4', value:450142, weeks:17, people:6,  ohp:15, note:'Main drainage — Dandara' },
-      { id:2, name:'Slab Works (Plots 7–11)', value:209056, weeks:10, people:3, ohp:15, note:'Ground bearing slabs — Dandara' }
+      { id:1, name:'Ballasalla Phase 4', value:450142, weeks:17, people:6,  ohp:15, profit:80000, note:'Main drainage — Dandara. Profit ~£80k inc wage margins + variations.' },
+      { id:2, name:'Living Hope Church', value:185551, weeks:13, people:4,  ohp:15, profit:0,     note:'Ground floor slab, gabion wall — currently active' },
+      { id:3, name:'Slab Works Plots 7–11', value:209056, weeks:10, people:3, ohp:15, profit:0,  note:'Not started yet — foundations ongoing. Add when slabs begin.' }
     ];
   }
   function saveJobs(jobs) { try { localStorage.setItem('dgc_jobs', JSON.stringify(jobs)); } catch(e) {} }
@@ -15307,6 +15308,12 @@ function closeZoneHealth() {
   }
 
   // ── Multi-job portfolio ────────────────────────────────────────────────────
+  // Profit for a job = user-entered if set, otherwise calculated from value × OH&P%
+  function jobProfit(job) {
+    if (job.profit && job.profit > 0) return job.profit;
+    return (job.value||0) * (job.ohp/100) / (1 + job.ohp/100);
+  }
+
   window.dirRenderJobs = function() {
     var listEl  = document.getElementById('dir-jobs-list');
     var totalEl = document.getElementById('dir-jobs-total');
@@ -15315,78 +15322,83 @@ function closeZoneHealth() {
 
     if (!jobs.length) {
       listEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">No jobs added yet. Click "+ Add a job" above.</div>';
-      if (totalEl) totalEl.innerHTML = '';
-      return;
+      if (totalEl) totalEl.innerHTML = ''; return;
     }
 
-    // Render each job card
     listEl.innerHTML = jobs.map(function(job, idx) {
-      var ohpProfit = job.value * (job.ohp/100) / (1 + job.ohp/100);
-      var ohpPerWk  = ohpProfit / job.weeks;
-      var col       = ohpProfit > 40000 ? '#22c55e' : ohpProfit > 15000 ? '#f59e0b' : '#ef4444';
-      return '<div style="border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;">'
-        // Left: job details
-        + '<div>'
-        + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:10px;">'
+      var profit   = jobProfit(job);
+      var profitWk = job.weeks > 0 ? profit / job.weeks : 0;
+      var col      = profit > 50000 ? '#22c55e' : profit > 20000 ? '#f59e0b' : '#ef4444';
+      var calcProfit = (job.value||0) * (job.ohp/100) / (1 + job.ohp/100);
+      return '<div style="border:1px solid var(--border);border-left:4px solid '+col+';border-radius:10px;padding:16px;margin-bottom:10px;">'
+        // Header row
+        + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">'
+        + '<div style="font-size:15px;font-weight:800;color:var(--text);">' + (job.name||'Unnamed job') + '</div>'
+        + '<div style="display:flex;gap:6px;">'
+        + '<button onclick="dirSaveJob('+idx+')" style="padding:5px 12px;background:rgba(34,197,94,0.1);border:1px solid #22c55e44;border-radius:6px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer;">✓ Save</button>'
+        + '<button onclick="dirDeleteJob('+idx+')" style="padding:5px 12px;background:transparent;border:1px solid #ef444444;border-radius:6px;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;">✕ Remove</button>'
+        + '</div>'
+        + '</div>'
+        // Fields — 3 rows
+        + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px;">'
         + jobField('Job name', 'dir-job-name-'+idx, 'text', job.name||'')
         + jobField('Contract value (£)', 'dir-job-val-'+idx, 'number', job.value||'')
         + jobField('Weeks on site', 'dir-job-wks-'+idx, 'number', job.weeks||'')
         + jobField('People on this job', 'dir-job-ppl-'+idx, 'number', job.people||'')
-        + jobField('Profit % (OH&P)', 'dir-job-ohp-'+idx, 'number', job.ohp||15)
         + '</div>'
-        // Result inline
-        + '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">'
-        + '<div style="font-size:11px;color:var(--muted);">This job earns:</div>'
-        + '<div style="font-size:18px;font-weight:900;color:'+col+';">'+fmt(ohpProfit)+' profit</div>'
-        + '<div style="font-size:11px;color:var(--muted);">('+fmt(ohpPerWk)+'/week · '+job.weeks+' weeks · '+job.people+' people)</div>'
+        // Profit override row
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">'
+        + '<div>'
+        + '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:3px;">Total profit on this job (£)</div>'
+        + '<input id="dir-job-pft-'+idx+'" type="number" value="'+(job.profit||'')+'" placeholder="Leave blank to auto-calc from 15%" '
+        + 'style="width:100%;padding:7px 10px;border-radius:8px;border:2px solid '+col+'66;font-size:14px;font-weight:900;background:var(--surface2);color:var(--text);">'
+        + '<div style="font-size:10px;color:var(--muted);margin-top:3px;">Auto-calc at 15%: '+fmt(calcProfit)+' &nbsp;·&nbsp; Enter your actual figure if different</div>'
+        + '</div>'
+        + '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;background:'+col+'11;border:1px solid '+col+'33;">'
+        + '<div>'
+        + '<div style="font-size:28px;font-weight:900;color:'+col+';line-height:1;">'+fmt(profit)+'</div>'
+        + '<div style="font-size:11px;color:var(--muted);">profit &nbsp;·&nbsp; '+fmt(profitWk)+'/week &nbsp;·&nbsp; '+job.people+' people</div>'
         + '</div>'
         + '</div>'
-        // Right: save + delete
-        + '<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">'
-        + '<button onclick="dirSaveJob('+idx+')" style="padding:6px 12px;background:rgba(34,197,94,0.1);border:1px solid #22c55e44;border-radius:6px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">✓ Save</button>'
-        + '<button onclick="dirDeleteJob('+idx+')" style="padding:6px 12px;background:transparent;border:1px solid #ef444444;border-radius:6px;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">✕ Remove</button>'
         + '</div>'
         + '</div>';
     }).join('');
 
     // Combined totals
-    var totalOhp     = jobs.reduce(function(s,j){ return s + j.value*(j.ohp/100)/(1+j.ohp/100); }, 0);
+    var totalProfit  = jobs.reduce(function(s,j){ return s + jobProfit(j); }, 0);
     var totalPeople  = jobs.reduce(function(s,j){ return s + (j.people||0); }, 0);
-    var annualOhp    = totalOhp; // this is total OH&P across all active jobs (not annualised)
-    // Annualised: OH&P is earned over the life of each contract — approximate monthly OH&P
-    var monthlyOhp   = jobs.reduce(function(s,j){ return s + (j.value*(j.ohp/100)/(1+j.ohp/100))/j.weeks*4.333; }, 0);
+    var monthlyOhp   = jobs.reduce(function(s,j){ return s + jobProfit(j)/Math.max(1,j.weeks)*4.333; }, 0);
     var monthlyNet   = monthlyOhp - MONTHLY_OVERHEAD;
     var peopleLeft   = CURRENT_STAFF - totalPeople;
-    var ohCoverPct   = Math.round(monthlyOhp / MONTHLY_OVERHEAD * 100);
     var netCol       = monthlyNet > 5000 ? '#22c55e' : monthlyNet > 0 ? '#f59e0b' : '#ef4444';
 
     if (totalEl) totalEl.innerHTML =
     '<div style="border-top:2px solid var(--border);padding-top:16px;margin-top:4px;">'
-    + '<div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Combined picture — all jobs running now</div>'
-    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px;">'
-    + dirNum('Total profit from all jobs', fmt(totalOhp), 'combined OH&P across every contract')
-    + dirNum('Monthly profit coming in', fmt(monthlyOhp), 'OH&P spread over active weeks')
-    + dirNum('Monthly overhead going out', fmt(MONTHLY_OVERHEAD), 'wages, vans, insurance — fixed')
+    + '<div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Combined — all jobs running right now</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:14px;">'
+    + dirNum('Total profit all jobs', fmt(totalProfit), 'across every active contract')
+    + dirNum('Profit per month (avg)', fmt(monthlyOhp), 'spread over the active weeks of each job')
+    + dirNum('Overhead per month', fmt(MONTHLY_OVERHEAD), 'fixed — same every month')
     + '<div style="background:var(--surface2);border:2px solid '+netCol+'44;border-radius:10px;padding:14px;text-align:center;">'
-    + '<div style="font-size:22px;font-weight:900;color:'+netCol+';margin-bottom:3px;">'+(monthlyNet>=0?'+':'')+fmt(monthlyNet)+'/month</div>'
-    + '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">NET right now</div>'
-    + '<div style="font-size:10px;color:var(--muted);margin-top:2px;">'+(monthlyNet>=0?'profitable':'losing money')+' while these jobs run</div>'
+    + '<div style="font-size:26px;font-weight:900;color:'+netCol+';line-height:1;margin-bottom:4px;">'+(monthlyNet>=0?'+':'')+fmt(monthlyNet)+'/month</div>'
+    + '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">Net monthly result</div>'
+    + '<div style="font-size:10px;color:'+netCol+';margin-top:2px;font-weight:700;">'+(monthlyNet>=0?'✓ Profitable':'⚠ Losing money')+' while these run</div>'
     + '</div>'
     + '</div>'
-    // Staff bar
-    + '<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">'
-    + 'People deployed: <strong style="color:'+( totalPeople > CURRENT_STAFF ? '#ef4444' : 'var(--text)')+';">'+totalPeople+' of '+CURRENT_STAFF+' available</strong>'
-    + (peopleLeft > 0 ? ' &nbsp;·&nbsp; <span style="color:#22c55e;">'+peopleLeft+' people not yet assigned — capacity for more work</span>' : '')
-    + (peopleLeft < 0 ? ' &nbsp;·&nbsp; <span style="color:#ef4444;">Overcommitted by '+Math.abs(peopleLeft)+' people — need to hire</span>' : '')
+    // People bar
+    + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">'
+    + '<div style="font-size:12px;font-weight:700;color:var(--text);">People deployed:</div>'
+    + '<div style="font-size:16px;font-weight:900;color:'+(totalPeople>CURRENT_STAFF?'#ef4444':'var(--text)')+';">'+totalPeople+' of '+CURRENT_STAFF+'</div>'
+    + (peopleLeft > 0 ? '<div style="font-size:11px;color:#22c55e;">· '+peopleLeft+' people free for more work</div>' : '')
+    + (peopleLeft < 0 ? '<div style="font-size:11px;color:#ef4444;">· Overcommitted by '+Math.abs(peopleLeft)+' — need to hire</div>' : '')
     + '</div>'
-    + '<div style="background:var(--border);border-radius:4px;height:8px;overflow:hidden;margin-bottom:14px;">'
-    + '<div style="width:'+Math.min(100,Math.round(totalPeople/CURRENT_STAFF*100))+'%;background:'+(totalPeople>CURRENT_STAFF?'#ef4444':'#22c55e')+';height:100%;border-radius:4px;transition:width 0.3s;"></div>'
+    + '<div style="background:var(--border);border-radius:4px;height:10px;overflow:hidden;margin-bottom:14px;">'
+    + '<div style="width:'+Math.min(100,Math.round(totalPeople/CURRENT_STAFF*100))+'%;background:'+(totalPeople>CURRENT_STAFF?'#ef4444':'#22c55e')+';height:100%;border-radius:4px;"></div>'
     + '</div>'
-    // Annual overhead coverage note
     + '<div style="padding:10px 14px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.6;">'
-    + '<strong style="color:var(--text);">Annual overhead: £'+(ANNUAL_OVERHEAD/1000).toFixed(0)+'k/year</strong> — this is what the business costs to run regardless of contracts (vans, insurance, office, Ash & Harry draws). '
-    + 'Current contracts generate <strong style="color:'+netCol+';">£'+Math.round(totalOhp/1000)+'k total OH&P</strong>. '
-    + 'To cover all overhead and make £150k profit: need <strong style="color:var(--text);">£2.5m of contracts per year</strong> at 15%.'
+    + '<strong style="color:var(--text);">The overhead is £'+Math.round(ANNUAL_OVERHEAD/1000)+'k/year.</strong> '
+    + 'Current contracts generate <strong style="color:'+netCol+';">£'+Math.round(totalProfit/1000)+'k profit</strong> across their lifetimes. '
+    + 'For £150k/year take-home after overhead, DGC needs roughly <strong style="color:var(--text);">£2.5m of annual contracts.</strong>'
     + '</div>'
     + '</div>';
   };
@@ -15403,11 +15415,13 @@ function closeZoneHealth() {
     var jobs = loadJobs();
     if (!jobs[idx]) return;
     var g = function(id) { var el=document.getElementById(id); return el?el.value:''; };
+    var profitOverride = parseFloat(g('dir-job-pft-'+idx));
     jobs[idx].name    = g('dir-job-name-'+idx) || jobs[idx].name;
     jobs[idx].value   = parseFloat(g('dir-job-val-'+idx))  || jobs[idx].value;
     jobs[idx].weeks   = parseFloat(g('dir-job-wks-'+idx))  || jobs[idx].weeks;
     jobs[idx].people  = parseInt  (g('dir-job-ppl-'+idx))  || jobs[idx].people;
-    jobs[idx].ohp     = parseFloat(g('dir-job-ohp-'+idx))  || 15;
+    jobs[idx].ohp     = 15;
+    jobs[idx].profit  = profitOverride > 0 ? profitOverride : 0; // 0 = use auto-calc
     saveJobs(jobs);
     dirRenderJobs();
   };
@@ -15421,10 +15435,9 @@ function closeZoneHealth() {
 
   window.dirAddJob = function() {
     var jobs = loadJobs();
-    jobs.push({ id: Date.now(), name:'New job', value:0, weeks:8, people:3, ohp:15, note:'' });
+    jobs.push({ id: Date.now(), name:'New job', value:0, weeks:8, people:3, ohp:15, profit:0 });
     saveJobs(jobs);
     dirRenderJobs();
-    // Focus the name field of the new job
     setTimeout(function() {
       var el = document.getElementById('dir-job-name-'+(jobs.length-1));
       if (el) { el.focus(); el.select(); }
