@@ -3518,7 +3518,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-31T13:30:00'); // v179 — Directors: profit growth chart 1–40 people with break-even line
+const LAST_UPDATED = new Date('2026-05-31T15:00:00'); // v180 — Directors: multi-job portfolio, real overhead £173k/year, 12 staff
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -15160,10 +15160,18 @@ function closeZoneHealth() {
   //   Gangers (charged £27.50, cost ~£20.95 all-in): £6.55/hr × 45hrs = £295/wk
   //   GWs (charged £22.00, cost ~£16.44 all-in):    £5.56/hr × 45hrs = £250/wk
   //   Weighted avg (1/3 gangers, 2/3 GWs): ~£265/person/week
-  var AVG_WAGE_MARGIN_PW = 265;   // £ per productive person per week (blended)
-  var MONTHLY_OVERHEAD   = 19747; // £/month fixed costs (overhead wages + running costs)
-  var BENCHMARK_PMPW     = 742;   // £/man/week actual benchmark (Ballasalla, real wages)
-  var PROFIT_PER_MAN_MTH = 3216;  // £742 × 4.333 weeks/month
+  var AVG_WAGE_MARGIN_PW = 265;    // £ per productive person per week (blended, from real wages)
+  var MONTHLY_OVERHEAD   = 14417;  // £/month — REAL figure: £173k/year ÷ 12
+  //   Non-wage overheads:  £9,544/month (vans, insurance, rent, software, loans)
+  //   Ash director draw:     £884/month
+  //   Harry director draw:   £884/month
+  //   Office staff:         £3,103/month (from master spreadsheet)
+  //   ────────────────────────────────────────────
+  //   Total:               £14,415/month = £172,980/year
+  var ANNUAL_OVERHEAD    = 172980; // Source: DGC Master Spreadsheet May 2026
+  var BENCHMARK_PMPW     = 742;    // £/man/week benchmark (Ballasalla, real wages May 2026)
+  var PROFIT_PER_MAN_MTH = 3216;   // Used in health panel only
+  var CURRENT_STAFF      = 12;     // Active staff as of 23 May-5 Jun 2026 pay period
   var HRS_PER_WEEK       = 45;
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -15180,10 +15188,25 @@ function closeZoneHealth() {
   ];}
 
   // ── Build ──────────────────────────────────────────────────────────────────
+  // ── Jobs localStorage ─────────────────────────────────────────────────────
+  function loadJobs() {
+    try {
+      var s = localStorage.getItem('dgc_jobs');
+      if (s) return JSON.parse(s);
+    } catch(e) {}
+    // Default: pre-loaded with current contracts
+    return [
+      { id:1, name:'Ballasalla Phase 4', value:450142, weeks:17, people:6,  ohp:15, note:'Main drainage — Dandara' },
+      { id:2, name:'Slab Works (Plots 7–11)', value:209056, weeks:10, people:3, ohp:15, note:'Ground bearing slabs — Dandara' }
+    ];
+  }
+  function saveJobs(jobs) { try { localStorage.setItem('dgc_jobs', JSON.stringify(jobs)); } catch(e) {} }
+
   window.buildDirectorsTab = function() {
     var el = document.getElementById('directors-panel');
     if (!el) return;
     el.innerHTML = dirHTML();
+    dirRenderJobs();
     dirCalc();
     dirHealth();
     dirRenderBM();
@@ -15199,10 +15222,23 @@ function closeZoneHealth() {
     + '<div style="color:#94a3b8;font-size:13px;line-height:1.5;">Private financial view for Ash and Harry. Type in a job and see if it\'s worth taking. Check the company health before hiring anyone new.</div>'
     + '</div>'
 
+    // ── ACTIVE JOBS PORTFOLIO ──
+    + '<div class="card" style="border-radius:14px;margin-bottom:16px;padding:24px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:8px;">'
+    + '<div>'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text);">Jobs currently running</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-top:3px;">Add every active contract. The combined view shows whether the company is making or losing money right now.</div>'
+    + '</div>'
+    + '<button onclick="dirAddJob()" style="padding:8px 18px;background:rgba(245,158,11,0.12);border:1px solid #f59e0b55;border-radius:8px;color:#f59e0b;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">+ Add a job</button>'
+    + '</div>'
+    + '<div id="dir-jobs-list" style="margin-bottom:16px;"></div>'
+    + '<div id="dir-jobs-total"></div>'
+    + '</div>'
+
     // ── CALCULATOR ──
     + '<div class="card" style="border-radius:14px;margin-bottom:16px;padding:24px;border:2px solid rgba(245,158,11,0.3);">'
-    + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">Is this job worth taking?</div>'
-    + '<div style="font-size:12px;color:var(--muted);margin-bottom:20px;">Type in a job you\'ve been offered. The calculator tells you what you\'ll earn per person per week — and whether it\'s a good job or a thin one.</div>'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">Price check — is this job worth taking?</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:20px;">Type in a job you\'ve been offered. See if the margin is worth it before you commit. Once you take it, add it above.</div>'
 
     // Three main inputs — big, obvious
     + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px;">'
@@ -15227,14 +15263,14 @@ function closeZoneHealth() {
     // ── COMPANY HEALTH ──
     + '<div class="card" style="border-radius:14px;margin-bottom:16px;padding:24px;">'
     + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">Is the company making money right now?</div>'
-    + '<div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Your fixed costs are £19,747 every month — no matter what. Rent, insurance, vans, management wages. This panel shows whether your current workforce is covering those costs.</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Your fixed costs are £14,417 every month — no matter what. Rent, insurance, vans, management wages. This panel shows whether your current workforce is covering those costs.</div>'
     + '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px;">'
     + '<div style="font-size:13px;font-weight:700;color:var(--text);">How many people are on paid productive work right now?</div>'
     + '<input id="health-n" type="number" min="0" max="30" value="8" oninput="dirHealth()" style="width:80px;padding:9px 12px;border-radius:10px;border:1px solid var(--border);font-size:22px;font-weight:900;text-align:center;background:var(--surface2);color:var(--text);">'
     + '</div>'
     + '<div id="dir-health"></div>'
     + '<div style="margin-top:14px;padding:12px 14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.6;">'
-    + '<strong style="color:var(--text);">Break-even is around 7 people.</strong> At 6 people the company is nearly breaking even (−£451/month). At 7 people it turns profitable (+£2,765/month). Each person above 7 adds roughly <strong style="color:#22c55e;">£3,200/month</strong> more to the bottom line. The table above shows the exact figures.'
+    + '<strong style="color:var(--text);">Break-even is around 5 people with the corrected overhead.</strong> Fixed costs are £14,417/month (£173k/year). Each active person contributes ~£3,200/month. At 5 people revenue covers costs; above that is profit. The table shows exact figures. The table above shows the exact figures.'
     + '</div>'
     + '</div>'
 
@@ -15269,6 +15305,131 @@ function closeZoneHealth() {
     + (help ? '<div style="font-size:10px;color:var(--muted);margin-top:3px;">' + help + '</div>' : '')
     + '</div>';
   }
+
+  // ── Multi-job portfolio ────────────────────────────────────────────────────
+  window.dirRenderJobs = function() {
+    var listEl  = document.getElementById('dir-jobs-list');
+    var totalEl = document.getElementById('dir-jobs-total');
+    if (!listEl) return;
+    var jobs = loadJobs();
+
+    if (!jobs.length) {
+      listEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">No jobs added yet. Click "+ Add a job" above.</div>';
+      if (totalEl) totalEl.innerHTML = '';
+      return;
+    }
+
+    // Render each job card
+    listEl.innerHTML = jobs.map(function(job, idx) {
+      var ohpProfit = job.value * (job.ohp/100) / (1 + job.ohp/100);
+      var ohpPerWk  = ohpProfit / job.weeks;
+      var col       = ohpProfit > 40000 ? '#22c55e' : ohpProfit > 15000 ? '#f59e0b' : '#ef4444';
+      return '<div style="border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;">'
+        // Left: job details
+        + '<div>'
+        + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:10px;">'
+        + jobField('Job name', 'dir-job-name-'+idx, 'text', job.name||'')
+        + jobField('Contract value (£)', 'dir-job-val-'+idx, 'number', job.value||'')
+        + jobField('Weeks on site', 'dir-job-wks-'+idx, 'number', job.weeks||'')
+        + jobField('People on this job', 'dir-job-ppl-'+idx, 'number', job.people||'')
+        + jobField('Profit % (OH&P)', 'dir-job-ohp-'+idx, 'number', job.ohp||15)
+        + '</div>'
+        // Result inline
+        + '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">'
+        + '<div style="font-size:11px;color:var(--muted);">This job earns:</div>'
+        + '<div style="font-size:18px;font-weight:900;color:'+col+';">'+fmt(ohpProfit)+' profit</div>'
+        + '<div style="font-size:11px;color:var(--muted);">('+fmt(ohpPerWk)+'/week · '+job.weeks+' weeks · '+job.people+' people)</div>'
+        + '</div>'
+        + '</div>'
+        // Right: save + delete
+        + '<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">'
+        + '<button onclick="dirSaveJob('+idx+')" style="padding:6px 12px;background:rgba(34,197,94,0.1);border:1px solid #22c55e44;border-radius:6px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">✓ Save</button>'
+        + '<button onclick="dirDeleteJob('+idx+')" style="padding:6px 12px;background:transparent;border:1px solid #ef444444;border-radius:6px;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">✕ Remove</button>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+
+    // Combined totals
+    var totalOhp     = jobs.reduce(function(s,j){ return s + j.value*(j.ohp/100)/(1+j.ohp/100); }, 0);
+    var totalPeople  = jobs.reduce(function(s,j){ return s + (j.people||0); }, 0);
+    var annualOhp    = totalOhp; // this is total OH&P across all active jobs (not annualised)
+    // Annualised: OH&P is earned over the life of each contract — approximate monthly OH&P
+    var monthlyOhp   = jobs.reduce(function(s,j){ return s + (j.value*(j.ohp/100)/(1+j.ohp/100))/j.weeks*4.333; }, 0);
+    var monthlyNet   = monthlyOhp - MONTHLY_OVERHEAD;
+    var peopleLeft   = CURRENT_STAFF - totalPeople;
+    var ohCoverPct   = Math.round(monthlyOhp / MONTHLY_OVERHEAD * 100);
+    var netCol       = monthlyNet > 5000 ? '#22c55e' : monthlyNet > 0 ? '#f59e0b' : '#ef4444';
+
+    if (totalEl) totalEl.innerHTML =
+    '<div style="border-top:2px solid var(--border);padding-top:16px;margin-top:4px;">'
+    + '<div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Combined picture — all jobs running now</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px;">'
+    + dirNum('Total profit from all jobs', fmt(totalOhp), 'combined OH&P across every contract')
+    + dirNum('Monthly profit coming in', fmt(monthlyOhp), 'OH&P spread over active weeks')
+    + dirNum('Monthly overhead going out', fmt(MONTHLY_OVERHEAD), 'wages, vans, insurance — fixed')
+    + '<div style="background:var(--surface2);border:2px solid '+netCol+'44;border-radius:10px;padding:14px;text-align:center;">'
+    + '<div style="font-size:22px;font-weight:900;color:'+netCol+';margin-bottom:3px;">'+(monthlyNet>=0?'+':'')+fmt(monthlyNet)+'/month</div>'
+    + '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">NET right now</div>'
+    + '<div style="font-size:10px;color:var(--muted);margin-top:2px;">'+(monthlyNet>=0?'profitable':'losing money')+' while these jobs run</div>'
+    + '</div>'
+    + '</div>'
+    // Staff bar
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">'
+    + 'People deployed: <strong style="color:'+( totalPeople > CURRENT_STAFF ? '#ef4444' : 'var(--text)')+';">'+totalPeople+' of '+CURRENT_STAFF+' available</strong>'
+    + (peopleLeft > 0 ? ' &nbsp;·&nbsp; <span style="color:#22c55e;">'+peopleLeft+' people not yet assigned — capacity for more work</span>' : '')
+    + (peopleLeft < 0 ? ' &nbsp;·&nbsp; <span style="color:#ef4444;">Overcommitted by '+Math.abs(peopleLeft)+' people — need to hire</span>' : '')
+    + '</div>'
+    + '<div style="background:var(--border);border-radius:4px;height:8px;overflow:hidden;margin-bottom:14px;">'
+    + '<div style="width:'+Math.min(100,Math.round(totalPeople/CURRENT_STAFF*100))+'%;background:'+(totalPeople>CURRENT_STAFF?'#ef4444':'#22c55e')+';height:100%;border-radius:4px;transition:width 0.3s;"></div>'
+    + '</div>'
+    // Annual overhead coverage note
+    + '<div style="padding:10px 14px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.6;">'
+    + '<strong style="color:var(--text);">Annual overhead: £'+(ANNUAL_OVERHEAD/1000).toFixed(0)+'k/year</strong> — this is what the business costs to run regardless of contracts (vans, insurance, office, Ash & Harry draws). '
+    + 'Current contracts generate <strong style="color:'+netCol+';">£'+Math.round(totalOhp/1000)+'k total OH&P</strong>. '
+    + 'To cover all overhead and make £150k profit: need <strong style="color:var(--text);">£2.5m of contracts per year</strong> at 15%.'
+    + '</div>'
+    + '</div>';
+  };
+
+  function jobField(label, id, type, val) {
+    return '<div>'
+    + '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:3px;">'+label+'</div>'
+    + '<input id="'+id+'" type="'+type+'" value="'+(val||'')+'" placeholder="'+label+'" '
+    + 'style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:700;background:var(--surface2);color:var(--text);">'
+    + '</div>';
+  }
+
+  window.dirSaveJob = function(idx) {
+    var jobs = loadJobs();
+    if (!jobs[idx]) return;
+    var g = function(id) { var el=document.getElementById(id); return el?el.value:''; };
+    jobs[idx].name    = g('dir-job-name-'+idx) || jobs[idx].name;
+    jobs[idx].value   = parseFloat(g('dir-job-val-'+idx))  || jobs[idx].value;
+    jobs[idx].weeks   = parseFloat(g('dir-job-wks-'+idx))  || jobs[idx].weeks;
+    jobs[idx].people  = parseInt  (g('dir-job-ppl-'+idx))  || jobs[idx].people;
+    jobs[idx].ohp     = parseFloat(g('dir-job-ohp-'+idx))  || 15;
+    saveJobs(jobs);
+    dirRenderJobs();
+  };
+
+  window.dirDeleteJob = function(idx) {
+    var jobs = loadJobs();
+    jobs.splice(idx, 1);
+    saveJobs(jobs);
+    dirRenderJobs();
+  };
+
+  window.dirAddJob = function() {
+    var jobs = loadJobs();
+    jobs.push({ id: Date.now(), name:'New job', value:0, weeks:8, people:3, ohp:15, note:'' });
+    saveJobs(jobs);
+    dirRenderJobs();
+    // Focus the name field of the new job
+    setTimeout(function() {
+      var el = document.getElementById('dir-job-name-'+(jobs.length-1));
+      if (el) { el.focus(); el.select(); }
+    }, 100);
+  };
 
   // ── Main calculation ───────────────────────────────────────────────────────
   window.dirCalc = function() {
@@ -15344,7 +15505,7 @@ function closeZoneHealth() {
 
     // Overhead check
     + '<div style="background:'+(ohCoverPct>=100?'rgba(34,197,94,0.07)':ohCoverPct>=60?'rgba(245,158,11,0.07)':'rgba(239,68,68,0.07)')+';border:1px solid '+(ohCoverPct>=100?'#22c55e40':ohCoverPct>=60?'#f59e0b40':'#ef444440')+';border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:12px;line-height:1.6;">'
-    + '<strong style="color:var(--text);">Company overhead check:</strong> this job brings in <strong>' + fmt(monthlyContrib) + '/month</strong> toward your £19,747/month fixed costs. '
+    + '<strong style="color:var(--text);">Company overhead check:</strong> this job brings in <strong>' + fmt(monthlyContrib) + '/month</strong> toward your £14,417/month fixed costs. '
     + (ohCoverPct >= 100
       ? '<span style="color:#22c55e;font-weight:800;">Covers all overheads with ' + fmt(monthlyContrib-MONTHLY_OVERHEAD) + ' to spare.</span>'
       : '<span style="color:'+(ohCoverPct>=60?'#f59e0b':'#ef4444')+';font-weight:800;">Covers '+ohCoverPct+'% of overheads — you need other jobs running alongside.</span>')
@@ -15407,7 +15568,7 @@ function closeZoneHealth() {
     + '</div>'
     + '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:14px;">'
     + '<span>£0</span>'
-    + '<span style="font-weight:700;">£19,747 break-even (6 people)</span>'
+    + '<span style="font-weight:700;">£14,417 break-even (~5 people)</span>'
     + '<span>' + fmt(rev) + ' (' + Math.round(rev/MONTHLY_OVERHEAD*100) + '% covered)</span>'
     + '</div>'
 
