@@ -16823,17 +16823,17 @@ function closeZoneHealth() {
     var staffScale = (TL_STAFF_H - 14) / maxStaff;
     var plY = staffY + TL_STAFF_H; // P&L row starts here
 
-    svg += '<rect x="0" y="'+(staffY-4)+'" width="'+TL_TOTAL_W+'" height="'+(TL_STAFF_H+TL_PL_H+8)+'" fill="var(--surface2,#f1f5f9)"/>';
-    svg += '<text x="4" y="'+(staffY+10)+'" font-size="9" fill="#64748b" font-weight="700">STAFF / WEEK</text>';
-    svg += '<text x="4" y="'+(plY+18)+'" font-size="9" fill="#64748b" font-weight="700">WEEKLY P&amp;L</text>';
+    svg += '<rect x="0" y="'+(staffY-4)+'" width="'+TL_TOTAL_W+'" height="'+(TL_STAFF_H+TL_PL_H+8)+'" fill="#0f1623"/>';
+    svg += '<text x="4" y="'+(staffY+10)+'" font-size="9" fill="#94a3b8" font-weight="700" letter-spacing="0.08em">STAFF / WEEK</text>';
+    svg += '<text x="4" y="'+(plY+18)+'" font-size="9" fill="#94a3b8" font-weight="700" letter-spacing="0.08em">WEEKLY P&amp;L</text>';
 
     // Available staff line
     var availY = staffY + TL_STAFF_H - Math.round(TL_AVAIL_STAFF * staffScale) - 2;
     svg += '<line x1="0" y1="'+availY+'" x2="'+TL_TOTAL_W+'" y2="'+availY+'" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,3"/>';
-    svg += '<text x="4" y="'+(availY-3)+'" font-size="9" fill="#f59e0b" font-weight="700">'+TL_AVAIL_STAFF+' available</text>';
+    svg += '<text x="4" y="'+(availY-3)+'" font-size="9" fill="#f59e0b" font-weight="800">'+TL_AVAIL_STAFF+' available</text>';
 
     // Divider between staff and P&L rows
-    svg += '<line x1="0" y1="'+plY+'" x2="'+TL_TOTAL_W+'" y2="'+plY+'" stroke="#e2e8f0" stroke-width="1"/>';
+    svg += '<line x1="0" y1="'+plY+'" x2="'+TL_TOTAL_W+'" y2="'+plY+'" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>';
 
     for (var ws = 0; ws < TL_TOTAL_WKS; ws++) {
       var sc = staffByWeek[ws];
@@ -16845,9 +16845,9 @@ function closeZoneHealth() {
         var barH2 = Math.max(4, Math.round(sc * staffScale));
         var sy2 = staffY + TL_STAFF_H - barH2 - 2;
         var sColor = sc > TL_AVAIL_STAFF ? '#ef4444' : '#22c55e';
-        svg += '<rect x="'+sx+'" y="'+sy2+'" width="'+(TL_WEEK_W-2)+'" height="'+barH2+'" fill="'+sColor+'" fill-opacity="0.75" rx="2"/>';
+        svg += '<rect x="'+sx+'" y="'+sy2+'" width="'+(TL_WEEK_W-2)+'" height="'+barH2+'" fill="'+sColor+'" fill-opacity="1" rx="2"/>';
         // Count number above bar
-        svg += '<text x="'+(sx+TL_WEEK_W/2-1)+'" y="'+(sy2-2)+'" font-size="9" font-weight="800" text-anchor="middle" fill="'+sColor+'">'+sc+'</text>';
+        svg += '<text x="'+(sx+TL_WEEK_W/2-1)+'" y="'+(sy2-2)+'" font-size="10" font-weight="900" text-anchor="middle" fill="'+sColor+'">'+sc+'</text>';
         // Overflow warning
         if (sc > TL_AVAIL_STAFF) {
           svg += '<text x="'+(sx+TL_WEEK_W/2-4)+'" y="'+(staffY+TL_STAFF_H-barH2-12)+'" font-size="10" fill="#ef4444">⚠</text>';
