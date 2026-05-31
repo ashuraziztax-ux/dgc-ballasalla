@@ -5781,11 +5781,11 @@ function projEnsureDefaults() {
       dataDate:'2026-05-31', zoneProgress:{}, bankHolidays:[], tasks:[], drawings:[], documents:[], fileLocations:[]
     };
   }
-  // Upmost International
-  if (!all['upmost-international']) {
-    all['upmost-international'] = {
-      _name:'Upmost International', _id:'upmost-international',
-      project:{ name:'Upmost International', client:'Upmost International', ref:'DGC-2026-TBC',
+  // Utmost International
+  if (!all['utmost-international']) {
+    all['utmost-international'] = {
+      _name:'Utmost International', _id:'utmost-international',
+      project:{ name:'Utmost International', client:'Utmost International', ref:'DGC-2026-TBC',
         address:'Isle of Man (TBC)', contractSum:500000, retentionRate:0,
         start:'2026-07-01', originalEnd:'2026-09-30', agreedEnd:'2026-09-30',
         qs:'TBC', dgcQs:'Sophie', pm:'TBC', foreman:'TBC',
@@ -15296,9 +15296,9 @@ function closeZoneHealth() {
     } catch(e) {}
     // Default: current active contracts (edit and save to update)
     return [
-      { id:1, name:'Ballasalla Phase 4',   value:450142, weeks:17, people:6,  ohp:15, profit:80000, startWeek:-14, onTimeline:true,  confirmed:true,  note:'Main drainage' },
-      { id:2, name:'Living Hope Church',   value:185551, weeks:13, people:4,  ohp:15, profit:0,     startWeek:-2,  onTimeline:true,  confirmed:true,  note:'Slab & gabion' },
-      { id:3, name:'Slab Works Plots 7-11',value:209056, weeks:10, people:3,  ohp:15, profit:0,     startWeek:4,   onTimeline:true, confirmed:false, note:'Not started — add when slabs begin' }
+      { id:1, name:'Ballasalla Phase 4',   value:450142, weeks:17, people:6,  ohp:15, profit:80000, startWeek:-14, onTimeline:true,  confirmed:true,  status:'running',  note:'Main drainage' },
+      { id:2, name:'Living Hope Church',   value:185551, weeks:13, people:4,  ohp:15, profit:0,     startWeek:-2,  onTimeline:true,  confirmed:true,  status:'running',  note:'Slab & gabion' },
+      { id:3, name:'Slab Works Plots 7-11',value:209056, weeks:10, people:3,  ohp:15, profit:0,     startWeek:4,   onTimeline:true,  confirmed:false, status:'running',  note:'Not started — add when slabs begin' }
     ];
   }
   function saveJobs(jobs) { try { localStorage.setItem('dgc_jobs', JSON.stringify(jobs)); } catch(e) {} }
@@ -15317,22 +15317,22 @@ function closeZoneHealth() {
 
       // Migration 2: Add Peel Breakwater if not present
       if (existingJobs && !existingJobs.find(function(j){ return j.id === 4 || (j.name && j.name.includes('Peel Breakwater')); })) {
-        existingJobs.push({ id:4, name:'Peel Breakwater (DOI)', value:122995, weeks:8, people:5, ohp:15, profit:0, startWeek:10, onTimeline:true, confirmed:true, note:'AWARDED — not started yet. August start. Sewage treatment works, Peel harbour. £122,994 brick option. DOI client (IoM Govt).' });
+        existingJobs.push({ id:4, name:'Peel Breakwater (DOI)', value:122995, weeks:8, people:5, ohp:15, profit:0, startWeek:10, onTimeline:true, confirmed:true, status:'awarded', note:'AWARDED — not started yet. August start. Sewage treatment works, Peel harbour. £122,994 brick option. DOI client (IoM Govt).' });
       }
 
-      // Migration 3: Add Upmost International if not present
-      if (existingJobs && !existingJobs.find(function(j){ return j.id === 5 || (j.name && j.name.includes('Upmost')); })) {
-        existingJobs.push({ id:5, name:'Upmost International (Est.)', value:500000, weeks:12, people:4, ohp:15, profit:0, startWeek:18, onTimeline:false, confirmed:false, note:'ESTIMATE — building/construction company. July/Aug start. ~£500k, 4 guys, ~3 months. Tender TBC.' });
+      // Migration 3: Add Utmost International if not present
+      if (existingJobs && !existingJobs.find(function(j){ return j.id === 5 || (j.name && (j.name.includes('Utmost') || j.name.includes('Upmost'))); })) {
+        existingJobs.push({ id:5, name:'Utmost International (KEBH)', value:500000, weeks:12, people:4, ohp:15, profit:0, startWeek:18, onTimeline:true, confirmed:false, status:'bidding', note:'BIDDING — King Edward Bay House, Onchan. Car park waterproofing membrane + structural repair. £500k Simon estimate. July/Aug 2026 start.' });
       }
 
       // Migration 4: Add Glenfaba Ring Road if not present
       if (existingJobs && !existingJobs.find(function(j){ return j.id === 6 || (j.name && j.name.includes('Glenfaba')); })) {
-        existingJobs.push({ id:6, name:'Glenfaba Ring Road (Est.)', value:1700000, weeks:52, people:12, ohp:15, profit:0, startWeek:26, onTimeline:false, confirmed:false, note:'CONFIDENT ESTIMATE — Dandara asked DGC to price ring road drainage. "They\'re going to give it to us." ICP failing. ~£1.7m, 4× Ballasalla scale.' });
+        existingJobs.push({ id:6, name:'Glenfaba Ring Road (Est.)', value:1700000, weeks:52, people:12, ohp:15, profit:0, startWeek:18, onTimeline:true, confirmed:false, status:'estimate', note:'CONFIDENT ESTIMATE — Dandara asked DGC to price ring road drainage. "They\'re going to give it to us." ICP failing. ~£1.7m, 4× Ballasalla scale.' });
       }
 
       // Migration 5: Add MU Flow Monitoring Phase 2 if not present
       if (existingJobs && !existingJobs.find(function(j){ return j.id === 7 || (j.name && j.name.includes('MU Flow')); })) {
-        existingJobs.push({ id:7, name:'MU Flow Monitoring Ph.2 (Est.)', value:500000, weeks:26, people:3, ohp:15, profit:0, startWeek:52, onTimeline:false, confirmed:false, note:'PLACEHOLDER — DGC did 5 sites for Manx Utilities. ~10 more sites coming. Estimated at ~2× Phase 1 value. Not for a while.' });
+        existingJobs.push({ id:7, name:'MU Flow Monitoring Ph.2 (Est.)', value:500000, weeks:26, people:3, ohp:15, profit:0, startWeek:52, onTimeline:false, confirmed:false, status:'placeholder', note:'PLACEHOLDER — DGC did 5 sites for Manx Utilities. ~10 more sites coming. Estimated at ~2× Phase 1 value. Not for a while.' });
       }
 
       if (existingJobs) localStorage.setItem('dgc_jobs', JSON.stringify(existingJobs));
@@ -15435,8 +15435,10 @@ function closeZoneHealth() {
     + '<div id="dp-tl-inner" style="position:relative;min-height:200px;"></div>'
     + '</div>'
     + '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--muted);">'
-    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#22c55e;border-radius:2px;display:inline-block;"></span>Confirmed</span>'
-    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#94a3b8;border-radius:2px;display:inline-block;opacity:0.6;"></span>Bidding</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#22c55e;border-radius:2px;display:inline-block;"></span>Running</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#3b82f6;border-radius:2px;display:inline-block;"></span>Awarded</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#f59e0b;border-radius:2px;display:inline-block;"></span>Bidding</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#fb923c;border-radius:2px;display:inline-block;opacity:0.8;"></span>Estimate</span>'
     + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#ef4444;border-radius:2px;display:inline-block;opacity:0.5;"></span>Gap (no revenue)</span>'
     + '</div>'
     + '</div>'
@@ -16050,9 +16052,11 @@ function closeZoneHealth() {
     + '<div id="dir-timeline-inner" style="position:relative;min-height:200px;"></div>'
     + '</div>'
     + '<div id="dir-timeline-legend" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--muted);">'
-    + '<span><span style="display:inline-block;width:12px;height:12px;background:#22c55e;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Confirmed job</span>'
-    + '<span><span style="display:inline-block;width:12px;height:12px;background:#94a3b8;border-radius:2px;vertical-align:middle;margin-right:4px;opacity:0.6;"></span>Bidding / not confirmed</span>'
-    + '<span><span style="display:inline-block;width:12px;height:12px;background:#ef4444;border-radius:2px;vertical-align:middle;margin-right:4px;opacity:0.5;"></span>Gap (overhead with no revenue)</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#22c55e;border-radius:2px;display:inline-block;"></span>Running</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#3b82f6;border-radius:2px;display:inline-block;"></span>Awarded</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#f59e0b;border-radius:2px;display:inline-block;"></span>Bidding</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#fb923c;border-radius:2px;display:inline-block;opacity:0.8;"></span>Estimate</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#ef4444;border-radius:2px;display:inline-block;opacity:0.5;"></span>Gap (no revenue)</span>'
     + '</div>'
     + '</div>'
 
@@ -16176,9 +16180,11 @@ function closeZoneHealth() {
     + '<div id="dir-timeline-inner" style="position:relative;min-height:200px;"></div>'
     + '</div>'
     + '<div id="dir-timeline-legend" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--muted);">'
-    + '<span><span style="display:inline-block;width:12px;height:12px;background:#22c55e;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Confirmed job</span>'
-    + '<span><span style="display:inline-block;width:12px;height:12px;background:#94a3b8;border-radius:2px;vertical-align:middle;margin-right:4px;opacity:0.6;"></span>Bidding / not confirmed</span>'
-    + '<span><span style="display:inline-block;width:12px;height:12px;background:#ef4444;border-radius:2px;vertical-align:middle;margin-right:4px;opacity:0.5;"></span>Gap (overhead with no revenue)</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#22c55e;border-radius:2px;display:inline-block;"></span>Running</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#3b82f6;border-radius:2px;display:inline-block;"></span>Awarded</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#f59e0b;border-radius:2px;display:inline-block;"></span>Bidding</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#fb923c;border-radius:2px;display:inline-block;opacity:0.8;"></span>Estimate</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#ef4444;border-radius:2px;display:inline-block;opacity:0.5;"></span>Gap (no revenue)</span>'
     + '</div>'
     + '</div>'
 
@@ -16876,8 +16882,17 @@ function closeZoneHealth() {
       var bw = tl.barW;
       var by = TL_PAD_TOP + i * TL_ROW_H;
       var bh = TL_ROW_H - 6;
-      var fillColor = tl.job.confirmed ? '#22c55e' : '#94a3b8';
-      var fillOpacity = tl.job.confirmed ? '0.85' : '0.55';
+      var statusColors = {
+        'running':     { fill:'#22c55e', opacity:'0.90' },
+        'awarded':     { fill:'#3b82f6', opacity:'0.85' },
+        'bidding':     { fill:'#f59e0b', opacity:'0.80' },
+        'estimate':    { fill:'#fb923c', opacity:'0.70' },
+        'placeholder': { fill:'#94a3b8', opacity:'0.45' }
+      };
+      var jobStatus = tl.job.status || (tl.job.confirmed ? 'running' : 'bidding');
+      var sc2 = statusColors[jobStatus] || statusColors['bidding'];
+      var fillColor = sc2.fill;
+      var fillOpacity = sc2.opacity;
       var msPerWeek = 7*24*60*60*1000;
       var today2 = new Date();
       var barStart = new Date(today2.getTime() + tl.sw * msPerWeek);
