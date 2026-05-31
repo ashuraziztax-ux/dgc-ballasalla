@@ -358,6 +358,7 @@ body:not(.admin-mode) .admin-only { display: none !important; }
 /* CLIENT MODE */
 body.client-mode .admin-only { display: none !important; }
 body.client-mode .no-client  { display: none !important; }
+body.director-mode .admin-only { display: block !important; } /* Director sees everything admin sees */
 
 /* ═══════════ MOBILE ═══════════ */
 @media (max-width: 768px) {
@@ -1153,13 +1154,14 @@ var isAdmin = false; // legacy compatibility
 
 function setMode(m) {
   VIEW_MODE = m;
-  isAdmin = (m === 'admin');
-  document.body.classList.remove('admin-mode', 'client-mode');
-  if (m === 'admin')  document.body.classList.add('admin-mode');
-  if (m === 'client') document.body.classList.add('client-mode');
+  isAdmin = (m === 'admin' || m === 'director');
+  document.body.classList.remove('admin-mode', 'client-mode', 'director-mode');
+  if (m === 'admin')    document.body.classList.add('admin-mode');
+  if (m === 'client')   document.body.classList.add('client-mode');
+  if (m === 'director') document.body.classList.add('admin-mode', 'director-mode');
 
   // Highlight active label
-  ['user','admin','client'].forEach(function(k) {
+  ['user','admin','client','director'].forEach(function(k) {
     var btn = document.getElementById('mode-btn-' + k);
     if (!btn) return;
     btn.style.background = (k === m) ? 'var(--accent)' : 'transparent';
@@ -1171,9 +1173,16 @@ function setMode(m) {
   var activeTxt = active ? active.textContent.trim() : '';
   var hiddenInUser   = ['Financials','Variations','Staff Hours','Delays','Dashboard','Efficiency','Progress Report','Programme'];
   var hiddenInClient = ['Staff Hours','Financials','Daily Log','Variations','Efficiency','Gantt Chart'];
-  var hidden = m === 'admin' ? [] : m === 'user' ? hiddenInUser : hiddenInClient;
+  var hidden = (m === 'admin' || m === 'director') ? [] : m === 'user' ? hiddenInUser : hiddenInClient;
 
-  if (m === 'client') {
+  if (m === 'director') {
+    // Director goes straight to the Directors tab
+    var dirBtn = null;
+    document.querySelectorAll('.nav button').forEach(function(b){
+      if (b.textContent.trim() === 'Directors') dirBtn = b;
+    });
+    if (dirBtn) { try { showTab('directors', dirBtn); } catch(e){} }
+  } else if (m === 'client') {
     // Client default first page = Programme
     var fcBtn = null;
     document.querySelectorAll('.nav button').forEach(function(b){
@@ -1647,6 +1656,7 @@ function gpExportCSV(){
       <span id="mode-btn-client" onclick="setMode('client')" style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Client</span>
       <span id="mode-btn-user"   onclick="setMode('user')"   style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Site Team</span>
       <span id="mode-btn-admin"  onclick="setMode('admin')"  style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Admin</span>
+      <span id="mode-btn-director" onclick="setMode('director')" style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Director</span>
     </div>
     <button class="admin-only" onclick="showTab('directors',document.getElementById('directors-nav-btn'))"
       style="display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:8px;border:1px solid #f59e0b55;background:rgba(245,158,11,0.12);color:#f59e0b;font-size:11px;font-weight:800;cursor:pointer;font-family:var(--font);letter-spacing:0.3px;white-space:nowrap;transition:all 0.15s;"
@@ -3518,7 +3528,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-31T15:00:00'); // v180 — Directors: multi-job portfolio, real overhead £173k/year, 12 staff
+const LAST_UPDATED = new Date('2026-05-31T18:00:00'); // v182 — Director 4th mode + Job Timeline planner
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -15196,9 +15206,9 @@ function closeZoneHealth() {
     } catch(e) {}
     // Default: current active contracts (edit and save to update)
     return [
-      { id:1, name:'Ballasalla Phase 4', value:450142, weeks:17, people:6,  ohp:15, profit:80000, note:'Main drainage — Dandara. Profit ~£80k inc wage margins + variations.' },
-      { id:2, name:'Living Hope Church', value:185551, weeks:13, people:4,  ohp:15, profit:0,     note:'Ground floor slab, gabion wall — currently active' },
-      { id:3, name:'Slab Works Plots 7–11', value:209056, weeks:10, people:3, ohp:15, profit:0,  note:'Not started yet — foundations ongoing. Add when slabs begin.' }
+      { id:1, name:'Ballasalla Phase 4',   value:450142, weeks:17, people:6,  ohp:15, profit:80000, startWeek:-14, onTimeline:true,  confirmed:true,  note:'Main drainage' },
+      { id:2, name:'Living Hope Church',   value:185551, weeks:13, people:4,  ohp:15, profit:0,     startWeek:-2,  onTimeline:true,  confirmed:true,  note:'Slab & gabion' },
+      { id:3, name:'Slab Works Plots 7-11',value:209056, weeks:10, people:3,  ohp:15, profit:0,     startWeek:4,   onTimeline:false, confirmed:false, note:'Not started — add when slabs begin' }
     ];
   }
   function saveJobs(jobs) { try { localStorage.setItem('dgc_jobs', JSON.stringify(jobs)); } catch(e) {} }
@@ -15211,6 +15221,7 @@ function closeZoneHealth() {
     dirCalc();
     dirHealth();
     dirRenderBM();
+    dirRenderTimeline();
   };
 
   // ── HTML shell ─────────────────────────────────────────────────────────────
@@ -15234,6 +15245,25 @@ function closeZoneHealth() {
     + '</div>'
     + '<div id="dir-jobs-list" style="margin-bottom:16px;"></div>'
     + '<div id="dir-jobs-total"></div>'
+    + '</div>'
+
+    // ── TIMELINE ──
+    + '<div class="card" style="border-radius:14px;margin-bottom:16px;padding:20px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">'
+    + '<div>'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text);">Job Planner — drag to plan the year</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-top:2px;">Each bar is a job. Drag left or right to plan when it runs. Overlapping jobs stack — the tally shows staff needed. Red zones = gaps = money lost.</div>'
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--muted);white-space:nowrap;">⟵ scroll ⟶</div>'
+    + '</div>'
+    + '<div id="dir-timeline-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;border-radius:10px;border:1px solid var(--border);">'
+    + '<div id="dir-timeline-inner" style="position:relative;min-height:200px;"></div>'
+    + '</div>'
+    + '<div id="dir-timeline-legend" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--muted);">'
+    + '<span><span style="display:inline-block;width:12px;height:12px;background:#22c55e;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Confirmed job</span>'
+    + '<span><span style="display:inline-block;width:12px;height:12px;background:#94a3b8;border-radius:2px;vertical-align:middle;margin-right:4px;opacity:0.6;"></span>Bidding / not confirmed</span>'
+    + '<span><span style="display:inline-block;width:12px;height:12px;background:#ef4444;border-radius:2px;vertical-align:middle;margin-right:4px;opacity:0.5;"></span>Gap (overhead with no revenue)</span>'
+    + '</div>'
     + '</div>'
 
     // ── CALCULATOR ──
@@ -15361,6 +15391,21 @@ function closeZoneHealth() {
         + '</div>'
         + '</div>'
         + '</div>'
+        // Timeline toggle row
+        + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:4px;border-top:1px solid var(--border);margin-top:4px;">'
+        + '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);cursor:pointer;">'
+        + '<input type="checkbox" id="dir-job-tl-'+idx+'" '+(job.onTimeline!==false?'checked':'')+' style="width:14px;height:14px;cursor:pointer;">'
+        + 'Show on Job Planner'
+        + '</label>'
+        + '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);cursor:pointer;">'
+        + '<input type="checkbox" id="dir-job-conf-'+idx+'" '+(job.confirmed?'checked':'')+' style="width:14px;height:14px;cursor:pointer;">'
+        + 'Confirmed (green bar)'
+        + '</label>'
+        + '<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);">'
+        + 'Start week: <input type="number" id="dir-job-sw-'+idx+'" value="'+(job.startWeek||0)+'" style="width:64px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);font-size:11px;background:var(--surface2);color:var(--text);" title="Weeks from today. Negative = past.">'
+        + '<span style="font-size:10px;color:var(--muted);">(neg=past)</span>'
+        + '</div>'
+        + '</div>'
         + '</div>';
     }).join('');
 
@@ -15414,16 +15459,22 @@ function closeZoneHealth() {
   window.dirSaveJob = function(idx) {
     var jobs = loadJobs();
     if (!jobs[idx]) return;
-    var g = function(id) { var el=document.getElementById(id); return el?el.value:''; };
+    var g  = function(id) { var el=document.getElementById(id); return el?el.value:''; };
+    var gc = function(id) { var el=document.getElementById(id); return el?el.checked:false; };
     var profitOverride = parseFloat(g('dir-job-pft-'+idx));
-    jobs[idx].name    = g('dir-job-name-'+idx) || jobs[idx].name;
-    jobs[idx].value   = parseFloat(g('dir-job-val-'+idx))  || jobs[idx].value;
-    jobs[idx].weeks   = parseFloat(g('dir-job-wks-'+idx))  || jobs[idx].weeks;
-    jobs[idx].people  = parseInt  (g('dir-job-ppl-'+idx))  || jobs[idx].people;
-    jobs[idx].ohp     = 15;
-    jobs[idx].profit  = profitOverride > 0 ? profitOverride : 0; // 0 = use auto-calc
+    var swVal          = parseInt(g('dir-job-sw-'+idx));
+    jobs[idx].name       = g('dir-job-name-'+idx) || jobs[idx].name;
+    jobs[idx].value      = parseFloat(g('dir-job-val-'+idx))  || jobs[idx].value;
+    jobs[idx].weeks      = parseFloat(g('dir-job-wks-'+idx))  || jobs[idx].weeks;
+    jobs[idx].people     = parseInt  (g('dir-job-ppl-'+idx))  || jobs[idx].people;
+    jobs[idx].ohp        = 15;
+    jobs[idx].profit     = profitOverride > 0 ? profitOverride : 0; // 0 = use auto-calc
+    jobs[idx].onTimeline = gc('dir-job-tl-'+idx);
+    jobs[idx].confirmed  = gc('dir-job-conf-'+idx);
+    jobs[idx].startWeek  = isNaN(swVal) ? (jobs[idx].startWeek || 0) : swVal;
     saveJobs(jobs);
     dirRenderJobs();
+    dirRenderTimeline();
   };
 
   window.dirDeleteJob = function(idx) {
@@ -15435,7 +15486,7 @@ function closeZoneHealth() {
 
   window.dirAddJob = function() {
     var jobs = loadJobs();
-    jobs.push({ id: Date.now(), name:'New job', value:0, weeks:8, people:3, ohp:15, profit:0 });
+    jobs.push({ id: Date.now(), name:'New job', value:0, weeks:8, people:3, ohp:15, profit:0, startWeek:0, onTimeline:true, confirmed:false });
     saveJobs(jobs);
     dirRenderJobs();
     setTimeout(function() {
@@ -15749,6 +15800,225 @@ function closeZoneHealth() {
     var rows = loadBM()||defaultBM();
     rows.push({job:name, type:'Added', weeks:weeks, people:people, pmpw:pmpw, notes:'Saved '+new Date().toLocaleDateString('en-GB')});
     saveBM(rows); dirRenderBM();
+  };
+
+  // ── Job Timeline / Gantt Planner ───────────────────────────────────────────
+  window.dirRenderTimeline = function() {
+    var inner = document.getElementById('dir-timeline-inner');
+    if (!inner) return;
+
+    // Constants
+    var TL_WEEK_W    = 32;
+    var TL_ROW_H     = 40;
+    var TL_HDR_H     = 28;
+    var TL_PAD_TOP   = TL_HDR_H + 8;
+    var TL_STAFF_H   = 60;
+    var TL_PAST_WKS  = 16;
+    var TL_FUT_WKS   = 104;
+    var TL_TOTAL_WKS = TL_PAST_WKS + TL_FUT_WKS;
+    var TL_TOTAL_W   = TL_TOTAL_WKS * TL_WEEK_W;
+    var TL_TODAY_X   = TL_PAST_WKS * TL_WEEK_W;
+    var TL_AVAIL_STAFF = 10;
+    var MONTHLY_OVERHEAD_LOSS = 14417;
+
+    var jobs = loadJobs().filter(function(j){ return j.onTimeline !== false; });
+    var tlJobs = []; // shallow copies with barX/barW
+    jobs.forEach(function(j, i) {
+      var sw  = (j.startWeek !== undefined) ? j.startWeek : 0;
+      var barX = TL_TODAY_X + sw * TL_WEEK_W;
+      var barW = Math.max(1, (j.weeks || 1)) * TL_WEEK_W;
+      tlJobs.push({ job:j, idx:i, barX:barX, barW:barW, sw:sw });
+    });
+
+    var svgH = TL_PAD_TOP + tlJobs.length * TL_ROW_H + 16 + TL_STAFF_H + 20;
+
+    // ── Build staff tally per week ──
+    var staffByWeek = []; // index = 0..TL_TOTAL_WKS-1 (week relative to start of timeline = today - TL_PAST_WKS)
+    for (var w = 0; w < TL_TOTAL_WKS; w++) staffByWeek[w] = 0;
+    tlJobs.forEach(function(tl) {
+      var wStart = Math.round(tl.sw) - TL_PAST_WKS; // offset from timeline start
+      var wEnd   = wStart + (tl.job.weeks || 1);
+      for (var w2 = Math.max(0, wStart); w2 < Math.min(TL_TOTAL_WKS, wEnd); w2++) {
+        staffByWeek[w2] += (tl.job.people || 0);
+      }
+    });
+
+    // ── Identify gap weeks in future 52 weeks ──
+    var gapRanges = []; // [{start, end}] in timeline-week coords (0-based from timeline start)
+    var futStart = TL_PAST_WKS; // timeline index of "today"
+    var inGap = false, gapStart = 0;
+    for (var wf = futStart; wf < futStart + 52; wf++) {
+      if (staffByWeek[wf] === 0) {
+        if (!inGap) { inGap = true; gapStart = wf; }
+      } else {
+        if (inGap) { gapRanges.push({start:gapStart, end:wf}); inGap = false; }
+      }
+    }
+    if (inGap) gapRanges.push({start:gapStart, end:futStart+52});
+
+    // ── SVG string builder ──
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+TL_TOTAL_W+'" height="'+svgH+'" style="display:block;font-family:system-ui,sans-serif;cursor:default;" id="dir-tl-svg">';
+
+    // Background
+    svg += '<rect width="'+TL_TOTAL_W+'" height="'+svgH+'" fill="var(--surface,#f8fafc)" rx="0"/>';
+
+    // ── Month header ──
+    var refDate = new Date();
+    refDate.setHours(0,0,0,0);
+    // Step back to monday of this week
+    var dow = refDate.getDay(); // 0=sun
+    refDate.setDate(refDate.getDate() - ((dow+6)%7));
+    // Go back TL_PAST_WKS weeks
+    refDate.setDate(refDate.getDate() - TL_PAST_WKS * 7);
+    var lastMonth = -1;
+    for (var mw = 0; mw < TL_TOTAL_WKS; mw++) {
+      var d = new Date(refDate); d.setDate(d.getDate() + mw*7);
+      var mo = d.getMonth();
+      if (mo !== lastMonth) {
+        lastMonth = mo;
+        var label = d.toLocaleString('en-GB',{month:'short',year:'numeric'});
+        var lx = mw * TL_WEEK_W + 4;
+        svg += '<text x="'+lx+'" y="18" font-size="10" font-weight="700" fill="#64748b">'+label+'</text>';
+        if (mw > 0) svg += '<line x1="'+(mw*TL_WEEK_W)+'" y1="0" x2="'+(mw*TL_WEEK_W)+'" y2="'+svgH+'" stroke="#e2e8f0" stroke-width="1"/>';
+      }
+    }
+
+    // ── Alternating week bands (subtle) ──
+    for (var wb = 0; wb < TL_TOTAL_WKS; wb++) {
+      if (wb % 2 === 0) {
+        svg += '<rect x="'+(wb*TL_WEEK_W)+'" y="'+TL_HDR_H+'" width="'+TL_WEEK_W+'" height="'+(svgH-TL_HDR_H)+'" fill="rgba(0,0,0,0.015)"/>';
+      }
+    }
+
+    // ── Gap zones ──
+    gapRanges.forEach(function(gr) {
+      var gx = gr.start * TL_WEEK_W;
+      var gw = (gr.end - gr.start) * TL_WEEK_W;
+      var gapWeeks = gr.end - gr.start;
+      var gapMonthLoss = Math.round(MONTHLY_OVERHEAD_LOSS * gapWeeks / 4.333);
+      svg += '<rect x="'+gx+'" y="'+TL_HDR_H+'" width="'+gw+'" height="'+(svgH-TL_HDR_H)+'" fill="rgba(239,68,68,0.07)" stroke="rgba(239,68,68,0.25)" stroke-width="1"/>';
+      if (gapWeeks >= 2) {
+        var lossLabel = gapWeeks >= 4 ? '-£'+Math.round(gapMonthLoss/1000)+'k gap' : 'gap';
+        svg += '<text x="'+(gx+4)+'" y="'+(TL_HDR_H+14)+'" font-size="9" fill="#ef4444" font-weight="700">'+lossLabel+'</text>';
+      }
+    });
+
+    // ── Today line ──
+    svg += '<line x1="'+TL_TODAY_X+'" y1="0" x2="'+TL_TODAY_X+'" y2="'+svgH+'" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5,4"/>';
+    svg += '<text x="'+(TL_TODAY_X+4)+'" y="'+(TL_HDR_H-6)+'" font-size="9" fill="#f59e0b" font-weight="800">TODAY</text>';
+
+    // ── Job bars ──
+    tlJobs.forEach(function(tl, i) {
+      var bx = tl.barX;
+      var bw = tl.barW;
+      var by = TL_PAD_TOP + i * TL_ROW_H;
+      var bh = TL_ROW_H - 6;
+      var fillColor = tl.job.confirmed ? '#22c55e' : '#94a3b8';
+      var fillOpacity = tl.job.confirmed ? '0.85' : '0.55';
+      var label = (tl.job.name || 'Job') + ' · ' + (tl.job.people || 0) + ' people';
+
+      svg += '<rect x="'+bx+'" y="'+by+'" width="'+bw+'" height="'+bh+'" rx="6" fill="'+fillColor+'" fill-opacity="'+fillOpacity+'" stroke="'+fillColor+'" stroke-width="1" stroke-opacity="0.5"'
+           + ' data-job-sw="'+tl.sw+'" data-job-wks="'+(tl.job.weeks||1)+'" data-job-tl-idx="'+i+'"'
+           + ' style="cursor:ew-resize;" class="tl-bar"/>';
+      // Clip label text inside bar
+      var maxChars = Math.max(0, Math.floor(bw / 7) - 2);
+      var displayLabel = label.length > maxChars ? label.substring(0, maxChars) + '…' : label;
+      if (bw > 30) {
+        svg += '<text x="'+(bx+8)+'" y="'+(by+bh/2+4)+'" font-size="11" font-weight="700" fill="white" fill-opacity="0.95" pointer-events="none">'+displayLabel+'</text>';
+      }
+    });
+
+    // ── Staff tally section ──
+    var staffY = TL_PAD_TOP + tlJobs.length * TL_ROW_H + 16;
+    var maxStaff = Math.max(TL_AVAIL_STAFF, Math.max.apply(null, staffByWeek.concat([1])));
+    var staffScale = (TL_STAFF_H - 16) / maxStaff;
+
+    svg += '<rect x="0" y="'+(staffY-4)+'" width="'+TL_TOTAL_W+'" height="'+(TL_STAFF_H+8)+'" fill="var(--surface2,#f1f5f9)"/>';
+    svg += '<text x="4" y="'+(staffY+10)+'" font-size="9" fill="#64748b" font-weight="700">STAFF / WEEK</text>';
+
+    for (var ws = 0; ws < TL_TOTAL_WKS; ws++) {
+      var sc = staffByWeek[ws];
+      if (sc === 0) continue;
+      var barH2 = Math.round(sc * staffScale);
+      var sx = ws * TL_WEEK_W + 1;
+      var sy = staffY + TL_STAFF_H - barH2 - 2;
+      var sColor = sc > TL_AVAIL_STAFF ? '#ef4444' : '#22c55e';
+      svg += '<rect x="'+sx+'" y="'+sy+'" width="'+(TL_WEEK_W-2)+'" height="'+barH2+'" fill="'+sColor+'" fill-opacity="0.7" rx="2"/>';
+      // Overflow warning marker
+      if (sc > TL_AVAIL_STAFF) {
+        svg += '<text x="'+(sx + TL_WEEK_W/2 - 5)+'" y="'+(sy-2)+'" font-size="10" fill="#ef4444">⚠</text>';
+      }
+    }
+
+    // Available staff line
+    var availY = staffY + TL_STAFF_H - Math.round(TL_AVAIL_STAFF * staffScale) - 2;
+    svg += '<line x1="0" y1="'+availY+'" x2="'+TL_TOTAL_W+'" y2="'+availY+'" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,3"/>';
+    svg += '<text x="4" y="'+(availY-3)+'" font-size="9" fill="#f59e0b" font-weight="700">'+TL_AVAIL_STAFF+' available</text>';
+
+    svg += '</svg>';
+
+    inner.style.width  = TL_TOTAL_W + 'px';
+    inner.style.height = svgH + 'px';
+    inner.innerHTML = svg;
+
+    // ── Scroll today into view ──
+    var wrap = document.getElementById('dir-timeline-wrap');
+    if (wrap) {
+      var targetScroll = TL_TODAY_X - Math.min(wrap.clientWidth / 3, 200);
+      wrap.scrollLeft = Math.max(0, targetScroll);
+    }
+
+    // ── Drag to reorder (desktop only) ──
+    var svgEl = document.getElementById('dir-tl-svg');
+    if (!svgEl) return;
+
+    var _tlDrag = null;
+
+    svgEl.addEventListener('mousedown', function(e) {
+      var bar = e.target.closest ? e.target.closest('.tl-bar') : (e.target.classList.contains('tl-bar') ? e.target : null);
+      if (!bar) return;
+      e.preventDefault();
+      var tlIdx    = parseInt(bar.getAttribute('data-job-tl-idx'));
+      var origSw   = parseInt(bar.getAttribute('data-job-sw'));
+      var barX     = parseFloat(bar.getAttribute('x'));
+      _tlDrag = { bar: bar, tlIdx: tlIdx, origSw: origSw, startMouseX: e.clientX, barOrigX: barX };
+      bar.style.cursor = 'grabbing';
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      if (!_tlDrag) return;
+      var dx     = e.clientX - _tlDrag.startMouseX;
+      var newX   = _tlDrag.barOrigX + dx;
+      _tlDrag.bar.setAttribute('x', newX);
+      // Move label text too
+      var texts = svgEl.querySelectorAll('text');
+      texts.forEach(function(t){ /* labels don't have data attr — update on mouseup */ });
+    });
+
+    document.addEventListener('mouseup', function(e) {
+      if (!_tlDrag) return;
+      var dx       = e.clientX - _tlDrag.startMouseX;
+      var newX     = _tlDrag.barOrigX + dx;
+      var newSw    = Math.round((newX - TL_TODAY_X) / TL_WEEK_W);
+
+      // Find the real job index in the full loadJobs() array
+      var allJobs  = loadJobs();
+      var tlVisible = allJobs.filter(function(j){ return j.onTimeline !== false; });
+      var realJob  = tlVisible[_tlDrag.tlIdx];
+      if (realJob) {
+        // Find its position in allJobs
+        var realIdx = allJobs.indexOf(realJob);
+        if (realIdx >= 0) {
+          allJobs[realIdx].startWeek = newSw;
+          saveJobs(allJobs);
+        }
+      }
+
+      _tlDrag.bar.style.cursor = 'ew-resize';
+      _tlDrag = null;
+      dirRenderTimeline();
+      dirRenderJobs();
+    });
   };
 
   // legacy aliases so existing showTab patches still work
