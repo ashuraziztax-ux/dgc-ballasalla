@@ -3535,7 +3535,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-31T21:00:00'); // v186 — Director mode: 2 proper nav tabs (Jobs + Job Planner)
+const LAST_UPDATED = new Date('2026-05-31T22:00:00'); // v187 — Overhead corrected to £14,065/month from real payroll — Director mode: 2 proper nav tabs (Jobs + Job Planner)
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -15180,17 +15180,16 @@ function closeZoneHealth() {
   //   GWs (charged £22.00, cost ~£16.44 all-in):    £5.56/hr × 45hrs = £250/wk
   //   Weighted avg (1/3 gangers, 2/3 GWs): ~£265/person/week
   var AVG_WAGE_MARGIN_PW = 265;    // £ per productive person per week (blended, from real wages)
-  var MONTHLY_OVERHEAD   = 17461;  // £/month — incl. NITP on all overhead staff
-  //   Non-wage (vans, insurance, rent, software, loans): £9,544/month
+  var MONTHLY_OVERHEAD   = 14065;  // £/month — CONFIRMED from real payroll May 2026
+  //   Non-wage (vans, insurance, rent, loans, software): £9,544/month
+  //   Office girl (24hrs × £20/hr + 12.8% NITP):        £2,253/month  ← confirmed
+  //   Bookkeeper:                                         £500/month   ← confirmed
   //   Ash director draw:                                  £884/month
   //   Harry director draw:                                £884/month
-  //   Office girl (24hrs/wk × £20/hr = £2,080 + 12.8% NITP £173): £2,253/month
-  //   Bookkeeper:                                         £500/month   ← confirmed
-  //   Bradley McKevitt (overhead — deliveries):           £2,464/month
-  //   Lewis Peck (overhead — deliveries):                 £932/month
-  //   ────────────────────────────────────────────────────────────────
-  //   Total:                                              £17,288/month = £207,456/year
-  var ANNUAL_OVERHEAD    = 209532; // £17,461/month × 12 — incl. employer NITP on all
+  //   NOTE: Bradley & Lewis wages ARE in job cost (payroll shows they're site workers)
+  //   ────────────────────────────────────────────────────────────────────────────
+  //   Total overhead (from OH&P profit):                  £14,065/month = £168,780/year
+  var ANNUAL_OVERHEAD    = 168780; // £14,065/month × 12 — from confirmed payroll data
   var BENCHMARK_PMPW     = 742;    // £/man/week benchmark (Ballasalla, real wages May 2026)
   var PROFIT_PER_MAN_MTH = 3216;   // Used in health panel only
   var CURRENT_STAFF      = 10;     // Productive site staff only — 12 total minus Bradley + Lewis (overhead)
