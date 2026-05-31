@@ -17061,33 +17061,35 @@ function closeZoneHealth() {
     // ── Simon's rate card data (from DGC Rate Card — Ballasalla Baseline, Feb 2026) ──
     var SIMON_RATES = [
       // Drainage complete runs (trench + pipe + surround)
-      { id:'d110-150', cat:'Drainage', name:'110mm drain — 1.5m deep', unit:'m', output:17.8, gang:'1 op + 1 labourer + 9t excav + 9t dumper + roller', notes:'Standard foul/SW run' },
-      { id:'d110-175', cat:'Drainage', name:'110mm drain — 1.75m deep', unit:'m', output:17.0, gang:'1 op + 1 labourer + 9t excav + 9t dumper + drag box', notes:'Add drag box >1.75m' },
-      { id:'d150-125', cat:'Drainage', name:'150mm drain — 1.25m deep', unit:'m', output:21.6, gang:'1 op + 1 labourer + 9t excav + 9t dumper + roller', notes:'Shallow SW run' },
-      { id:'d150-150', cat:'Drainage', name:'150mm drain — 1.5m deep',  unit:'m', output:19.0, gang:'1 op + 1 labourer + 9t excav + 9t dumper + roller', notes:'' },
-      { id:'d150-175', cat:'Drainage', name:'150mm drain — 1.75m deep', unit:'m', output:17.0, gang:'1 op + 1 labourer + 9t excav + 9t dumper + drag box', notes:'' },
-      { id:'d225-175', cat:'Drainage', name:'225mm drain — 1.75m deep', unit:'m', output:19.0, gang:'1 op + 1 labourer + 9t excav + 9t dumper + roller', notes:'' },
-      { id:'d225-200', cat:'Drainage', name:'225mm drain — 2.0m deep',  unit:'m', output:17.0, gang:'1 op + 1 labourer + 9t excav + 9t dumper + drag box', notes:'' },
-      { id:'d225-225', cat:'Drainage', name:'225mm drain — 2.25m deep', unit:'m', output:16.0, gang:'1 op + 1 labourer + 9t excav + 9t dumper + drag box', notes:'Deep — add time for dewatering' },
+      // Standard drainage gang: op £200 + GW £220 + 9t excav £100 + 9t dumper £62 + fuel £90 = £672/day
+      { id:'d110-150', cat:'Drainage', name:'110mm drain — 1.5m deep',  unit:'m', output:17.8, gang:'1 op + 1 labourer + 9t excav + 9t dumper + roller', notes:'Standard foul/SW run', dayCost:672, gangShort:'Op + GW + 9t excav + dumper' },
+      { id:'d110-175', cat:'Drainage', name:'110mm drain — 1.75m deep', unit:'m', output:17.0, gang:'1 op + 1 labourer + 9t excav + 9t dumper + drag box', notes:'Add drag box >1.75m', dayCost:672, gangShort:'Op + GW + 9t excav + dumper + drag box' },
+      { id:'d150-125', cat:'Drainage', name:'150mm drain — 1.25m deep', unit:'m', output:21.6, gang:'1 op + 1 labourer + 9t excav + 9t dumper + roller', notes:'Shallow SW run', dayCost:672, gangShort:'Op + GW + 9t excav + dumper' },
+      { id:'d150-150', cat:'Drainage', name:'150mm drain — 1.5m deep',  unit:'m', output:19.0, gang:'1 op + 1 labourer + 9t excav + 9t dumper + roller', notes:'', dayCost:672, gangShort:'Op + GW + 9t excav + dumper' },
+      { id:'d150-175', cat:'Drainage', name:'150mm drain — 1.75m deep', unit:'m', output:17.0, gang:'1 op + 1 labourer + 9t excav + 9t dumper + drag box', notes:'', dayCost:672, gangShort:'Op + GW + 9t excav + dumper + drag box' },
+      { id:'d225-175', cat:'Drainage', name:'225mm drain — 1.75m deep', unit:'m', output:19.0, gang:'1 op + 1 labourer + 9t excav + 9t dumper + roller', notes:'', dayCost:672, gangShort:'Op + GW + 9t excav + dumper' },
+      { id:'d225-200', cat:'Drainage', name:'225mm drain — 2.0m deep',  unit:'m', output:17.0, gang:'1 op + 1 labourer + 9t excav + 9t dumper + drag box', notes:'', dayCost:672, gangShort:'Op + GW + 9t excav + dumper + drag box' },
+      { id:'d225-225', cat:'Drainage', name:'225mm drain — 2.25m deep', unit:'m', output:16.0, gang:'1 op + 1 labourer + 9t excav + 9t dumper + drag box', notes:'Deep — add time for dewatering', dayCost:672, gangShort:'Op + GW + 9t excav + dumper + drag box' },
       // Manholes
-      { id:'mh1200-175', cat:'Manholes', name:'1200mm manhole — 1.75m deep', unit:'nr', output:0.5, gang:'Drainage gang', notes:'32 man-hrs each = 1 every 2 days' },
-      { id:'mh1200-200', cat:'Manholes', name:'1200mm manhole — 2.0m deep',  unit:'nr', output:0.4, gang:'Drainage gang', notes:'36 man-hrs each = 1 every 2.5 days' },
-      { id:'mh1350-125', cat:'Manholes', name:'1350mm manhole — 1.25m deep', unit:'nr', output:0.33, gang:'Drainage gang', notes:'48 man-hrs each = 1 every 3 days' },
-      { id:'mh1350-175', cat:'Manholes', name:'1350mm manhole — 1.75m deep', unit:'nr', output:0.29, gang:'Drainage gang', notes:'56 man-hrs each = 1 every 3.5 days' },
-      { id:'gully', cat:'Manholes', name:'Road gully 450×900mm', unit:'nr', output:2.0, gang:'1 GW + 1 labourer', notes:'5 man-hrs each, 2 per day' },
+      { id:'mh1200-175', cat:'Manholes', name:'1200mm manhole — 1.75m deep', unit:'nr', output:0.5,  gang:'Drainage gang', notes:'32 man-hrs each = 1 every 2 days', dayCost:672, gangShort:'Drainage gang (shared)' },
+      { id:'mh1200-200', cat:'Manholes', name:'1200mm manhole — 2.0m deep',  unit:'nr', output:0.4,  gang:'Drainage gang', notes:'36 man-hrs each = 1 every 2.5 days', dayCost:672, gangShort:'Drainage gang (shared)' },
+      { id:'mh1350-125', cat:'Manholes', name:'1350mm manhole — 1.25m deep', unit:'nr', output:0.33, gang:'Drainage gang', notes:'48 man-hrs each = 1 every 3 days', dayCost:672, gangShort:'Drainage gang (shared)' },
+      { id:'mh1350-175', cat:'Manholes', name:'1350mm manhole — 1.75m deep', unit:'nr', output:0.29, gang:'Drainage gang', notes:'56 man-hrs each = 1 every 3.5 days', dayCost:672, gangShort:'Drainage gang (shared)' },
+      { id:'gully', cat:'Manholes', name:'Road gully 450×900mm', unit:'nr', output:2.0, gang:'1 GW + 1 labourer', notes:'5 man-hrs each, 2 per day', dayCost:396, gangShort:'1 GW + 1 labourer' },
       // Earthworks
-      { id:'rl-dig', cat:'Earthworks', name:'Reduce level dig', unit:'m³', output:100, gang:'21t excavator + operator', notes:'0.08 hrs/m³' },
-      { id:'type1', cat:'Earthworks', name:'Type 1 fill (place + compact)', unit:'m³', output:61, gang:'21t excav + dumper + operator', notes:'0.13 hrs/m³' },
-      { id:'compact', cat:'Earthworks', name:'Compacting (roller)', unit:'m²', output:300, gang:'Roller', notes:'0.02–0.03 hrs/m², use 300 as mid-point' },
-      // Kerbing
-      { id:'kerb-bullnose', cat:'Kerbing', name:'125×150mm bullnose straight', unit:'m', output:27, gang:'Kerbing gang — 5t excav', notes:'0.15 GW + 0.15 lab hrs/m' },
-      { id:'kerb-radius',   cat:'Kerbing', name:'125×150mm bullnose radius',   unit:'m', output:23, gang:'Kerbing gang — 5t excav', notes:'0.17 GW + 0.17 lab hrs/m' },
-      { id:'kerb-hb2',      cat:'Kerbing', name:'HB2 125×225mm straight',       unit:'m', output:33, gang:'Kerbing gang — 5t excav', notes:'0.12 GW + 0.12 lab hrs/m' },
-      { id:'kerb-edging',   cat:'Kerbing', name:'50×150mm flat top edging',      unit:'m', output:40, gang:'Kerbing gang — 5t excav', notes:'0.10 GW + 0.10 lab hrs/m' },
-      // Services trenches
-      { id:'svc-single', cat:'Services', name:'Services trench 750mm — 1 duct',    unit:'m', output:40, gang:'1 op + 1 labourer', notes:'Elec/water/telecom' },
-      { id:'svc-combined', cat:'Services', name:'Services trench 750mm — combined', unit:'m', output:16, gang:'1 op + 1 labourer', notes:'Elec + water combined' },
-      { id:'svc-crossing', cat:'Services', name:'Road crossing — 1500mm deep',      unit:'m', output:20, gang:'1 op + 1 labourer', notes:'' }
+      // 21t gang: excav £142 + fuel £100 + op £200 + dumper £62 = £504/day; compaction: roller £45/day
+      { id:'rl-dig',  cat:'Earthworks', name:'Reduce level dig',           unit:'m³', output:100, gang:'21t excavator + operator', notes:'0.08 hrs/m³', dayCost:504, gangShort:'21t excav + op + dumper' },
+      { id:'type1',   cat:'Earthworks', name:'Type 1 fill (place + compact)', unit:'m³', output:61,  gang:'21t excav + dumper + operator', notes:'0.13 hrs/m³', dayCost:504, gangShort:'21t excav + op + dumper' },
+      { id:'compact', cat:'Earthworks', name:'Compacting (roller)',         unit:'m²', output:300, gang:'Roller', notes:'0.02–0.03 hrs/m², use 300 as mid-point', dayCost:45, gangShort:'Roller' },
+      // Kerbing gang: 5t excav all-in £360 + GW £220 + lab £176 = £756/day
+      { id:'kerb-bullnose', cat:'Kerbing', name:'125×150mm bullnose straight', unit:'m', output:27, gang:'Kerbing gang — 5t excav', notes:'0.15 GW + 0.15 lab hrs/m', dayCost:756, gangShort:'1 GW + 1 lab + 5t excav all-in' },
+      { id:'kerb-radius',   cat:'Kerbing', name:'125×150mm bullnose radius',   unit:'m', output:23, gang:'Kerbing gang — 5t excav', notes:'0.17 GW + 0.17 lab hrs/m', dayCost:756, gangShort:'1 GW + 1 lab + 5t excav all-in' },
+      { id:'kerb-hb2',      cat:'Kerbing', name:'HB2 125×225mm straight',       unit:'m', output:33, gang:'Kerbing gang — 5t excav', notes:'0.12 GW + 0.12 lab hrs/m', dayCost:756, gangShort:'1 GW + 1 lab + 5t excav all-in' },
+      { id:'kerb-edging',   cat:'Kerbing', name:'50×150mm flat top edging',      unit:'m', output:40, gang:'Kerbing gang — 5t excav', notes:'0.10 GW + 0.10 lab hrs/m', dayCost:756, gangShort:'1 GW + 1 lab + 5t excav all-in' },
+      // Services trenches — same as drainage gang = £672/day
+      { id:'svc-single',   cat:'Services', name:'Services trench 750mm — 1 duct',    unit:'m', output:40, gang:'1 op + 1 labourer', notes:'Elec/water/telecom', dayCost:672, gangShort:'Op + GW + 9t excav' },
+      { id:'svc-combined', cat:'Services', name:'Services trench 750mm — combined',   unit:'m', output:16, gang:'1 op + 1 labourer', notes:'Elec + water combined', dayCost:672, gangShort:'Op + GW + 9t excav' },
+      { id:'svc-crossing', cat:'Services', name:'Road crossing — 1500mm deep',        unit:'m', output:20, gang:'1 op + 1 labourer', notes:'', dayCost:672, gangShort:'Op + GW + 9t excav' }
     ];
 
     // Load/save productivity log
@@ -17123,6 +17125,69 @@ function closeZoneHealth() {
     + '</div>'
     + '</div>'
     + '<div id="dr-result"></div>'
+    + '</div>'
+
+    // ── DIGITAL DAILY SHEET ──
+    + '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:20px;">'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">Daily site sheet — Teams A · B · C</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Digital version of the DGC-21/22 forms. Fill in morning plan, check off at 10:00 · 13:00 · 17:00, then record actual at end of day. App compares to Simon\'s rates automatically.</div>'
+
+    // Header row: date, SM, weather
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">'
+    + '<div><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Date</div>'
+    + '<input id="ds-date" type="date" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:13px;background:var(--surface2);color:var(--text);"></div>'
+    + '<div><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Site Manager</div>'
+    + '<input id="ds-sm" type="text" placeholder="e.g. James Cosgrove" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:13px;background:var(--surface2);color:var(--text);"></div>'
+    + '<div><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Weather</div>'
+    + '<select id="ds-weather" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:13px;background:var(--surface2);color:var(--text);">'
+    + '<option>Sunny</option><option>Cloudy</option><option>Rain</option><option>Heavy Rain</option><option>Wind</option><option>Frost</option>'
+    + '</select></div>'
+    + '</div>'
+
+    // Teams A, B, C
+    + ['A','B','C'].map(function(team) {
+        return '<div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;">'
+        + '<div style="font-size:12px;font-weight:800;color:#f59e0b;margin-bottom:10px;">TEAM '+team+'</div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'
+        + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Operative</div>'
+        + '<input id="ds-'+team+'-op" type="text" placeholder="Name" style="width:100%;padding:6px 8px;border-radius:7px;border:1px solid var(--border);font-size:12px;background:var(--surface2);color:var(--text);"></div>'
+        + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Plant</div>'
+        + '<input id="ds-'+team+'-plant" type="text" placeholder="e.g. 5.5t CAT, 9t Komatsu" style="width:100%;padding:6px 8px;border-radius:7px;border:1px solid var(--border);font-size:12px;background:var(--surface2);color:var(--text);"></div>'
+        + '</div>'
+        + '<div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-bottom:8px;">'
+        + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Activity (Simon\'s rate)</div>'
+        + '<select id="ds-'+team+'-act" onchange="dsCalcTeam(\''+team+'\')" style="width:100%;padding:6px 8px;border-radius:7px;border:1px solid var(--border);font-size:11px;background:var(--surface2);color:var(--text);">'
+        + '<option value="">— Select activity —</option>'
+        + SIMON_RATES.map(function(r){ return '<option value="'+r.id+'">'+r.name+'</option>'; }).join('')
+        + '</select></div>'
+        + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Qty planned</div>'
+        + '<input id="ds-'+team+'-qty" type="number" min="0" placeholder="0" oninput="dsCalcTeam(\''+team+'\')" style="width:100%;padding:6px 8px;border-radius:7px;border:1px solid var(--border);font-size:13px;font-weight:700;background:var(--surface2);color:var(--text);text-align:center;"></div>'
+        + '</div>'
+        + '<div id="ds-'+team+'-verdict" style="font-size:11px;margin-bottom:8px;"></div>'
+        // 3 checkpoints
+        + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;">'
+        + ['10:00','13:00','17:00'].map(function(t){
+            var tid = t.replace(':','');
+            return '<div><div style="font-size:9px;font-weight:700;color:var(--muted);margin-bottom:2px;">'+t+' check</div>'
+            +'<input id="ds-'+team+'-'+tid+'" type="number" min="0" max="100" placeholder="%" style="width:100%;padding:5px 6px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-weight:700;background:var(--surface2);color:var(--text);text-align:center;">'
+            +'</div>';
+          }).join('')
+        + '</div>'
+        // Blocker + EOD actual
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'
+        + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Blocker type (if any)</div>'
+        + '<select id="ds-'+team+'-block" style="width:100%;padding:6px 8px;border-radius:7px;border:1px solid var(--border);font-size:11px;background:var(--surface2);color:var(--text);">'
+        + '<option value="">None</option><option value="third-party">Third party (not DGC\'s fault)</option><option value="plant">Plant breakdown</option><option value="material">Material delay</option><option value="design">Design/instruction late</option><option value="weather">Weather</option><option value="access">Access blocked</option>'
+        + '</select></div>'
+        + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Actual qty done (EOD)</div>'
+        + '<input id="ds-'+team+'-done" type="number" min="0" placeholder="0" oninput="dsCalcTeam(\''+team+'\')" style="width:100%;padding:6px 8px;border-radius:7px;border:1px solid var(--border);font-size:13px;font-weight:700;background:var(--surface2);color:var(--text);text-align:center;"></div>'
+        + '</div>'
+        + '<div id="ds-'+team+'-result" style="font-size:11px;"></div>'
+        + '</div>';
+      }).join('')
+
+    + '<button onclick="dsSaveSheet()" style="padding:10px 20px;background:#f59e0b;border:none;border-radius:8px;color:#1a1d27;font-size:13px;font-weight:900;cursor:pointer;margin-top:4px;margin-bottom:14px;">Save today\'s sheet</button>'
+    + '<div id="ds-history" style="margin-top:4px;"></div>'
     + '</div>'
 
     // ── DAILY PRODUCTIVITY LOG ──
@@ -17170,22 +17235,77 @@ function closeZoneHealth() {
       if (!el2) return;
       var rate  = SIMON_RATES.find(function(r){ return r.id === actId; });
       if (!rate || qty <= 0) { el2.innerHTML = ''; return; }
-      var days = Math.round(qty / rate.output * 10) / 10;
-      var col  = days <= 1 ? '#22c55e' : days <= 5 ? '#f59e0b' : '#94a3b8';
+
+      var days    = Math.round(qty / rate.output * 10) / 10;
+      var totCost = Math.round(days * rate.dayCost);
+      var unitCost = Math.round(rate.dayCost / rate.output * 10) / 10;
+      var col     = days <= 1 ? '#22c55e' : days <= 5 ? '#f59e0b' : '#94a3b8';
+      var fmt     = function(n){ return '£' + Math.round(n).toLocaleString('en-GB'); };
+
+      // What-if: +1 person (GW £220/day, output +15%)
+      var extraPersonCost = 220;
+      var extraPersonOutputBoost = 0.15;
+      var newOutputWithPerson = rate.output * (1 + extraPersonOutputBoost);
+      var newDaysWithPerson   = Math.round(qty / newOutputWithPerson * 10) / 10;
+      var extraPersonTotalCost = Math.round(newDaysWithPerson * (rate.dayCost + extraPersonCost));
+      var daysSaved  = Math.round((days - newDaysWithPerson) * 10) / 10;
+
+      // What-if: +1 machine (9t excav £100/day + fuel £90 + op £200 = £390/day extra, output roughly +80% for drain runs)
+      var extraMachineCost   = 390;
+      var extraMachineBoost  = 0.80;
+      var newOutputWithMachine = rate.output * (1 + extraMachineBoost);
+      var newDaysWithMachine   = Math.round(qty / newOutputWithMachine * 10) / 10;
+      var extraMachineTotalCost = Math.round(newDaysWithMachine * (rate.dayCost + extraMachineCost));
+      var daysSavedMachine = Math.round((days - newDaysWithMachine) * 10) / 10;
+
       el2.innerHTML =
-        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:4px;">'
+        // Main result row
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;">'
         + '<div style="background:var(--surface2);border-radius:10px;padding:14px;text-align:center;">'
         +   '<div style="font-size:36px;font-weight:900;color:'+col+';">'+days+'</div>'
-        +   '<div style="font-size:11px;color:var(--muted);">days needed</div>'
+        +   '<div style="font-size:11px;color:var(--muted);">days at Simon\'s rate</div>'
         + '</div>'
         + '<div style="background:var(--surface2);border-radius:10px;padding:14px;text-align:center;">'
-        +   '<div style="font-size:20px;font-weight:900;color:var(--text);">'+rate.output+' '+rate.unit+'/day</div>'
-        +   '<div style="font-size:11px;color:var(--muted);">Simon\'s benchmark output</div>'
+        +   '<div style="font-size:22px;font-weight:900;color:var(--text);">'+rate.output+' '+rate.unit+'/day</div>'
+        +   '<div style="font-size:11px;color:var(--muted);">benchmark output</div>'
+        + '</div>'
+        + '<div style="background:var(--surface2);border-radius:10px;padding:14px;text-align:center;">'
+        +   '<div style="font-size:22px;font-weight:900;color:#f59e0b;">'+fmt(totCost)+'</div>'
+        +   '<div style="font-size:11px;color:var(--muted);">gang cost for those '+days+' days</div>'
         + '</div>'
         + '<div style="background:var(--surface2);border-radius:10px;padding:14px;">'
-        +   '<div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:4px;">Resources needed</div>'
-        +   '<div style="font-size:11px;color:var(--muted);">'+rate.gang+'</div>'
+        +   '<div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px;">Gang breakdown</div>'
+        +   '<div style="font-size:11px;color:var(--muted);">'+rate.gangShort+'</div>'
+        +   '<div style="font-size:12px;font-weight:700;color:var(--text);margin-top:6px;">'+fmt(rate.dayCost)+'/day · '+fmt(unitCost)+'/'+rate.unit+'</div>'
         +   (rate.notes ? '<div style="font-size:10px;color:var(--muted);margin-top:4px;font-style:italic;">'+rate.notes+'</div>' : '')
+        + '</div>'
+        + '</div>'
+
+        // What-if section
+        + '<div style="border-top:1px solid var(--border);padding-top:12px;margin-top:2px;">'
+        + '<div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">What if you change the gang?</div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+
+        // +1 person
+        + '<div style="background:rgba(34,197,94,0.07);border:1px solid #22c55e33;border-radius:10px;padding:12px;">'
+        +   '<div style="font-size:11px;font-weight:800;color:#22c55e;margin-bottom:6px;">+ Add 1 skilled groundworker</div>'
+        +   '<div style="font-size:11px;color:var(--muted);">Extra cost: £220/day</div>'
+        +   '<div style="font-size:11px;color:var(--muted);">Output boost: ~15% faster</div>'
+        +   '<div style="font-size:13px;font-weight:900;color:var(--text);margin-top:6px;">'+newDaysWithPerson+' days (saves '+daysSaved+' days)</div>'
+        +   '<div style="font-size:13px;font-weight:700;color:#f59e0b;">Total cost: '+fmt(extraPersonTotalCost)+' (+'+fmt(extraPersonTotalCost - totCost)+')</div>'
+        +   '<div style="font-size:10px;color:var(--muted);margin-top:4px;">'+(daysSaved > 0 ? 'Each day saved frees the gang for other work' : 'Minimal programme benefit')+'</div>'
+        + '</div>'
+
+        // +1 machine
+        + '<div style="background:rgba(245,158,11,0.07);border:1px solid #f59e0b33;border-radius:10px;padding:12px;">'
+        +   '<div style="font-size:11px;font-weight:800;color:#f59e0b;margin-bottom:6px;">+ Add a 9t excavator + operator</div>'
+        +   '<div style="font-size:11px;color:var(--muted);">Extra: 9t hire £100 + fuel £90 + op £200 = £390/day</div>'
+        +   '<div style="font-size:11px;color:var(--muted);">Output boost: ~80% faster</div>'
+        +   '<div style="font-size:13px;font-weight:900;color:var(--text);margin-top:6px;">'+newDaysWithMachine+' days (saves '+daysSavedMachine+' days)</div>'
+        +   '<div style="font-size:13px;font-weight:700;color:#f59e0b;">Total cost: '+fmt(extraMachineTotalCost)+' (+'+fmt(extraMachineTotalCost - totCost)+')</div>'
+        +   '<div style="font-size:10px;color:var(--muted);margin-top:4px;">Worth it if programme time is critical</div>'
+        + '</div>'
+
         + '</div>'
         + '</div>';
     };
@@ -17307,9 +17427,107 @@ function closeZoneHealth() {
       var items = loadLookahead(); items.splice(i,1); saveLookahead(items); drRenderLookahead();
     };
 
+    // ── Digital daily sheet functions ──
+    window.dsCalcTeam = function(team) {
+      var actId  = (document.getElementById('ds-'+team+'-act') ||{}).value;
+      var qty    = parseFloat((document.getElementById('ds-'+team+'-qty') ||{}).value) || 0;
+      var done   = parseFloat((document.getElementById('ds-'+team+'-done')||{}).value);
+      var block  = (document.getElementById('ds-'+team+'-block')||{}).value;
+      var verdict = document.getElementById('ds-'+team+'-verdict');
+      var result  = document.getElementById('ds-'+team+'-result');
+      var rate    = SIMON_RATES.find(function(r){ return r.id === actId; });
+
+      if (!rate || !qty) { if(verdict) verdict.innerHTML=''; if(result) result.innerHTML=''; return; }
+
+      // Morning verdict: is the planned qty achievable in 1 day?
+      var pct = Math.round(qty / rate.output * 100);
+      var vCol = pct <= 90 ? '#22c55e' : pct <= 110 ? '#f59e0b' : '#ef4444';
+      var vTxt = pct <= 90 ? 'Achievable — '+qty+' '+rate.unit+' is '+pct+'% of a full day\'s output'
+               : pct <= 110 ? 'Tight — that\'s '+pct+'% of Simon\'s daily output. Needs a clean run.'
+               : 'Over-ambitious — '+qty+' '+rate.unit+' is '+pct+'% of daily output. Simon says max '+rate.output+' '+rate.unit+'/day.';
+      if (verdict) verdict.innerHTML = '<div style="padding:6px 10px;border-radius:8px;background:'+vCol+'11;border:1px solid '+vCol+'33;color:'+vCol+';font-size:11px;font-weight:700;">'+vTxt+'</div>';
+
+      // EOD result: actual vs Simon
+      if (!isNaN(done) && done >= 0) {
+        var effPct = Math.round(done / rate.output * 100);
+        var isBlocked = block && block !== '';
+        var effCol = effPct >= 90 ? '#22c55e' : effPct >= 70 ? '#f59e0b' : '#ef4444';
+        var effTxt = isBlocked && effPct < 50
+          ? 'Blocked by '+block+' — '+done+' '+rate.unit+' done. This day\'s shortfall is NOT DGC\'s efficiency problem.'
+          : effPct >= 100 ? 'Ahead of Simon\'s rate — '+done+' '+rate.unit+' vs '+rate.output+' expected ('+effPct+'%)'
+          : effPct >= 80  ? 'Close to Simon\'s rate — '+done+' '+rate.unit+' vs '+rate.output+' expected ('+effPct+'%)'
+          : 'Below Simon\'s rate — '+done+' '+rate.unit+' vs '+rate.output+' expected ('+effPct+'%)'+( block?' — blocker: '+block:'');
+        if (result) result.innerHTML = '<div style="padding:8px 10px;border-radius:8px;background:'+effCol+'11;border:1px solid '+effCol+'33;color:var(--text);font-size:11px;margin-top:4px;">'+effTxt+'</div>';
+      }
+    };
+
+    window.dsSaveSheet = function() {
+      var date    = (document.getElementById('ds-date')||{}).value || new Date().toISOString().slice(0,10);
+      var sm      = (document.getElementById('ds-sm')||{}).value || '';
+      var weather = (document.getElementById('ds-weather')||{}).value || '';
+      var teams   = ['A','B','C'].map(function(team) {
+        var actId = (document.getElementById('ds-'+team+'-act')||{}).value;
+        var rate  = SIMON_RATES.find(function(r){ return r.id===actId; });
+        var done  = parseFloat((document.getElementById('ds-'+team+'-done')||{}).value);
+        var qty   = parseFloat((document.getElementById('ds-'+team+'-qty') ||{}).value)||0;
+        return {
+          team:    team,
+          op:      (document.getElementById('ds-'+team+'-op')   ||{}).value||'',
+          plant:   (document.getElementById('ds-'+team+'-plant')||{}).value||'',
+          actId:   actId,
+          actName: rate ? rate.name : '',
+          unit:    rate ? rate.unit : '',
+          qtyPlan: qty,
+          done:    isNaN(done) ? null : done,
+          block:   (document.getElementById('ds-'+team+'-block')||{}).value||'',
+          effPct:  (!isNaN(done) && rate && rate.output) ? Math.round(done/rate.output*100) : null,
+          c1000:   (document.getElementById('ds-'+team+'-1000')||{}).value||'',
+          c1300:   (document.getElementById('ds-'+team+'-1300')||{}).value||'',
+          c1700:   (document.getElementById('ds-'+team+'-1700')||{}).value||''
+        };
+      });
+      var sheets = dsLoadSheets();
+      sheets.unshift({ date:date, sm:sm, weather:weather, teams:teams });
+      dsSaveSheets(sheets);
+      dsRenderHistory();
+      alert('Sheet saved for '+date);
+    };
+
+    function dsLoadSheets()  { try { var s=localStorage.getItem('dgc_daily_sheets'); return s?JSON.parse(s):[]; } catch(e){return [];} }
+    function dsSaveSheets(s) { try { localStorage.setItem('dgc_daily_sheets',JSON.stringify(s)); } catch(e){} }
+
+    function dsRenderHistory() {
+      var el = document.getElementById('ds-history');
+      if (!el) return;
+      var sheets = dsLoadSheets();
+      if (!sheets.length) { el.innerHTML = ''; return; }
+      el.innerHTML = '<div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Saved sheets</div>'
+        + sheets.slice(0,10).map(function(s, i) {
+          var teamRows = s.teams.filter(function(t){ return t.actName; }).map(function(t) {
+            var ec = t.effPct === null ? '#94a3b8' : t.effPct >= 90 ? '#22c55e' : t.effPct >= 70 ? '#f59e0b' : '#ef4444';
+            var effStr = t.effPct !== null ? '<span style="color:'+ec+';font-weight:800;">'+t.effPct+'%</span>' : '—';
+            var blockStr = t.block ? ' <span style="color:#f59e0b;font-size:10px;">['+t.block+']</span>' : '';
+            return '<div style="font-size:11px;color:var(--muted);padding-left:8px;">Team '+t.team+': '+t.actName+(t.done!==null?' · '+t.done+' '+t.unit+' done · '+effStr:'')+(t.op?' · '+t.op:'')+blockStr+'</div>';
+          }).join('');
+          return '<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;">'
+            +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
+            +'<span style="font-size:12px;font-weight:700;color:var(--text);">'+s.date+' — '+s.weather+'</span>'
+            +'<span style="font-size:11px;color:var(--muted);">SM: '+(s.sm||'—')+'</span>'
+            +'<button onclick="dsDeleteSheet('+i+')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:11px;">x</button>'
+            +'</div>'
+            + teamRows
+            +'</div>';
+        }).join('');
+    }
+
+    window.dsDeleteSheet = function(i) { var s=dsLoadSheets(); s.splice(i,1); dsSaveSheets(s); dsRenderHistory(); };
+
     // ── Set today's date + initialise all displays (after all functions defined above) ──
     var dateEl = document.getElementById('dl-date');
     if (dateEl) { var now = new Date(); dateEl.value = now.toISOString().slice(0,10); }
+    var dsDateEl = document.getElementById('ds-date');
+    if (dsDateEl) { dsDateEl.value = new Date().toISOString().slice(0,10); }
+    dsRenderHistory();
     window.drCalc();
     drRenderLog();
     drRenderLookahead();
