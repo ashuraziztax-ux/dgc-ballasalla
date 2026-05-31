@@ -3528,7 +3528,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-31T19:00:00'); // v183 — Director 4th mode + Job Timeline planner
+const LAST_UPDATED = new Date('2026-05-31T19:30:00'); // v184 — Progress chart larger (900×240, full width) — Director 4th mode + Job Timeline planner
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -7170,7 +7170,7 @@ function buildProgrammeV135() {
   // If both finish dots are within 40px of each other, offset labels vertically
   var dotsClose = Math.abs(proj_x - planSpeed_x) < 45;
 
-  var chartSVG = '<svg viewBox="0 0 '+chartW+' '+chartH+'" style="width:100%;max-width:'+chartW+'px;height:auto;display:block;">'
+  var chartSVG = '<svg viewBox="0 0 '+chartW+' '+chartH+'" style="width:100%;height:auto;display:block;">'
     // Grid axes
     +'<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(padT+innerH)+'" stroke="var(--border)" stroke-width="1"/>'
     +'<line x1="'+padL+'" y1="'+(padT+innerH)+'" x2="'+(padL+innerW)+'" y2="'+(padT+innerH)+'" stroke="var(--border)" stroke-width="1"/>'
