@@ -16388,7 +16388,8 @@ function closeZoneHealth() {
     var TL_ROW_H     = 40;
     var TL_HDR_H     = 28;
     var TL_PAD_TOP   = TL_HDR_H + 8;
-    var TL_STAFF_H   = 60;
+    var TL_STAFF_H   = 50;
+    var TL_PL_H      = 32;
     var TL_PAST_WKS  = 16;
     var TL_FUT_WKS   = 104;
     var TL_TOTAL_WKS = TL_PAST_WKS + TL_FUT_WKS;
@@ -16418,18 +16419,32 @@ function closeZoneHealth() {
       tlJobs.push({ job:j, idx:i, barX:barX, barW:barW, sw:sw });
     });
 
-    var svgH = TL_PAD_TOP + tlJobs.length * TL_ROW_H + 16 + TL_STAFF_H + 20;
+    var svgH = TL_PAD_TOP + tlJobs.length * TL_ROW_H + 16 + TL_STAFF_H + TL_PL_H + 24;
 
     // ── Build staff tally per week ──
     var staffByWeek = []; // index = 0..TL_TOTAL_WKS-1 (week relative to start of timeline = today - TL_PAST_WKS)
     for (var w = 0; w < TL_TOTAL_WKS; w++) staffByWeek[w] = 0;
     tlJobs.forEach(function(tl) {
-      var wStart = Math.round(tl.sw) - TL_PAST_WKS; // offset from timeline start
+      var wStart = Math.round(tl.sw) + TL_PAST_WKS; // offset from timeline start
       var wEnd   = wStart + (tl.job.weeks || 1);
       for (var w2 = Math.max(0, wStart); w2 < Math.min(TL_TOTAL_WKS, wEnd); w2++) {
         staffByWeek[w2] += (tl.job.people || 0);
       }
     });
+
+    // ── Build profit contribution per week ──
+    var profitByWeek = [];
+    for (var wp = 0; wp < TL_TOTAL_WKS; wp++) profitByWeek[wp] = 0;
+    tlJobs.forEach(function(tl) {
+      var wpStart = Math.round(tl.sw) + TL_PAST_WKS;
+      var wpEnd   = wpStart + (tl.job.weeks || 1);
+      var ohpPerWk = jobProfit(tl.job) / Math.max(1, tl.job.weeks);
+      var wageWk   = (tl.job.people || 0) * AVG_WAGE_MARGIN_PW;
+      for (var wp2 = Math.max(0, wpStart); wp2 < Math.min(TL_TOTAL_WKS, wpEnd); wp2++) {
+        profitByWeek[wp2] += ohpPerWk + wageWk;
+      }
+    });
+    var OVERHEAD_PER_WEEK = MONTHLY_OVERHEAD / 4.333; // ~£3,759
 
     // ── Identify gap weeks in future 52 weeks ──
     var gapRanges = []; // [{start, end}] in timeline-week coords (0-based from timeline start)
@@ -16531,36 +16546,126 @@ function closeZoneHealth() {
     // ── Staff tally section ──
     var staffY = TL_PAD_TOP + tlJobs.length * TL_ROW_H + 16;
     var maxStaff = Math.max(TL_AVAIL_STAFF, Math.max.apply(null, staffByWeek.concat([1])));
-    var staffScale = (TL_STAFF_H - 16) / maxStaff;
+    var staffScale = (TL_STAFF_H - 14) / maxStaff;
+    var plY = staffY + TL_STAFF_H; // P&L row starts here
 
-    svg += '<rect x="0" y="'+(staffY-4)+'" width="'+TL_TOTAL_W+'" height="'+(TL_STAFF_H+8)+'" fill="var(--surface2,#f1f5f9)"/>';
+    svg += '<rect x="0" y="'+(staffY-4)+'" width="'+TL_TOTAL_W+'" height="'+(TL_STAFF_H+TL_PL_H+8)+'" fill="var(--surface2,#f1f5f9)"/>';
     svg += '<text x="4" y="'+(staffY+10)+'" font-size="9" fill="#64748b" font-weight="700">STAFF / WEEK</text>';
-
-    for (var ws = 0; ws < TL_TOTAL_WKS; ws++) {
-      var sc = staffByWeek[ws];
-      if (sc === 0) continue;
-      var barH2 = Math.round(sc * staffScale);
-      var sx = ws * TL_WEEK_W + 1;
-      var sy = staffY + TL_STAFF_H - barH2 - 2;
-      var sColor = sc > TL_AVAIL_STAFF ? '#ef4444' : '#22c55e';
-      svg += '<rect x="'+sx+'" y="'+sy+'" width="'+(TL_WEEK_W-2)+'" height="'+barH2+'" fill="'+sColor+'" fill-opacity="0.7" rx="2"/>';
-      if (barH2 > 12) { svg += '<text x="'+(sx+TL_WEEK_W/2-1)+'" y="'+(sy-3)+'" font-size="9" font-weight="700" text-anchor="middle" fill="'+sColor+'">'+sc+'</text>'; }
-      // Overflow warning marker
-      if (sc > TL_AVAIL_STAFF) {
-        svg += '<text x="'+(sx + TL_WEEK_W/2 - 5)+'" y="'+(sy-2)+'" font-size="10" fill="#ef4444">⚠</text>';
-      }
-    }
+    svg += '<text x="4" y="'+(plY+18)+'" font-size="9" fill="#64748b" font-weight="700">WEEKLY P&amp;L</text>';
 
     // Available staff line
     var availY = staffY + TL_STAFF_H - Math.round(TL_AVAIL_STAFF * staffScale) - 2;
     svg += '<line x1="0" y1="'+availY+'" x2="'+TL_TOTAL_W+'" y2="'+availY+'" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,3"/>';
     svg += '<text x="4" y="'+(availY-3)+'" font-size="9" fill="#f59e0b" font-weight="700">'+TL_AVAIL_STAFF+' available</text>';
 
+    // Divider between staff and P&L rows
+    svg += '<line x1="0" y1="'+plY+'" x2="'+TL_TOTAL_W+'" y2="'+plY+'" stroke="#e2e8f0" stroke-width="1"/>';
+
+    for (var ws = 0; ws < TL_TOTAL_WKS; ws++) {
+      var sc = staffByWeek[ws];
+      var weekProfit = profitByWeek[ws] - OVERHEAD_PER_WEEK;
+      var sx = ws * TL_WEEK_W + 1;
+
+      // Staff bar
+      if (sc > 0) {
+        var barH2 = Math.max(4, Math.round(sc * staffScale));
+        var sy2 = staffY + TL_STAFF_H - barH2 - 2;
+        var sColor = sc > TL_AVAIL_STAFF ? '#ef4444' : '#22c55e';
+        svg += '<rect x="'+sx+'" y="'+sy2+'" width="'+(TL_WEEK_W-2)+'" height="'+barH2+'" fill="'+sColor+'" fill-opacity="0.75" rx="2"/>';
+        // Count number above bar
+        svg += '<text x="'+(sx+TL_WEEK_W/2-1)+'" y="'+(sy2-2)+'" font-size="9" font-weight="800" text-anchor="middle" fill="'+sColor+'">'+sc+'</text>';
+        // Overflow warning
+        if (sc > TL_AVAIL_STAFF) {
+          svg += '<text x="'+(sx+TL_WEEK_W/2-4)+'" y="'+(staffY+TL_STAFF_H-barH2-12)+'" font-size="10" fill="#ef4444">⚠</text>';
+        }
+      }
+
+      // P&L label for each week (future only — from today onwards)
+      if (ws >= TL_PAST_WKS && ws < TL_PAST_WKS + 52) {
+        var plCol, plLabel;
+        if (sc === 0) {
+          plCol = '#ef4444';
+          plLabel = '-£' + Math.round(OVERHEAD_PER_WEEK/1000*10)/10 + 'k';
+        } else if (weekProfit > 0) {
+          plCol = '#22c55e';
+          plLabel = '+£' + Math.round(weekProfit/1000*10)/10 + 'k';
+        } else {
+          plCol = '#ef4444';
+          plLabel = '-£' + Math.round(Math.abs(weekProfit)/1000*10)/10 + 'k';
+        }
+        svg += '<text x="'+(sx+TL_WEEK_W/2-1)+'" y="'+(plY+20)+'" font-size="8" font-weight="700" text-anchor="middle" fill="'+plCol+'">'+plLabel+'</text>';
+      }
+    }
+
     svg += '</svg>';
 
     inner.style.width  = TL_TOTAL_W + 'px';
     inner.style.height = svgH + 'px';
     inner.innerHTML = svg;
+
+    // ── Year forecast card — rendered below the timeline ──
+    var forecastWrap = inner.parentElement.querySelector('.tl-forecast-card');
+    if (!forecastWrap) {
+      forecastWrap = document.createElement('div');
+      forecastWrap.className = 'tl-forecast-card';
+      inner.parentElement.parentElement.appendChild(forecastWrap);
+    }
+
+    // Compute 52-week forecast from today
+    var totalWeeks = 52;
+    var futStart2 = TL_PAST_WKS;
+    var annualOverhead  = MONTHLY_OVERHEAD * 12;
+    var annualRevenue   = 0;
+    var coveredWeeks    = 0;
+    var peakStaff       = 0;
+    var staffWeekTotal  = 0;
+
+    for (var fw = futStart2; fw < futStart2 + totalWeeks; fw++) {
+      var fwProfit = profitByWeek[fw] || 0;
+      annualRevenue += fwProfit;
+      if (staffByWeek[fw] > 0) coveredWeeks++;
+      staffWeekTotal += staffByWeek[fw];
+      if (staffByWeek[fw] > peakStaff) peakStaff = staffByWeek[fw];
+    }
+
+    var annualNet      = annualRevenue - annualOverhead;
+    var avgStaffPerWk  = coveredWeeks > 0 ? Math.round(staffWeekTotal / coveredWeeks) : 0;
+    var uncoveredWeeks = totalWeeks - coveredWeeks;
+    var netCol2 = annualNet > 50000 ? '#22c55e' : annualNet > 0 ? '#f59e0b' : '#ef4444';
+    var fmt2 = function(n){ return '£' + Math.round(Math.abs(n)).toLocaleString('en-GB'); };
+
+    forecastWrap.innerHTML =
+      '<div style="margin-top:12px;border:1px solid var(--border);border-radius:12px;padding:16px 20px;background:var(--surface);">'
+      + '<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:12px;">📈 Year forecast — if the plan stays as is</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:12px;">'
+      + '<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;">'
+      +   '<div style="font-size:22px;font-weight:900;color:'+netCol2+';">'+(annualNet>=0?'+':'-')+fmt2(annualNet)+'</div>'
+      +   '<div style="font-size:10px;color:var(--muted);margin-top:2px;">Net for the year</div>'
+      + '</div>'
+      + '<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;">'
+      +   '<div style="font-size:22px;font-weight:900;color:var(--text);">'+coveredWeeks+'</div>'
+      +   '<div style="font-size:10px;color:var(--muted);margin-top:2px;">Weeks with work</div>'
+      + '</div>'
+      + '<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;">'
+      +   '<div style="font-size:22px;font-weight:900;color:'+(uncoveredWeeks>8?'#ef4444':'#f59e0b')+';">'+uncoveredWeeks+'</div>'
+      +   '<div style="font-size:10px;color:var(--muted);margin-top:2px;">Weeks with no work</div>'
+      + '</div>'
+      + '<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;">'
+      +   '<div style="font-size:22px;font-weight:900;color:var(--text);">'+avgStaffPerWk+'</div>'
+      +   '<div style="font-size:10px;color:var(--muted);margin-top:2px;">Avg staff on work</div>'
+      + '</div>'
+      + '<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center;">'
+      +   '<div style="font-size:22px;font-weight:900;color:var(--text);">'+peakStaff+'</div>'
+      +   '<div style="font-size:10px;color:var(--muted);margin-top:2px;">Peak staff in any week</div>'
+      + '</div>'
+      + '</div>'
+      + '<div style="font-size:12px;color:var(--muted);line-height:1.6;border-top:1px solid var(--border);padding-top:10px;">'
+      + '<strong style="color:var(--text);">How this is calculated:</strong> Revenue from each job\'s OH&P spread over its weeks ('+fmt2(annualRevenue)+' gross)'
+      + ', minus fixed overhead for the full year ('+fmt2(annualOverhead)+'). '
+      + (uncoveredWeeks > 0 ? '<span style="color:#ef4444;">'+uncoveredWeeks+' weeks with no contracts = '+fmt2(uncoveredWeeks * OVERHEAD_PER_WEEK)+' burning with nothing coming in.</span> ' : '')
+      + 'Drag bars to fill gaps and watch the forecast update.'
+      + '</div>'
+      + '</div>';
 
     // ── Scroll today into view ──
     var wrap = inner.parentElement;
