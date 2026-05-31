@@ -17569,6 +17569,25 @@ function closeZoneHealth() {
     };
     var REMEASURE_NOTE = 'Earthworks, kerbing and surfacing are rate-only — quantities remeasured at job completion.';
 
+    function loadBOQProgress()   { try{var s=localStorage.getItem('dgc_boq_progress');return s?JSON.parse(s):{};} catch(e){return {};} }
+    function saveBOQProgress(p)  { try{localStorage.setItem('dgc_boq_progress',JSON.stringify(p));}catch(e){} }
+
+    // Pre-seed BOQ progress from AFP data if not already set
+    (function() {
+      try {
+        var existing = loadBOQProgress();
+        if (Object.keys(existing).length > 0) return; // already set
+        // AFP3 submitted 22 May 2026 = 71% of contract value = 71% of drainage done (approx)
+        // 110mm: 96m total × 71% = 68m done
+        // 150mm: 226m total × 71% = 161m done
+        // 225mm: 195m total × 71% = 138m done
+        // Manholes: 12 total × 71% = ~9 done (use 8 to be conservative: 4 each size)
+        // Gullies: 10 total × 71% = ~7 done
+        var preSeeded = { d110:68, d150:161, d225:138, mh12:4, mh13:4, gly:7 };
+        saveBOQProgress(preSeeded);
+      } catch(e) {}
+    })();
+
     // Simon's rates (same as Rates tab)
     var SIMON = [
       {id:'d110-150',name:'110mm drain — 1.5m deep',  unit:'m',  output:17.8, dayCost:672},
@@ -17804,6 +17823,14 @@ function closeZoneHealth() {
       a.click();
     };
 
+    window.updateBOQProgress = function(id, val) {
+      var p = loadBOQProgress();
+      p[id] = parseFloat(val) || 0;
+      saveBOQProgress(p);
+      // Re-render the intel tab to update progress bars
+      buildDirIntelTab();
+    };
+
     // ── HTML ──
     var html = '<div style="max-width:960px;padding:0 0 24px;">'
 
@@ -17838,18 +17865,22 @@ function closeZoneHealth() {
     + '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:18px;">'
     + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">📊 Ballasalla Phase 4 — Programme Matrix</div>'
     + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Real BoQ quantities — drainage is fixed scope. External works (earthworks, kerbing, surfacing) are rates-only and will be remeasured at completion. 13-week programme running at extra resource.</div>'
+    + '<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,0.08);border:1px solid #f59e0b33;border-radius:8px;padding:10px 14px;margin-bottom:12px;">Progress figures are pre-seeded from AFP3 (71% of contract value certified as of 22 May 2026). Edit the \'Qty done\' column to refine — ask David Smith for exact quantities per activity. Daily logs add automatically on top.</div>'
     + (function() {
+        var boqProgress = loadBOQProgress();
         var sections = {};
         BOQ.forEach(function(b) { if (!sections[b.section]) sections[b.section]=[]; sections[b.section].push(b); });
         return Object.keys(sections).map(function(sec) {
           var rows = sections[sec].map(function(b) {
-            // Look up progress from log data (if any activity matches)
-            var loggedQty = 0;
+            // Use manual BOQ progress if set, otherwise fall back to logged data
+            var loggedQty = boqProgress[b.id] || 0; // manual entry takes priority
+            // Also add from daily logs (additive only when no manual entry to avoid double-counting)
             logs.forEach(function(log) {
               (log.teams||[]).forEach(function(t) {
-                var allowedActIds = BOQ_ACT_MAP[b.id] || [b.id];
-                if (allowedActIds.indexOf(t.actId) >= 0 && t.qtyDone && (!t.blocker || t.blocker === 'None')) {
-                  loggedQty += (t.qtyDone || 0);
+                var allowed = BOQ_ACT_MAP[b.id] || [b.id];
+                if (allowed.indexOf(t.actId) >= 0 && t.qtyDone && (!t.blocker || t.blocker === 'None')) {
+                  // Only add if not already in manual entry (to avoid double-counting)
+                  if (!boqProgress[b.id]) loggedQty += (t.qtyDone || 0);
                 }
               });
             });
@@ -17890,12 +17921,22 @@ function closeZoneHealth() {
               + '<td style="padding:7px 10px;min-width:80px;">'+pctBar+'<div style="font-size:10px;color:var(--muted);margin-top:2px;">'+pctLabel+'</div></td>'
               + '<td style="padding:7px 10px;font-size:11px;font-weight:700;text-align:right;color:'+(daysLeft<2?'#22c55e':daysLeft<5?'#f59e0b':'var(--text)')+';">'+daysLeft+'d left</td>'
               + '<td style="padding:7px 10px;font-size:11px;">'+paceText+'</td>'
+              + '<td style="padding:7px 10px;min-width:100px;">'
+              +   pctBar
+              +   '<div style="display:flex;align-items:center;gap:4px;margin-top:4px;">'
+              +   '<span style="font-size:10px;color:var(--muted);">Done:</span>'
+              +   '<input type="number" value="'+(boqProgress[b.id]||loggedQty||0)+'" min="0" max="'+b.totalQty+'" step="1"'
+              +   ' onchange="updateBOQProgress(\''+b.id+'\',this.value)"'
+              +   ' style="width:55px;padding:2px 5px;border-radius:5px;border:1px solid var(--border);font-size:11px;font-weight:700;background:var(--surface2);color:var(--text);text-align:center;">'
+              +   '<span style="font-size:10px;color:var(--muted);">/ '+b.totalQty+' '+b.unit+'</span>'
+              +   '</div>'
+              + '</td>'
               + '</tr>';
           }).join('');
           return '<div style="margin-bottom:14px;">'
             + '<div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#f59e0b;margin-bottom:6px;">'+sec+'</div>'
             + '<div style="overflow-x:auto;"><table style="border-collapse:collapse;width:100%;font-size:12px;">'
-            + '<thead><tr style="background:var(--surface2);"><th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--muted);">Activity</th><th style="text-align:right;font-size:10px;color:var(--muted);">Contract qty</th><th style="text-align:right;font-size:10px;color:var(--muted);">Simon\'s days</th><th style="font-size:10px;color:var(--muted);">Progress</th><th style="text-align:right;font-size:10px;color:var(--muted);">Days left</th><th style="font-size:10px;color:var(--muted);">At current pace</th></tr></thead>'
+            + '<thead><tr style="background:var(--surface2);"><th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--muted);">Activity</th><th style="text-align:right;font-size:10px;color:var(--muted);">Contract qty</th><th style="text-align:right;font-size:10px;color:var(--muted);">Simon\'s days</th><th style="font-size:10px;color:var(--muted);">Progress</th><th style="text-align:right;font-size:10px;color:var(--muted);">Days left</th><th style="font-size:10px;color:var(--muted);">At current pace</th><th style="font-size:10px;color:var(--muted);">Qty done (edit)</th></tr></thead>'
             + '<tbody>'+rows+'</tbody>'
             + '</table></div></div>';
         }).join('');
