@@ -535,6 +535,14 @@ body.dark-theme [style*="background:#f1f5f9"] {
 /* Site map container: white bg on light, dark on dark theme */
 #tab-sitemap .card { background: #ffffff; }
 body.dark-theme #tab-sitemap .card { background: #1a1d27; }
+/* ── Director mode navigation ── */
+body.director-mode .nav button:not(.director-only) { display: none !important; }
+body.director-mode .nav .nav-sep { display: none !important; }
+body:not(.director-mode) .director-only { display: none !important; }
+/* Director nav buttons styling */
+.nav button.director-only { color: #f59e0b !important; }
+.nav button.director-only:hover { color: #fbbf24 !important; }
+.nav button.director-only.active { color: #f59e0b !important; border-bottom-color: #f59e0b !important; }
 /* ── Dark mode: Programme section cards & bars (hardcoded #fff in CSS class) ── */
 body.dark-theme .pv5-bar-section { background: var(--surface) !important; border-color: var(--border) !important; }
 body.dark-theme .pv5-section-card { background: var(--surface) !important; border-color: var(--border) !important; }
@@ -1176,12 +1184,9 @@ function setMode(m) {
   var hidden = (m === 'admin' || m === 'director') ? [] : m === 'user' ? hiddenInUser : hiddenInClient;
 
   if (m === 'director') {
-    // Director goes straight to the Directors tab
-    var dirBtn = null;
-    document.querySelectorAll('.nav button').forEach(function(b){
-      if (b.textContent.trim() === 'Directors') dirBtn = b;
-    });
-    if (dirBtn) { try { showTab('directors', dirBtn); } catch(e){} }
+    // Director mode: navigate to Jobs tab (first director-only tab)
+    var jobsBtn = document.querySelector('.nav button.director-only');
+    if (jobsBtn) { try { showTab('dir-jobs', jobsBtn); } catch(e){} }
   } else if (m === 'client') {
     // Client default first page = Programme
     var fcBtn = null;
@@ -1736,6 +1741,8 @@ function gpExportCSV(){
   <button class="admin-only preview-tab" onclick="showTab('tender',this)">Tender / Quote</button>
   <button class="admin-only preview-tab" onclick="showTab('handover',this)">Handover</button>
   <button class="admin-only" id="directors-nav-btn" style="display:none;"></button>
+  <button class="director-only" onclick="showTab('dir-jobs',this)">Jobs</button>
+  <button class="director-only" onclick="showTab('dir-planner',this)">Job Planner</button>
 </div>
 
 <div id="state-banner"></div>
@@ -3528,7 +3535,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-31T20:00:00'); // v185 — NITP added to office girl overhead — Progress chart larger (900×240, full width) — Director 4th mode + Job Timeline planner
+const LAST_UPDATED = new Date('2026-05-31T21:00:00'); // v186 — Director mode: 2 proper nav tabs (Jobs + Job Planner)
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -8695,6 +8702,8 @@ function showTab(name, btn) {
   if(name === 'cashflow')   { try { buildCashFlowTab();   } catch(e){} }
   if(name === 'finalac')    { try { buildFinalAcTab();    } catch(e){} }
   if(name === 'directors')  { try { buildDirectorsTab();  } catch(e){} }
+  if(name === 'dir-jobs')   { try { buildDirJobsTab();   } catch(e){} }
+  if(name === 'dir-planner'){ try { buildDirPlannerTab();} catch(e){} }
 }
 // ═══════════════════ OWNED PLANT ROI CALCULATOR ════════════════════
 (function() {
@@ -15227,6 +15236,25 @@ function closeZoneHealth() {
     dirRenderTimeline();
   };
 
+  // ── Director Jobs tab (new 2-tab navigation) ───────────────────────────────
+  window.buildDirJobsTab = function() {
+    var el = document.getElementById('dir-jobs-panel');
+    if (!el) return;
+    el.innerHTML = dirJobsHTML();
+    dirRenderJobs();
+    dirCalc();
+  };
+
+  // ── Director Job Planner tab (new 2-tab navigation) ────────────────────────
+  window.buildDirPlannerTab = function() {
+    var el = document.getElementById('dir-planner-panel');
+    if (!el) return;
+    el.innerHTML = dirPlannerHTML();
+    dirRenderTimeline();
+    dirHealth();
+    dirRenderBM();
+  };
+
   // ── HTML shell ─────────────────────────────────────────────────────────────
   function dirHTML() {
     return '<div style="max-width:900px;">'
@@ -15309,6 +15337,107 @@ function closeZoneHealth() {
     + '</div>'
 
     // ── PAST JOBS ──
+    + '<details>'
+    + '<summary style="font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;user-select:none;padding:8px 0;">▸ Past jobs — how does this job compare?</summary>'
+    + '<div class="card" style="border-radius:14px;margin-top:10px;padding:20px;">'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">A good DGC job makes <strong style="color:var(--text);">£700–900 per person per week</strong> profit. Below £600 is thin. Above £900 is excellent. Save jobs here to build a reference library.</div>'
+    + '<div id="dir-bm"></div>'
+    + '<button onclick="dirSaveCurrent()" style="margin-top:12px;padding:8px 16px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">+ Save current calculator result</button>'
+    + '</div>'
+    + '</details>'
+
+    + '</div>';
+  }
+
+  // ── Jobs tab HTML: header + active jobs portfolio + price check calculator ──
+  function dirJobsHTML() {
+    return '<div style="max-width:900px;">'
+
+    // ── HEADER ──
+    + '<div style="background:#1a1d27;border-radius:14px;padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">'
+    + '<div style="background:#f59e0b;color:#1a1d27;border-radius:8px;padding:6px 14px;font-size:16px;font-weight:900;">📊 Directors</div>'
+    + '<div style="color:#94a3b8;font-size:13px;line-height:1.5;">Private financial view for Ash and Harry. Type in a job and see if it\'s worth taking. Check the company health before hiring anyone new.</div>'
+    + '</div>'
+
+    // ── ACTIVE JOBS PORTFOLIO ──
+    + '<div class="card" style="border-radius:14px;margin-bottom:16px;padding:24px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:8px;">'
+    + '<div>'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text);">Jobs currently running</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-top:3px;">Add every active contract. The combined view shows whether the company is making or losing money right now.</div>'
+    + '</div>'
+    + '<button onclick="dirAddJob()" style="padding:8px 18px;background:rgba(245,158,11,0.12);border:1px solid #f59e0b55;border-radius:8px;color:#f59e0b;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">+ Add a job</button>'
+    + '</div>'
+    + '<div id="dir-jobs-list" style="margin-bottom:16px;"></div>'
+    + '<div id="dir-jobs-total"></div>'
+    + '</div>'
+
+    // ── CALCULATOR ──
+    + '<div class="card" style="border-radius:14px;margin-bottom:16px;padding:24px;border:2px solid rgba(245,158,11,0.3);">'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">Price check — is this job worth taking?</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:20px;">Type in a job you\'ve been offered. See if the margin is worth it before you commit. Once you take it, add it above.</div>'
+
+    // Three main inputs — big, obvious
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px;">'
+    + dirBigInput('Job value', 'dir-v', 'number', '210000', '£ — what the client pays you')
+    + dirBigInput('Weeks on site', 'dir-w', 'number', '10', 'how long the job runs')
+    + dirBigInput('People on the job', 'dir-p', 'number', '3', 'total site workers')
+    + '</div>'
+
+    // Advanced toggle
+    + '<details style="margin-bottom:16px;">'
+    + '<summary style="font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;user-select:none;padding:4px 0;">▸ Change profit % (default is 15%) or job name</summary>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">'
+    + dirSmInput('Job name (optional)', 'dir-name', 'text', '', 'e.g. Onchan drainage')
+    + dirSmInput('Profit % (OH&P)', 'dir-ohp', 'number', '15', '15% is standard for DGC')
+    + '</div>'
+    + '</details>'
+
+    // Results (live, no button)
+    + '<div id="dir-result"></div>'
+    + '</div>'
+
+    + '</div>';
+  }
+
+  // ── Planner tab HTML: timeline + company health + benchmark library ──────────
+  function dirPlannerHTML() {
+    return '<div style="max-width:900px;">'
+
+    // ── TIMELINE ──
+    + '<div class="card" style="border-radius:14px;margin-bottom:16px;padding:20px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">'
+    + '<div>'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text);">Job Planner — drag to plan the year</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-top:2px;">Each bar is a job. Drag left or right to plan when it runs. Overlapping jobs stack — the tally shows staff needed. Red zones = gaps = money lost.</div>'
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--muted);white-space:nowrap;">⟵ scroll ⟶</div>'
+    + '</div>'
+    + '<div id="dir-timeline-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;border-radius:10px;border:1px solid var(--border);">'
+    + '<div id="dir-timeline-inner" style="position:relative;min-height:200px;"></div>'
+    + '</div>'
+    + '<div id="dir-timeline-legend" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--muted);">'
+    + '<span><span style="display:inline-block;width:12px;height:12px;background:#22c55e;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Confirmed job</span>'
+    + '<span><span style="display:inline-block;width:12px;height:12px;background:#94a3b8;border-radius:2px;vertical-align:middle;margin-right:4px;opacity:0.6;"></span>Bidding / not confirmed</span>'
+    + '<span><span style="display:inline-block;width:12px;height:12px;background:#ef4444;border-radius:2px;vertical-align:middle;margin-right:4px;opacity:0.5;"></span>Gap (overhead with no revenue)</span>'
+    + '</div>'
+    + '</div>'
+
+    // ── COMPANY HEALTH ──
+    + '<div class="card" style="border-radius:14px;margin-bottom:16px;padding:24px;">'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">Is the company making money right now?</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Your fixed costs are £14,417 every month — no matter what. Rent, insurance, vans, management wages. This panel shows whether your current workforce is covering those costs.</div>'
+    + '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px;">'
+    + '<div style="font-size:13px;font-weight:700;color:var(--text);">How many people are on paid productive work right now?</div>'
+    + '<input id="health-n" type="number" min="0" max="30" value="8" oninput="dirHealth()" style="width:80px;padding:9px 12px;border-radius:10px;border:1px solid var(--border);font-size:22px;font-weight:900;text-align:center;background:var(--surface2);color:var(--text);">'
+    + '</div>'
+    + '<div id="dir-health"></div>'
+    + '<div style="margin-top:14px;padding:12px 14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.6;">'
+    + '<strong style="color:var(--text);">Break-even is around 6 people.</strong> Fixed costs are £14,417/month (£173k/year). Each active person contributes ~£3,200/month. At 5 people revenue covers costs; above that is profit. The table shows exact figures.'
+    + '</div>'
+    + '</div>'
+
+    // ── PAST JOBS / BENCHMARK LIBRARY ──
     + '<details>'
     + '<summary style="font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;user-select:none;padding:8px 0;">▸ Past jobs — how does this job compare?</summary>'
     + '<div class="card" style="border-radius:14px;margin-top:10px;padding:20px;">'
@@ -16034,6 +16163,16 @@ function closeZoneHealth() {
 <!-- ═══════════════════════════════ DIRECTORS ═══════════════════════════════ -->
 <div id="tab-directors" class="tab-content admin-only">
   <div id="directors-panel"></div>
+</div>
+
+<!-- ═══════════════ DIRECTOR — JOBS TAB ═══════════════ -->
+<div id="tab-dir-jobs" class="tab-content director-only">
+  <div id="dir-jobs-panel"></div>
+</div>
+
+<!-- ═══════════════ DIRECTOR — JOB PLANNER TAB ═══════════════ -->
+<div id="tab-dir-planner" class="tab-content director-only">
+  <div id="dir-planner-panel"></div>
 </div>
 
 </body>
