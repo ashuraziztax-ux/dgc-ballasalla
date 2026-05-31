@@ -7221,15 +7221,21 @@ function buildProgrammeV135() {
     +'<circle cx="'+proj_x+'" cy="'+padT+'" r="4.5" fill="'+projCol+'" stroke="#fff" stroke-width="2"/>'
     +'<text x="'+proj_x_lbl+'" y="12" text-anchor="middle" font-size="8" font-weight="700" fill="'+projCol+'">'+projFinish.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+'</text>'
     + ticks
-    // ── Legend: plain English, no abbreviations ──
-    +'<rect x="'+padL+'" y="'+(padT+innerH+22)+'" width="12" height="3" fill="#22c55e" rx="1"/>'
-    +'<text x="'+(padL+15)+'" y="'+(padT+innerH+27)+'" font-size="9" fill="var(--muted)">Work done so far</text>'
-    +'<rect x="'+(padL+108)+'" y="'+(padT+innerH+22)+'" width="12" height="3" fill="#94a3b8" rx="1" opacity="0.6" stroke-dasharray="3,2"/>'
-    +'<text x="'+(padL+123)+'" y="'+(padT+innerH+27)+'" font-size="9" fill="var(--muted)">Original contract schedule</text>'
-    +'<rect x="'+(padL+268)+'" y="'+(padT+innerH+22)+'" width="12" height="3" fill="#f59e0b" rx="1"/>'
-    +'<text x="'+(padL+283)+'" y="'+(padT+innerH+27)+'" font-size="9" fill="var(--muted)">Finish at contracted rate — '+planSpeedFinStr+'</text>'
-    +'<rect x="'+padL+'" y="'+(padT+innerH+35)+'" width="12" height="3" fill="'+projCol+'" rx="1"/>'
-    +'<text x="'+(padL+15)+'" y="'+(padT+innerH+40)+'" font-size="9" fill="var(--muted)">Finish at our actual speed — '+projFinStr+'</text>'
+    // ── Legend: lines match exactly what appears in the chart ──
+    // 1. Work done so far — solid green line (same as actual line)
+    +'<line x1="'+padL+'" y1="'+(padT+innerH+24)+'" x2="'+(padL+14)+'" y2="'+(padT+innerH+24)+'" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"/>'
+    +'<text x="'+(padL+18)+'" y="'+(padT+innerH+27)+'" font-size="9" fill="var(--muted)">Work done so far</text>'
+    // 2. Original contract schedule — grey dashed (same dash pattern as chart)
+    +'<line x1="'+(padL+108)+'" y1="'+(padT+innerH+24)+'" x2="'+(padL+122)+'" y2="'+(padT+innerH+24)+'" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,3" opacity="0.8"/>'
+    +'<text x="'+(padL+126)+'" y="'+(padT+innerH+27)+'" font-size="9" fill="var(--muted)">Original contract schedule</text>'
+    // 3. Contracted rate — amber dashed (same dash pattern as chart)
+    +'<line x1="'+(padL+270)+'" y1="'+(padT+innerH+24)+'" x2="'+(padL+284)+'" y2="'+(padT+innerH+24)+'" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.85"/>'
+    +'<circle cx="'+(padL+290)+'" cy="'+(padT+innerH+24)+'" r="2.5" fill="#f59e0b"/>'
+    +'<text x="'+(padL+295)+'" y="'+(padT+innerH+27)+'" font-size="9" fill="var(--muted)">Finish at contracted rate — '+planSpeedFinStr+'</text>'
+    // 4. Actual speed — green dashed (same dash pattern as chart)
+    +'<line x1="'+padL+'" y1="'+(padT+innerH+37)+'" x2="'+(padL+14)+'" y2="'+(padT+innerH+37)+'" stroke="'+projCol+'" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.8"/>'
+    +'<circle cx="'+(padL+18)+'" cy="'+(padT+innerH+37)+'" r="2.5" fill="'+projCol+'"/>'
+    +'<text x="'+(padL+23)+'" y="'+(padT+innerH+40)+'" font-size="9" fill="var(--muted)">Finish at our actual speed — '+projFinStr+'</text>'
     +'</svg>';
 
   // ── Financial summary (admin only) ───────────────────────────────────────
