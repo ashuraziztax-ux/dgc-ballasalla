@@ -17162,19 +17162,7 @@ function closeZoneHealth() {
 
     el.innerHTML = html;
 
-    // Set today's date on the log form
-    var dateEl = document.getElementById('dl-date');
-    if (dateEl) {
-      var now = new Date();
-      dateEl.value = now.toISOString().slice(0,10);
-    }
-
-    // Initialise displays
-    drCalc();
-    drRenderLog();
-    drRenderLookahead();
-
-    // ── Rate calculator ──
+    // ── Rate calculator — defined BEFORE init calls below ──
     window.drCalc = function() {
       var actId = (document.getElementById('dr-activity')||{}).value;
       var qty   = parseFloat((document.getElementById('dr-qty')||{}).value) || 0;
@@ -17318,6 +17306,13 @@ function closeZoneHealth() {
     window.drRemoveLookahead = function(i) {
       var items = loadLookahead(); items.splice(i,1); saveLookahead(items); drRenderLookahead();
     };
+
+    // ── Set today's date + initialise all displays (after all functions defined above) ──
+    var dateEl = document.getElementById('dl-date');
+    if (dateEl) { var now = new Date(); dateEl.value = now.toISOString().slice(0,10); }
+    window.drCalc();
+    drRenderLog();
+    drRenderLookahead();
   };
 
 })();
