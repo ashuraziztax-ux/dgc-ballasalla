@@ -15306,6 +15306,14 @@ function closeZoneHealth() {
     + '<div id="dj-result"></div>'
     + '</div>'
 
+    // Completed jobs history (collapsed)
+    + '<details>'
+    + '<summary style="font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;user-select:none;padding:6px 0;">▸ Completed jobs — actual vs predicted</summary>'
+    + '<div class="card" style="border-radius:12px;margin-top:10px;padding:18px;">'
+    + '<div id="dj-history"></div>'
+    + '</div>'
+    + '</details>'
+
     + '</div>';
 
     el.innerHTML = html;
@@ -15314,6 +15322,8 @@ function closeZoneHealth() {
     djRenderJobs();
     // Render price check
     djCalc();
+    // Render job history
+    djRenderHistory();
   };
 
   // ── Director: Job Planner tab — completely standalone ─────────────────────
@@ -15354,6 +15364,21 @@ function closeZoneHealth() {
     + '<input id="dp-health-n" type="number" min="0" max="30" value="8" oninput="dpHealth()" style="width:75px;padding:8px 10px;border-radius:10px;border:1px solid var(--border);font-size:20px;font-weight:900;text-align:center;background:var(--surface2);color:var(--text);">'
     + '</div>'
     + '<div id="dp-health-result"></div>'
+    + '</div>'
+
+    // Smart slot finder card
+    + '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:20px;">'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">🔍 When can I fit a new job?</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Enter the new job details. The planner will find the best gap in your current schedule.</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">'
+    + '<div><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Weeks needed</div>'
+    + '<input id="dp-find-weeks" type="number" value="8" min="1" max="52" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);font-size:18px;font-weight:900;background:var(--surface2);color:var(--text);text-align:center;"></div>'
+    + '<div><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">People needed</div>'
+    + '<input id="dp-find-people" type="number" value="4" min="1" max="20" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);font-size:18px;font-weight:900;background:var(--surface2);color:var(--text);text-align:center;"></div>'
+    + '<div style="display:flex;align-items:flex-end;">'
+    + '<button onclick="dpFindSlot()" style="width:100%;padding:11px;background:#f59e0b;border:none;border-radius:8px;color:#1a1d27;font-size:13px;font-weight:900;cursor:pointer;">Find best slot ›</button>'
+    + '</div></div>'
+    + '<div id="dp-find-result"></div>'
     + '</div>'
 
     // Benchmarks (collapsed)
@@ -15419,6 +15444,9 @@ function closeZoneHealth() {
       var profit = jobProfit(job);
       var profitWk = job.weeks > 0 ? profit / job.weeks : 0;
       var col = profit > 50000 ? '#22c55e' : profit > 20000 ? '#f59e0b' : '#ef4444';
+      var totalWkProfit = profit + (job.people * AVG_WAGE_MARGIN_PW * job.weeks);
+      var pmpw    = (job.people > 0 && job.weeks > 0) ? Math.round(totalWkProfit / job.people / job.weeks) : 0;
+      var pmpwCol = pmpw >= 700 ? '#22c55e' : pmpw >= 500 ? '#f59e0b' : '#ef4444';
       var calcProfit = (job.value||0) * (job.ohp/100) / (1 + job.ohp/100);
       var msPerWeek = 7*24*60*60*1000;
       var today = new Date();
@@ -15435,6 +15463,7 @@ function closeZoneHealth() {
         + '<div style="display:flex;gap:6px;">'
         + '<button onclick="djSaveJob('+idx+')" style="padding:5px 11px;background:rgba(34,197,94,0.1);border:1px solid #22c55e44;border-radius:6px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer;">✓ Save</button>'
         + '<button onclick="djDeleteJob('+idx+')" style="padding:5px 11px;background:transparent;border:1px solid #ef444444;border-radius:6px;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;">✕ Remove</button>'
+        + '<button onclick="djArchiveJob('+idx+')" style="padding:5px 11px;background:rgba(148,163,184,0.1);border:1px solid #94a3b844;border-radius:6px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer;">📦 Archive</button>'
         + '</div></div>'
         + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px;margin-bottom:10px;">'
         + djJobField('Name','dj-job-name-'+idx,'text',job.name||'')
@@ -15445,14 +15474,20 @@ function closeZoneHealth() {
         + '</div>'
         + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
         + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px;">Profit on this job (£)</div>'
-        + '<input id="dj-job-pft-'+idx+'" type="number" value="'+(job.profit||'')+'" placeholder="Leave blank = auto 15%" style="width:100%;padding:7px 10px;border-radius:8px;border:2px solid '+col+'66;font-size:14px;font-weight:900;background:var(--surface2);color:var(--text);">'
+        + '<input id="dj-job-pft-'+idx+'" type="number" value="'+(job.profit||'')+'" placeholder="Leave blank = auto 15%" oninput="if(window.djLiveCalc){var m=this.id.match(/-(\\d+)$/);if(m)djLiveCalc(m[1]);}" style="width:100%;padding:7px 10px;border-radius:8px;border:2px solid '+col+'66;font-size:14px;font-weight:900;background:var(--surface2);color:var(--text);">'
         + '<div style="font-size:10px;color:var(--muted);margin-top:2px;">Auto at 15%: '+fmt(calcProfit)+'</div>'
         + '</div>'
-        + '<div style="display:flex;align-items:center;padding:10px 12px;border-radius:8px;background:'+col+'11;border:1px solid '+col+'33;">'
-        + '<div><div style="font-size:26px;font-weight:900;color:'+col+';line-height:1;">'+fmt(profit)+'</div>'
-        + '<div style="font-size:10px;color:var(--muted);">profit · '+fmt(profitWk)+'/wk · '+job.people+' ppl</div>'
+        + '<div style="padding:10px 12px;border-radius:8px;background:'+col+'11;border:1px solid '+col+'33;">'
+        + '<div id="dj-live-profit-'+idx+'">'
+        + '<div style="font-size:28px;font-weight:900;color:'+col+';line-height:1;">'+fmt(profit)+'</div>'
+        + '<div style="font-size:10px;color:var(--muted);">profit · '+fmt(profitWk)+'/wk</div>'
+        + '</div>'
+        + '<div style="margin-top:6px;padding:4px 8px;background:'+pmpwCol+'18;border-radius:6px;text-align:center;">'
+        + '<div id="dj-live-pmpw-'+idx+'" style="font-size:14px;font-weight:900;color:'+pmpwCol+';">'+fmt(pmpw)+'/person/week</div>'
+        + '<div style="font-size:9px;color:var(--muted);">profit per man per week</div>'
         + '</div></div>'
         + '</div>'
+        + '<div id="dj-suggestions-'+idx+'" style="margin-top:8px;font-size:11px;color:var(--muted);"></div>'
         + '<div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;">'
         + '<label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="dj-job-tl-'+idx+'" '+(job.onTimeline!==false?'checked':'')+' style="accent-color:#f59e0b;"> Show on planner</label>'
         + '<label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="dj-job-con-'+idx+'" '+(job.confirmed?'checked':'')+' style="accent-color:#22c55e;"> Confirmed (green bar)</label>'
@@ -15462,6 +15497,17 @@ function closeZoneHealth() {
         + '</div>'
         + '</div>';
     }).join('');
+
+    // Trigger initial suggestions for each job (after HTML is injected)
+    jobs.forEach(function(job2, i2) {
+      setTimeout(function() {
+        djUpdateSuggestions(i2,
+          job2.value, job2.weeks, job2.people, job2.ohp||15,
+          jobProfit(job2),
+          (job2.people>0&&job2.weeks>0) ? Math.round((jobProfit(job2)+job2.people*AVG_WAGE_MARGIN_PW*job2.weeks)/job2.people/job2.weeks) : 0
+        );
+      }, 50);
+    });
 
     // Totals
     function weeksRemainingDj(j) {
@@ -15477,6 +15523,16 @@ function closeZoneHealth() {
       if (wr <= 0) return s;
       return s + jobProfit(j) / Math.max(1, j.weeks) * Math.min(4.333, wr * 4.333 / (j.weeks||1));
     }, 0);
+    var totalPmpw = 0; var pmpwCount = 0;
+    jobs.forEach(function(j){
+      if (j.people > 0 && j.weeks > 0) {
+        var tp = jobProfit(j) + (j.people * AVG_WAGE_MARGIN_PW * j.weeks);
+        totalPmpw += tp / j.people / j.weeks;
+        pmpwCount++;
+      }
+    });
+    var avgPmpw = pmpwCount > 0 ? Math.round(totalPmpw / pmpwCount) : 0;
+    var avgPmpwCol = avgPmpw >= 700 ? '#22c55e' : avgPmpw >= 500 ? '#f59e0b' : '#ef4444';
     var monthlyNet   = monthlyOhp - MONTHLY_OVERHEAD;
     var peopleLeft   = CURRENT_STAFF - totalPeople;
     var netCol       = monthlyNet > 5000 ? '#22c55e' : monthlyNet > 0 ? '#f59e0b' : '#ef4444';
@@ -15487,6 +15543,7 @@ function closeZoneHealth() {
     + dirNum('All-jobs profit', fmt(totalProfit), 'across every active contract')
     + dirNum('Profit/month (avg)', fmt(monthlyOhp), 'spread over active weeks')
     + dirNum('Overhead/month', fmt(MONTHLY_OVERHEAD), 'fixed — always running')
+    + dirNum('Avg £/person/week', '<span style="color:'+avgPmpwCol+'">£'+avgPmpw+'</span>', 'across all jobs — benchmark is £700–900')
     + '<div style="background:var(--surface2);border:2px solid '+netCol+'44;border-radius:10px;padding:12px;text-align:center;">'
     + '<div style="font-size:24px;font-weight:900;color:'+netCol+';line-height:1;margin-bottom:3px;">'+(monthlyNet>=0?'+':'')+fmt(monthlyNet)+'/month</div>'
     + '<div style="font-size:10px;color:'+netCol+';font-weight:700;">'+(monthlyNet>=0?'✓ Profitable':'⚠ Losing money')+'</div>'
@@ -15523,7 +15580,7 @@ function closeZoneHealth() {
   function djJobField(label, id, type, val) {
     return '<div>'
     + '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px;">'+label+'</div>'
-    + '<input id="'+id+'" type="'+type+'" value="'+(val||'')+'" style="width:100%;padding:6px 9px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:700;background:var(--surface2);color:var(--text);">'
+    + '<input id="'+id+'" type="'+type+'" value="'+(val||'')+'" oninput="if(window.djLiveCalc){var m=this.id.match(/-(\\d+)$/);if(m)djLiveCalc(m[1]);}" style="width:100%;padding:6px 9px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:700;background:var(--surface2);color:var(--text);">'
     + '</div>';
   }
 
@@ -15543,10 +15600,227 @@ function closeZoneHealth() {
     jobs[idx].confirmed  = conEl ? conEl.checked : false;
     jobs[idx].note    = g('dj-job-note-'+idx) || '';
     saveJobs(jobs); djRenderJobs();
+    // Sync planner if it's currently visible
+    try {
+      var plannerPanel = document.getElementById('dir-planner-panel');
+      if (plannerPanel && plannerPanel.innerHTML.length > 100) {
+        dpRenderTimeline();
+      }
+    } catch(e) {}
   };
 
   window.djDeleteJob = function(idx) {
     var jobs = loadJobs(); jobs.splice(idx,1); saveJobs(jobs); djRenderJobs();
+  };
+
+  // ── Feature 1: Live recalculation on job cards ─────────────────────────────
+  window.djLiveCalc = function(idx) {
+    var jobs = loadJobs(); if (!jobs[idx]) return;
+    var g = function(id){ var el=document.getElementById(id); return el?el.value:''; };
+    // Read live values without saving
+    var value  = parseFloat(g('dj-job-val-'+idx))  || jobs[idx].value  || 0;
+    var weeks  = parseFloat(g('dj-job-wks-'+idx))  || jobs[idx].weeks  || 1;
+    var people = parseInt  (g('dj-job-ppl-'+idx))  || jobs[idx].people || 1;
+    var ohp    = parseFloat(g('dj-job-ohp-'+idx))  || jobs[idx].ohp    || 15;
+    var pftIn  = parseFloat(g('dj-job-pft-'+idx));
+    var profit = (pftIn > 0) ? pftIn : value * (ohp/100) / (1 + ohp/100);
+    var profitWk = weeks > 0 ? profit / weeks : 0;
+    var totalWkProfit = profit + (people * AVG_WAGE_MARGIN_PW * weeks);
+    var pmpw = (people > 0 && weeks > 0) ? Math.round(totalWkProfit / people / weeks) : 0;
+    var col = profit > 50000 ? '#22c55e' : profit > 20000 ? '#f59e0b' : '#ef4444';
+    var pmpwCol = pmpw >= 700 ? '#22c55e' : pmpw >= 500 ? '#f59e0b' : '#ef4444';
+
+    // Update the live display elements
+    var profitDisplay = document.getElementById('dj-live-profit-'+idx);
+    if (profitDisplay) {
+      profitDisplay.innerHTML =
+        '<div style="font-size:28px;font-weight:900;color:'+col+';line-height:1;">£'+Math.round(profit).toLocaleString('en-GB')+'</div>'
+        + '<div style="font-size:10px;color:var(--muted);">profit · £'+Math.round(profitWk).toLocaleString('en-GB')+'/wk</div>';
+    }
+    var pmpwDisplay = document.getElementById('dj-live-pmpw-'+idx);
+    if (pmpwDisplay) {
+      pmpwDisplay.style.color = pmpwCol;
+      pmpwDisplay.textContent = '£'+pmpw+'/person/week';
+    }
+    // Update what-if suggestions
+    djUpdateSuggestions(idx, value, weeks, people, ohp, profit, pmpw);
+  };
+
+  // ── Feature 4: What-if suggestions per job card ────────────────────────────
+  function djUpdateSuggestions(idx, value, weeks, people, ohp, profit, pmpw) {
+    var el = document.getElementById('dj-suggestions-'+idx);
+    if (!el) return;
+    var tips = [];
+    var calcPmpw = function(v, w, p, o) {
+      if (!p || !w) return 0;
+      var prof = v * (o/100) / (1 + o/100);
+      return Math.round((prof + p * AVG_WAGE_MARGIN_PW * w) / p / w);
+    };
+    // Tip 1: fewer weeks
+    if (weeks > 2) {
+      var pm1 = calcPmpw(value, weeks-1, people, ohp);
+      if (pm1 > pmpw + 30) tips.push('💡 1 week shorter → <strong style="color:#22c55e;">£'+pm1+'/pmpw</strong>');
+    }
+    // Tip 2: one more person
+    if (people < 12) {
+      var pm2 = calcPmpw(value, weeks, people+1, ohp);
+      if (pm2 < pmpw - 30) tips.push('⚠ 1 extra person → <strong style="color:#f59e0b;">£'+pm2+'/pmpw</strong> (thinner margin)');
+    }
+    // Tip 3: one fewer person
+    if (people > 1) {
+      var pm3 = calcPmpw(value, weeks, people-1, ohp);
+      if (pm3 > pmpw + 50) tips.push('💡 1 fewer person → <strong style="color:#22c55e;">£'+pm3+'/pmpw</strong>');
+    }
+    // Tip 4: pmpw verdict
+    if (pmpw < 500) tips.push('🔴 Below £500/pmpw — negotiate harder or reduce gang size');
+    else if (pmpw >= 800) tips.push('🟢 Strong margin — lock this in');
+
+    el.innerHTML = tips.length
+      ? '<div style="padding:8px 10px;background:var(--surface2);border-radius:8px;border-left:3px solid #f59e0b;line-height:1.8;">' + tips.join('<br>') + '</div>'
+      : '';
+  }
+
+  // ── Feature 6: Smart slot finder ───────────────────────────────────────────
+  window.dpFindSlot = function() {
+    var weeksNeeded  = parseInt((document.getElementById('dp-find-weeks') ||{}).value)||0;
+    var peopleNeeded = parseInt((document.getElementById('dp-find-people')||{}).value)||0;
+    var el = document.getElementById('dp-find-result');
+    if (!el) return;
+    if (!weeksNeeded || !peopleNeeded) { el.innerHTML = '<div style="color:#ef4444;font-size:12px;">Enter weeks and people first.</div>'; return; }
+
+    // Build staffByWeek from current jobs
+    var TL_PAST_WKS   = 16;
+    var TL_FUT_WKS    = 104;
+    var TL_TOTAL_WKS  = TL_PAST_WKS + TL_FUT_WKS;
+    var TL_AVAIL_STAFF = 10;
+    var staffByWeek   = [];
+    for (var i=0; i<TL_TOTAL_WKS; i++) staffByWeek[i] = 0;
+    loadJobs().filter(function(j){ return j.onTimeline !== false; }).forEach(function(j) {
+      var sw = j.startWeek||0;
+      var wS = sw + TL_PAST_WKS;
+      var wE = wS + (j.weeks||1);
+      for (var w=Math.max(0,wS); w<Math.min(TL_TOTAL_WKS,wE); w++) staffByWeek[w] += (j.people||0);
+    });
+
+    // Scan for best slot starting from today
+    var refDate = new Date();
+    var msW = 7*24*60*60*1000;
+    var bestSlot = null;
+    var futStart = TL_PAST_WKS;
+    for (var fs = futStart; fs <= TL_TOTAL_WKS - weeksNeeded; fs++) {
+      var fits = true;
+      for (var fw = fs; fw < fs + weeksNeeded; fw++) {
+        if (staffByWeek[fw] + peopleNeeded > TL_AVAIL_STAFF) { fits = false; break; }
+      }
+      if (fits) { bestSlot = fs; break; }
+    }
+
+    if (bestSlot === null) {
+      el.innerHTML = '<div style="padding:12px;border-radius:10px;background:rgba(239,68,68,0.08);border:1px solid #ef444433;font-size:12px;color:#ef4444;">No gap found in the next 2 years with '+peopleNeeded+' people free for '+weeksNeeded+' consecutive weeks. Consider hiring or staggering contracts.</div>';
+      return;
+    }
+
+    var startDate = new Date(refDate.getTime() + (bestSlot - TL_PAST_WKS) * msW);
+    var endDate   = new Date(startDate.getTime() + weeksNeeded * msW);
+    var fmtD      = function(d){ return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); };
+    var weeksAway = bestSlot - TL_PAST_WKS;
+    var altSlots  = [];
+    for (var as2 = bestSlot + 1; as2 <= TL_TOTAL_WKS - weeksNeeded && altSlots.length < 2; as2++) {
+      var fitsAlt = true;
+      for (var aw = as2; aw < as2 + weeksNeeded; aw++) {
+        if (staffByWeek[aw] + peopleNeeded > TL_AVAIL_STAFF) { fitsAlt = false; break; }
+      }
+      if (fitsAlt) {
+        var altDate = new Date(refDate.getTime() + (as2 - TL_PAST_WKS) * msW);
+        altSlots.push(fmtD(altDate));
+      }
+    }
+
+    el.innerHTML =
+      '<div style="padding:14px;border-radius:10px;background:rgba(34,197,94,0.07);border:1px solid #22c55e33;margin-bottom:8px;">'
+      + '<div style="font-size:13px;font-weight:800;color:#22c55e;margin-bottom:6px;">✅ Best slot found</div>'
+      + '<div style="font-size:20px;font-weight:900;color:var(--text);">'+fmtD(startDate)+' → '+fmtD(endDate)+'</div>'
+      + '<div style="font-size:12px;color:var(--muted);margin-top:4px;">'+(weeksAway===0?'Could start immediately':weeksAway+' weeks from now')+' · '+weeksNeeded+' weeks · '+peopleNeeded+' people</div>'
+      + '</div>'
+      + (altSlots.length ? '<div style="font-size:11px;color:var(--muted);">Other options: '+altSlots.join(' or ')+'</div>' : '');
+  };
+
+  // ── Features 7 & 8: Job archive / Actual vs Predicted ────────────────────
+  function loadJobHistory() {
+    try { var s=localStorage.getItem('dgc_job_history'); return s?JSON.parse(s):[]; } catch(e){return [];}
+  }
+  function saveJobHistory(h) { try{localStorage.setItem('dgc_job_history',JSON.stringify(h));}catch(e){} }
+
+  window.djArchiveJob = function(idx) {
+    var jobs = loadJobs(); if (!jobs[idx]) return;
+    var job = jobs[idx];
+    var actualProfit = parseFloat(prompt('Actual profit on this job? (£)\nPredicted: £'+Math.round(jobProfit(job)).toLocaleString('en-GB'),'')) || null;
+    var actualWeeks  = parseFloat(prompt('Actual weeks on site?\nPlanned: '+job.weeks,'')) || null;
+    var actualPeople = parseInt(prompt('Actual people used?\nPlanned: '+job.people,'')) || null;
+
+    var history = loadJobHistory();
+    var pred    = jobProfit(job);
+    var predPmpw = (job.people>0&&job.weeks>0) ? Math.round((pred + job.people*AVG_WAGE_MARGIN_PW*job.weeks)/job.people/job.weeks) : 0;
+    var actPmpw  = (actualProfit && actualPeople && actualWeeks) ?
+      Math.round((actualProfit + actualPeople*AVG_WAGE_MARGIN_PW*actualWeeks)/actualPeople/actualWeeks) : null;
+
+    history.push({
+      id:         job.id || Date.now(),
+      name:       job.name,
+      value:      job.value,
+      archivedAt: new Date().toISOString().slice(0,10),
+      predicted:  { profit: pred,         weeks: job.weeks,  people: job.people,  pmpw: predPmpw },
+      actual:     { profit: actualProfit,  weeks: actualWeeks, people: actualPeople, pmpw: actPmpw }
+    });
+    saveJobHistory(history);
+
+    // Remove from active jobs
+    jobs.splice(idx, 1);
+    saveJobs(jobs);
+    djRenderJobs();
+    dpRenderTimeline();
+    alert('Job archived. View history in the Completed jobs section.');
+  };
+
+  // ── Feature 9: Historical pmpw view ───────────────────────────────────────
+  function djRenderHistory() {
+    var el = document.getElementById('dj-history');
+    if (!el) return;
+    var history = loadJobHistory();
+    if (!history.length) {
+      el.innerHTML = '<div style="text-align:center;padding:14px;color:var(--muted);font-size:12px;">No completed jobs yet. Archive a job when it finishes to build your benchmark record.</div>';
+      return;
+    }
+    var avgActualPmpw = 0; var count = 0;
+    history.forEach(function(h){ if(h.actual&&h.actual.pmpw){avgActualPmpw+=h.actual.pmpw;count++;} });
+    avgActualPmpw = count ? Math.round(avgActualPmpw/count) : 0;
+    var avgCol = avgActualPmpw >= 700 ? '#22c55e' : avgActualPmpw >= 500 ? '#f59e0b' : '#ef4444';
+
+    var rows = history.slice().reverse().map(function(h) {
+      var predCol = h.predicted.pmpw >= 700 ? '#22c55e' : h.predicted.pmpw >= 500 ? '#f59e0b' : '#ef4444';
+      var actCol  = h.actual.pmpw ? (h.actual.pmpw>=700?'#22c55e':h.actual.pmpw>=500?'#f59e0b':'#ef4444') : '#94a3b8';
+      var origIdx = history.indexOf(h);
+      return '<tr style="border-bottom:1px solid var(--border);">'
+        +'<td style="padding:7px 10px;font-weight:700;font-size:12px;">'+h.name+'</td>'
+        +'<td style="padding:7px 10px;font-size:11px;color:var(--muted);">'+h.archivedAt+'</td>'
+        +'<td style="padding:7px 10px;font-weight:800;color:'+predCol+';font-size:12px;">£'+h.predicted.pmpw+'/pw</td>'
+        +'<td style="padding:7px 10px;font-weight:800;color:'+actCol+';font-size:12px;">'+(h.actual.pmpw?'£'+h.actual.pmpw+'/pw':'—')+'</td>'
+        +'<td style="padding:7px 10px;font-size:11px;color:var(--muted);">'+h.predicted.weeks+'wks / '+h.predicted.people+'ppl</td>'
+        +'<td style="padding:7px 4px;"><button onclick="djDeleteHistory('+origIdx+')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:11px;">✕</button></td>'
+        +'</tr>';
+    }).join('');
+
+    el.innerHTML =
+      (avgActualPmpw > 0 ? '<div style="padding:10px 14px;border-radius:8px;background:'+avgCol+'11;border:1px solid '+avgCol+'33;margin-bottom:12px;font-size:13px;">'
+        +'<strong style="color:'+avgCol+';">All-time average: £'+avgActualPmpw+'/person/week actual</strong>'
+        +'<span style="font-size:11px;color:var(--muted);"> — across '+count+' completed jobs</span></div>' : '')
+      +'<div style="overflow-x:auto;"><table style="border-collapse:collapse;font-size:12px;width:100%;">'
+      +'<thead><tr style="background:var(--surface2);"><th style="padding:7px 10px;text-align:left;font-size:11px;color:var(--muted);">Job</th><th>Completed</th><th>Predicted £/pw</th><th>Actual £/pw</th><th>Size</th><th></th></tr></thead>'
+      +'<tbody>'+rows+'</tbody></table></div>';
+  }
+
+  window.djDeleteHistory = function(i) {
+    var h = loadJobHistory(); h.splice(i,1); saveJobHistory(h); djRenderHistory();
   };
 
   // Price check calculation for dj- tab
