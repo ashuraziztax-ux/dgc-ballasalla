@@ -3535,7 +3535,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-31T22:30:00'); // v188 — Ash and Harry director draws raised to £2,000/month each — Overhead corrected to £14,065/month from real payroll — Director mode: 2 proper nav tabs (Jobs + Job Planner)
+const LAST_UPDATED = new Date('2026-05-31T23:00:00'); // v189 — Director tabs rebuilt with unique IDs, no conflicts — Ash and Harry director draws raised to £2,000/month each — Overhead corrected to £14,065/month from real payroll — Director mode: 2 proper nav tabs (Jobs + Job Planner)
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -15236,22 +15236,343 @@ function closeZoneHealth() {
   };
 
   // ── Director Jobs tab (new 2-tab navigation) ───────────────────────────────
+  // ── Director: Jobs tab — completely standalone, no shared IDs ─────────────
   window.buildDirJobsTab = function() {
     var el = document.getElementById('dir-jobs-panel');
     if (!el) return;
-    el.innerHTML = dirJobsHTML();
-    dirRenderJobs();
-    dirCalc();
+
+    // Build HTML fresh with unique IDs (dj- prefix = director jobs)
+    var html = '<div style="max-width:960px;padding:0 0 20px;">'
+
+    // Header
+    + '<div style="background:#1a1d27;border-radius:14px;padding:18px 22px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">'
+    + '<div style="background:#f59e0b;color:#1a1d27;border-radius:8px;padding:5px 13px;font-size:15px;font-weight:900;">📊 Jobs</div>'
+    + '<div style="color:#94a3b8;font-size:12px;">Add every active or upcoming contract. The combined view tells you if the business is profitable right now.</div>'
+    + '</div>'
+
+    // Portfolio card
+    + '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:22px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text);">Jobs currently running</div>'
+    + '<button onclick="dirAddJob();buildDirJobsTab();" style="padding:7px 16px;background:rgba(245,158,11,0.12);border:1px solid #f59e0b55;border-radius:8px;color:#f59e0b;font-size:12px;font-weight:800;cursor:pointer;">+ Add a job</button>'
+    + '</div>'
+    + '<div id="dj-list" style="margin-bottom:14px;"></div>'
+    + '<div id="dj-total"></div>'
+    + '</div>'
+
+    // Price check card
+    + '<div class="card" style="border-radius:12px;padding:22px;border:2px solid rgba(245,158,11,0.25);">'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:3px;">Price check — is this job worth taking?</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:18px;">Type in a job you\'ve been offered. See instantly what you\'d make per person per week.</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;">'
+    + djInput('Job value (£)', 'dj-v', '210000', 'what the client pays')
+    + djInput('Weeks on site', 'dj-w', '10', 'how long it runs')
+    + djInput('People on it', 'dj-p', '3', 'total site workers')
+    + '</div>'
+    + '<details style="margin-bottom:14px;"><summary style="font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;user-select:none;">▸ Change profit % or add job name</summary>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">'
+    + djSmInput('Job name', 'dj-name', 'text', '')
+    + djSmInput('Profit % (OH&P)', 'dj-ohp', 'number', '15')
+    + '</div></details>'
+    + '<div id="dj-result"></div>'
+    + '</div>'
+
+    + '</div>';
+
+    el.innerHTML = html;
+
+    // Render jobs list
+    djRenderJobs();
+    // Render price check
+    djCalc();
   };
 
-  // ── Director Job Planner tab (new 2-tab navigation) ────────────────────────
+  // ── Director: Job Planner tab — completely standalone ─────────────────────
   window.buildDirPlannerTab = function() {
     var el = document.getElementById('dir-planner-panel');
     if (!el) return;
-    el.innerHTML = dirPlannerHTML();
-    dirRenderTimeline();
-    dirHealth();
-    dirRenderBM();
+
+    var html = '<div style="max-width:960px;padding:0 0 20px;">'
+
+    // Header
+    + '<div style="background:#1a1d27;border-radius:14px;padding:18px 22px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">'
+    + '<div style="background:#f59e0b;color:#1a1d27;border-radius:8px;padding:5px 13px;font-size:15px;font-weight:900;">📅 Job Planner</div>'
+    + '<div style="color:#94a3b8;font-size:12px;">Drag job bars to plan the year. Overlapping bars show combined staff needed. Red gaps = money lost with no work.</div>'
+    + '</div>'
+
+    // Timeline card
+    + '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:20px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text);">Year planner</div>'
+    + '<div style="font-size:11px;color:var(--muted);">Drag bars · desktop only · scroll left/right</div>'
+    + '</div>'
+    + '<div id="dp-tl-wrap" style="overflow-x:auto;overflow-y:hidden;border-radius:10px;border:1px solid var(--border);-webkit-overflow-scrolling:touch;">'
+    + '<div id="dp-tl-inner" style="position:relative;min-height:200px;"></div>'
+    + '</div>'
+    + '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--muted);">'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#22c55e;border-radius:2px;display:inline-block;"></span>Confirmed</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#94a3b8;border-radius:2px;display:inline-block;opacity:0.6;"></span>Bidding</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#ef4444;border-radius:2px;display:inline-block;opacity:0.5;"></span>Gap (no revenue)</span>'
+    + '</div>'
+    + '</div>'
+
+    // Company health card
+    + '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:22px;">'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:3px;">Is the company making money right now?</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Fixed costs are £16,297/month no matter what. This shows if current work is covering them.</div>'
+    + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">'
+    + '<div style="font-size:13px;font-weight:700;color:var(--text);">Productive people on work right now:</div>'
+    + '<input id="dp-health-n" type="number" min="0" max="30" value="8" oninput="dpHealth()" style="width:75px;padding:8px 10px;border-radius:10px;border:1px solid var(--border);font-size:20px;font-weight:900;text-align:center;background:var(--surface2);color:var(--text);">'
+    + '</div>'
+    + '<div id="dp-health-result"></div>'
+    + '</div>'
+
+    // Benchmarks (collapsed)
+    + '<details>'
+    + '<summary style="font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;user-select:none;padding:6px 0;">▸ Past jobs — what did they earn?</summary>'
+    + '<div class="card" style="border-radius:12px;margin-top:10px;padding:18px;">'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">A good DGC job earns £700–900 per person per week. Below £600 is thin. Save jobs here to build a reference library.</div>'
+    + '<div id="dp-bm"></div>'
+    + '<button onclick="dpSaveBenchmark()" style="margin-top:10px;padding:7px 14px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">+ Save current price check result</button>'
+    + '</div>'
+    + '</details>'
+
+    + '</div>';
+
+    el.innerHTML = html;
+
+    // Render timeline using the existing function but pointing at dp-tl-inner
+    dpRenderTimeline();
+    dpHealth();
+    dpRenderBM();
+  };
+
+  // ── dj- (director jobs tab) helper functions ────────────────────────────────
+  function djInput(label, id, val, help) {
+    return '<div>'
+    + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:5px;">' + label + '</div>'
+    + '<input id="' + id + '" type="number" value="' + val + '" oninput="djCalc()" style="width:100%;padding:11px 12px;border-radius:10px;border:2px solid var(--border);font-size:20px;font-weight:900;background:var(--surface2);color:var(--text);text-align:center;">'
+    + '<div style="font-size:10px;color:var(--muted);margin-top:3px;text-align:center;">' + help + '</div>'
+    + '</div>';
+  }
+  function djSmInput(label, id, type, val) {
+    return '<div>'
+    + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:3px;">' + label + '</div>'
+    + '<input id="' + id + '" type="' + (type||'text') + '" value="' + val + '" oninput="djCalc()" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;background:var(--surface2);color:var(--text);">'
+    + '</div>';
+  }
+
+  // Render the jobs list into #dj-list and #dj-total
+  function djRenderJobs() {
+    var listEl  = document.getElementById('dj-list');
+    var totalEl = document.getElementById('dj-total');
+    if (!listEl) return;
+    var jobs = loadJobs();
+    if (!jobs.length) {
+      listEl.innerHTML = '<div style="text-align:center;padding:18px;color:var(--muted);font-size:13px;">No jobs yet. Add one above.</div>';
+      if (totalEl) totalEl.innerHTML = ''; return;
+    }
+    listEl.innerHTML = jobs.map(function(job, idx) {
+      var profit = jobProfit(job);
+      var profitWk = job.weeks > 0 ? profit / job.weeks : 0;
+      var col = profit > 50000 ? '#22c55e' : profit > 20000 ? '#f59e0b' : '#ef4444';
+      var calcProfit = (job.value||0) * (job.ohp/100) / (1 + job.ohp/100);
+      return '<div style="border:1px solid var(--border);border-left:4px solid '+col+';border-radius:10px;padding:14px 16px;margin-bottom:10px;">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">'
+        + '<div style="font-size:14px;font-weight:800;color:var(--text);">' + (job.name||'Unnamed') + '</div>'
+        + '<div style="display:flex;gap:6px;">'
+        + '<button onclick="djSaveJob('+idx+')" style="padding:5px 11px;background:rgba(34,197,94,0.1);border:1px solid #22c55e44;border-radius:6px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer;">✓ Save</button>'
+        + '<button onclick="djDeleteJob('+idx+')" style="padding:5px 11px;background:transparent;border:1px solid #ef444444;border-radius:6px;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;">✕ Remove</button>'
+        + '</div></div>'
+        + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px;margin-bottom:10px;">'
+        + djJobField('Name','dj-job-name-'+idx,'text',job.name||'')
+        + djJobField('Value (£)','dj-job-val-'+idx,'number',job.value||'')
+        + djJobField('Weeks','dj-job-wks-'+idx,'number',job.weeks||'')
+        + djJobField('People','dj-job-ppl-'+idx,'number',job.people||'')
+        + '</div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+        + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px;">Profit on this job (£)</div>'
+        + '<input id="dj-job-pft-'+idx+'" type="number" value="'+(job.profit||'')+'" placeholder="Leave blank = auto 15%" style="width:100%;padding:7px 10px;border-radius:8px;border:2px solid '+col+'66;font-size:14px;font-weight:900;background:var(--surface2);color:var(--text);">'
+        + '<div style="font-size:10px;color:var(--muted);margin-top:2px;">Auto at 15%: '+fmt(calcProfit)+'</div>'
+        + '</div>'
+        + '<div style="display:flex;align-items:center;padding:10px 12px;border-radius:8px;background:'+col+'11;border:1px solid '+col+'33;">'
+        + '<div><div style="font-size:26px;font-weight:900;color:'+col+';line-height:1;">'+fmt(profit)+'</div>'
+        + '<div style="font-size:10px;color:var(--muted);">profit · '+fmt(profitWk)+'/wk · '+job.people+' ppl</div>'
+        + '</div></div>'
+        + '</div>'
+        + '<div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;">'
+        + '<label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="dj-job-tl-'+idx+'" '+(job.onTimeline!==false?'checked':'')+' style="accent-color:#f59e0b;"> Show on planner</label>'
+        + '<label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="dj-job-con-'+idx+'" '+(job.confirmed?'checked':'')+' style="accent-color:#22c55e;"> Confirmed (green bar)</label>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+
+    // Totals
+    var totalProfit  = jobs.reduce(function(s,j){ return s + jobProfit(j); }, 0);
+    var totalPeople  = jobs.reduce(function(s,j){ return s + (j.people||0); }, 0);
+    var monthlyOhp   = jobs.reduce(function(s,j){ return s + jobProfit(j)/Math.max(1,j.weeks)*4.333; }, 0);
+    var monthlyNet   = monthlyOhp - MONTHLY_OVERHEAD;
+    var peopleLeft   = CURRENT_STAFF - totalPeople;
+    var netCol       = monthlyNet > 5000 ? '#22c55e' : monthlyNet > 0 ? '#f59e0b' : '#ef4444';
+    if (totalEl) totalEl.innerHTML =
+    '<div style="border-top:2px solid var(--border);padding-top:14px;margin-top:4px;">'
+    + '<div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Combined — all jobs right now</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px;">'
+    + dirNum('All-jobs profit', fmt(totalProfit), 'across every active contract')
+    + dirNum('Profit/month (avg)', fmt(monthlyOhp), 'spread over active weeks')
+    + dirNum('Overhead/month', fmt(MONTHLY_OVERHEAD), 'fixed — always running')
+    + '<div style="background:var(--surface2);border:2px solid '+netCol+'44;border-radius:10px;padding:12px;text-align:center;">'
+    + '<div style="font-size:24px;font-weight:900;color:'+netCol+';line-height:1;margin-bottom:3px;">'+(monthlyNet>=0?'+':'')+fmt(monthlyNet)+'/month</div>'
+    + '<div style="font-size:10px;color:'+netCol+';font-weight:700;">'+(monthlyNet>=0?'✓ Profitable':'⚠ Losing money')+'</div>'
+    + '</div>'
+    + '</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:5px;">People on jobs: <strong style="color:'+(totalPeople>CURRENT_STAFF?'#ef4444':'var(--text)')+';">'+totalPeople+' of '+CURRENT_STAFF+'</strong>'+(peopleLeft>0?' · <span style="color:#22c55e;">'+peopleLeft+' free</span>':peopleLeft<0?' · <span style="color:#ef4444;">Need '+Math.abs(peopleLeft)+' more</span>':'')+'</div>'
+    + '<div style="background:var(--border);border-radius:4px;height:8px;overflow:hidden;">'
+    + '<div style="width:'+Math.min(100,Math.round(totalPeople/CURRENT_STAFF*100))+'%;background:'+(totalPeople>CURRENT_STAFF?'#ef4444':'#22c55e')+';height:100%;border-radius:4px;"></div>'
+    + '</div>'
+    + '</div>';
+  }
+
+  function djJobField(label, id, type, val) {
+    return '<div>'
+    + '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px;">'+label+'</div>'
+    + '<input id="'+id+'" type="'+type+'" value="'+(val||'')+'" style="width:100%;padding:6px 9px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:700;background:var(--surface2);color:var(--text);">'
+    + '</div>';
+  }
+
+  window.djSaveJob = function(idx) {
+    var jobs = loadJobs(); if (!jobs[idx]) return;
+    var g = function(id){ var el=document.getElementById(id); return el?el.value:''; };
+    var pft = parseFloat(g('dj-job-pft-'+idx));
+    var tlEl = document.getElementById('dj-job-tl-'+idx);
+    var conEl = document.getElementById('dj-job-con-'+idx);
+    jobs[idx].name    = g('dj-job-name-'+idx) || jobs[idx].name;
+    jobs[idx].value   = parseFloat(g('dj-job-val-'+idx)) || jobs[idx].value;
+    jobs[idx].weeks   = parseFloat(g('dj-job-wks-'+idx)) || jobs[idx].weeks;
+    jobs[idx].people  = parseInt(g('dj-job-ppl-'+idx))   || jobs[idx].people;
+    jobs[idx].profit  = pft > 0 ? pft : 0;
+    jobs[idx].onTimeline = tlEl ? tlEl.checked : true;
+    jobs[idx].confirmed  = conEl ? conEl.checked : false;
+    saveJobs(jobs); djRenderJobs();
+  };
+
+  window.djDeleteJob = function(idx) {
+    var jobs = loadJobs(); jobs.splice(idx,1); saveJobs(jobs); djRenderJobs();
+  };
+
+  // Price check calculation for dj- tab
+  window.djCalc = function() {
+    var el = document.getElementById('dj-result');
+    if (!el) return;
+    var value  = parseFloat((document.getElementById('dj-v')   ||{}).value) || 0;
+    var weeks  = parseFloat((document.getElementById('dj-w')   ||{}).value) || 0;
+    var people = parseInt  ((document.getElementById('dj-p')   ||{}).value) || 0;
+    var ohp    = parseFloat((document.getElementById('dj-ohp') ||{}).value) || 15;
+    if (!value||value<=0||!weeks||!people) {
+      el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px;">Fill in job value, weeks and people ↑</div>';
+      return;
+    }
+    var ohpProfit   = value * (ohp/100) / (1+ohp/100);
+    var ohpPerWk    = ohpProfit / weeks;
+    var wageMarginWk= people * AVG_WAGE_MARGIN_PW;
+    var totalPerWk  = ohpPerWk + wageMarginWk;
+    var perManWk    = totalPerWk / people;
+    var totalProfit = ohpProfit + (wageMarginWk * weeks);
+    var monthly     = totalPerWk * 4.333;
+    var ohCoverPct  = Math.round(monthly / MONTHLY_OVERHEAD * 100);
+    var v, vBg, vBdr;
+    if (perManWk >= 800)     { v='🟢 Excellent'; vBdr='#22c55e44'; vBg='rgba(34,197,94,0.07)'; }
+    else if (perManWk >= 650){ v='🟢 Good job';  vBdr='#22c55e44'; vBg='rgba(34,197,94,0.06)'; }
+    else if (perManWk >= 500){ v='🟡 Tight';     vBdr='#f59e0b44'; vBg='rgba(245,158,11,0.07)'; }
+    else                     { v='🔴 Thin';      vBdr='#ef444444'; vBg='rgba(239,68,68,0.07)'; }
+    var col = perManWk>=800?'#22c55e':perManWk>=650?'#22c55e':perManWk>=500?'#f59e0b':'#ef4444';
+    el.innerHTML =
+    '<div style="border-radius:12px;padding:18px;background:'+vBg+';border:2px solid '+vBdr+';text-align:center;margin-bottom:14px;">'
+    + '<div style="font-size:12px;font-weight:700;color:'+col+';margin-bottom:6px;">'+v+'</div>'
+    + '<div style="font-size:52px;font-weight:900;color:'+col+';line-height:1;margin-bottom:4px;">'+fmt(perManWk)+'</div>'
+    + '<div style="font-size:13px;color:var(--muted);">per person per week</div>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px;">'
+    + dirNum('Total profit', fmt(totalProfit), 'OH&P + labour margin')
+    + dirNum('Per week (whole gang)', fmt(totalPerWk), 'across all '+people+' people')
+    + dirNum('Overhead covered', ohCoverPct+'%', 'of £'+Math.round(MONTHLY_OVERHEAD/1000)+'k/month')
+    + '</div>'
+    + '<div style="background:var(--surface2);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--muted);line-height:1.6;">'
+    + fmt(value)+' job × '+ohp+'% OH&P = <strong style="color:var(--text);">'+fmt(ohpProfit)+'</strong> profit over '+weeks+' wks → <strong style="color:'+col+';">'+fmt(perManWk)+'/person/week</strong>'
+    + '</div>';
+  };
+
+  // ── dp- (director planner tab) helper functions ────────────────────────────
+  function dpRenderTimeline() {
+    // The existing dirRenderTimeline looks for '#dir-timeline-inner'.
+    // We create a temporary alias: give dp-tl-inner the id it expects,
+    // call the renderer, then restore the real id.
+    var dpInner = document.getElementById('dp-tl-inner');
+    var dpWrap  = document.getElementById('dp-tl-wrap');
+    if (!dpInner) return;
+    // Temporarily rename so dirRenderTimeline can find it
+    dpInner.id = 'dir-timeline-inner';
+    if (dpWrap) dpWrap.id = 'dir-timeline-wrap';
+    try {
+      dirRenderTimeline();
+    } catch(e) {
+      dpInner.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center;font-size:12px;">Timeline loading — add jobs on the Jobs tab first.</div>';
+    }
+    // Restore original ids
+    dpInner.id = 'dp-tl-inner';
+    if (dpWrap) dpWrap.id = 'dp-tl-wrap';
+  }
+
+  function dpHealth() {
+    var el = document.getElementById('dp-health-result');
+    if (!el) return;
+    var n = parseInt((document.getElementById('dp-health-n')||{}).value) || 0;
+    var rev = n * PROFIT_PER_MAN_MTH;
+    var net = rev - MONTHLY_OVERHEAD;
+    var col = net > 5000 ? '#22c55e' : net > 0 ? '#f59e0b' : '#ef4444';
+    var barW = Math.min(130, Math.round(rev/MONTHLY_OVERHEAD*100));
+    el.innerHTML =
+    '<div style="border-radius:12px;padding:16px;background:'+(net>0?'rgba(34,197,94,0.07)':'rgba(239,68,68,0.07)')+';border:2px solid '+col+'30;text-align:center;margin-bottom:12px;">'
+    + '<div style="font-size:44px;font-weight:900;color:'+col+';line-height:1;">'+(net>=0?'+':'')+fmt(net)+'/month</div>'
+    + '<div style="font-size:11px;color:var(--muted);margin-top:4px;">'+(net>=0?'Profitable':'Running at a loss')+' with '+n+' people on work</div>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">'
+    + dirNum('Monthly in from work', fmt(rev), n+' people × £'+Math.round(PROFIT_PER_MAN_MTH/1000)+'k/month avg')
+    + dirNum('Monthly fixed costs', fmt(MONTHLY_OVERHEAD), 'always running')
+    + '</div>'
+    + '<div style="background:var(--border);border-radius:4px;height:10px;overflow:hidden;margin-bottom:6px;">'
+    + '<div style="width:'+Math.min(100,barW)+'%;background:'+col+';height:100%;border-radius:4px;"></div>'
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--muted);">'+Math.round(rev/MONTHLY_OVERHEAD*100)+'% of overhead covered. '
+    + 'Break-even at around 5-6 people. Each extra person adds ~£'+Math.round(PROFIT_PER_MAN_MTH/1000)+'k/month.'
+    + '</div>';
+  }
+
+  function dpRenderBM() {
+    var el = document.getElementById('dp-bm');
+    if (!el) return;
+    var rows = loadBM()||defaultBM();
+    el.innerHTML = '<div style="overflow-x:auto;"><table style="border-collapse:collapse;font-size:12px;width:100%;">'
+    + '<thead><tr style="background:var(--surface2);"><th style="padding:7px 10px;text-align:left;font-size:11px;color:var(--muted);font-weight:700;">Job</th><th>Weeks</th><th>People</th><th>Profit/person/wk</th><th>Notes</th><th></th></tr></thead>'
+    + '<tbody>' + rows.map(function(r,i){
+        var col=clr(r.pmpw);
+        return '<tr style="border-bottom:1px solid var(--border);"><td style="padding:7px 10px;font-weight:700;">'+r.job+'</td><td style="padding:7px 10px;">'+r.weeks+'wks</td><td style="padding:7px 10px;">'+r.people+'</td><td style="padding:7px 10px;font-weight:900;color:'+col+';">'+fmt(r.pmpw)+'/wk</td><td style="padding:7px 10px;font-size:11px;color:var(--muted);">'+r.notes+'</td><td style="padding:7px 10px;">'+(i>1?'<button onclick="dirRemoveBM('+i+')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px;">✕</button>':'')+'</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+
+  window.dpSaveBenchmark = function() {
+    var value  = parseFloat((document.getElementById('dj-v')  ||{}).value)||0;
+    var weeks  = parseFloat((document.getElementById('dj-w')  ||{}).value)||0;
+    var people = parseInt  ((document.getElementById('dj-p')  ||{}).value)||0;
+    var ohp    = parseFloat((document.getElementById('dj-ohp')||{}).value)||15;
+    var name   = ((document.getElementById('dj-name')||{}).value||'').trim()||'Unnamed job';
+    if (!value||!weeks||!people) { alert('Fill in the price check calculator on the Jobs tab first.'); return; }
+    var ohpProfit = value*(ohp/100)/(1+ohp/100);
+    var totalPW   = ohpProfit/weeks + people*AVG_WAGE_MARGIN_PW;
+    var pmpw      = Math.round(totalPW/people);
+    var rows = loadBM()||defaultBM();
+    rows.push({job:name, type:'From price check', weeks:weeks, people:people, pmpw:pmpw, notes:'Saved '+new Date().toLocaleDateString('en-GB')});
+    saveBM(rows); dpRenderBM();
   };
 
   // ── HTML shell ─────────────────────────────────────────────────────────────
