@@ -1643,6 +1643,7 @@ function gpExportCSV(){
   if(orig) window.showTab=function(name,btn){
     orig(name,btn);
     if(name==='daily') setTimeout(gpRenderHistory,80);
+    if(name==='daily') { try { buildGangLogForm(); } catch(e){} }
   };
 })();
 
@@ -2964,6 +2965,8 @@ function gpExportCSV(){
     <div style="font-size:12px; color:var(--muted); margin-bottom:14px;">Based on programme — tasks that should be active today</div>
     <div id="today-tasks-plan"></div>
   </div>
+
+  <div id="gang-log-form-panel"></div>
 </div>
 
 <!-- ═══════════════════════════════ DELAYS ═══════════════════════════════ -->
@@ -17547,28 +17550,16 @@ function closeZoneHealth() {
 
     // ── Ballasalla Phase 4 Programme Matrix — real BoQ quantities ──
     var BOQ = [
-      // Drainage pipes
+      // Drainage pipes — fixed scope
       { id:'d110', name:'110mm drainage pipe', unit:'m',  simonDays:5.4,  totalQty:96,   section:'Drainage' },
       { id:'d150', name:'150mm drainage pipe', unit:'m',  simonDays:11.9, totalQty:226,  section:'Drainage' },
       { id:'d225', name:'225mm drainage pipe', unit:'m',  simonDays:11.5, totalQty:195,  section:'Drainage' },
       { id:'mh12', name:'1200mm manholes',     unit:'nr', simonDays:12.0, totalQty:6,    section:'Drainage' },
       { id:'mh13', name:'1350mm manholes',     unit:'nr', simonDays:18.0, totalQty:6,    section:'Drainage' },
-      { id:'gly',  name:'Road gullies',        unit:'nr', simonDays:5.0,  totalQty:10,   section:'Drainage' },
-      // Earthworks
-      { id:'rl',   name:'Reduce level dig',    unit:'m³', simonDays:4.3,  totalQty:428,  section:'Earthworks' },
-      { id:'t1',   name:'Type 1 fill',         unit:'m³', simonDays:7.1,  totalQty:433,  section:'Earthworks' },
-      { id:'f6',   name:'6F2 fill',            unit:'m³', simonDays:14.9, totalQty:908,  section:'Earthworks' },
-      { id:'cmp',  name:'Compaction',          unit:'m²', simonDays:6.8,  totalQty:2029, section:'Earthworks' },
-      // Kerbing
-      { id:'kb1',  name:'Bullnose kerb (straight)', unit:'m', simonDays:14.7, totalQty:398, section:'Kerbing' },
-      { id:'kb2',  name:'Bullnose kerb (radius)',    unit:'m', simonDays:2.1,  totalQty:49,  section:'Kerbing' },
-      { id:'kb3',  name:'HB2 kerb',                 unit:'m', simonDays:1.2,  totalQty:40,  section:'Kerbing' },
-      { id:'kb4',  name:'Flat top edging',           unit:'m', simonDays:8.9,  totalQty:354, section:'Kerbing' },
-      // Services
-      { id:'svc1', name:'Services trenches (shallow)', unit:'m', simonDays:5.6,  totalQty:223, section:'Services' },
-      { id:'svc2', name:'Road crossings (deep)',       unit:'m', simonDays:1.2,  totalQty:35,  section:'Services' }
+      { id:'gly',  name:'Road gullies',        unit:'nr', simonDays:5.0,  totalQty:10,   section:'Drainage' }
     ];
-    var BOQ_TOTAL_DAYS = BOQ.reduce(function(s,b){ return s+b.simonDays; },0); // ~131 days
+    var BOQ_TOTAL_DAYS = BOQ.reduce(function(s,b){ return s+b.simonDays; },0); // ~64 days (drainage only)
+    var REMEASURE_NOTE = 'Earthworks, kerbing and surfacing are rate-only — quantities remeasured at job completion.';
 
     // Simon's rates (same as Rates tab)
     var SIMON = [
@@ -17642,12 +17633,18 @@ function closeZoneHealth() {
     var ystrKey = yesterday.toISOString().slice(0,10);
     var ystrLog = logs.find(function(l){ return l.date === ystrKey; });
 
-    // Build 3-card status for Teams A/B/C
-    var teamCards = ['A','B','C'].map(function(team) {
-      // Find today's entry for this team
+    // Build 3-card status for Gangs 1/2/3
+    var gangNums = ['1','2','3'];
+    // If today has logs with different numbers, use those instead
+    if (todayLog && todayLog.teams && todayLog.teams.length > 0) {
+      var seenTeams = todayLog.teams.map(function(t){return t.team;}).filter(function(t,i,a){return a.indexOf(t)===i;});
+      if (seenTeams.length > 0) gangNums = seenTeams;
+    }
+    var teamCards = gangNums.map(function(team) {
+      // Find today's entry for this gang
       var todayTeam = todayLog ? (todayLog.teams||[]).find(function(t){return t.team===team;}) : null;
       var todayEff  = todayTeam && todayTeam.efficiency !== undefined ? todayTeam.efficiency : null;
-      // Rolling 7-day avg (last activity for this team)
+      // Rolling 7-day avg (last activity for this gang)
       var rolling   = null;
       var lastAct   = null;
       for (var i=0; i<logs.length; i++) {
@@ -17661,7 +17658,7 @@ function closeZoneHealth() {
       var people   = todayTeam && todayTeam.people ? todayTeam.people.join(', ') : '—';
 
       return '<div style="flex:1;min-width:140px;border-radius:12px;padding:16px;background:'+todaySt.bg+';border:2px solid '+todaySt.col+'44;">'
-        + '<div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:'+todaySt.col+';margin-bottom:8px;">Team '+team+'</div>'
+        + '<div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:'+todaySt.col+';margin-bottom:8px;">Gang '+team+'</div>'
         + '<div style="font-size:36px;font-weight:900;color:'+todaySt.col+';line-height:1;">'+(todayEff!==null?todayEff+'%':'—')+'</div>'
         + '<div style="font-size:10px;color:var(--muted);margin-top:3px;">today</div>'
         + (rolling!==null?'<div style="font-size:12px;font-weight:700;color:var(--text);margin-top:6px;">7-day avg: '+rolling+'%</div>':'')
@@ -17703,81 +17700,6 @@ function closeZoneHealth() {
         }).join('')
       : '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--muted);font-size:12px;">No productivity data yet. Add daily logs below to build the picture.</td></tr>';
 
-    // ── Build the daily entry form ──
-    // Detect yesterday's gang/activity for "copy yesterday" defaults
-    var ystrTeam = function(t) { return ystrLog ? (ystrLog.teams||[]).find(function(x){return x.team===t;}) : null; };
-
-    var teamForms = ['A','B','C'].map(function(team) {
-      var yT = ystrTeam(team);
-      var defPeople = yT && yT.people ? yT.people : [];
-      var defActId  = yT ? yT.actId : '';
-
-      var peopleOptions = STAFF.map(function(name) {
-        var sel = defPeople.indexOf(name)>=0 ? ' selected' : '';
-        return '<option value="'+name+'"'+sel+'>'+name+'</option>';
-      }).join('');
-
-      var actOptions = '<option value="">— Select activity —</option>'
-        + SIMON.map(function(r){ return '<option value="'+r.id+'"'+(r.id===defActId?' selected':'')+'>'+r.name+'</option>'; }).join('');
-
-      var blockerOptions = BLOCKERS.map(function(b){ return '<option>'+b+'</option>'; }).join('');
-
-      return '<div style="border:1px solid var(--border);border-left:3px solid #f59e0b;border-radius:10px;padding:14px;margin-bottom:10px;">'
-        + '<div style="font-size:12px;font-weight:900;color:#f59e0b;margin-bottom:10px;">TEAM '+team+(yT?' <span style="font-size:10px;font-weight:400;color:var(--muted);">(pre-filled from yesterday)</span>':'')+'</div>'
-        // People multiselect (limited height)
-        + '<div style="margin-bottom:8px;"><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Who\'s in this team?</div>'
-        + '<select id="gi-'+team+'-people" multiple size="4" style="width:100%;border-radius:8px;border:1px solid var(--border);font-size:12px;background:var(--surface2);color:var(--text);padding:4px;">'+peopleOptions+'</select>'
-        + '<div style="font-size:10px;color:var(--muted);margin-top:2px;">Hold Ctrl/Cmd to select multiple</div></div>'
-        // Activity + qty
-        + '<div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-bottom:8px;">'
-        + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Activity</div>'
-        + '<select id="gi-'+team+'-act" style="width:100%;padding:6px;border-radius:8px;border:1px solid var(--border);font-size:11px;background:var(--surface2);color:var(--text);">'+actOptions+'</select></div>'
-        + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Qty done</div>'
-        + '<input id="gi-'+team+'-qty" type="number" min="0" step="0.5" placeholder="0" style="width:100%;padding:7px;border-radius:8px;border:1px solid var(--border);font-size:14px;font-weight:900;background:var(--surface2);color:var(--text);text-align:center;"></div>'
-        + '</div>'
-        // Ground condition + blocker
-        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'
-        + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Ground (1=easy 5=hard)</div>'
-        + '<div style="display:flex;gap:4px;">'
-        + [1,2,3,4,5].map(function(n){ return '<button onclick="giSetGround(\''+team+'\','+n+',this)" style="flex:1;padding:6px 2px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;" data-team="'+team+'" data-val="'+n+'">'+n+'</button>'; }).join('')
-        + '</div><input type="hidden" id="gi-'+team+'-ground" value="3"></div>'
-        + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Blocker</div>'
-        + '<select id="gi-'+team+'-block" style="width:100%;padding:6px;border-radius:8px;border:1px solid var(--border);font-size:11px;background:var(--surface2);color:var(--text);">'+blockerOptions+'</select></div>'
-        + '</div>'
-        // First pass checkbox
-        + '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);cursor:pointer;margin-bottom:4px;">'
-        + '<input type="checkbox" id="gi-'+team+'-pass" checked style="accent-color:#22c55e;"> Work passed inspection today (no rework required)'
-        + '</label>'
-        + '</div>';
-    }).join('');
-
-    // ── Render log history ──
-    function giConfidenceTag(n) {
-      var label = n < 3 ? 'Early data — '+n+' logs' : n < 10 ? 'Building — '+n+' logs' : 'Reliable — '+n+' logs';
-      var col   = n < 3 ? '#f59e0b' : n < 10 ? '#38bdf8' : '#22c55e';
-      return '<span style="font-size:9px;padding:2px 6px;border-radius:10px;background:'+col+'18;color:'+col+';font-weight:700;">'+label+'</span>';
-    }
-
-    function giRenderHistory() {
-      var hEl = document.getElementById('gi-history');
-      if (!hEl) return;
-      var ls = loadGangLogs();
-      if (!ls.length) { hEl.innerHTML = '<div style="text-align:center;padding:18px;color:var(--muted);font-size:12px;">No logs yet — save the first entry above.</div>'; return; }
-      hEl.innerHTML = ls.slice(0,15).map(function(log,i) {
-        var teamSummary = (log.teams||[]).filter(function(t){return t.actId;}).map(function(t) {
-          var col = t.efficiency>=90?'#22c55e':t.efficiency>=70?'#f59e0b':'#ef4444';
-          return '<span style="font-size:11px;color:var(--muted);">Team '+t.team+': <strong style="color:'+col+';">'+Math.round(t.efficiency||0)+'%</strong>'
-            +(t.blocker&&t.blocker!=='None'?' ['+t.blocker+']':'')+'</span>';
-        }).join(' &nbsp;·&nbsp; ');
-        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--border);gap:8px;flex-wrap:wrap;">'
-          +'<span style="font-size:12px;font-weight:700;color:var(--text);min-width:90px;">'+log.date+'</span>'
-          +'<span style="font-size:11px;color:var(--muted);">'+log.sm+'</span>'
-          +teamSummary
-          +'<button onclick="giDeleteLog('+i+')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:11px;">✕</button>'
-          +'</div>';
-      }).join('');
-    }
-
     // ── HTML ──
     var html = '<div style="max-width:960px;padding:0 0 24px;">'
 
@@ -17805,7 +17727,7 @@ function closeZoneHealth() {
     // Programme matrix card
     + '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:18px;">'
     + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">📊 Ballasalla Phase 4 — Programme Matrix</div>'
-    + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Real BoQ quantities from the priced contract (Feb 2026). Simon\'s rate gives the expected days for each activity. Total programme: '+Math.round(BOQ_TOTAL_DAYS)+' gang-days across 3 concurrent teams = ~17 working weeks.</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Real BoQ quantities — drainage is fixed scope. External works (earthworks, kerbing, surfacing) are rates-only and will be remeasured at completion. 13-week programme running at extra resource.</div>'
     + (function() {
         var sections = {};
         BOQ.forEach(function(b) { if (!sections[b.section]) sections[b.section]=[]; sections[b.section].push(b); });
@@ -17846,104 +17768,119 @@ function closeZoneHealth() {
     + '<div style="padding:10px 14px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);font-size:11px;color:var(--muted);">'
     + '⚠ Progress figures are based on what\'s been logged in this system. They\'ll become accurate as daily logs accumulate. The programme is currently at 71% overall (from AFP calculations).'
     + '</div>'
+    + '<div style="margin-top:10px;padding:8px 12px;border-radius:8px;background:rgba(245,158,11,0.08);border:1px solid #f59e0b33;font-size:11px;color:#f59e0b;">📐 External works (earthworks, kerbing, surfacing) are rates-only — quantities confirmed at remeasure on completion.</div>'
     + '</div>'
 
-    // Daily entry form
-    + '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:18px;">'
-    + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">📋 Log today\'s gang output</div>'
-    + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">James Cosgrove fills this in at end of day. Takes under 60 seconds once you know the system.</div>'
-    // Header row
-    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">'
-    + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Date</div><input id="gi-date" type="date" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:13px;background:var(--surface2);color:var(--text);"></div>'
-    + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Foreman</div>'
-    + '<select id="gi-foreman" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:12px;background:var(--surface2);color:var(--text);">'
-    + ['James Cosgrove','David Smith','Harry Harrison'].map(function(n){return '<option>'+n+'</option>';}).join('')
-    + '</select></div>'
-    + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Weather</div>'
-    + '<select id="gi-weather" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:12px;background:var(--surface2);color:var(--text);"><option>Sunny</option><option>Cloudy</option><option>Rain</option><option>Heavy Rain</option><option>Wind/Frost</option></select>'
-    + '</div></div>'
-    + teamForms
-    + '<button onclick="giSaveLog()" style="padding:12px 24px;background:#f59e0b;border:none;border-radius:10px;color:#1a1d27;font-size:14px;font-weight:900;cursor:pointer;width:100%;margin-top:4px;">💾 Save today\'s gang log</button>'
-    + '</div>'
+    // ── Staff performance ──
+    + (function() {
+        var staffStats = {};
+        STAFF.forEach(function(name) {
+          staffStats[name] = { name:name, logs:0, activities:{}, gangPartners:[] };
+        });
 
-    // Log history
-    + '<div class="card" style="border-radius:12px;padding:18px;">'
-    + '<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px;">Log history</div>'
-    + '<div id="gi-history"></div>'
-    + '</div>'
+        logs.forEach(function(log) {
+          (log.teams||[]).forEach(function(team) {
+            var people = team.people || [];
+            people.forEach(function(person) {
+              if (!staffStats[person]) staffStats[person] = { name:person, logs:0, activities:{}, gangPartners:[] };
+              staffStats[person].logs++;
+              if (team.actId && team.qtyDone !== null && team.qtyDone !== undefined) {
+                var simon = SIMON.find(function(s){ return s.id===team.actId; });
+                if (simon && !staffStats[person].activities[team.actId]) {
+                  staffStats[person].activities[team.actId] = { name:team.actName||simon.name, effs:[], logs:0 };
+                }
+                if (simon && (!team.blocker || team.blocker === 'None' || team.blocker === '')) {
+                  var eff = Math.round(team.qtyDone / simon.output * 100);
+                  if (staffStats[person].activities[team.actId]) {
+                    staffStats[person].activities[team.actId].effs.push(eff);
+                    staffStats[person].activities[team.actId].logs++;
+                  }
+                }
+              }
+              people.forEach(function(partner) {
+                if (partner !== person && staffStats[person].gangPartners.indexOf(partner) < 0) {
+                  staffStats[person].gangPartners.push(partner);
+                }
+              });
+            });
+          });
+        });
+
+        var staffCards = STAFF.map(function(name) {
+          var s = staffStats[name];
+          if (!s) return '';
+          var actKeys = Object.keys(s.activities);
+          var noData = s.logs === 0;
+          var alwaysSame = s.gangPartners.length <= 1 && s.logs > 2;
+          var actRows = actKeys.length
+            ? actKeys.map(function(id) {
+                var a = s.activities[id];
+                var avg = a.effs.length ? Math.round(a.effs.reduce(function(x,y){return x+y;},0)/a.effs.length) : null;
+                var col = avg===null?'#94a3b8':avg>=100?'#22c55e':avg>=80?'#f59e0b':'#ef4444';
+                var conf = a.logs < 3 ? '('+a.logs+' log'+(a.logs===1?'':'s')+')' : '('+a.logs+' logs)';
+                return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border);font-size:11px;">'
+                  +'<span style="color:var(--muted);">'+a.name+'</span>'
+                  +'<span style="font-weight:700;color:'+col+';">'+(avg!==null?avg+'%':'—')+' <span style="color:var(--muted);font-weight:400;">'+conf+'</span></span>'
+                  +'</div>';
+              }).join('')
+            : '<div style="font-size:11px;color:var(--muted);padding:4px 0;">No activity data yet</div>';
+
+          return '<div style="border:1px solid var(--border);border-radius:10px;padding:14px;'+(noData?'opacity:0.6;':'')+'">'
+            + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">'
+            +   '<div style="font-size:13px;font-weight:800;color:var(--text);">'+name+'</div>'
+            +   '<div style="font-size:10px;color:var(--muted);">'+s.logs+' log'+(s.logs===1?'':'s')+'</div>'
+            + '</div>'
+            + actRows
+            + (s.gangPartners.length ? '<div style="font-size:10px;color:var(--muted);margin-top:6px;">Works with: '+s.gangPartners.slice(0,3).join(', ')+(s.gangPartners.length>3?' +more':'')+' </div>' : '')
+            + (noData ? '<div style="font-size:10px;color:#f59e0b;margin-top:4px;">⚠ No data yet</div>' : '')
+            + (alwaysSame ? '<div style="font-size:10px;color:#38bdf8;margin-top:4px;">💡 Always same gang — try rotating</div>' : '')
+            + '</div>';
+        }).join('');
+
+        var suggestions = [];
+        STAFF.forEach(function(name) {
+          if (!staffStats[name] || staffStats[name].logs === 0) {
+            suggestions.push({ type:'nodata', person:name, text:'No logs for '+name+' yet — make sure they\'re being included in daily logs.', col:'#94a3b8' });
+          }
+        });
+        STAFF.forEach(function(name) {
+          var s = staffStats[name];
+          if (!s || s.logs < 3) return;
+          if (s.gangPartners.length <= 1) {
+            suggestions.push({ type:'rotate', person:name, text:name+' has only worked with '+(s.gangPartners[0]||'one person')+'. Try a different gang combination to get fresh data.', col:'#38bdf8' });
+          }
+        });
+        var keyActivities = ['d150-150','d150-175','mh1200-175','kerb-bullnose'];
+        keyActivities.forEach(function(actId) {
+          var simon = SIMON.find(function(s){return s.id===actId;});
+          var hasData = logs.some(function(l){return (l.teams||[]).some(function(t){return t.actId===actId;});});
+          if (!hasData && simon) {
+            suggestions.push({ type:'activity', text:'No data on '+simon.name+' yet. When this activity runs, log it to build the benchmark.', col:'#f59e0b' });
+          }
+        });
+
+        return '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:18px;">'
+          + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">👷 Staff performance</div>'
+          + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">How each operative is performing vs Simon\'s benchmark rates. Based on daily logs — confidence grows as more entries are added. Blocked days (third-party delays) excluded from scores.</div>'
+          + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">'
+          + staffCards
+          + '</div>'
+          + '</div>'
+          + '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:18px;">'
+          + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">💡 Suggestions</div>'
+          + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">System-generated recommendations based on the data. Act on these to improve gang planning and build more useful performance data over time.</div>'
+          + (suggestions.length
+            ? suggestions.map(function(s) {
+                return '<div style="padding:10px 14px;border-radius:8px;border-left:3px solid '+s.col+';background:'+s.col+'08;margin-bottom:8px;font-size:12px;color:var(--text);">'+s.text+'</div>';
+              }).join('')
+            : '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px;">No suggestions yet — add more daily logs to generate recommendations.</div>'
+          )
+          + '</div>';
+      })()
 
     + '</div>';
 
     el.innerHTML = html;
-
-    // Set today's date
-    var giDate = document.getElementById('gi-date');
-    if (giDate) giDate.value = new Date().toISOString().slice(0,10);
-
-    // Highlight default ground = 3 for all teams
-    ['A','B','C'].forEach(function(team) {
-      var btn3 = document.querySelector('button[data-team="'+team+'"][data-val="3"]');
-      if (btn3) { btn3.style.background = '#f59e0b'; btn3.style.color = '#1a1d27'; btn3.style.borderColor = '#f59e0b'; }
-    });
-
-    giRenderHistory();
-
-    // ── Functions ──
-    window.giSetGround = function(team, val, btn) {
-      document.querySelectorAll('button[data-team="'+team+'"]').forEach(function(b) {
-        b.style.background = 'var(--surface2)'; b.style.color = 'var(--muted)'; b.style.borderColor = 'var(--border)';
-      });
-      btn.style.background = '#f59e0b'; btn.style.color = '#1a1d27'; btn.style.borderColor = '#f59e0b';
-      var hid = document.getElementById('gi-'+team+'-ground');
-      if (hid) hid.value = val;
-    };
-
-    window.giSaveLog = function() {
-      var date    = (document.getElementById('gi-date')   ||{}).value || new Date().toISOString().slice(0,10);
-      var foreman = (document.getElementById('gi-foreman') ||{}).value || '';
-      var weather = (document.getElementById('gi-weather') ||{}).value || '';
-
-      var teams = ['A','B','C'].map(function(team) {
-        var actId  = (document.getElementById('gi-'+team+'-act')  ||{}).value;
-        var qty    = parseFloat((document.getElementById('gi-'+team+'-qty')  ||{}).value);
-        var ground = parseInt((document.getElementById('gi-'+team+'-ground')||{}).value)||3;
-        var block  = (document.getElementById('gi-'+team+'-block')||{}).value||'None';
-        var pass   = document.getElementById('gi-'+team+'-pass');
-        var passOk = pass ? pass.checked : true;
-
-        // Get selected people
-        var pSelect = document.getElementById('gi-'+team+'-people');
-        var people  = pSelect ? Array.from(pSelect.selectedOptions).map(function(o){return o.value;}) : [];
-
-        var simon   = SIMON.find(function(s){return s.id===actId;});
-        var eff     = (simon && !isNaN(qty)) ? Math.round(qty / simon.output * 100) : null;
-        // Adjust efficiency for ground condition (condition 1 = +10%, 5 = -15%)
-        var condAdj = { 1:1.10, 2:1.05, 3:1.00, 4:0.92, 5:0.85 };
-        var adjEff  = (eff !== null) ? Math.round(eff * (condAdj[ground]||1)) : null;
-
-        return {
-          team:team, people:people,
-          actId:actId, actName:simon?simon.name:'', unit:simon?simon.unit:'',
-          qtyDone:isNaN(qty)?null:qty,
-          groundCond:ground, blocker:block, firstPass:passOk,
-          efficiency:eff, adjEfficiency:adjEff
-        };
-      });
-
-      var logs = loadGangLogs();
-      // Remove existing entry for today if any
-      logs = logs.filter(function(l){ return l.date !== date; });
-      logs.unshift({ date:date, foreman:foreman, sm:foreman, weather:weather, teams:teams });
-      saveGangLogs(logs);
-      giRenderHistory();
-      // Refresh the top status cards
-      buildDirIntelTab();
-      alert('✅ Log saved for '+date);
-    };
-
-    window.giDeleteLog = function(i) {
-      var l = loadGangLogs(); l.splice(i,1); saveGangLogs(l); giRenderHistory();
-    };
   };
 
   // ── Seed Gang Intelligence with logs from digitised paper forms (29 May + 21 Jun 2026) ──
@@ -17954,22 +17891,22 @@ function closeZoneHealth() {
         {
           date:'2026-06-21', foreman:'James Cosgrove', sm:'James Cosgrove', weather:'Sunny',
           teams:[
-            { team:'A', people:['Craig Smith','James Cosgrove'], actId:'svc-crossing', actName:'Road crossing 1500mm', unit:'m',
+            { team:'1', people:['Craig Smith','James Cosgrove'], actId:'svc-crossing', actName:'Road crossing 1500mm', unit:'m',
               qtyDone:20, groundCond:3, blocker:'None', firstPass:true, efficiency:100, adjEfficiency:100 },
-            { team:'B', people:['Liam Smith'], actId:'svc-crossing', actName:'Road crossing 1500mm', unit:'m',
+            { team:'2', people:['Liam Smith'], actId:'svc-crossing', actName:'Road crossing 1500mm', unit:'m',
               qtyDone:2, groundCond:3, blocker:'Subcontractor delay', firstPass:true, efficiency:10, adjEfficiency:10 },
-            { team:'C', people:[], actId:'kerb-bullnose', actName:'Bullnose kerb straight', unit:'m',
+            { team:'3', people:[], actId:'kerb-bullnose', actName:'Bullnose kerb straight', unit:'m',
               qtyDone:0, groundCond:3, blocker:'Material delay', firstPass:true, efficiency:0, adjEfficiency:0 }
           ]
         },
         {
           date:'2026-05-29', foreman:'James Cosgrove', sm:'James Cosgrove', weather:'Sunny',
           teams:[
-            { team:'A', people:['Craig Smith','James Cosgrove'], actId:'d110-150', actName:'110mm drain — 1.5m deep', unit:'m',
+            { team:'1', people:['Craig Smith','James Cosgrove'], actId:'d110-150', actName:'110mm drain — 1.5m deep', unit:'m',
               qtyDone:0, groundCond:3, blocker:'Third-party access', firstPass:true, efficiency:0, adjEfficiency:0 },
-            { team:'B', people:['Liam Smith'], actId:'d110-150', actName:'110mm drain — 1.5m deep', unit:'m',
+            { team:'2', people:['Liam Smith'], actId:'d110-150', actName:'110mm drain — 1.5m deep', unit:'m',
               qtyDone:4.5, groundCond:3, blocker:'None', firstPass:true, efficiency:25, adjEfficiency:25 },
-            { team:'C', people:[], actId:'kerb-bullnose', actName:'Bullnose kerb straight', unit:'m',
+            { team:'3', people:[], actId:'kerb-bullnose', actName:'Bullnose kerb straight', unit:'m',
               qtyDone:5, groundCond:3, blocker:'None', firstPass:true, efficiency:19, adjEfficiency:19 }
           ]
         }
@@ -17977,6 +17914,130 @@ function closeZoneHealth() {
       localStorage.setItem('dgc_gang_logs', JSON.stringify(seedLogs));
     } catch(e) {}
   })();
+
+  // ── Gang log form for Daily Log tab (filled by James Cosgrove at end of day) ──
+  window.buildGangLogForm = function() {
+    var el = document.getElementById('gang-log-form-panel');
+    if (!el) return;
+
+    var GANG_STAFF = ['Liam Smith','David Smith','Dean Garrett','Lee Clinton',
+                      'Jake Whetnall','James Cosgrove','Bradley McKevitt','Stephen Lamb',
+                      'James Shannon','Stephen Smithies','Daniel Seed','Lewis Peck'];
+    var GANG_BLOCKERS = ['None','Plant breakdown','Material delay','Design/instruction wait',
+                         'Weather','Ground condition','Subcontractor delay','Third-party access','Other'];
+
+    function loadGangLogs2()    { try{var s=localStorage.getItem('dgc_gang_logs');return s?JSON.parse(s):[];}catch(e){return[];} }
+    function saveGangLogs2(l)   { try{localStorage.setItem('dgc_gang_logs',JSON.stringify(l));}catch(e){} }
+
+    var GANG_ACTS = [
+      {id:'d110-150',name:'110mm drain — 1.5m deep',unit:'m',output:17.8},
+      {id:'d110-175',name:'110mm drain — 1.75m deep',unit:'m',output:17.0},
+      {id:'d150-125',name:'150mm drain — 1.25m deep',unit:'m',output:21.6},
+      {id:'d150-150',name:'150mm drain — 1.5m deep',unit:'m',output:19.0},
+      {id:'d150-175',name:'150mm drain — 1.75m deep',unit:'m',output:17.0},
+      {id:'d225-175',name:'225mm drain — 1.75m deep',unit:'m',output:19.0},
+      {id:'d225-200',name:'225mm drain — 2.0m deep',unit:'m',output:17.0},
+      {id:'mh1200-175',name:'1200mm manhole — 1.75m deep',unit:'nr',output:0.5},
+      {id:'mh1350-175',name:'1350mm manhole — 1.75m deep',unit:'nr',output:0.29},
+      {id:'gully',name:'Road gully 450x900mm',unit:'nr',output:2.0},
+      {id:'rl-dig',name:'Reduce level dig',unit:'m³',output:100},
+      {id:'type1',name:'Type 1 fill',unit:'m³',output:61},
+      {id:'kerb-bullnose',name:'Bullnose kerb',unit:'m',output:27},
+      {id:'kerb-hb2',name:'HB2 kerb',unit:'m',output:33},
+      {id:'svc-single',name:'Services trench 750mm',unit:'m',output:40},
+      {id:'svc-crossing',name:'Road crossing 1500mm',unit:'m',output:20}
+    ];
+
+    var logs2 = loadGangLogs2();
+    var yesterday2 = new Date(); yesterday2.setDate(yesterday2.getDate()-1);
+    var ystrLog2 = logs2.find(function(l){ return l.date===yesterday2.toISOString().slice(0,10); });
+
+    var numGangs = 3;
+
+    var gangForms = '';
+    for (var gi=1; gi<=numGangs; gi++) {
+      var yG = ystrLog2 ? (ystrLog2.teams||[]).find(function(t){return t.team===''+gi;}) : null;
+      var defPeople = yG && yG.people ? yG.people : [];
+      var defActId  = yG ? yG.actId : '';
+
+      var pOpts = GANG_STAFF.map(function(n){
+        return '<option value="'+n+'"'+(defPeople.indexOf(n)>=0?' selected':'')+'>'+n+'</option>';
+      }).join('');
+      var aOpts = '<option value="">— Activity —</option>'
+        + GANG_ACTS.map(function(r){return '<option value="'+r.id+'"'+(r.id===defActId?' selected':'')+'>'+r.name+'</option>';}).join('');
+      var bOpts = GANG_BLOCKERS.map(function(b){return '<option>'+b+'</option>';}).join('');
+
+      gangForms += '<div style="border:1px solid var(--border);border-left:3px solid #f59e0b;border-radius:10px;padding:12px;margin-bottom:10px;">'
+        + '<div style="font-size:12px;font-weight:900;color:#f59e0b;margin-bottom:8px;">Gang '+gi+(yG?' <span style="font-size:10px;font-weight:400;color:var(--muted);">(from yesterday)</span>':'')+'</div>'
+        + '<div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-bottom:8px;">'
+        + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Who\'s in this gang?</div>'
+        + '<select id="glf-'+gi+'-people" multiple size="3" style="width:100%;border-radius:7px;border:1px solid var(--border);font-size:11px;background:var(--surface2);color:var(--text);padding:3px;">'+pOpts+'</select>'
+        + '<div style="font-size:9px;color:var(--muted);margin-top:1px;">Ctrl/Cmd to select multiple</div></div>'
+        + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Activity</div>'
+        + '<select id="glf-'+gi+'-act" style="width:100%;padding:5px;border-radius:7px;border:1px solid var(--border);font-size:11px;background:var(--surface2);color:var(--text);">'+aOpts+'</select>'
+        + '<div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-top:6px;margin-bottom:3px;">Qty done</div>'
+        + '<input id="glf-'+gi+'-qty" type="number" min="0" step="0.5" placeholder="0" style="width:100%;padding:5px;border-radius:7px;border:1px solid var(--border);font-size:13px;font-weight:900;background:var(--surface2);color:var(--text);text-align:center;"></div>'
+        + '</div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+        + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Ground (1-5)</div>'
+        + '<div style="display:flex;gap:3px;">'
+        + [1,2,3,4,5].map(function(n){return '<button onclick="glfGround('+gi+','+n+',this)" style="flex:1;padding:4px;border-radius:5px;border:1px solid var(--border);background:'+(n===3?'#f59e0b':'var(--surface2)')+';color:'+(n===3?'#1a1d27':'var(--muted)')+';font-size:11px;font-weight:700;cursor:pointer;" data-gi="'+gi+'" data-gn="'+n+'">'+n+'</button>';}).join('')
+        + '</div><input type="hidden" id="glf-'+gi+'-ground" value="3"></div>'
+        + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Blocker</div>'
+        + '<select id="glf-'+gi+'-block" style="width:100%;padding:5px;border-radius:7px;border:1px solid var(--border);font-size:11px;background:var(--surface2);color:var(--text);">'+bOpts+'</select></div>'
+        + '</div>'
+        + '</div>';
+    }
+
+    el.innerHTML = '<div style="border-top:2px solid var(--border);padding-top:16px;margin-top:16px;">'
+      + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">📋 End-of-day gang output log</div>'
+      + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">James Cosgrove fills this in at end of day. Under 60 seconds. Results feed the Director → Gang Intel analytics.</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">'
+      + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Date</div><input id="glf-date" type="date" style="width:100%;padding:7px;border-radius:8px;border:1px solid var(--border);font-size:13px;background:var(--surface2);color:var(--text);"></div>'
+      + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Foreman</div><select id="glf-foreman" style="width:100%;padding:7px;border-radius:8px;border:1px solid var(--border);font-size:12px;background:var(--surface2);color:var(--text);"><option>James Cosgrove</option><option>David Smith</option><option>Harry Harrison</option></select></div>'
+      + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Weather</div><select id="glf-weather" style="width:100%;padding:7px;border-radius:8px;border:1px solid var(--border);font-size:12px;background:var(--surface2);color:var(--text);"><option>Sunny</option><option>Cloudy</option><option>Rain</option><option>Heavy Rain</option><option>Wind/Frost</option></select></div>'
+      + '</div>'
+      + gangForms
+      + '<button onclick="glfSave('+numGangs+')" style="width:100%;padding:12px;background:#f59e0b;border:none;border-radius:10px;color:#1a1d27;font-size:14px;font-weight:900;cursor:pointer;margin-top:4px;">💾 Save gang log</button>'
+      + '<div id="glf-confirm" style="margin-top:10px;font-size:12px;color:var(--muted);text-align:center;"></div>'
+      + '</div>';
+
+    var d = document.getElementById('glf-date');
+    if(d) d.value = new Date().toISOString().slice(0,10);
+
+    window.glfGround = function(gi, val, btn) {
+      document.querySelectorAll('button[data-gi="'+gi+'"]').forEach(function(b) {
+        b.style.background='var(--surface2)'; b.style.color='var(--muted)';
+      });
+      btn.style.background='#f59e0b'; btn.style.color='#1a1d27';
+      var h=document.getElementById('glf-'+gi+'-ground'); if(h)h.value=val;
+    };
+
+    window.glfSave = function(n) {
+      var date    = (document.getElementById('glf-date')   ||{}).value || new Date().toISOString().slice(0,10);
+      var foreman = (document.getElementById('glf-foreman')||{}).value || '';
+      var weather = (document.getElementById('glf-weather')||{}).value || '';
+      var teams=[];
+      for(var i=1;i<=n;i++) {
+        var pSel = document.getElementById('glf-'+i+'-people');
+        var people = pSel ? Array.from(pSel.selectedOptions).map(function(o){return o.value;}) : [];
+        var actId  = (document.getElementById('glf-'+i+'-act')  ||{}).value;
+        var qty    = parseFloat((document.getElementById('glf-'+i+'-qty')  ||{}).value);
+        var ground = parseInt((document.getElementById('glf-'+i+'-ground')||{}).value)||3;
+        var block  = (document.getElementById('glf-'+i+'-block')||{}).value||'None';
+        var act    = GANG_ACTS.find(function(a){return a.id===actId;});
+        var eff    = (act && !isNaN(qty)) ? Math.round(qty/act.output*100) : null;
+        teams.push({ team:''+i, people:people, actId:actId, actName:act?act.name:'', unit:act?act.unit:'',
+                     qtyDone:isNaN(qty)?null:qty, groundCond:ground, blocker:block, efficiency:eff });
+      }
+      var l2=loadGangLogs2();
+      l2=l2.filter(function(x){return x.date!==date;});
+      l2.unshift({date:date,foreman:foreman,sm:foreman,weather:weather,teams:teams});
+      saveGangLogs2(l2);
+      var c=document.getElementById('glf-confirm');
+      if(c) c.innerHTML='✅ Saved for '+date+'. View analytics in Director → Gang Intel.';
+    };
+  };
 
 })();
 </script>
