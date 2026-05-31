@@ -17559,6 +17559,14 @@ function closeZoneHealth() {
       { id:'gly',  name:'Road gullies',        unit:'nr', simonDays:5.0,  totalQty:10,   section:'Drainage' }
     ];
     var BOQ_TOTAL_DAYS = BOQ.reduce(function(s,b){ return s+b.simonDays; },0); // ~64 days (drainage only)
+    var BOQ_ACT_MAP = {
+      'd110': ['d110-150','d110-175'],
+      'd150': ['d150-125','d150-150','d150-175'],
+      'd225': ['d225-175','d225-200','d225-225'],
+      'mh12': ['mh1200-175','mh1200-200'],
+      'mh13': ['mh1350-125','mh1350-175'],
+      'gly':  ['gully']
+    };
     var REMEASURE_NOTE = 'Earthworks, kerbing and surfacing are rate-only — quantities remeasured at job completion.';
 
     // Simon's rates (same as Rates tab)
@@ -17627,6 +17635,46 @@ function closeZoneHealth() {
 
     // ── Get today's and recent logs ──
     var logs = loadGangLogs();
+
+    // Programme status banner
+    var progStart  = new Date('2026-03-23'); // Ballasalla start
+    var progWeeks  = 13;
+    var msPerDay   = 86400000;
+    var today2     = new Date();
+    today2.setHours(0,0,0,0);
+    var daysIn     = Math.max(0, Math.round((today2 - progStart) / msPerDay));
+    var wksIn      = Math.floor(daysIn / 7) + 1;
+    var progPct    = Math.min(100, Math.round(daysIn / (progWeeks * 7) * 100));
+    var isOnTrack  = progPct <= 78; // 71% AFP + some buffer
+    var bannerCol  = isOnTrack ? '#22c55e' : '#f59e0b';
+    var bannerText = 'Week '+ Math.min(wksIn, progWeeks) +' of '+progWeeks+' — '+progPct+'% of programme time elapsed';
+    // Check for active blockers
+    var lastLog = logs[0];
+    var activeBlockers = [];
+    if (lastLog && lastLog.date === today2.toISOString().slice(0,10)) {
+      (lastLog.teams||[]).forEach(function(t) {
+        if (t.blocker && t.blocker !== 'None') activeBlockers.push('Gang '+t.team+': '+t.blocker);
+      });
+    }
+    if (activeBlockers.length) {
+      bannerText += ' · ⚠ Active blockers: ' + activeBlockers.join(', ');
+      bannerCol = '#ef4444';
+    } else {
+      bannerText += ' · ✓ No active blockers';
+    }
+
+    // Yesterday summary
+    var ystrSummary = '';
+    if (lastLog) {
+      var ystrEffs = (lastLog.teams||[]).filter(function(t){return t.efficiency!==null;}).map(function(t){return t.efficiency;});
+      var ystrAvg  = ystrEffs.length ? Math.round(ystrEffs.reduce(function(a,b){return a+b;},0)/ystrEffs.length) : null;
+      var ystrCol  = ystrAvg===null?'#94a3b8':ystrAvg>=90?'#22c55e':ystrAvg>=70?'#f59e0b':'#ef4444';
+      var ystrBlocks = (lastLog.teams||[]).filter(function(t){return t.blocker&&t.blocker!=='None';});
+      ystrSummary = 'Last log: '+lastLog.date+' — '+(ystrAvg!==null?ystrAvg+'% overall efficiency':'no output logged')
+        + (ystrBlocks.length?' · ⚠ '+ystrBlocks.length+' blocker'+(ystrBlocks.length>1?'s':''):' · no blockers')
+        + ' · '+(lastLog.foreman||'unknown SM');
+    }
+
     var today = new Date().toISOString().slice(0,10);
     var todayLog = logs.find(function(l){ return l.date === today; });
     var yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
@@ -17663,7 +17711,7 @@ function closeZoneHealth() {
         + '<div style="font-size:10px;color:var(--muted);margin-top:3px;">today</div>'
         + (rolling!==null?'<div style="font-size:12px;font-weight:700;color:var(--text);margin-top:6px;">7-day avg: '+rolling+'%</div>':'')
         + '<div style="font-size:11px;font-weight:700;color:'+todaySt.col+';margin-top:4px;">'+todaySt.label+'</div>'
-        + (blocker && blocker!=='None'?'<div style="font-size:10px;color:#f59e0b;margin-top:4px;">⚠ '+blocker+'</div>':'')
+        + (blocker && blocker!=='None'?'<div style="font-size:10px;color:#f59e0b;margin-top:4px;font-weight:700;">⚠ Blocker: '+blocker+'</div>':'')
         + (people!=='—'?'<div style="font-size:10px;color:var(--muted);margin-top:4px;">'+people+'</div>':'')
         + '</div>';
     }).join('');
@@ -17674,7 +17722,7 @@ function closeZoneHealth() {
       logs.forEach(function(log) {
         (log.teams||[]).forEach(function(t) {
           if (!t.actId || t.qtyDone===null || t.qtyDone===undefined) return;
-          if (t.blocker && t.blocker !== 'None' && t.qtyDone===0) return; // skip blocked days
+          if (t.blocker && t.blocker !== 'None') return; // skip blocked days
           var simon = SIMON.find(function(s){return s.id===t.actId;});
           if (!simon) return;
           if (!scores[t.actId]) scores[t.actId] = { name:simon.name, unit:simon.unit, simonRate:simon.output, entries:[] };
@@ -17700,14 +17748,76 @@ function closeZoneHealth() {
         }).join('')
       : '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--muted);font-size:12px;">No productivity data yet. Add daily logs below to build the picture.</td></tr>';
 
+    // ── Gang combination matrix ──
+    function buildPairingMatrix() {
+      var pairs = {};
+      logs.forEach(function(log) {
+        (log.teams||[]).forEach(function(t) {
+          var people = t.people || [];
+          if (people.length < 2 || !t.actId || t.qtyDone === null) return;
+          if (t.blocker && t.blocker !== 'None') return;
+          var simon = SIMON.find(function(s){ return s.id===t.actId; });
+          if (!simon) return;
+          var eff = Math.round(t.qtyDone / simon.output * 100);
+          // Record every pair
+          for (var i=0; i<people.length; i++) {
+            for (var j=i+1; j<people.length; j++) {
+              var key = [people[i],people[j]].sort().join(' + ');
+              if (!pairs[key]) pairs[key] = { effs:[], acts:{} };
+              pairs[key].effs.push(eff);
+              pairs[key].acts[t.actName||t.actId] = (pairs[key].acts[t.actName||t.actId]||0)+1;
+            }
+          }
+        });
+      });
+      // Build rows sorted by avg efficiency
+      var rows = Object.keys(pairs).map(function(key) {
+        var p    = pairs[key];
+        var avg  = Math.round(p.effs.reduce(function(a,b){return a+b;},0)/p.effs.length);
+        var col  = avg>=100?'#22c55e':avg>=80?'#f59e0b':'#ef4444';
+        var acts = Object.keys(p.acts).join(', ');
+        var n    = p.effs.length;
+        return { key:key, avg:avg, col:col, acts:acts, n:n };
+      }).sort(function(a,b){ return b.avg-a.avg; });
+      if (!rows.length) return '<div style="text-align:center;padding:14px;color:var(--muted);font-size:12px;">No combination data yet — log activities with named operatives to build pairings.</div>';
+      return '<div style="overflow-x:auto;"><table style="border-collapse:collapse;width:100%;font-size:12px;">'
+        +'<thead><tr style="background:var(--surface2);"><th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--muted);">Pairing</th><th>Avg efficiency</th><th>Activities</th><th>Logs</th></tr></thead>'
+        +'<tbody>'
+        +rows.map(function(r){
+          return '<tr style="border-bottom:1px solid var(--border);">'
+            +'<td style="padding:7px 10px;font-weight:700;">'+r.key+'</td>'
+            +'<td style="padding:7px 10px;font-size:18px;font-weight:900;color:'+r.col+';">'+r.avg+'%</td>'
+            +'<td style="padding:7px 10px;font-size:11px;color:var(--muted);">'+r.acts+'</td>'
+            +'<td style="padding:7px 10px;font-size:11px;color:var(--muted);">'+r.n+' log'+(r.n>1?'s':'')+'</td>'
+            +'</tr>';
+        }).join('')
+        +'</tbody></table></div>';
+    }
+
+    // ── Export function ──
+    window.giExport = function() {
+      var data = { exported: new Date().toISOString(), logs: loadGangLogs() };
+      var blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'dgc-gang-intel-' + new Date().toISOString().slice(0,10) + '.json';
+      a.click();
+    };
+
     // ── HTML ──
     var html = '<div style="max-width:960px;padding:0 0 24px;">'
 
     // Header
     + '<div style="background:#1a1d27;border-radius:14px;padding:18px 22px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">'
     + '<div style="background:#f59e0b;color:#1a1d27;border-radius:8px;padding:5px 13px;font-size:15px;font-weight:900;">🧠 Gang Intel</div>'
-    + '<div style="color:#94a3b8;font-size:12px;">How fast are DGC\'s gangs working vs Simon\'s benchmark rates? Builds DGC\'s own speed data over time.</div>'
+    + '<div style="color:#94a3b8;font-size:12px;flex:1;">How fast are DGC\'s gangs working vs Simon\'s benchmark rates? Builds DGC\'s own speed data over time.</div>'
+    + '<button onclick="giExport()" style="padding:5px 12px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#94a3b8;font-size:11px;cursor:pointer;white-space:nowrap;">⬇ Export data</button>'
     + '</div>'
+
+    // Programme status banner
+    + '<div style="padding:12px 16px;border-radius:10px;background:'+bannerCol+'11;border:1px solid '+bannerCol+'44;font-size:13px;font-weight:700;color:'+bannerCol+';margin-bottom:14px;">'+bannerText+'</div>'
+    // Yesterday summary bar
+    + (lastLog ? '<div style="font-size:11px;color:var(--muted);padding:6px 16px;border-bottom:1px solid var(--border);margin-bottom:10px;">'+ystrSummary+'</div>' : '')
 
     // 3-card gang status
     + '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:18px;">'
@@ -17737,7 +17847,8 @@ function closeZoneHealth() {
             var loggedQty = 0;
             logs.forEach(function(log) {
               (log.teams||[]).forEach(function(t) {
-                if (t.actId && t.actId.indexOf(b.id.replace(/[0-9]/g,'').substring(0,3)) >= 0 && t.qtyDone) {
+                var allowedActIds = BOQ_ACT_MAP[b.id] || [b.id];
+                if (allowedActIds.indexOf(t.actId) >= 0 && t.qtyDone && (!t.blocker || t.blocker === 'None')) {
                   loggedQty += (t.qtyDone || 0);
                 }
               });
@@ -17749,18 +17860,42 @@ function closeZoneHealth() {
               ? '<div style="background:var(--border);border-radius:3px;height:6px;margin-top:4px;"><div style="width:'+donePct+'%;background:#22c55e;height:100%;border-radius:3px;"></div></div>'
               : '<div style="background:var(--border);border-radius:3px;height:6px;margin-top:4px;"><div style="width:0%;background:#22c55e;height:100%;border-radius:3px;"></div></div>';
             var pctLabel   = donePct !== null ? donePct+'% done' : 'No logs yet';
+            // Pace tracker
+            var avgOutput = null;
+            var logCount  = 0;
+            logs.forEach(function(log) {
+              (log.teams||[]).forEach(function(t) {
+                var allowedActs = BOQ_ACT_MAP[b.id] || [b.id];
+                if (allowedActs.indexOf(t.actId) >= 0 && t.qtyDone !== null && (!t.blocker || t.blocker === 'None')) {
+                  avgOutput = (avgOutput === null) ? t.qtyDone : (avgOutput * logCount + t.qtyDone) / (logCount + 1);
+                  logCount++;
+                }
+              });
+            });
+            var paceText = '—';
+            if (avgOutput !== null && avgOutput > 0 && qtyLeft > 0) {
+              var paceDays   = Math.round(qtyLeft / avgOutput * 10) / 10;
+              var finishDate = new Date(today2.getTime() + paceDays * 7 * msPerDay / 5); // rough working days
+              var fmtFin     = finishDate.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+              var simonDaysLeft = b.simonDays * qtyLeft / b.totalQty;
+              var deltaDays     = Math.round((paceDays - simonDaysLeft) * 10) / 10;
+              paceText = fmtFin + (deltaDays > 0 ? ' <span style="color:#ef4444;">(+'+deltaDays+'d late)</span>' : ' <span style="color:#22c55e;">('+deltaDays+'d early)</span>') + '<br><span style="font-size:9px;color:var(--muted);">n='+logCount+'</span>';
+            } else if (logCount === 0) {
+              paceText = '<span style="color:var(--muted);font-size:10px;">No logs yet</span>';
+            }
             return '<tr style="border-bottom:1px solid var(--border);">'
               + '<td style="padding:7px 10px;font-size:12px;font-weight:700;">'+b.name+'</td>'
               + '<td style="padding:7px 10px;font-size:11px;text-align:right;">'+b.totalQty+' '+b.unit+'</td>'
               + '<td style="padding:7px 10px;font-size:11px;text-align:right;color:var(--muted);">'+b.simonDays+'d</td>'
               + '<td style="padding:7px 10px;min-width:80px;">'+pctBar+'<div style="font-size:10px;color:var(--muted);margin-top:2px;">'+pctLabel+'</div></td>'
               + '<td style="padding:7px 10px;font-size:11px;font-weight:700;text-align:right;color:'+(daysLeft<2?'#22c55e':daysLeft<5?'#f59e0b':'var(--text)')+';">'+daysLeft+'d left</td>'
+              + '<td style="padding:7px 10px;font-size:11px;">'+paceText+'</td>'
               + '</tr>';
           }).join('');
           return '<div style="margin-bottom:14px;">'
             + '<div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#f59e0b;margin-bottom:6px;">'+sec+'</div>'
             + '<div style="overflow-x:auto;"><table style="border-collapse:collapse;width:100%;font-size:12px;">'
-            + '<thead><tr style="background:var(--surface2);"><th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--muted);">Activity</th><th style="text-align:right;font-size:10px;color:var(--muted);">Contract qty</th><th style="text-align:right;font-size:10px;color:var(--muted);">Simon\'s days</th><th style="font-size:10px;color:var(--muted);">Progress</th><th style="text-align:right;font-size:10px;color:var(--muted);">Days left</th></tr></thead>'
+            + '<thead><tr style="background:var(--surface2);"><th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--muted);">Activity</th><th style="text-align:right;font-size:10px;color:var(--muted);">Contract qty</th><th style="text-align:right;font-size:10px;color:var(--muted);">Simon\'s days</th><th style="font-size:10px;color:var(--muted);">Progress</th><th style="text-align:right;font-size:10px;color:var(--muted);">Days left</th><th style="font-size:10px;color:var(--muted);">At current pace</th></tr></thead>'
             + '<tbody>'+rows+'</tbody>'
             + '</table></div></div>';
         }).join('');
@@ -17847,7 +17982,7 @@ function closeZoneHealth() {
           var s = staffStats[name];
           if (!s || s.logs < 3) return;
           if (s.gangPartners.length <= 1) {
-            suggestions.push({ type:'rotate', person:name, text:name+' has only worked with '+(s.gangPartners[0]||'one person')+'. Try a different gang combination to get fresh data.', col:'#38bdf8' });
+            suggestions.push({ type:'rotate', person:name, text:'Try varying the gang that includes '+name+' to build comparison data and find the best combination for each activity.', col:'#38bdf8' });
           }
         });
         var keyActivities = ['d150-150','d150-175','mh1200-175','kerb-bullnose'];
@@ -17867,15 +18002,31 @@ function closeZoneHealth() {
           + '</div>'
           + '</div>'
           + '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:18px;">'
-          + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">💡 Suggestions</div>'
-          + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">System-generated recommendations based on the data. Act on these to improve gang planning and build more useful performance data over time.</div>'
-          + (suggestions.length
-            ? suggestions.map(function(s) {
-                return '<div style="padding:10px 14px;border-radius:8px;border-left:3px solid '+s.col+';background:'+s.col+'08;margin-bottom:8px;font-size:12px;color:var(--text);">'+s.text+'</div>';
-              }).join('')
-            : '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px;">No suggestions yet — add more daily logs to generate recommendations.</div>'
-          )
-          + '</div>';
+          + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">🔗 Gang combinations</div>'
+          + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Which pairs of operatives produce the best results? Builds from daily logs as data accumulates. More logs = more reliable picture.</div>'
+          + buildPairingMatrix()
+          + '</div>'
+          + (function() {
+              var actionSugs = suggestions.filter(function(s){ return s.type !== 'nodata'; });
+              var dataSugs   = suggestions.filter(function(s){ return s.type === 'nodata'; });
+              return '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:18px;">'
+                + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">💡 Suggestions</div>'
+                + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">System-generated recommendations based on the data. Act on these to improve gang planning and build more useful performance data over time.</div>'
+                + (actionSugs.length
+                  ? actionSugs.map(function(s){
+                      return '<div style="padding:10px 14px;border-radius:8px;border-left:3px solid '+s.col+';background:'+s.col+'08;margin-bottom:8px;font-size:12px;color:var(--text);">'+s.text+'</div>';
+                    }).join('')
+                  : '<div style="font-size:12px;color:var(--muted);padding:8px 0;">No action items yet.</div>'
+                )
+                + (dataSugs.length
+                  ? '<details style="margin-top:8px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">'+dataSugs.length+' operative'+(dataSugs.length>1?'s':'')+' with no logs yet</summary>'
+                    + '<div style="margin-top:6px;">'
+                    + dataSugs.map(function(s){ return '<div style="padding:6px 10px;font-size:11px;color:var(--muted);">'+s.text+'</div>'; }).join('')
+                    + '</div></details>'
+                  : ''
+                )
+                + '</div>';
+            })();
       })()
 
     + '</div>';
@@ -17920,9 +18071,9 @@ function closeZoneHealth() {
     var el = document.getElementById('gang-log-form-panel');
     if (!el) return;
 
-    var GANG_STAFF = ['Liam Smith','David Smith','Dean Garrett','Lee Clinton',
-                      'Jake Whetnall','James Cosgrove','Bradley McKevitt','Stephen Lamb',
-                      'James Shannon','Stephen Smithies','Daniel Seed','Lewis Peck'];
+    var GANG_STAFF = ['James Cosgrove','Craig Smith','Dean Garrett','Liam Smith',
+                      'Lee Clinton','Jake Whetnall','Stephen Lamb','James Shannon',
+                      'Stephen Smithies','Daniel Seed','Lewis Peck','Bradley McKevitt'];
     var GANG_BLOCKERS = ['None','Plant breakdown','Material delay','Design/instruction wait',
                          'Weather','Ground condition','Subcontractor delay','Third-party access','Other'];
 
