@@ -15317,17 +15317,22 @@ function closeZoneHealth() {
 
       // Migration 2: Add Peel Breakwater if not present
       if (existingJobs && !existingJobs.find(function(j){ return j.id === 4 || (j.name && j.name.includes('Peel Breakwater')); })) {
-        existingJobs.push({ id:4, name:'Peel Breakwater (DOI)', value:122995, weeks:8, people:5, ohp:15, profit:0, startWeek:6, onTimeline:true, confirmed:true, note:'Sewage treatment works — awarded. Brick option £122,994. DOI client.' });
+        existingJobs.push({ id:4, name:'Peel Breakwater (DOI)', value:122995, weeks:8, people:5, ohp:15, profit:0, startWeek:10, onTimeline:true, confirmed:true, note:'AWARDED — not started yet. August start. Sewage treatment works, Peel harbour. £122,994 brick option. DOI client (IoM Govt).' });
       }
 
       // Migration 3: Add Upmost International if not present
       if (existingJobs && !existingJobs.find(function(j){ return j.id === 5 || (j.name && j.name.includes('Upmost')); })) {
-        existingJobs.push({ id:5, name:'Upmost International', value:500000, weeks:12, people:4, ohp:15, profit:0, startWeek:18, onTimeline:true, confirmed:false, note:'Potential — July/Aug start. ~£500k, 4 guys, ~3 months. Data TBC.' });
+        existingJobs.push({ id:5, name:'Upmost International (Est.)', value:500000, weeks:12, people:4, ohp:15, profit:0, startWeek:18, onTimeline:false, confirmed:false, note:'ESTIMATE — building/construction company. July/Aug start. ~£500k, 4 guys, ~3 months. Tender TBC.' });
       }
 
-      // Migration 4: Add Glenfaba Ring Road demo if not present
+      // Migration 4: Add Glenfaba Ring Road if not present
       if (existingJobs && !existingJobs.find(function(j){ return j.id === 6 || (j.name && j.name.includes('Glenfaba')); })) {
-        existingJobs.push({ id:6, name:'Glenfaba Ring Road (Demo)', value:1700000, weeks:52, people:12, ohp:15, profit:0, startWeek:26, onTimeline:false, confirmed:false, note:'Demo estimate — 4× Ballasalla scale. Ring road drainage ~£1.7m. ICP taking over from; DGC being asked to price.' });
+        existingJobs.push({ id:6, name:'Glenfaba Ring Road (Est.)', value:1700000, weeks:52, people:12, ohp:15, profit:0, startWeek:26, onTimeline:false, confirmed:false, note:'CONFIDENT ESTIMATE — Dandara asked DGC to price ring road drainage. "They\'re going to give it to us." ICP failing. ~£1.7m, 4× Ballasalla scale.' });
+      }
+
+      // Migration 5: Add MU Flow Monitoring Phase 2 if not present
+      if (existingJobs && !existingJobs.find(function(j){ return j.id === 7 || (j.name && j.name.includes('MU Flow')); })) {
+        existingJobs.push({ id:7, name:'MU Flow Monitoring Ph.2 (Est.)', value:500000, weeks:26, people:3, ohp:15, profit:0, startWeek:52, onTimeline:false, confirmed:false, note:'PLACEHOLDER — DGC did 5 sites for Manx Utilities. ~10 more sites coming. Estimated at ~2× Phase 1 value. Not for a while.' });
       }
 
       if (existingJobs) localStorage.setItem('dgc_jobs', JSON.stringify(existingJobs));
