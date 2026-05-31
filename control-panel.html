@@ -17545,6 +17545,31 @@ function closeZoneHealth() {
     function loadGangLogs()    { try{var s=localStorage.getItem('dgc_gang_logs');return s?JSON.parse(s):[];}catch(e){return[];} }
     function saveGangLogs(l)   { try{localStorage.setItem('dgc_gang_logs',JSON.stringify(l));}catch(e){} }
 
+    // ── Ballasalla Phase 4 Programme Matrix — real BoQ quantities ──
+    var BOQ = [
+      // Drainage pipes
+      { id:'d110', name:'110mm drainage pipe', unit:'m',  simonDays:5.4,  totalQty:96,   section:'Drainage' },
+      { id:'d150', name:'150mm drainage pipe', unit:'m',  simonDays:11.9, totalQty:226,  section:'Drainage' },
+      { id:'d225', name:'225mm drainage pipe', unit:'m',  simonDays:11.5, totalQty:195,  section:'Drainage' },
+      { id:'mh12', name:'1200mm manholes',     unit:'nr', simonDays:12.0, totalQty:6,    section:'Drainage' },
+      { id:'mh13', name:'1350mm manholes',     unit:'nr', simonDays:18.0, totalQty:6,    section:'Drainage' },
+      { id:'gly',  name:'Road gullies',        unit:'nr', simonDays:5.0,  totalQty:10,   section:'Drainage' },
+      // Earthworks
+      { id:'rl',   name:'Reduce level dig',    unit:'m³', simonDays:4.3,  totalQty:428,  section:'Earthworks' },
+      { id:'t1',   name:'Type 1 fill',         unit:'m³', simonDays:7.1,  totalQty:433,  section:'Earthworks' },
+      { id:'f6',   name:'6F2 fill',            unit:'m³', simonDays:14.9, totalQty:908,  section:'Earthworks' },
+      { id:'cmp',  name:'Compaction',          unit:'m²', simonDays:6.8,  totalQty:2029, section:'Earthworks' },
+      // Kerbing
+      { id:'kb1',  name:'Bullnose kerb (straight)', unit:'m', simonDays:14.7, totalQty:398, section:'Kerbing' },
+      { id:'kb2',  name:'Bullnose kerb (radius)',    unit:'m', simonDays:2.1,  totalQty:49,  section:'Kerbing' },
+      { id:'kb3',  name:'HB2 kerb',                 unit:'m', simonDays:1.2,  totalQty:40,  section:'Kerbing' },
+      { id:'kb4',  name:'Flat top edging',           unit:'m', simonDays:8.9,  totalQty:354, section:'Kerbing' },
+      // Services
+      { id:'svc1', name:'Services trenches (shallow)', unit:'m', simonDays:5.6,  totalQty:223, section:'Services' },
+      { id:'svc2', name:'Road crossings (deep)',       unit:'m', simonDays:1.2,  totalQty:35,  section:'Services' }
+    ];
+    var BOQ_TOTAL_DAYS = BOQ.reduce(function(s,b){ return s+b.simonDays; },0); // ~131 days
+
     // Simon's rates (same as Rates tab)
     var SIMON = [
       {id:'d110-150',name:'110mm drain — 1.5m deep',  unit:'m',  output:17.8, dayCost:672},
@@ -17775,6 +17800,52 @@ function closeZoneHealth() {
     + '<div style="overflow-x:auto;"><table style="border-collapse:collapse;width:100%;font-size:12px;">'
     + '<thead><tr style="background:var(--surface2);"><th style="padding:8px 10px;text-align:left;font-size:10px;color:var(--muted);font-weight:700;">Activity</th><th>Simon\'s rate</th><th>DGC avg</th><th>Confidence</th></tr></thead>'
     + '<tbody>'+scoreRows+'</tbody></table></div>'
+    + '</div>'
+
+    // Programme matrix card
+    + '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:18px;">'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">📊 Ballasalla Phase 4 — Programme Matrix</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Real BoQ quantities from the priced contract (Feb 2026). Simon\'s rate gives the expected days for each activity. Total programme: '+Math.round(BOQ_TOTAL_DAYS)+' gang-days across 3 concurrent teams = ~17 working weeks.</div>'
+    + (function() {
+        var sections = {};
+        BOQ.forEach(function(b) { if (!sections[b.section]) sections[b.section]=[]; sections[b.section].push(b); });
+        return Object.keys(sections).map(function(sec) {
+          var rows = sections[sec].map(function(b) {
+            // Look up progress from log data (if any activity matches)
+            var loggedQty = 0;
+            logs.forEach(function(log) {
+              (log.teams||[]).forEach(function(t) {
+                if (t.actId && t.actId.indexOf(b.id.replace(/[0-9]/g,'').substring(0,3)) >= 0 && t.qtyDone) {
+                  loggedQty += (t.qtyDone || 0);
+                }
+              });
+            });
+            var donePct    = loggedQty > 0 ? Math.min(100, Math.round(loggedQty/b.totalQty*100)) : null;
+            var qtyLeft    = loggedQty > 0 ? Math.max(0, b.totalQty - loggedQty) : b.totalQty;
+            var daysLeft   = Math.round(b.simonDays * qtyLeft / b.totalQty * 10) / 10;
+            var pctBar     = donePct !== null
+              ? '<div style="background:var(--border);border-radius:3px;height:6px;margin-top:4px;"><div style="width:'+donePct+'%;background:#22c55e;height:100%;border-radius:3px;"></div></div>'
+              : '<div style="background:var(--border);border-radius:3px;height:6px;margin-top:4px;"><div style="width:0%;background:#22c55e;height:100%;border-radius:3px;"></div></div>';
+            var pctLabel   = donePct !== null ? donePct+'% done' : 'No logs yet';
+            return '<tr style="border-bottom:1px solid var(--border);">'
+              + '<td style="padding:7px 10px;font-size:12px;font-weight:700;">'+b.name+'</td>'
+              + '<td style="padding:7px 10px;font-size:11px;text-align:right;">'+b.totalQty+' '+b.unit+'</td>'
+              + '<td style="padding:7px 10px;font-size:11px;text-align:right;color:var(--muted);">'+b.simonDays+'d</td>'
+              + '<td style="padding:7px 10px;min-width:80px;">'+pctBar+'<div style="font-size:10px;color:var(--muted);margin-top:2px;">'+pctLabel+'</div></td>'
+              + '<td style="padding:7px 10px;font-size:11px;font-weight:700;text-align:right;color:'+(daysLeft<2?'#22c55e':daysLeft<5?'#f59e0b':'var(--text)')+';">'+daysLeft+'d left</td>'
+              + '</tr>';
+          }).join('');
+          return '<div style="margin-bottom:14px;">'
+            + '<div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#f59e0b;margin-bottom:6px;">'+sec+'</div>'
+            + '<div style="overflow-x:auto;"><table style="border-collapse:collapse;width:100%;font-size:12px;">'
+            + '<thead><tr style="background:var(--surface2);"><th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--muted);">Activity</th><th style="text-align:right;font-size:10px;color:var(--muted);">Contract qty</th><th style="text-align:right;font-size:10px;color:var(--muted);">Simon\'s days</th><th style="font-size:10px;color:var(--muted);">Progress</th><th style="text-align:right;font-size:10px;color:var(--muted);">Days left</th></tr></thead>'
+            + '<tbody>'+rows+'</tbody>'
+            + '</table></div></div>';
+        }).join('');
+      })()
+    + '<div style="padding:10px 14px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);font-size:11px;color:var(--muted);">'
+    + '⚠ Progress figures are based on what\'s been logged in this system. They\'ll become accurate as daily logs accumulate. The programme is currently at 71% overall (from AFP calculations).'
+    + '</div>'
     + '</div>'
 
     // Daily entry form
