@@ -15197,6 +15197,11 @@ function closeZoneHealth() {
   var CURRENT_STAFF      = 10;     // Productive site staff only — 12 total minus Bradley + Lewis (overhead)
   var HRS_PER_WEEK       = 45;
 
+  // ── Timeline drag state (module-level to prevent listener accumulation) ─────
+  var _tlDragState      = null;
+  var _tlMoveHandler    = null;
+  var _tlUpHandler      = null;
+
   // ── Helpers ────────────────────────────────────────────────────────────────
   function fmt(n) { return '£' + Math.round(n).toLocaleString('en-GB'); }
   function clr(v, good, warn) {
@@ -15343,6 +15348,20 @@ function closeZoneHealth() {
 
     el.innerHTML = html;
 
+    // Auto-calculate active staff from confirmed jobs
+    var _jobs = loadJobs();
+    var _today = new Date();
+    var _msW = 7*24*60*60*1000;
+    var _activeCount = 0;
+    _jobs.forEach(function(j){
+      if (!j.confirmed) return;
+      var sd = new Date(_today.getTime() + (j.startWeek||0)*_msW);
+      var ed = new Date(sd.getTime() + (j.weeks||1)*_msW);
+      if (_today >= sd && _today <= ed) _activeCount += (j.people||0);
+    });
+    var _hEl = document.getElementById('dp-health-n');
+    if (_hEl) _hEl.value = _activeCount;
+
     // Render timeline using the existing function but pointing at dp-tl-inner
     dpRenderTimeline();
     dpHealth();
@@ -15379,9 +15398,18 @@ function closeZoneHealth() {
       var profitWk = job.weeks > 0 ? profit / job.weeks : 0;
       var col = profit > 50000 ? '#22c55e' : profit > 20000 ? '#f59e0b' : '#ef4444';
       var calcProfit = (job.value||0) * (job.ohp/100) / (1 + job.ohp/100);
+      var msPerWeek = 7*24*60*60*1000;
+      var today = new Date();
+      var startDate = new Date(today.getTime() + (job.startWeek||0) * msPerWeek);
+      var endDate   = new Date(startDate.getTime() + (job.weeks||1) * msPerWeek);
+      var fmtD = function(d){ return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'}); };
+      var dateLabel = fmtD(startDate) + ' → ' + fmtD(endDate);
       return '<div style="border:1px solid var(--border);border-left:4px solid '+col+';border-radius:10px;padding:14px 16px;margin-bottom:10px;">'
         + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">'
+        + '<div>'
         + '<div style="font-size:14px;font-weight:800;color:var(--text);">' + (job.name||'Unnamed') + '</div>'
+        + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">📅 '+dateLabel+'</div>'
+        + '</div>'
         + '<div style="display:flex;gap:6px;">'
         + '<button onclick="djSaveJob('+idx+')" style="padding:5px 11px;background:rgba(34,197,94,0.1);border:1px solid #22c55e44;border-radius:6px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer;">✓ Save</button>'
         + '<button onclick="djDeleteJob('+idx+')" style="padding:5px 11px;background:transparent;border:1px solid #ef444444;border-radius:6px;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;">✕ Remove</button>'
@@ -15391,6 +15419,7 @@ function closeZoneHealth() {
         + djJobField('Value (£)','dj-job-val-'+idx,'number',job.value||'')
         + djJobField('Weeks','dj-job-wks-'+idx,'number',job.weeks||'')
         + djJobField('People','dj-job-ppl-'+idx,'number',job.people||'')
+        + djJobField('Profit % (OH&P)','dj-job-ohp-'+idx,'number',job.ohp||15)
         + '</div>'
         + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
         + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px;">Profit on this job (£)</div>'
@@ -15406,13 +15435,26 @@ function closeZoneHealth() {
         + '<label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="dj-job-tl-'+idx+'" '+(job.onTimeline!==false?'checked':'')+' style="accent-color:#f59e0b;"> Show on planner</label>'
         + '<label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="dj-job-con-'+idx+'" '+(job.confirmed?'checked':'')+' style="accent-color:#22c55e;"> Confirmed (green bar)</label>'
         + '</div>'
+        + '<div style="margin-top:10px;">'
+        + '<input id="dj-job-note-'+idx+'" type="text" value="'+(job.note||'')+'" placeholder="Status note — e.g. Week 3 of 17, drainage complete" style="width:100%;padding:6px 10px;border-radius:8px;border:1px dashed var(--border);font-size:12px;color:var(--muted);background:var(--surface2);">'
+        + '</div>'
         + '</div>';
     }).join('');
 
     // Totals
+    function weeksRemainingDj(j) {
+      var sw = j.startWeek||0; var ew = sw + (j.weeks||1);
+      if (ew <= 0) return 0; if (sw >= 52) return 0;
+      if (sw >= 0) return j.weeks||1;
+      return Math.max(0, ew);
+    }
     var totalProfit  = jobs.reduce(function(s,j){ return s + jobProfit(j); }, 0);
     var totalPeople  = jobs.reduce(function(s,j){ return s + (j.people||0); }, 0);
-    var monthlyOhp   = jobs.reduce(function(s,j){ return s + jobProfit(j)/Math.max(1,j.weeks)*4.333; }, 0);
+    var monthlyOhp = jobs.reduce(function(s,j){
+      var wr = weeksRemainingDj(j);
+      if (wr <= 0) return s;
+      return s + jobProfit(j) / Math.max(1, j.weeks) * Math.min(4.333, wr * 4.333 / (j.weeks||1));
+    }, 0);
     var monthlyNet   = monthlyOhp - MONTHLY_OVERHEAD;
     var peopleLeft   = CURRENT_STAFF - totalPeople;
     var netCol       = monthlyNet > 5000 ? '#22c55e' : monthlyNet > 0 ? '#f59e0b' : '#ef4444';
@@ -15432,6 +15474,27 @@ function closeZoneHealth() {
     + '<div style="background:var(--border);border-radius:4px;height:8px;overflow:hidden;">'
     + '<div style="width:'+Math.min(100,Math.round(totalPeople/CURRENT_STAFF*100))+'%;background:'+(totalPeople>CURRENT_STAFF?'#ef4444':'#22c55e')+';height:100%;border-radius:4px;"></div>'
     + '</div>'
+    + (function(){
+        var msPerWeek2 = 7*24*60*60*1000;
+        var today3 = new Date();
+        var maxEndWeek = 0;
+        jobs.forEach(function(j){
+          if (!j.confirmed) return;
+          var ew = (j.startWeek||0) + (j.weeks||1);
+          if (ew > maxEndWeek) maxEndWeek = ew;
+        });
+        var coverageWeeks = Math.max(0, maxEndWeek);
+        var coverageDate  = new Date(today3.getTime() + coverageWeeks * msPerWeek2);
+        var coverageFmt   = coverageDate.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+        var winByDate     = new Date(coverageDate.getTime() - 8 * msPerWeek2);
+        var winByFmt      = winByDate.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+        var pipCol        = coverageWeeks > 12 ? '#22c55e' : coverageWeeks > 6 ? '#f59e0b' : '#ef4444';
+        return '<div style="margin-top:10px;padding:12px 14px;border-radius:10px;background:'+pipCol+'11;border:1px solid '+pipCol+'44;font-size:12px;color:var(--text);line-height:1.6;">'
+          + '<strong style="color:'+pipCol+';">📅 Confirmed work covers overhead until '+coverageFmt+'</strong>'
+          + (coverageWeeks > 0 ? ' ('+coverageWeeks+' weeks)' : '')
+          + (coverageWeeks < 52 ? '<br><span style="color:var(--muted);">Win next job by <strong style="color:'+pipCol+';">'+winByFmt+'</strong> to avoid a gap.</span>' : '')
+          + '</div>';
+      })()
     + '</div>';
   }
 
@@ -15452,9 +15515,11 @@ function closeZoneHealth() {
     jobs[idx].value   = parseFloat(g('dj-job-val-'+idx)) || jobs[idx].value;
     jobs[idx].weeks   = parseFloat(g('dj-job-wks-'+idx)) || jobs[idx].weeks;
     jobs[idx].people  = parseInt(g('dj-job-ppl-'+idx))   || jobs[idx].people;
+    jobs[idx].ohp     = parseFloat(g('dj-job-ohp-'+idx)) || jobs[idx].ohp || 15;
     jobs[idx].profit  = pft > 0 ? pft : 0;
     jobs[idx].onTimeline = tlEl ? tlEl.checked : true;
     jobs[idx].confirmed  = conEl ? conEl.checked : false;
+    jobs[idx].note    = g('dj-job-note-'+idx) || '';
     saveJobs(jobs); djRenderJobs();
   };
 
@@ -15506,23 +15571,13 @@ function closeZoneHealth() {
 
   // ── dp- (director planner tab) helper functions ────────────────────────────
   function dpRenderTimeline() {
-    // The existing dirRenderTimeline looks for '#dir-timeline-inner'.
-    // We create a temporary alias: give dp-tl-inner the id it expects,
-    // call the renderer, then restore the real id.
     var dpInner = document.getElementById('dp-tl-inner');
-    var dpWrap  = document.getElementById('dp-tl-wrap');
     if (!dpInner) return;
-    // Temporarily rename so dirRenderTimeline can find it
-    dpInner.id = 'dir-timeline-inner';
-    if (dpWrap) dpWrap.id = 'dir-timeline-wrap';
     try {
-      dirRenderTimeline();
+      dirRenderTimeline('dp-tl-inner');
     } catch(e) {
       dpInner.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center;font-size:12px;">Timeline loading — add jobs on the Jobs tab first.</div>';
     }
-    // Restore original ids
-    dpInner.id = 'dp-tl-inner';
-    if (dpWrap) dpWrap.id = 'dp-tl-wrap';
   }
 
   function dpHealth() {
@@ -15647,14 +15702,14 @@ function closeZoneHealth() {
     // ── COMPANY HEALTH ──
     + '<div class="card" style="border-radius:14px;margin-bottom:16px;padding:24px;">'
     + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">Is the company making money right now?</div>'
-    + '<div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Your fixed costs are £14,417 every month — no matter what. Rent, insurance, vans, management wages. This panel shows whether your current workforce is covering those costs.</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Your fixed costs are £16,297 every month — no matter what. Rent, insurance, vans, management wages. This panel shows whether your current workforce is covering those costs.</div>'
     + '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px;">'
     + '<div style="font-size:13px;font-weight:700;color:var(--text);">How many people are on paid productive work right now?</div>'
     + '<input id="health-n" type="number" min="0" max="30" value="8" oninput="dirHealth()" style="width:80px;padding:9px 12px;border-radius:10px;border:1px solid var(--border);font-size:22px;font-weight:900;text-align:center;background:var(--surface2);color:var(--text);">'
     + '</div>'
     + '<div id="dir-health"></div>'
     + '<div style="margin-top:14px;padding:12px 14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.6;">'
-    + '<strong style="color:var(--text);">Break-even is around 6 people.</strong> Fixed costs are £14,417/month (£173k/year). Each active person contributes ~£3,200/month. At 5 people revenue covers costs; above that is profit. The table shows exact figures. The table above shows the exact figures.'
+    + '<strong style="color:var(--text);">Break-even is around 5 people.</strong> Fixed costs are £16,297/month (£195k/year). Each active person contributes ~£3,200/month. At 5 people revenue covers costs; above that is profit. The table shows exact figures. The table above shows the exact figures.'
     + '</div>'
     + '</div>'
 
@@ -15748,14 +15803,14 @@ function closeZoneHealth() {
     // ── COMPANY HEALTH ──
     + '<div class="card" style="border-radius:14px;margin-bottom:16px;padding:24px;">'
     + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">Is the company making money right now?</div>'
-    + '<div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Your fixed costs are £14,417 every month — no matter what. Rent, insurance, vans, management wages. This panel shows whether your current workforce is covering those costs.</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Your fixed costs are £16,297 every month — no matter what. Rent, insurance, vans, management wages. This panel shows whether your current workforce is covering those costs.</div>'
     + '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px;">'
     + '<div style="font-size:13px;font-weight:700;color:var(--text);">How many people are on paid productive work right now?</div>'
     + '<input id="health-n" type="number" min="0" max="30" value="8" oninput="dirHealth()" style="width:80px;padding:9px 12px;border-radius:10px;border:1px solid var(--border);font-size:22px;font-weight:900;text-align:center;background:var(--surface2);color:var(--text);">'
     + '</div>'
     + '<div id="dir-health"></div>'
     + '<div style="margin-top:14px;padding:12px 14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.6;">'
-    + '<strong style="color:var(--text);">Break-even is around 6 people.</strong> Fixed costs are £14,417/month (£173k/year). Each active person contributes ~£3,200/month. At 5 people revenue covers costs; above that is profit. The table shows exact figures.'
+    + '<strong style="color:var(--text);">Break-even is around 5 people.</strong> Fixed costs are £16,297/month (£195k/year). Each active person contributes ~£3,200/month. At 5 people revenue covers costs; above that is profit. The table shows exact figures.'
     + '</div>'
     + '</div>'
 
@@ -15814,10 +15869,19 @@ function closeZoneHealth() {
       var profitWk = job.weeks > 0 ? profit / job.weeks : 0;
       var col      = profit > 50000 ? '#22c55e' : profit > 20000 ? '#f59e0b' : '#ef4444';
       var calcProfit = (job.value||0) * (job.ohp/100) / (1 + job.ohp/100);
+      var msPerWeek = 7*24*60*60*1000;
+      var today = new Date();
+      var startDate = new Date(today.getTime() + (job.startWeek||0) * msPerWeek);
+      var endDate   = new Date(startDate.getTime() + (job.weeks||1) * msPerWeek);
+      var fmtD = function(d){ return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'}); };
+      var dateLabel = fmtD(startDate) + ' → ' + fmtD(endDate);
       return '<div style="border:1px solid var(--border);border-left:4px solid '+col+';border-radius:10px;padding:16px;margin-bottom:10px;">'
         // Header row
         + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">'
+        + '<div>'
         + '<div style="font-size:15px;font-weight:800;color:var(--text);">' + (job.name||'Unnamed job') + '</div>'
+        + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">📅 '+dateLabel+'</div>'
+        + '</div>'
         + '<div style="display:flex;gap:6px;">'
         + '<button onclick="dirSaveJob('+idx+')" style="padding:5px 12px;background:rgba(34,197,94,0.1);border:1px solid #22c55e44;border-radius:6px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer;">✓ Save</button>'
         + '<button onclick="dirDeleteJob('+idx+')" style="padding:5px 12px;background:transparent;border:1px solid #ef444444;border-radius:6px;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;">✕ Remove</button>'
@@ -15829,6 +15893,7 @@ function closeZoneHealth() {
         + jobField('Contract value (£)', 'dir-job-val-'+idx, 'number', job.value||'')
         + jobField('Weeks on site', 'dir-job-wks-'+idx, 'number', job.weeks||'')
         + jobField('People on this job', 'dir-job-ppl-'+idx, 'number', job.people||'')
+        + jobField('Profit % (OH&P)', 'dir-job-ohp-'+idx, 'number', job.ohp||15)
         + '</div>'
         // Profit override row
         + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">'
@@ -15860,13 +15925,26 @@ function closeZoneHealth() {
         + '<span style="font-size:10px;color:var(--muted);">(neg=past)</span>'
         + '</div>'
         + '</div>'
+        + '<div style="margin-top:10px;">'
+        + '<input id="dir-job-note-'+idx+'" type="text" value="'+(job.note||'')+'" placeholder="Status note — e.g. Week 3 of 17, drainage complete" style="width:100%;padding:6px 10px;border-radius:8px;border:1px dashed var(--border);font-size:12px;color:var(--muted);background:var(--surface2);">'
+        + '</div>'
         + '</div>';
     }).join('');
 
     // Combined totals
+    function weeksRemaining(j) {
+      var sw = j.startWeek||0; var ew = sw + (j.weeks||1);
+      if (ew <= 0) return 0; if (sw >= 52) return 0;
+      if (sw >= 0) return j.weeks||1;
+      return Math.max(0, ew);
+    }
     var totalProfit  = jobs.reduce(function(s,j){ return s + jobProfit(j); }, 0);
     var totalPeople  = jobs.reduce(function(s,j){ return s + (j.people||0); }, 0);
-    var monthlyOhp   = jobs.reduce(function(s,j){ return s + jobProfit(j)/Math.max(1,j.weeks)*4.333; }, 0);
+    var monthlyOhp = jobs.reduce(function(s,j){
+      var wr = weeksRemaining(j);
+      if (wr <= 0) return s;
+      return s + jobProfit(j) / Math.max(1, j.weeks) * Math.min(4.333, wr * 4.333 / (j.weeks||1));
+    }, 0);
     var monthlyNet   = monthlyOhp - MONTHLY_OVERHEAD;
     var peopleLeft   = CURRENT_STAFF - totalPeople;
     var netCol       = monthlyNet > 5000 ? '#22c55e' : monthlyNet > 0 ? '#f59e0b' : '#ef4444';
@@ -15894,7 +15972,28 @@ function closeZoneHealth() {
     + '<div style="background:var(--border);border-radius:4px;height:10px;overflow:hidden;margin-bottom:14px;">'
     + '<div style="width:'+Math.min(100,Math.round(totalPeople/CURRENT_STAFF*100))+'%;background:'+(totalPeople>CURRENT_STAFF?'#ef4444':'#22c55e')+';height:100%;border-radius:4px;"></div>'
     + '</div>'
-    + '<div style="padding:10px 14px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.6;">'
+    + (function(){
+        var msPerWeek2 = 7*24*60*60*1000;
+        var today3 = new Date();
+        var maxEndWeek = 0;
+        jobs.forEach(function(j){
+          if (!j.confirmed) return;
+          var ew = (j.startWeek||0) + (j.weeks||1);
+          if (ew > maxEndWeek) maxEndWeek = ew;
+        });
+        var coverageWeeks = Math.max(0, maxEndWeek);
+        var coverageDate  = new Date(today3.getTime() + coverageWeeks * msPerWeek2);
+        var coverageFmt   = coverageDate.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+        var winByDate     = new Date(coverageDate.getTime() - 8 * msPerWeek2);
+        var winByFmt      = winByDate.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+        var pipCol        = coverageWeeks > 12 ? '#22c55e' : coverageWeeks > 6 ? '#f59e0b' : '#ef4444';
+        return '<div style="margin-top:10px;padding:12px 14px;border-radius:10px;background:'+pipCol+'11;border:1px solid '+pipCol+'44;font-size:12px;color:var(--text);line-height:1.6;">'
+          + '<strong style="color:'+pipCol+';">📅 Confirmed work covers overhead until '+coverageFmt+'</strong>'
+          + (coverageWeeks > 0 ? ' ('+coverageWeeks+' weeks)' : '')
+          + (coverageWeeks < 52 ? '<br><span style="color:var(--muted);">Win next job by <strong style="color:'+pipCol+';">'+winByFmt+'</strong> to avoid a gap.</span>' : '')
+          + '</div>';
+      })()
+    + '<div style="margin-top:10px;padding:10px 14px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.6;">'
     + '<strong style="color:var(--text);">The overhead is £'+Math.round(ANNUAL_OVERHEAD/1000)+'k/year.</strong> '
     + 'Current contracts generate <strong style="color:'+netCol+';">£'+Math.round(totalProfit/1000)+'k profit</strong> across their lifetimes. '
     + 'For £150k/year take-home after overhead, DGC needs roughly <strong style="color:var(--text);">£2.7m of annual contracts.</strong>'
@@ -15921,11 +16020,12 @@ function closeZoneHealth() {
     jobs[idx].value      = parseFloat(g('dir-job-val-'+idx))  || jobs[idx].value;
     jobs[idx].weeks      = parseFloat(g('dir-job-wks-'+idx))  || jobs[idx].weeks;
     jobs[idx].people     = parseInt  (g('dir-job-ppl-'+idx))  || jobs[idx].people;
-    jobs[idx].ohp        = 15;
+    jobs[idx].ohp        = parseFloat(g('dir-job-ohp-'+idx)) || jobs[idx].ohp || 15;
     jobs[idx].profit     = profitOverride > 0 ? profitOverride : 0; // 0 = use auto-calc
     jobs[idx].onTimeline = gc('dir-job-tl-'+idx);
     jobs[idx].confirmed  = gc('dir-job-conf-'+idx);
     jobs[idx].startWeek  = isNaN(swVal) ? (jobs[idx].startWeek || 0) : swVal;
+    jobs[idx].note       = g('dir-job-note-'+idx) || '';
     saveJobs(jobs);
     dirRenderJobs();
     dirRenderTimeline();
@@ -16023,7 +16123,7 @@ function closeZoneHealth() {
 
     // Overhead check
     + '<div style="background:'+(ohCoverPct>=100?'rgba(34,197,94,0.07)':ohCoverPct>=60?'rgba(245,158,11,0.07)':'rgba(239,68,68,0.07)')+';border:1px solid '+(ohCoverPct>=100?'#22c55e40':ohCoverPct>=60?'#f59e0b40':'#ef444440')+';border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:12px;line-height:1.6;">'
-    + '<strong style="color:var(--text);">Company overhead check:</strong> this job brings in <strong>' + fmt(monthlyContrib) + '/month</strong> toward your £14,417/month fixed costs. '
+    + '<strong style="color:var(--text);">Company overhead check:</strong> this job brings in <strong>' + fmt(monthlyContrib) + '/month</strong> toward your £16,297/month fixed costs. '
     + (ohCoverPct >= 100
       ? '<span style="color:#22c55e;font-weight:800;">Covers all overheads with ' + fmt(monthlyContrib-MONTHLY_OVERHEAD) + ' to spare.</span>'
       : '<span style="color:'+(ohCoverPct>=60?'#f59e0b':'#ef4444')+';font-weight:800;">Covers '+ohCoverPct+'% of overheads — you need other jobs running alongside.</span>')
@@ -16086,7 +16186,7 @@ function closeZoneHealth() {
     + '</div>'
     + '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:14px;">'
     + '<span>£0</span>'
-    + '<span style="font-weight:700;">£14,417 break-even (~5 people)</span>'
+    + '<span style="font-weight:700;">£16,297 break-even (~5 people)</span>'
     + '<span>' + fmt(rev) + ' (' + Math.round(rev/MONTHLY_OVERHEAD*100) + '% covered)</span>'
     + '</div>'
 
@@ -16257,8 +16357,8 @@ function closeZoneHealth() {
   };
 
   // ── Job Timeline / Gantt Planner ───────────────────────────────────────────
-  window.dirRenderTimeline = function() {
-    var inner = document.getElementById('dir-timeline-inner');
+  window.dirRenderTimeline = function(containerId) {
+    var inner = document.getElementById(containerId || 'dir-timeline-inner');
     if (!inner) return;
 
     // Constants
@@ -16273,9 +16373,21 @@ function closeZoneHealth() {
     var TL_TOTAL_W   = TL_TOTAL_WKS * TL_WEEK_W;
     var TL_TODAY_X   = TL_PAST_WKS * TL_WEEK_W;
     var TL_AVAIL_STAFF = 10;
-    var MONTHLY_OVERHEAD_LOSS = 14417;
+    var MONTHLY_OVERHEAD_LOSS = 16297;
 
     var jobs = loadJobs().filter(function(j){ return j.onTimeline !== false; });
+    var allJobsForHidden = loadJobs();
+    var hiddenCount = allJobsForHidden.length - jobs.length;
+    if (hiddenCount > 0) {
+      var noticeEl = inner.previousElementSibling;
+      if (!noticeEl || !noticeEl.classList.contains('tl-hidden-notice')) {
+        var notice = document.createElement('div');
+        notice.className = 'tl-hidden-notice';
+        notice.style.cssText = 'padding:8px 12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:12px;color:#f59e0b;margin-bottom:8px;';
+        notice.textContent = hiddenCount + ' job' + (hiddenCount>1?'s':'') + ' hidden from planner — go to the Jobs tab and tick "Show on planner" to display them.';
+        inner.parentElement.insertBefore(notice, inner);
+      }
+    }
     var tlJobs = []; // shallow copies with barX/barW
     jobs.forEach(function(j, i) {
       var sw  = (j.startWeek !== undefined) ? j.startWeek : 0;
@@ -16369,7 +16481,12 @@ function closeZoneHealth() {
       var bh = TL_ROW_H - 6;
       var fillColor = tl.job.confirmed ? '#22c55e' : '#94a3b8';
       var fillOpacity = tl.job.confirmed ? '0.85' : '0.55';
-      var label = (tl.job.name || 'Job') + ' · ' + (tl.job.people || 0) + ' people';
+      var msPerWeek = 7*24*60*60*1000;
+      var today2 = new Date();
+      var barStart = new Date(today2.getTime() + tl.sw * msPerWeek);
+      var barEnd   = new Date(barStart.getTime() + (tl.job.weeks||1) * msPerWeek);
+      var fmtD2 = function(d){ return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'}); };
+      var label = (tl.job.name || 'Job') + ' · ends ' + fmtD2(barEnd);
 
       svg += '<rect x="'+bx+'" y="'+by+'" width="'+bw+'" height="'+bh+'" rx="6" fill="'+fillColor+'" fill-opacity="'+fillOpacity+'" stroke="'+fillColor+'" stroke-width="1" stroke-opacity="0.5"'
            + ' data-job-sw="'+tl.sw+'" data-job-wks="'+(tl.job.weeks||1)+'" data-job-tl-idx="'+i+'"'
@@ -16379,6 +16496,13 @@ function closeZoneHealth() {
       var displayLabel = label.length > maxChars ? label.substring(0, maxChars) + '…' : label;
       if (bw > 30) {
         svg += '<text x="'+(bx+8)+'" y="'+(by+bh/2+4)+'" font-size="11" font-weight="700" fill="white" fill-opacity="0.95" pointer-events="none">'+displayLabel+'</text>';
+      }
+      // Staff count badge (circle at right end of bar)
+      if (bw > 50) {
+        var bxr = Math.max(bx + 20, bx + bw - 16);
+        var byc = by + bh / 2;
+        svg += '<circle cx="'+bxr+'" cy="'+byc+'" r="10" fill="rgba(0,0,0,0.3)" pointer-events="none"/>';
+        svg += '<text x="'+bxr+'" y="'+(byc+4)+'" font-size="10" font-weight="900" fill="white" text-anchor="middle" pointer-events="none">'+(tl.job.people||0)+'</text>';
       }
     });
 
@@ -16398,6 +16522,7 @@ function closeZoneHealth() {
       var sy = staffY + TL_STAFF_H - barH2 - 2;
       var sColor = sc > TL_AVAIL_STAFF ? '#ef4444' : '#22c55e';
       svg += '<rect x="'+sx+'" y="'+sy+'" width="'+(TL_WEEK_W-2)+'" height="'+barH2+'" fill="'+sColor+'" fill-opacity="0.7" rx="2"/>';
+      if (barH2 > 12) { svg += '<text x="'+(sx+TL_WEEK_W/2-1)+'" y="'+(sy-3)+'" font-size="9" font-weight="700" text-anchor="middle" fill="'+sColor+'">'+sc+'</text>'; }
       // Overflow warning marker
       if (sc > TL_AVAIL_STAFF) {
         svg += '<text x="'+(sx + TL_WEEK_W/2 - 5)+'" y="'+(sy-2)+'" font-size="10" fill="#ef4444">⚠</text>';
@@ -16416,51 +16541,71 @@ function closeZoneHealth() {
     inner.innerHTML = svg;
 
     // ── Scroll today into view ──
-    var wrap = document.getElementById('dir-timeline-wrap');
+    var wrap = inner.parentElement;
     if (wrap) {
       var targetScroll = TL_TODAY_X - Math.min(wrap.clientWidth / 3, 200);
       wrap.scrollLeft = Math.max(0, targetScroll);
     }
 
-    // ── Drag to reorder (desktop only) ──
+    // ── Drag to reorder (desktop + touch) ──
     var svgEl = document.getElementById('dir-tl-svg');
     if (!svgEl) return;
 
-    var _tlDrag = null;
+    _tlDragState = null;
 
     svgEl.addEventListener('mousedown', function(e) {
       var bar = e.target.closest ? e.target.closest('.tl-bar') : (e.target.classList.contains('tl-bar') ? e.target : null);
       if (!bar) return;
       e.preventDefault();
-      var tlIdx    = parseInt(bar.getAttribute('data-job-tl-idx'));
-      var origSw   = parseInt(bar.getAttribute('data-job-sw'));
-      var barX     = parseFloat(bar.getAttribute('x'));
-      _tlDrag = { bar: bar, tlIdx: tlIdx, origSw: origSw, startMouseX: e.clientX, barOrigX: barX };
+      var tlIdx  = parseInt(bar.getAttribute('data-job-tl-idx'));
+      var origSw = parseInt(bar.getAttribute('data-job-sw'));
+      var barX   = parseFloat(bar.getAttribute('x'));
+      _tlDragState = { bar: bar, tlIdx: tlIdx, origSw: origSw, startMouseX: e.clientX, barOrigX: barX };
       bar.style.cursor = 'grabbing';
     });
 
-    document.addEventListener('mousemove', function(e) {
-      if (!_tlDrag) return;
-      var dx     = e.clientX - _tlDrag.startMouseX;
-      var newX   = _tlDrag.barOrigX + dx;
-      _tlDrag.bar.setAttribute('x', newX);
-      // Move label text too
-      var texts = svgEl.querySelectorAll('text');
-      texts.forEach(function(t){ /* labels don't have data attr — update on mouseup */ });
-    });
+    svgEl.addEventListener('touchstart', function(e) {
+      var bar = e.target.closest ? e.target.closest('.tl-bar') : (e.target.classList.contains('tl-bar') ? e.target : null);
+      if (!bar) return;
+      e.preventDefault();
+      var touch  = e.touches[0];
+      var tlIdx  = parseInt(bar.getAttribute('data-job-tl-idx'));
+      var origSw = parseInt(bar.getAttribute('data-job-sw'));
+      var barX   = parseFloat(bar.getAttribute('x'));
+      _tlDragState = { bar: bar, tlIdx: tlIdx, origSw: origSw, startMouseX: touch.clientX, barOrigX: barX };
+      bar.style.cursor = 'grabbing';
+    }, {passive: false});
 
-    document.addEventListener('mouseup', function(e) {
-      if (!_tlDrag) return;
-      var dx       = e.clientX - _tlDrag.startMouseX;
-      var newX     = _tlDrag.barOrigX + dx;
-      var newSw    = Math.round((newX - TL_TODAY_X) / TL_WEEK_W);
+    // Remove old handlers before adding new ones (prevents accumulation)
+    if (_tlMoveHandler) {
+      document.removeEventListener('mousemove', _tlMoveHandler);
+      document.removeEventListener('touchmove', _tlMoveHandler, {passive: false});
+    }
+    if (_tlUpHandler) {
+      document.removeEventListener('mouseup', _tlUpHandler);
+      document.removeEventListener('touchend', _tlUpHandler);
+    }
+
+    _tlMoveHandler = function(e) {
+      if (!_tlDragState) return;
+      var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      var dx  = clientX - _tlDragState.startMouseX;
+      var newX = _tlDragState.barOrigX + dx;
+      _tlDragState.bar.setAttribute('x', Math.max(0, newX));
+    };
+
+    _tlUpHandler = function(e) {
+      if (!_tlDragState) return;
+      var clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+      var dx    = clientX - _tlDragState.startMouseX;
+      var newX  = _tlDragState.barOrigX + dx;
+      var newSw = Math.round((newX - TL_TODAY_X) / TL_WEEK_W);
 
       // Find the real job index in the full loadJobs() array
-      var allJobs  = loadJobs();
+      var allJobs   = loadJobs();
       var tlVisible = allJobs.filter(function(j){ return j.onTimeline !== false; });
-      var realJob  = tlVisible[_tlDrag.tlIdx];
+      var realJob   = tlVisible[_tlDragState.tlIdx];
       if (realJob) {
-        // Find its position in allJobs
         var realIdx = allJobs.indexOf(realJob);
         if (realIdx >= 0) {
           allJobs[realIdx].startWeek = newSw;
@@ -16468,11 +16613,18 @@ function closeZoneHealth() {
         }
       }
 
-      _tlDrag.bar.style.cursor = 'ew-resize';
-      _tlDrag = null;
-      dirRenderTimeline();
+      _tlDragState.bar.style.cursor = 'ew-resize';
+      _tlDragState = null;
+      var cid = inner ? inner.id : 'dir-timeline-inner';
+      dirRenderTimeline(cid);
       dirRenderJobs();
-    });
+      djRenderJobs();
+    };
+
+    document.addEventListener('mousemove', _tlMoveHandler);
+    document.addEventListener('mouseup',   _tlUpHandler);
+    document.addEventListener('touchmove', _tlMoveHandler, {passive: false});
+    document.addEventListener('touchend',  _tlUpHandler);
   };
 
   // legacy aliases so existing showTab patches still work
