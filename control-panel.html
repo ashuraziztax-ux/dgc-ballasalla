@@ -358,7 +358,9 @@ body:not(.admin-mode) .admin-only { display: none !important; }
 /* CLIENT MODE */
 body.client-mode .admin-only { display: none !important; }
 body.client-mode .no-client  { display: none !important; }
-body.director-mode .admin-only { display: block !important; } /* Director sees everything admin sees */
+/* Director sees admin-only content — but NOT tab divs (those are controlled by showTab logic) */
+body.director-mode .admin-only:not(.tab-content) { display: block !important; }
+body.director-mode .nav button.admin-only { display: inline-flex !important; }
 
 /* ═══════════ MOBILE ═══════════ */
 @media (max-width: 768px) {
@@ -3535,7 +3537,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-31T23:00:00'); // v189 — Director tabs rebuilt with unique IDs, no conflicts — Ash and Harry director draws raised to £2,000/month each — Overhead corrected to £14,065/month from real payroll — Director mode: 2 proper nav tabs (Jobs + Job Planner)
+const LAST_UPDATED = new Date('2026-05-31T23:30:00'); // v190 — Director CSS fix: admin tabs no longer bleed through — Director tabs rebuilt with unique IDs, no conflicts — Ash and Harry director draws raised to £2,000/month each — Overhead corrected to £14,065/month from real payroll — Director mode: 2 proper nav tabs (Jobs + Job Planner)
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
