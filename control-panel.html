@@ -5757,6 +5757,42 @@ function projEnsureDefaults() {
     _testCopy._name = 'Ballasalla Phase 4 — Test'; _testCopy._id = 'ballasalla-ph4-test';
     all['ballasalla-ph4-test'] = _testCopy;
   }
+  // Slab Works Plots 7-11
+  if (!all['slab-works-b4']) {
+    all['slab-works-b4'] = {
+      _name:'Slab Works Plots 7-11', _id:'slab-works-b4',
+      project:{ name:'Slab Works Plots 7-11', client:'Dandara', ref:'DGC-2026-002',
+        address:'Ballasalla, Isle of Man', contractSum:209056, retentionRate:2.5,
+        start:'2026-05-01', originalEnd:'2026-07-10', agreedEnd:'2026-07-10',
+        qs:'Ian Barnes', dgcQs:'Sophie', pm:'David Smith', foreman:'James Cosgrove',
+        description:'Concrete slab works on plots 7-11, Ballasalla Phase 4 development' },
+      dataDate:'2026-05-31', zoneProgress:{}, bankHolidays:[], tasks:[], drawings:[], documents:[], fileLocations:[]
+    };
+  }
+  // Peel Breakwater
+  if (!all['peel-breakwater']) {
+    all['peel-breakwater'] = {
+      _name:'Peel Breakwater (DOI)', _id:'peel-breakwater',
+      project:{ name:'Peel Breakwater Sewage Treatment Works', client:'Department of Infrastructure, IoM Government',
+        ref:'PBW-PEFM414', address:'West Quay, Peel, Isle of Man IM5 1TB',
+        contractSum:122995, retentionRate:0, start:'2026-02-06', originalEnd:'2026-03-30',
+        qs:'Marc Marshall (DOI)', dgcQs:'Sophie', pm:'Ash Aziz', foreman:'TBC',
+        description:'Install Klargester BioTec+8 sewage treatment plant, grease separator, soakaway. Stop raw sewage discharging into Irish Sea.' },
+      dataDate:'2026-05-31', zoneProgress:{}, bankHolidays:[], tasks:[], drawings:[], documents:[], fileLocations:[]
+    };
+  }
+  // Upmost International
+  if (!all['upmost-international']) {
+    all['upmost-international'] = {
+      _name:'Upmost International', _id:'upmost-international',
+      project:{ name:'Upmost International', client:'Upmost International', ref:'DGC-2026-TBC',
+        address:'Isle of Man (TBC)', contractSum:500000, retentionRate:0,
+        start:'2026-07-01', originalEnd:'2026-09-30', agreedEnd:'2026-09-30',
+        qs:'TBC', dgcQs:'Sophie', pm:'TBC', foreman:'TBC',
+        description:'Placeholder — ~£500k, 4 people, July start, ~3 months. Data to be uploaded.' },
+      dataDate:'2026-05-31', zoneProgress:{}, bankHolidays:[], tasks:[], drawings:[], documents:[], fileLocations:[]
+    };
+  }
   projSaveAll(all);
   // Set active to Live if nothing active or active doesn't exist
   var cur = projActive();
@@ -15267,15 +15303,34 @@ function closeZoneHealth() {
   }
   function saveJobs(jobs) { try { localStorage.setItem('dgc_jobs', JSON.stringify(jobs)); } catch(e) {} }
 
-  // Migration: ensure Job 3 (Slab Works) shows on timeline
+  // Migrations — run on every page load
   (function() {
     try {
       var existing = localStorage.getItem('dgc_jobs');
-      if (existing) {
-        var existingJobs = JSON.parse(existing);
+      var existingJobs = existing ? JSON.parse(existing) : null;
+
+      // Migration 1: Job 3 (Slab Works) should show on timeline
+      if (existingJobs) {
         var j3 = existingJobs.find(function(j){ return j.id === 3 || (j.name && j.name.includes('Slab Works')); });
-        if (j3 && j3.onTimeline === false) { j3.onTimeline = true; localStorage.setItem('dgc_jobs', JSON.stringify(existingJobs)); }
+        if (j3 && j3.onTimeline === false) { j3.onTimeline = true; }
       }
+
+      // Migration 2: Add Peel Breakwater if not present
+      if (existingJobs && !existingJobs.find(function(j){ return j.id === 4 || (j.name && j.name.includes('Peel Breakwater')); })) {
+        existingJobs.push({ id:4, name:'Peel Breakwater (DOI)', value:122995, weeks:8, people:5, ohp:15, profit:0, startWeek:6, onTimeline:true, confirmed:true, note:'Sewage treatment works — awarded. Brick option £122,994. DOI client.' });
+      }
+
+      // Migration 3: Add Upmost International if not present
+      if (existingJobs && !existingJobs.find(function(j){ return j.id === 5 || (j.name && j.name.includes('Upmost')); })) {
+        existingJobs.push({ id:5, name:'Upmost International', value:500000, weeks:12, people:4, ohp:15, profit:0, startWeek:18, onTimeline:true, confirmed:false, note:'Potential — July/Aug start. ~£500k, 4 guys, ~3 months. Data TBC.' });
+      }
+
+      // Migration 4: Add Glenfaba Ring Road demo if not present
+      if (existingJobs && !existingJobs.find(function(j){ return j.id === 6 || (j.name && j.name.includes('Glenfaba')); })) {
+        existingJobs.push({ id:6, name:'Glenfaba Ring Road (Demo)', value:1700000, weeks:52, people:12, ohp:15, profit:0, startWeek:26, onTimeline:false, confirmed:false, note:'Demo estimate — 4× Ballasalla scale. Ring road drainage ~£1.7m. ICP taking over from; DGC being asked to price.' });
+      }
+
+      if (existingJobs) localStorage.setItem('dgc_jobs', JSON.stringify(existingJobs));
     } catch(e) {}
   })();
 
