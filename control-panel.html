@@ -13938,13 +13938,26 @@ function shRebuild() {
 // STAFF DAILY HOURS TRACKER (v87) + ROSTER MANAGEMENT (v89)
 // ═════════════════════════════════════════════════════════════════════════
 
-// Staff roster — persisted to localStorage 'dgc_staff_roster'; 12-person default (May 2026)
+// Staff roster — persisted to localStorage 'dgc_staff_roster'; correct list (May 2026)
+// Robert Urquhart removed — left. Fred dlinstone / fred denstone = never a real person, removed.
 var SH_ROSTER_DEFAULTS = [
   'Liam Smith', 'David Smith', 'Dean Garrett', 'Lee Clinton',
   'Jake Whetnall', 'James Cosgrove', 'Bradley McKevitt', 'Stephen Lamb',
-  'James Shannon', 'Stephen Smithies', 'Robert Urquhart', 'Lewis Peck'
+  'James Shannon', 'Stephen Smithies', 'Lewis Peck'
 ];
-function shLoadRoster()  { return lsGet('dgc_staff_roster', null) || SH_ROSTER_DEFAULTS.slice(); }
+// Known fake/error names to always strip from any saved roster
+var SH_ROSTER_BLOCKLIST = ['fred dlinstone','fred denstone','fred dinstone','robert urquhart'];
+function shLoadRoster() {
+  var saved = lsGet('dgc_staff_roster', null);
+  if (!saved) return SH_ROSTER_DEFAULTS.slice();
+  // Strip fake/departed names that may have been added by mistake
+  var cleaned = saved.filter(function(n) {
+    return SH_ROSTER_BLOCKLIST.indexOf(n.toLowerCase().trim()) < 0;
+  });
+  // If cleaning changed anything, save the fixed version
+  if (cleaned.length !== saved.length) lsSet('dgc_staff_roster', cleaned);
+  return cleaned;
+}
 function shSaveRoster(r) { lsSet('dgc_staff_roster', r); }
 var SH_STAFF_ROSTER = shLoadRoster();
 
