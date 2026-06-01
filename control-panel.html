@@ -3,6 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DGC">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#f59e0b">
+  <link rel="apple-touch-icon" href="icon-192.png">
 <title>DGC — Ballasalla Phase 4 | Site Control</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23f59e0b'/><text x='50' y='70' font-family='system-ui,sans-serif' font-size='60' font-weight='900' text-anchor='middle' fill='%231a1d27'>D</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -351,6 +359,33 @@ body.admin-mode .mode-label-right { color: var(--accent); }
 body.admin-mode .mode-label-left { color: var(--muted); }
 body:not(.admin-mode) .mode-label-left { color: var(--accent2); }
 body:not(.admin-mode) .mode-thumb { background: var(--accent2); }
+
+/* MODE BUTTONS (v211) */
+.mode-btn {
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+}
+.mode-btn.active, .mode-btn:hover {
+  background: #f59e0b;
+  color: #1a1d27;
+  border-color: #f59e0b;
+}
+.admin-drawer-btn {
+  font-size: 11px !important;
+  padding: 4px 10px !important;
+}
+.admin-drawer-btn:hover {
+  background: rgba(100,116,139,0.2) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
 
 /* ADMIN-ONLY elements — hidden in user mode */
 .admin-only { transition: opacity 0.2s; }
@@ -1392,12 +1427,15 @@ function setMode(m) {
   if (m === 'client')   document.body.classList.add('client-mode');
   if (m === 'director') document.body.classList.add('admin-mode', 'director-mode');
 
-  // Highlight active label
-  ['user','admin','client','director'].forEach(function(k) {
+  // Highlight active label (admin button is a drawer trigger, not a mode indicator)
+  ['user','client','director'].forEach(function(k) {
     var btn = document.getElementById('mode-btn-' + k);
     if (!btn) return;
-    btn.style.background = (k === m) ? 'var(--accent)' : 'transparent';
-    btn.style.color      = (k === m) ? '#000'          : 'var(--muted)';
+    if (k === m) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
   });
 
   // Redirect to appropriate default tab for mode
@@ -1881,12 +1919,12 @@ function gpExportCSV(){
       style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;max-width:240px;flex-shrink:1;">
     </select>
     
-    <div id="mode-toggle" style="display:flex;align-items:center;gap:2px;background:var(--surface2);border-radius:8px;padding:3px;">
-      <span style="font-size:9px;color:var(--muted);padding:2px 8px;white-space:nowrap;flex-shrink:0;">View as:</span>
-      <span id="mode-btn-client" onclick="setMode('client')" style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Client</span>
-      <span id="mode-btn-user"   onclick="setMode('user')"   style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Site Team</span>
-      <span id="mode-btn-admin"  onclick="setMode('admin')"  style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Admin</span>
-      <span id="mode-btn-director" onclick="setMode('director')" style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;color:var(--muted);">Director</span>
+    <div id="mode-toggle" class="mode-btns" style="display:flex;gap:6px;align-items:center;">
+      <button onclick="setMode('director')" class="mode-btn director-btn" id="mode-btn-director">Director</button>
+      <button onclick="setMode('user')" class="mode-btn" id="mode-btn-user">Site Team</button>
+      <button onclick="setMode('client')" class="mode-btn" id="mode-btn-client">Client</button>
+      <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
+      <button onclick="openAdminDrawer()" class="mode-btn admin-drawer-btn" id="mode-btn-admin" style="background:rgba(100,116,139,0.1);color:var(--muted);font-size:11px;padding:4px 10px;">⚙ Admin</button>
     </div>
     <button class="admin-only" onclick="showTab('directors',document.getElementById('directors-nav-btn'))"
       style="display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:8px;border:1px solid #f59e0b55;background:rgba(245,158,11,0.12);color:#f59e0b;font-size:11px;font-weight:800;cursor:pointer;font-family:var(--font);letter-spacing:0.3px;white-space:nowrap;transition:all 0.15s;"
@@ -1992,9 +2030,9 @@ function gpExportCSV(){
     <span class="mob-icon">🏗️</span>
     Site
   </button>
-  <button class="mob-btn" id="mob-more" onclick="mobMoreOpen()">
-    <span class="mob-icon">⋯</span>
-    More
+  <button class="mob-btn" id="mob-admin" onclick="openAdminDrawer()">
+    <span class="mob-icon">⚙</span>
+    Admin
   </button>
 </div>
 
@@ -2016,6 +2054,16 @@ function gpExportCSV(){
   <button class="mob-drawer-btn" onclick="mobDrawerTab('dashboard')">📊 &nbsp;Dashboard</button>
   <button class="mob-drawer-btn" onclick="mobDrawerTab('data')">📁 &nbsp;Data</button>
   <button class="mob-drawer-btn" onclick="mobDrawerTab('setup')">⚙️ &nbsp;Setup</button>
+</div>
+
+<!-- ═══ ADMIN DRAWER ═══ -->
+<div id="admin-drawer-overlay" onclick="closeAdminDrawer()" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.5);"></div>
+<div id="admin-drawer" style="display:none;position:fixed;top:0;right:0;bottom:0;z-index:401;width:min(320px,90vw);background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;box-shadow:-8px 0 30px rgba(0,0,0,0.3);padding:20px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+    <div style="font-size:15px;font-weight:800;color:var(--text);">⚙ Admin</div>
+    <button onclick="closeAdminDrawer()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px;">✕</button>
+  </div>
+  <div id="admin-drawer-content" style="display:flex;flex-direction:column;gap:4px;"></div>
 </div>
 
 <div class="main">
@@ -14952,6 +15000,33 @@ window.mobNav = function(section, btn) {
   }, 50);
 };
 
+// ── Admin Drawer ──────────────────────────────────────────────
+window.openAdminDrawer = function() {
+  // Build list of admin tabs dynamically
+  var drawerContent = document.getElementById('admin-drawer-content');
+  if (drawerContent) {
+    var adminTabs = Array.from(document.querySelectorAll('.nav button.admin-only')).filter(function(b) {
+      return getComputedStyle(b).display !== 'none';
+    });
+    drawerContent.innerHTML = adminTabs.length
+      ? adminTabs.map(function(btn) {
+          var label = btn.textContent.trim();
+          var onclick = btn.getAttribute('onclick') || '';
+          return '<button onclick="closeAdminDrawer();' + onclick + '" style="display:flex;align-items:center;gap:10px;width:100%;padding:12px 10px;background:none;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600;text-align:left;cursor:pointer;border-radius:6px;">' + label + '</button>';
+        }).join('')
+      : '<div style="color:var(--muted);font-size:12px;padding:10px;">Switch to Admin mode first to see admin tabs.</div>';
+  }
+  // Switch to admin mode to populate tabs
+  setMode('admin');
+  document.getElementById('admin-drawer').style.display = 'block';
+  document.getElementById('admin-drawer-overlay').style.display = 'block';
+};
+
+window.closeAdminDrawer = function() {
+  document.getElementById('admin-drawer').style.display = 'none';
+  document.getElementById('admin-drawer-overlay').style.display = 'none';
+};
+
 window.mobMoreOpen = function() {
   document.getElementById('mobile-more-drawer').classList.add('open');
   document.getElementById('mobile-more-overlay').classList.add('open');
@@ -18596,5 +18671,12 @@ if (typeof showTab === 'function') {
   <div id="dir-intel-panel"></div>
 </div>
 
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+}
+</script>
 </body>
 </html>
