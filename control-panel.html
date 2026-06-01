@@ -400,17 +400,51 @@ body.director-mode .nav button.admin-only { display: inline-flex !important; }
 /* ═══════════ MOBILE ═══════════ */
 @media (max-width: 768px) {
 
-  /* ── Header: 2 rows ── */
-  .header { padding: 8px 12px; flex-direction: column; align-items: stretch; gap: 0; }
-  .header-left { gap: 10px; align-items: center; }
-  .header-left img { height: 28px; max-width: 140px; }
-  .project-title strong { font-size: 14px; }
-  .project-title { font-size: 12px; }
-  .mode-toggle { margin-left: auto; }
-  .mode-track { padding: 4px 10px; }
-  .mode-label-left, .mode-label-right { font-size: 10px; }
-  .mode-thumb { width: 20px; height: 20px; }
-  .header-status { display: none; }
+  /* ── Header: single thin row on mobile ── */
+  .header {
+    padding: 8px 12px !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    min-height: 48px !important;
+  }
+  .header-left {
+    gap: 8px !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+  .header-left img { height: 26px !important; max-width: 60px !important; flex-shrink: 0; }
+
+  /* Project selector: truncate, don't overflow */
+  #hdr-proj-select {
+    max-width: 130px !important;
+    font-size: 11px !important;
+    padding: 4px 6px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .project-title { display: none !important; }
+
+  /* HIDE mode buttons row on mobile — they're in bottom nav */
+  .mode-btns,
+  .mode-btn,
+  #mode-director, #mode-user, #mode-client, #mode-admin-btn,
+  .hdr-mode-row,
+  [class*="mode-toggle"] {
+    display: none !important;
+  }
+
+  /* Hide date/time, status bar */
+  .header-status,
+  .today-badge,
+  .hdr-date,
+  .hdr-time {
+    display: none !important;
+  }
+
+  /* Keep dark mode toggle visible */
+  .mode-track { display: flex !important; }
 
   /* ── Nav: horizontal scroll ── */
   .nav { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
@@ -670,6 +704,11 @@ body.dark-theme .pv5-bar-track { background: var(--border) !important; }
 
   /* 16. Payment table containers */
   .payment-table { min-width: 480px; }
+
+  /* 17. Programme hero: compact on mobile */
+  .pv5-hero { padding: 12px !important; }
+  .pv5-hero-flex { flex-direction: column !important; gap: 10px !important; }
+  .pv5-hero .prog-hero-title { font-size: 18px !important; }
 }
 
 @media (max-width: 480px) {
@@ -784,6 +823,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .task-status-btn.complete    { background:#22c55e20; color:#22c55e; border:1px solid #22c55e55; }
 
 .fab-quicklog {
+  display: none !important;
   position:fixed; bottom:24px; right:24px; z-index:900;
   background:var(--accent); color:#000; border:none; border-radius:50px;
   padding:12px 22px; font-size:13px; font-weight:800; cursor:pointer;
@@ -5869,6 +5909,26 @@ function projSaveAll(all) {
 function projActive() {
   return localStorage.getItem('dgc_active_project') || '';
 }
+
+// Helper to check if active project is Ballasalla
+function isBallasallaActive() {
+  try {
+    var active = localStorage.getItem('dgc_active_project') || projActive();
+    return !active || active.includes('ballasalla') || active === '';
+  } catch(e) { return true; }
+}
+
+// Helper to show empty state for non-Ballasalla projects
+function showProjectEmptyState(containerId, projectName) {
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--muted);">'
+    + '<div style="font-size:48px;margin-bottom:16px;">🏗️</div>'
+    + '<div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:8px;">' + (projectName || 'This project') + '</div>'
+    + '<div style="font-size:14px;line-height:1.6;">Programme data, financials and reports will appear here as the project is set up.</div>'
+    + '<div style="margin-top:20px;font-size:12px;color:var(--muted);">Switch to Ballasalla Phase 4 to see live data.</div>'
+    + '</div>';
+}
 function projSetActive(id) {
   localStorage.setItem('dgc_active_project', id);
 }
@@ -9052,14 +9112,29 @@ function showTab(name, btn) {
   document.getElementById('tab-' + name).classList.add('active');
   if(btn) btn.classList.add('active');
   if(name === 'gantt')    { try { buildGantt(); } catch(e) { console.error('buildGantt error:', e); var gb=document.getElementById('gantt-body'); if(gb) gb.innerHTML='<tr><td colspan="4" style="padding:20px;color:#ef4444;font-size:12px;">&#9888; Chart error: '+e.message+' — check console for details.</td></tr>'; } }
-  if(name === 'financial'){ try { buildFinancialChart(); } catch(e){} }
+  if(name === 'financial'){
+    if (!isBallasallaActive()) {
+      var _fpname = localStorage.getItem('dgc_active_project') || 'This project';
+      showProjectEmptyState('tab-financial', _fpname);
+    } else { try { buildFinancialChart(); } catch(e){} }
+  }
   if(name === 'report')   buildTwoWeekReport();
   if(name === 'materials') buildMaterials();
-  if(name === 'risks')    buildRiskTickets();
+  if(name === 'risks'){
+    if (!isBallasallaActive()) {
+      var _rpname = localStorage.getItem('dgc_active_project') || 'This project';
+      showProjectEmptyState('tab-risks', _rpname);
+    } else { buildRiskTickets(); }
+  }
   if(name === 'sitemap')  buildSiteMap();
   if(name === 'staffhours') buildStaffHours();
   if(name === 'efficiency') buildEfficiencyTab();
-  if(name === 'programme')  { buildProgrammeV135(); }
+  if(name === 'programme')  {
+    if (!isBallasallaActive()) {
+      var _ppname = localStorage.getItem('dgc_active_project') || 'This project';
+      showProjectEmptyState('tab-programme', _ppname);
+    } else { try { buildProgrammeV135(); } catch(e){} }
+  }
   if(name === 'drawings')   { try { drwFilter(); } catch(e) {} }
   if(name === 'data')       buildDataTab();
   if(name === 'setup')      buildSetupTab();
@@ -15080,7 +15155,7 @@ if (typeof showTab === 'function') {
 </div>
 
 <!-- Quick-Log FAB (admin only) -->
-<button class="fab-quicklog admin-only" onclick="openQuickLog()" title="Quick log — log today's key info in under 60 seconds" style="box-shadow:0 4px 16px rgba(245,158,11,0.35);border-radius:24px;font-weight:700;letter-spacing:0.03em;transition:transform 0.15s,box-shadow 0.15s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(245,158,11,0.5)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(245,158,11,0.35)'">⚡ Quick Log</button>
+<button class="fab-quicklog admin-only" onclick="openQuickLog()" title="Quick log — log today's key info in under 60 seconds" style="display:none!important;box-shadow:0 4px 16px rgba(245,158,11,0.35);border-radius:24px;font-weight:700;letter-spacing:0.03em;transition:transform 0.15s,box-shadow 0.15s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(245,158,11,0.5)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(245,158,11,0.35)'">⚡ Quick Log</button>
 
 <!-- Quick-Log Modal -->
 <div class="quicklog-overlay" id="quicklog-overlay" onclick="if(event.target===this)closeQuickLog()">
