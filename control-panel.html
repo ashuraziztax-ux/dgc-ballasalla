@@ -16655,8 +16655,7 @@ if (typeof showTab === 'function') {
     } catch(e) {
       dpInner.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center;font-size:12px;">Timeline loading — add jobs on the Jobs tab first.</div>';
     }
-    // Always refresh monthly summary after timeline updates
-    try { dpBuildMonthlySummary(); } catch(e2) {}
+    // Monthly summary updated separately — do NOT call inside dirRenderTimeline, avoids any side-effects on drag
   }
 
   function dpHealth() {
@@ -17463,24 +17462,26 @@ if (typeof showTab === 'function') {
     var jobs = allJobsRaw.filter(function(j){ return j.onTimeline !== false; });
     var hiddenCount = allJobsRaw.length - jobs.length;
 
-    // Remove old notice if any
-    var oldNotice = inner.previousElementSibling;
-    if (oldNotice && oldNotice.classList && oldNotice.classList.contains('tl-hidden-notice')) {
-      oldNotice.parentElement.removeChild(oldNotice);
+    // Count bar — placed OUTSIDE the scrollable container (before the scroll wrapper)
+    // Using a fixed ID so it's always cleanly replaced, never accumulates
+    var cbId = 'tl-count-bar-' + (inner.id || 'tl');
+    var scrollWrap = inner.parentElement; // dp-tl-wrap (the scrollable div)
+    var countBarHost = scrollWrap ? scrollWrap.parentElement : null; // card div — outside scroll
+    var existingCb = document.getElementById(cbId);
+    if (existingCb) { try { existingCb.parentElement.removeChild(existingCb); } catch(e2) {} }
+    if (countBarHost && scrollWrap) {
+      var countBar = document.createElement('div');
+      countBar.id = cbId;
+      if (hiddenCount > 0) {
+        countBar.style.cssText = 'padding:8px 12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:12px;color:#f59e0b;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;';
+        countBar.innerHTML = '<span><strong>' + jobs.length + ' job' + (jobs.length!==1?'s':'') + ' on planner</strong> · ' + hiddenCount + ' hidden</span>'
+          + '<button onclick="(function(){var jbs=window._loadJobsForShowAll?window._loadJobsForShowAll():[];jbs.forEach(function(j){j.onTimeline=true;});try{localStorage.setItem(\'dgc_jobs\',JSON.stringify(jbs));buildDirPlannerTab();}catch(e){}})()" style="padding:4px 10px;background:#f59e0b;border:none;border-radius:6px;color:#1a1d27;font-size:11px;font-weight:800;cursor:pointer;">Show all</button>';
+      } else {
+        countBar.style.cssText = 'padding:6px 12px;background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.2);border-radius:8px;font-size:12px;color:#22c55e;margin-bottom:8px;';
+        countBar.innerHTML = '✓ <strong>' + jobs.length + ' job' + (jobs.length!==1?'s':'') + '</strong> on planner — all showing';
+      }
+      countBarHost.insertBefore(countBar, scrollWrap); // insert BEFORE the scroll container, not inside it
     }
-    // Always show count bar above timeline
-    var countBar = document.createElement('div');
-    countBar.className = 'tl-hidden-notice';
-    if (hiddenCount > 0) {
-      countBar.style.cssText = 'padding:8px 12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:12px;color:#f59e0b;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;';
-      countBar.innerHTML = '<span><strong>' + jobs.length + ' job' + (jobs.length!==1?'s':'') + ' on planner</strong> · ' + hiddenCount + ' hidden</span>'
-        + '<button onclick="(function(){var jbs=window._loadJobsForShowAll?window._loadJobsForShowAll():[];jbs.forEach(function(j){j.onTimeline=true;});try{localStorage.setItem(\'dgc_jobs\',JSON.stringify(jbs));buildDirPlannerTab();}catch(e){}})()" style="padding:4px 10px;background:#f59e0b;border:none;border-radius:6px;color:#1a1d27;font-size:11px;font-weight:800;cursor:pointer;">Show all</button>';
-    } else {
-      countBar.style.cssText = 'padding:6px 12px;background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.2);border-radius:8px;font-size:12px;color:#22c55e;margin-bottom:8px;';
-      countBar.innerHTML = '✓ <strong>' + jobs.length + ' job' + (jobs.length!==1?'s':'') + '</strong> on planner — all showing';
-    }
-    inner.parentElement.insertBefore(countBar, inner);
-    // Expose loadJobs for the show-all button
     window._loadJobsForShowAll = loadJobs;
     var tlJobs = []; // shallow copies with barX/barW
     jobs.forEach(function(j, i) {
@@ -17755,7 +17756,8 @@ if (typeof showTab === 'function') {
     }
 
     // ── Drag to reorder (desktop + touch) ──
-    var svgEl = document.getElementById('dir-tl-svg');
+    // Use querySelector within inner to avoid stale/duplicate id='dir-tl-svg' from other hidden tabs
+    var svgEl = inner ? inner.querySelector('svg') : null;
     if (!svgEl) return;
 
     _tlDragState = null;
