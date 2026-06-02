@@ -16184,15 +16184,15 @@ if (typeof showTab === 'function') {
         + '<button onclick="djArchiveJob('+idx+')" style="padding:5px 11px;background:rgba(148,163,184,0.1);border:1px solid #94a3b844;border-radius:6px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer;">📦 Archive</button>'
         + '</div></div>'
         + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px;margin-bottom:10px;">'
-        + djJobField('Name','dj-job-name-'+idx,'text',job.name||'')
-        + djJobField('Value (£)','dj-job-val-'+idx,'number',job.value||'')
-        + djJobField('Weeks','dj-job-wks-'+idx,'number',job.weeks||'')
-        + djJobField('People','dj-job-ppl-'+idx,'number',job.people||'')
-        + djJobField('Profit % (OH&P)','dj-job-ohp-'+idx,'number',job.ohp||15)
+        + djJobField('Name','dj-job-name-'+idx,'text',job.name||'',idx)
+        + djJobField('Value (£)','dj-job-val-'+idx,'number',job.value,idx)
+        + djJobField('Weeks','dj-job-wks-'+idx,'number',job.weeks,idx)
+        + djJobField('People','dj-job-ppl-'+idx,'number',job.people,idx)
+        + djJobField('Profit % (OH&P)','dj-job-ohp-'+idx,'number',job.ohp||15,idx)
         + '</div>'
         + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
         + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px;">Profit on this job (£)</div>'
-        + '<input id="dj-job-pft-'+idx+'" type="number" value="'+(job.profit||'')+'" placeholder="Leave blank = auto 15%" oninput="if(window.djLiveCalc){var m=this.id.match(/-(\\d+)$/);if(m)djLiveCalc(m[1]);}" style="width:100%;padding:7px 10px;border-radius:8px;border:2px solid '+col+'66;font-size:14px;font-weight:900;background:var(--surface2);color:var(--text);">'
+        + '<input id="dj-job-pft-'+idx+'" type="number" value="'+(job.profit||'')+'" placeholder="Leave blank = auto 15%" oninput="djLiveCalc('+idx+')" style="width:100%;padding:7px 10px;border-radius:8px;border:2px solid '+col+'66;font-size:14px;font-weight:900;background:var(--surface2);color:var(--text);">'
         + '<div style="font-size:10px;color:var(--muted);margin-top:2px;">Auto at 15%: '+fmt(calcProfit)+'</div>'
         + '</div>'
         + '<div style="padding:10px 12px;border-radius:8px;background:'+col+'11;border:1px solid '+col+'33;">'
@@ -16295,10 +16295,10 @@ if (typeof showTab === 'function') {
     + '</div>';
   }
 
-  function djJobField(label, id, type, val) {
+  function djJobField(label, id, type, val, jobIdx) {
     return '<div>'
     + '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px;">'+label+'</div>'
-    + '<input id="'+id+'" type="'+type+'" value="'+(val||'')+'" oninput="if(window.djLiveCalc){var m=this.id.match(/-(\\d+)$/);if(m)djLiveCalc(m[1]);}" style="width:100%;padding:6px 9px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:700;background:var(--surface2);color:var(--text);">'
+    + '<input id="'+id+'" type="'+type+'" value="'+(val===0?'0':(val||''))+'" oninput="djLiveCalc('+jobIdx+')" style="width:100%;padding:6px 9px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:700;background:var(--surface2);color:var(--text);">'
     + '</div>';
   }
 
@@ -16379,15 +16379,32 @@ if (typeof showTab === 'function') {
 
   // ── Feature 1: Live recalculation on job cards ─────────────────────────────
   window.djLiveCalc = function(idx) {
-    var jobs = loadJobs(); if (!jobs[idx]) return;
-    var g = function(id){ var el=document.getElementById(id); return el?el.value:''; };
-    // Read live values without saving
-    var value  = parseFloat(g('dj-job-val-'+idx))  || jobs[idx].value  || 0;
-    var weeks  = parseFloat(g('dj-job-wks-'+idx))  || jobs[idx].weeks  || 1;
-    var people = parseInt  (g('dj-job-ppl-'+idx))  || jobs[idx].people || 1;
-    var ohp    = parseFloat(g('dj-job-ohp-'+idx))  || jobs[idx].ohp    || 15;
-    var pftIn  = parseFloat(g('dj-job-pft-'+idx));
-    var profit = (pftIn > 0) ? pftIn : value * (ohp/100) / (1 + ohp/100);
+    idx = parseInt(idx, 10);   // always integer
+    var jobs = loadJobs();
+    var job  = jobs[idx];
+    if (!job) return;
+    // Helper: read input value; return null if field is empty (user is mid-type)
+    var gNum = function(id) {
+      var el = document.getElementById(id);
+      if (!el) return null;
+      var raw = el.value.trim();
+      if (raw === '' || raw === '-') return null;   // field cleared — don't snap back
+      return parseFloat(raw);
+    };
+    var gInt = function(id) {
+      var el = document.getElementById(id);
+      if (!el) return null;
+      var raw = el.value.trim();
+      if (raw === '') return null;
+      return parseInt(raw, 10);
+    };
+    // Use live input value; fall back to saved only if field is completely empty
+    var value  = gNum('dj-job-val-'+idx);  if (value  === null) value  = job.value  || 0;
+    var weeks  = gNum('dj-job-wks-'+idx);  if (weeks  === null || weeks  <= 0) weeks  = job.weeks  || 1;
+    var people = gInt('dj-job-ppl-'+idx);  if (people === null || people <= 0) people = job.people || 1;
+    var ohp    = gNum('dj-job-ohp-'+idx);  if (ohp    === null || isNaN(ohp)) ohp    = job.ohp    || 15;
+    var pftIn  = gNum('dj-job-pft-'+idx);
+    var profit = (pftIn !== null && pftIn > 0) ? pftIn : value * (ohp/100) / (1 + ohp/100);
     var profitWk = weeks > 0 ? profit / weeks : 0;
     var totalWkProfit = profit + (people * AVG_WAGE_MARGIN_PW * weeks);
     var pmpw = (people > 0 && weeks > 0) ? Math.round(totalWkProfit / people / weeks) : 0;
