@@ -16360,21 +16360,18 @@ if (typeof showTab === 'function') {
 
   // ── Sync/refresh planner from Jobs tab ───────────────────────────────────
   window.djSyncPlanner = function() {
-    // loadJobs() now auto-merges missing seeds on every call — just reload
-    var jobs = loadJobs();
-    // Rebuild the Jobs tab to show any newly-merged jobs
-    buildDirJobsTab();
-    // Build/rebuild the Planner tab with fresh data
-    try {
-      var pp = document.getElementById('dir-planner-panel');
-      if (pp) { buildDirPlannerTab(); }
-    } catch(e) {}
-    // Switch to planner so Ash can see the result
-    try {
-      document.querySelectorAll('.tab-content').forEach(function(t){ t.style.display='none'; });
-      var pt = document.getElementById('tab-dir-planner');
-      if (pt) { pt.style.display = ''; buildDirPlannerTab(); }
-    } catch(e2) {}
+    loadJobs(); // auto-merges missing seeds
+    buildDirJobsTab(); // refresh Jobs tab list
+    // Switch to Planner and build it ONCE
+    document.querySelectorAll('.tab-content').forEach(function(t){ t.style.display='none'; });
+    var pt = document.getElementById('tab-dir-planner');
+    if (pt) {
+      pt.style.display = '';
+      try { buildDirPlannerTab(); } catch(e) {}
+    }
+    document.querySelectorAll('#mobile-bottom-nav .mob-btn').forEach(function(b){ b.classList.remove('active'); });
+    var mb = document.getElementById('mob-director');
+    if (mb) mb.classList.add('active');
   };
 
   // ── Feature 1: Live recalculation on job cards ─────────────────────────────
@@ -17661,20 +17658,22 @@ if (typeof showTab === 'function') {
         }
       }
 
-      // P&L label for each week (future only — from today onwards)
-      if (ws >= TL_PAST_WKS && ws < TL_PAST_WKS + 52) {
+      // P&L label — show every 4 weeks only (prevents cramping in narrow columns)
+      // No pence/decimals — whole £k only
+      if (ws >= TL_PAST_WKS && ws < TL_PAST_WKS + 52 && (ws - TL_PAST_WKS) % 4 === 0) {
         var plCol, plLabel;
         if (sc === 0) {
           plCol = '#ef4444';
-          plLabel = '-£' + Math.round(OVERHEAD_PER_WEEK/1000*10)/10 + 'k';
+          plLabel = '-£' + Math.round(OVERHEAD_PER_WEEK * 4 / 1000) + 'k'; // 4-week total for gap period
         } else if (weekProfit > 0) {
           plCol = '#22c55e';
-          plLabel = '+£' + Math.round(weekProfit/1000*10)/10 + 'k';
+          plLabel = '+£' + Math.round(weekProfit / 1000) + 'k/w';
         } else {
           plCol = '#ef4444';
-          plLabel = '-£' + Math.round(Math.abs(weekProfit)/1000*10)/10 + 'k';
+          plLabel = '-£' + Math.round(Math.abs(weekProfit) / 1000) + 'k/w';
         }
-        svg += '<text x="'+(sx+TL_WEEK_W/2-1)+'" y="'+(plY+26)+'" font-size="10" font-weight="800" text-anchor="middle" fill="'+plCol+'">'+plLabel+'</text>';
+        // Span 4 columns so label centres over the 4-week block
+        svg += '<text x="'+(sx + TL_WEEK_W*2)+'" y="'+(plY+28)+'" font-size="11" font-weight="800" text-anchor="middle" fill="'+plCol+'">'+plLabel+'</text>';
       }
     }
 
@@ -17685,12 +17684,16 @@ if (typeof showTab === 'function') {
     inner.innerHTML = svg;
 
     // ── Year forecast card — rendered below the timeline ──
-    var forecastWrap = inner.parentElement.querySelector('.tl-forecast-card');
-    if (!forecastWrap) {
+    // Query the CARD div (grandparent of inner) — that's where it's appended
+    // Previously queried inner.parentElement (dp-tl-wrap) which never contained it → always created a new one
+    var forecastHost = inner.parentElement.parentElement;
+    var forecastWrap = forecastHost ? forecastHost.querySelector('.tl-forecast-card') : null;
+    if (!forecastWrap && forecastHost) {
       forecastWrap = document.createElement('div');
       forecastWrap.className = 'tl-forecast-card';
-      inner.parentElement.parentElement.appendChild(forecastWrap);
+      forecastHost.appendChild(forecastWrap);
     }
+    if (!forecastWrap) forecastWrap = document.createElement('div'); // silent fallback
 
     // Compute 52-week forecast from today
     var totalWeeks = 52;
