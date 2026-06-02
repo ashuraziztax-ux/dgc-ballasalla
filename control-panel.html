@@ -15797,55 +15797,49 @@ if (typeof showTab === 'function') {
 
   // ── Build ──────────────────────────────────────────────────────────────────
   // ── Jobs localStorage ─────────────────────────────────────────────────────
+  // ── All default/seeded jobs — single source of truth ──────────────────────
+  var JOB_SEEDS = [
+    { id:1, name:'Ballasalla Phase 4',        value:450142,  weeks:17, people:6,  ohp:15, profit:80000, startWeek:-14, onTimeline:true,  confirmed:true,  status:'running',   note:'Main drainage' },
+    { id:2, name:'Living Hope Church',         value:185551,  weeks:13, people:4,  ohp:15, profit:0,     startWeek:-2,  onTimeline:true,  confirmed:true,  status:'running',   note:'Slab & gabion' },
+    { id:3, name:'Slab Works Plots 7-11',      value:209056,  weeks:10, people:3,  ohp:15, profit:0,     startWeek:4,   onTimeline:true,  confirmed:false, status:'running',   note:'Not started — add when slabs begin' },
+    { id:4, name:'Peel Breakwater (DOI)',      value:122995,  weeks:8,  people:5,  ohp:15, profit:0,     startWeek:10,  onTimeline:true,  confirmed:true,  status:'awarded',   note:'AWARDED — August start. Sewage treatment works, Peel harbour. £122,994 brick option. DOI client (IoM Govt).' },
+    { id:5, name:'Utmost International (KEBH)',value:500000,  weeks:12, people:4,  ohp:15, profit:0,     startWeek:18,  onTimeline:true,  confirmed:false, status:'bidding',   note:'BIDDING — King Edward Bay House, Onchan. Car park waterproofing + structural repair. £500k Simon estimate.' },
+    { id:6, name:'Glenfaba Ring Road (Est.)',  value:1700000, weeks:52, people:12, ohp:15, profit:0,     startWeek:18,  onTimeline:true,  confirmed:false, status:'estimate',  note:'ESTIMATE — Dandara ring road drainage. ~£1.7m, 4× Ballasalla scale. Kal Chudasama to confirm.' },
+    { id:7, name:'MU Flow Monitoring Ph.2',   value:500000,  weeks:26, people:3,  ohp:15, profit:0,     startWeek:52,  onTimeline:false, confirmed:false, status:'placeholder',note:'PLACEHOLDER — Manx Utilities, ~10 more sites. Not imminent.' }
+  ];
+
   function loadJobs() {
     try {
       var s = localStorage.getItem('dgc_jobs');
-      if (s) return JSON.parse(s);
-    } catch(e) {}
-    // Default: current active contracts (edit and save to update)
-    return [
-      { id:1, name:'Ballasalla Phase 4',   value:450142, weeks:17, people:6,  ohp:15, profit:80000, startWeek:-14, onTimeline:true,  confirmed:true,  status:'running',  note:'Main drainage' },
-      { id:2, name:'Living Hope Church',   value:185551, weeks:13, people:4,  ohp:15, profit:0,     startWeek:-2,  onTimeline:true,  confirmed:true,  status:'running',  note:'Slab & gabion' },
-      { id:3, name:'Slab Works Plots 7-11',value:209056, weeks:10, people:3,  ohp:15, profit:0,     startWeek:4,   onTimeline:true,  confirmed:false, status:'running',  note:'Not started — add when slabs begin' }
-    ];
+      var jobs = s ? JSON.parse(s) : null;
+
+      if (!jobs || !Array.isArray(jobs) || jobs.length === 0) {
+        // No data at all — seed with all defaults and save
+        saveJobs(JOB_SEEDS);
+        return JOB_SEEDS.map(function(j){ return Object.assign({}, j); });
+      }
+
+      // Merge: add any seeded job that isn't already in localStorage (by id OR close name match)
+      var changed = false;
+      JOB_SEEDS.forEach(function(seed) {
+        var exists = jobs.find(function(j) {
+          return j.id === seed.id || (j.name && seed.name && j.name.toLowerCase().replace(/\s+/g,'').indexOf(seed.name.toLowerCase().replace(/\s+/g,'').substring(0,8)) >= 0);
+        });
+        if (!exists) { jobs.push(Object.assign({}, seed)); changed = true; }
+      });
+
+      // Fix undefined onTimeline → true (never hide by accident)
+      jobs.forEach(function(j) {
+        if (j.onTimeline === undefined || j.onTimeline === null) { j.onTimeline = true; changed = true; }
+      });
+
+      if (changed) saveJobs(jobs);
+      return jobs;
+    } catch(e) {
+      return JOB_SEEDS.map(function(j){ return Object.assign({}, j); });
+    }
   }
   function saveJobs(jobs) { try { localStorage.setItem('dgc_jobs', JSON.stringify(jobs)); } catch(e) {} }
-
-  // Migrations — run on every page load
-  (function() {
-    try {
-      var existing = localStorage.getItem('dgc_jobs');
-      var existingJobs = existing ? JSON.parse(existing) : null;
-
-      // Migration 1: Job 3 (Slab Works) should show on timeline
-      if (existingJobs) {
-        var j3 = existingJobs.find(function(j){ return j.id === 3 || (j.name && j.name.includes('Slab Works')); });
-        if (j3 && j3.onTimeline === false) { j3.onTimeline = true; }
-      }
-
-      // Migration 2: Add Peel Breakwater if not present
-      if (existingJobs && !existingJobs.find(function(j){ return j.id === 4 || (j.name && j.name.includes('Peel Breakwater')); })) {
-        existingJobs.push({ id:4, name:'Peel Breakwater (DOI)', value:122995, weeks:8, people:5, ohp:15, profit:0, startWeek:10, onTimeline:true, confirmed:true, status:'awarded', note:'AWARDED — not started yet. August start. Sewage treatment works, Peel harbour. £122,994 brick option. DOI client (IoM Govt).' });
-      }
-
-      // Migration 3: Add Utmost International if not present
-      if (existingJobs && !existingJobs.find(function(j){ return j.id === 5 || (j.name && (j.name.includes('Utmost') || j.name.includes('Upmost'))); })) {
-        existingJobs.push({ id:5, name:'Utmost International (KEBH)', value:500000, weeks:12, people:4, ohp:15, profit:0, startWeek:18, onTimeline:true, confirmed:false, status:'bidding', note:'BIDDING — King Edward Bay House, Onchan. Car park waterproofing membrane + structural repair. £500k Simon estimate. July/Aug 2026 start.' });
-      }
-
-      // Migration 4: Add Glenfaba Ring Road if not present
-      if (existingJobs && !existingJobs.find(function(j){ return j.id === 6 || (j.name && j.name.includes('Glenfaba')); })) {
-        existingJobs.push({ id:6, name:'Glenfaba Ring Road (Est.)', value:1700000, weeks:52, people:12, ohp:15, profit:0, startWeek:18, onTimeline:true, confirmed:false, status:'estimate', note:'CONFIDENT ESTIMATE — Dandara asked DGC to price ring road drainage. "They\'re going to give it to us." ICP failing. ~£1.7m, 4× Ballasalla scale.' });
-      }
-
-      // Migration 5: Add MU Flow Monitoring Phase 2 if not present
-      if (existingJobs && !existingJobs.find(function(j){ return j.id === 7 || (j.name && j.name.includes('MU Flow')); })) {
-        existingJobs.push({ id:7, name:'MU Flow Monitoring Ph.2 (Est.)', value:500000, weeks:26, people:3, ohp:15, profit:0, startWeek:52, onTimeline:false, confirmed:false, status:'placeholder', note:'PLACEHOLDER — DGC did 5 sites for Manx Utilities. ~10 more sites coming. Estimated at ~2× Phase 1 value. Not for a while.' });
-      }
-
-      if (existingJobs) localStorage.setItem('dgc_jobs', JSON.stringify(existingJobs));
-    } catch(e) {}
-  })();
 
   window.buildDirectorsTab = function() {
     var el = document.getElementById('directors-panel');
@@ -15901,6 +15895,12 @@ if (typeof showTab === 'function') {
     + djSmInput('Profit % (OH&P)', 'dj-ohp', 'number', '15')
     + '</div></details>'
     + '<div id="dj-result"></div>'
+    + '</div>'
+
+    // Refresh / sync banner
+    + '<div style="padding:12px 16px;background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;">'
+    + '<div style="font-size:12px;color:#f59e0b;">Jobs saved here automatically appear on the Planner. Use Refresh to force a sync.</div>'
+    + '<button onclick="djSyncPlanner()" style="padding:7px 16px;background:#f59e0b;border:none;border-radius:8px;color:#1a1d27;font-size:12px;font-weight:900;cursor:pointer;white-space:nowrap;">🔄 Refresh Planner</button>'
     + '</div>'
 
     // Completed jobs history (collapsed)
@@ -16356,6 +16356,25 @@ if (typeof showTab === 'function') {
       var nameEl = document.getElementById('dj-job-name-' + (jobs.length - 1));
       if (nameEl) { nameEl.focus(); nameEl.select(); }
     }, 120);
+  };
+
+  // ── Sync/refresh planner from Jobs tab ───────────────────────────────────
+  window.djSyncPlanner = function() {
+    // loadJobs() now auto-merges missing seeds on every call — just reload
+    var jobs = loadJobs();
+    // Rebuild the Jobs tab to show any newly-merged jobs
+    buildDirJobsTab();
+    // Build/rebuild the Planner tab with fresh data
+    try {
+      var pp = document.getElementById('dir-planner-panel');
+      if (pp) { buildDirPlannerTab(); }
+    } catch(e) {}
+    // Switch to planner so Ash can see the result
+    try {
+      document.querySelectorAll('.tab-content').forEach(function(t){ t.style.display='none'; });
+      var pt = document.getElementById('tab-dir-planner');
+      if (pt) { pt.style.display = ''; buildDirPlannerTab(); }
+    } catch(e2) {}
   };
 
   // ── Feature 1: Live recalculation on job cards ─────────────────────────────
@@ -17409,12 +17428,12 @@ if (typeof showTab === 'function') {
     if (!inner) return;
 
     // Constants
-    var TL_WEEK_W    = 32;
-    var TL_ROW_H     = 40;
+    var TL_WEEK_W    = 36;   // wider columns = more readable
+    var TL_ROW_H     = 42;
     var TL_HDR_H     = 28;
     var TL_PAD_TOP   = TL_HDR_H + 8;
-    var TL_STAFF_H   = 50;
-    var TL_PL_H      = 32;
+    var TL_STAFF_H   = 54;
+    var TL_PL_H      = 44;  // taller P&L row so £ amounts are readable
     var TL_PAST_WKS  = 16;
     var TL_FUT_WKS   = 104;
     var TL_TOTAL_WKS = TL_PAST_WKS + TL_FUT_WKS;
@@ -17423,19 +17442,29 @@ if (typeof showTab === 'function') {
     var TL_AVAIL_STAFF = 10;
     var MONTHLY_OVERHEAD_LOSS = 16297;
 
-    var jobs = loadJobs().filter(function(j){ return j.onTimeline !== false; });
-    var allJobsForHidden = loadJobs();
-    var hiddenCount = allJobsForHidden.length - jobs.length;
-    if (hiddenCount > 0) {
-      var noticeEl = inner.previousElementSibling;
-      if (!noticeEl || !noticeEl.classList.contains('tl-hidden-notice')) {
-        var notice = document.createElement('div');
-        notice.className = 'tl-hidden-notice';
-        notice.style.cssText = 'padding:8px 12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:12px;color:#f59e0b;margin-bottom:8px;';
-        notice.textContent = hiddenCount + ' job' + (hiddenCount>1?'s':'') + ' hidden from planner — go to the Jobs tab and tick "Show on planner" to display them.';
-        inner.parentElement.insertBefore(notice, inner);
-      }
+    var allJobsRaw = loadJobs();
+    var jobs = allJobsRaw.filter(function(j){ return j.onTimeline !== false; });
+    var hiddenCount = allJobsRaw.length - jobs.length;
+
+    // Remove old notice if any
+    var oldNotice = inner.previousElementSibling;
+    if (oldNotice && oldNotice.classList && oldNotice.classList.contains('tl-hidden-notice')) {
+      oldNotice.parentElement.removeChild(oldNotice);
     }
+    // Always show count bar above timeline
+    var countBar = document.createElement('div');
+    countBar.className = 'tl-hidden-notice';
+    if (hiddenCount > 0) {
+      countBar.style.cssText = 'padding:8px 12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:12px;color:#f59e0b;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;';
+      countBar.innerHTML = '<span><strong>' + jobs.length + ' job' + (jobs.length!==1?'s':'') + ' on planner</strong> · ' + hiddenCount + ' hidden</span>'
+        + '<button onclick="(function(){var jbs=window._loadJobsForShowAll?window._loadJobsForShowAll():[];jbs.forEach(function(j){j.onTimeline=true;});try{localStorage.setItem(\'dgc_jobs\',JSON.stringify(jbs));buildDirPlannerTab();}catch(e){}})()" style="padding:4px 10px;background:#f59e0b;border:none;border-radius:6px;color:#1a1d27;font-size:11px;font-weight:800;cursor:pointer;">Show all</button>';
+    } else {
+      countBar.style.cssText = 'padding:6px 12px;background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.2);border-radius:8px;font-size:12px;color:#22c55e;margin-bottom:8px;';
+      countBar.innerHTML = '✓ <strong>' + jobs.length + ' job' + (jobs.length!==1?'s':'') + '</strong> on planner — all showing';
+    }
+    inner.parentElement.insertBefore(countBar, inner);
+    // Expose loadJobs for the show-all button
+    window._loadJobsForShowAll = loadJobs;
     var tlJobs = []; // shallow copies with barX/barW
     jobs.forEach(function(j, i) {
       var sw  = (j.startWeek !== undefined) ? j.startWeek : 0;
@@ -17607,7 +17636,7 @@ if (typeof showTab === 'function') {
         var sColor = sc > TL_AVAIL_STAFF ? '#ef4444' : '#22c55e';
         svg += '<rect x="'+sx+'" y="'+sy2+'" width="'+(TL_WEEK_W-2)+'" height="'+barH2+'" fill="'+sColor+'" fill-opacity="1" rx="2"/>';
         // Count number above bar
-        svg += '<text x="'+(sx+TL_WEEK_W/2-1)+'" y="'+(sy2-2)+'" font-size="10" font-weight="900" text-anchor="middle" fill="'+sColor+'">'+sc+'</text>';
+        svg += '<text x="'+(sx+TL_WEEK_W/2-1)+'" y="'+(sy2-3)+'" font-size="11" font-weight="900" text-anchor="middle" fill="'+sColor+'">'+sc+'</text>';
         // Overflow warning
         if (sc > TL_AVAIL_STAFF) {
           svg += '<text x="'+(sx+TL_WEEK_W/2-4)+'" y="'+(staffY+TL_STAFF_H-barH2-12)+'" font-size="10" fill="#ef4444">⚠</text>';
@@ -17627,7 +17656,7 @@ if (typeof showTab === 'function') {
           plCol = '#ef4444';
           plLabel = '-£' + Math.round(Math.abs(weekProfit)/1000*10)/10 + 'k';
         }
-        svg += '<text x="'+(sx+TL_WEEK_W/2-1)+'" y="'+(plY+20)+'" font-size="8" font-weight="700" text-anchor="middle" fill="'+plCol+'">'+plLabel+'</text>';
+        svg += '<text x="'+(sx+TL_WEEK_W/2-1)+'" y="'+(plY+26)+'" font-size="10" font-weight="800" text-anchor="middle" fill="'+plCol+'">'+plLabel+'</text>';
       }
     }
 
