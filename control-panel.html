@@ -15868,16 +15868,19 @@ if (typeof showTab === 'function') {
     var html = '<div style="max-width:960px;padding:0 0 20px;">'
 
     // Header
-    + '<div style="background:#1a1d27;border-radius:14px;padding:18px 22px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">'
+    + '<div style="background:#1a1d27;border-radius:14px;padding:18px 22px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">'
+    + '<div style="display:flex;align-items:center;gap:14px;">'
     + '<div style="background:#f59e0b;color:#1a1d27;border-radius:8px;padding:5px 13px;font-size:15px;font-weight:900;">📊 Jobs</div>'
-    + '<div style="color:#94a3b8;font-size:12px;">Add every active or upcoming contract. The combined view tells you if the business is profitable right now.</div>'
+    + '<div style="color:#94a3b8;font-size:12px;">Add every active or upcoming contract.</div>'
+    + '</div>'
+    + '<button onclick="(function(){document.querySelectorAll(\'.tab-content\').forEach(function(t){t.style.display=\'none\';});var pt=document.getElementById(\'tab-dir-planner\');if(pt){pt.style.display=\'\';try{buildDirPlannerTab();}catch(e){}}document.querySelectorAll(\'#mobile-bottom-nav .mob-btn\').forEach(function(b){b.classList.remove(\'active\');});var mb=document.getElementById(\'mob-director\');if(mb)mb.classList.add(\'active\');})()" style="padding:6px 14px;background:rgba(245,158,11,0.15);border:1px solid #f59e0b88;border-radius:8px;color:#f59e0b;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">📅 View Planner →</button>'
     + '</div>'
 
     // Portfolio card
     + '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:22px;">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">'
     + '<div style="font-size:14px;font-weight:800;color:var(--text);">Jobs currently running</div>'
-    + '<button onclick="dirAddJob();buildDirJobsTab();" style="padding:7px 16px;background:rgba(245,158,11,0.12);border:1px solid #f59e0b55;border-radius:8px;color:#f59e0b;font-size:12px;font-weight:800;cursor:pointer;">+ Add a job</button>'
+    + '<button onclick="djAddJob()" style="padding:7px 16px;background:rgba(245,158,11,0.12);border:1px solid #f59e0b55;border-radius:8px;color:#f59e0b;font-size:12px;font-weight:800;cursor:pointer;">+ Add a job</button>'
     + '</div>'
     + '<div id="dj-list" style="margin-bottom:14px;"></div>'
     + '<div id="dj-total"></div>'
@@ -15936,8 +15939,11 @@ if (typeof showTab === 'function') {
     // Timeline card
     + '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:20px;">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">'
+    + '<div>'
     + '<div style="font-size:14px;font-weight:800;color:var(--text);">Year planner</div>'
-    + '<div style="font-size:11px;color:var(--muted);">Drag bars · desktop only · scroll left/right</div>'
+    + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">Drag bars · scroll left/right · bars show staff count</div>'
+    + '</div>'
+    + '<button onclick="(function(){document.querySelectorAll(\'.tab-content\').forEach(function(t){t.style.display=\'none\';});var jt=document.getElementById(\'tab-dir-jobs\');if(jt){jt.style.display=\'\';try{buildDirJobsTab();}catch(e){}}document.querySelectorAll(\'#mobile-bottom-nav .mob-btn\').forEach(function(b){b.classList.remove(\'active\');});var mb=document.getElementById(\'mob-director\');if(mb)mb.classList.add(\'active\');})()" style="padding:6px 14px;background:rgba(148,163,184,0.1);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;">← Jobs</button>'
     + '</div>'
     + '<div id="dp-tl-wrap" style="overflow-x:auto;overflow-y:hidden;border-radius:10px;border:1px solid var(--border);-webkit-overflow-scrolling:touch;">'
     + '<div id="dp-tl-inner" style="position:relative;min-height:200px;"></div>'
@@ -15949,6 +15955,13 @@ if (typeof showTab === 'function') {
     + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#fb923c;border-radius:2px;display:inline-block;opacity:0.8;"></span>Estimate</span>'
     + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#ef4444;border-radius:2px;display:inline-block;opacity:0.5;"></span>Gap (no revenue)</span>'
     + '</div>'
+    + '</div>'
+
+    // Monthly cashflow summary card
+    + '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:20px;">'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:3px;">📆 Monthly cashflow — what you earn when jobs overlap</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Turnover = what you invoice. Profit = what you keep after labour. OH cover = how much of your £16,297/month fixed costs are covered.</div>'
+    + '<div id="dp-monthly-summary"></div>'
     + '</div>'
 
     // Company health card
@@ -16009,6 +16022,115 @@ if (typeof showTab === 'function') {
     dpRenderTimeline();
     dpHealth();
     dpRenderBM();
+    dpBuildMonthlySummary();
+  };
+
+  // ── Monthly cashflow summary ──────────────────────────────────────────────
+  window.dpBuildMonthlySummary = function() {
+    var el = document.getElementById('dp-monthly-summary');
+    if (!el) return;
+    var jobs = loadJobs().filter(function(j){ return j.onTimeline !== false; });
+    if (!jobs.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:10px 0;">No jobs on planner yet. Add jobs on the Jobs tab.</div>'; return; }
+
+    // Build week-by-week data for next 52 weeks from today
+    var FUTURE_WKS = 60; // slightly beyond a year so December shows
+    var turnoverByWeek = [];
+    var profitWkArr = [];
+    var staffWkArr = [];
+    for (var i = 0; i < FUTURE_WKS; i++) { turnoverByWeek[i] = 0; profitWkArr[i] = 0; staffWkArr[i] = 0; }
+
+    jobs.forEach(function(j) {
+      var sw = j.startWeek || 0;   // weeks relative to today (negative = past)
+      var wks = j.weeks || 1;
+      var turnoverWk = (j.value || 0) / wks;
+      var profitOHP  = jobProfit(j) / wks;
+      var wageWk     = (j.people || 0) * AVG_WAGE_MARGIN_PW;
+      var profitWk   = profitOHP + wageWk;
+      for (var w = 0; w < FUTURE_WKS; w++) {
+        // w = 0 is this week, relative to today
+        if (w >= sw && w < sw + wks) {
+          turnoverByWeek[w] += turnoverWk;
+          profitWkArr[w]    += profitWk;
+          staffWkArr[w]     = Math.max(staffWkArr[w], staffWkArr[w] + 0); // accumulate below
+        }
+      }
+    });
+
+    // Re-do staff (sum, not max per job)
+    for (var s = 0; s < FUTURE_WKS; s++) staffWkArr[s] = 0;
+    jobs.forEach(function(j2) {
+      var sw2 = j2.startWeek || 0;
+      var wks2 = j2.weeks || 1;
+      for (var w2 = 0; w2 < FUTURE_WKS; w2++) {
+        if (w2 >= sw2 && w2 < sw2 + wks2) staffWkArr[w2] += (j2.people || 0);
+      }
+    });
+
+    // Group by calendar month
+    var today = new Date(); today.setHours(0,0,0,0);
+    var months = [];
+    var monthMap = {};
+    for (var wk = 0; wk < FUTURE_WKS; wk++) {
+      var d = new Date(today.getTime() + wk * 7 * 24 * 60 * 60 * 1000);
+      var mkey = d.getFullYear() + '-' + d.getMonth();
+      if (!monthMap[mkey]) {
+        var mLabel = d.toLocaleString('en-GB', {month:'short', year:'numeric'});
+        monthMap[mkey] = { label: mLabel, turnover: 0, profit: 0, staff: 0, active: false };
+        months.push(monthMap[mkey]);
+      }
+      monthMap[mkey].turnover += turnoverByWeek[wk];
+      monthMap[mkey].profit   += profitWkArr[wk];
+      monthMap[mkey].staff     = Math.max(monthMap[mkey].staff, staffWkArr[wk]);
+      if (staffWkArr[wk] > 0 || turnoverByWeek[wk] > 0) monthMap[mkey].active = true;
+    }
+
+    var visibleMonths = months.filter(function(m){ return m.active; });
+    if (!visibleMonths.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:10px 0;">No future work scheduled on the planner.</div>'; return; }
+
+    var html = '<div style="overflow-x:auto;">'
+      + '<table style="border-collapse:collapse;width:100%;min-width:500px;font-size:12px;">'
+      + '<thead>'
+      + '<tr style="background:var(--surface2);border-bottom:2px solid var(--border);">'
+      + '<th style="padding:8px 12px;text-align:left;font-weight:700;color:var(--text);">Month</th>'
+      + '<th style="padding:8px 12px;text-align:right;font-weight:700;color:var(--muted);">Turnover</th>'
+      + '<th style="padding:8px 12px;text-align:right;font-weight:700;color:var(--muted);">Profit</th>'
+      + '<th style="padding:8px 12px;text-align:right;font-weight:700;color:var(--muted);">Peak staff</th>'
+      + '<th style="padding:8px 12px;text-align:right;font-weight:700;color:var(--muted);">Net vs OH</th>'
+      + '</tr>'
+      + '</thead><tbody>';
+
+    visibleMonths.forEach(function(m) {
+      var net = m.profit - MONTHLY_OVERHEAD;
+      var col = net > 8000 ? '#22c55e' : net > 0 ? '#f59e0b' : '#ef4444';
+      var netStr = (net >= 0 ? '+£' : '-£') + Math.abs(Math.round(net)).toLocaleString('en-GB');
+      html += '<tr style="border-bottom:1px solid var(--border);">'
+        + '<td style="padding:8px 12px;font-weight:700;color:var(--text);">' + m.label + '</td>'
+        + '<td style="padding:8px 12px;text-align:right;color:var(--text);">£' + Math.round(m.turnover).toLocaleString('en-GB') + '</td>'
+        + '<td style="padding:8px 12px;text-align:right;font-weight:800;color:'+col+';">£' + Math.round(m.profit).toLocaleString('en-GB') + '</td>'
+        + '<td style="padding:8px 12px;text-align:right;">'
+        + '<span style="font-weight:900;color:var(--text);">' + m.staff + '</span><span style="color:var(--muted);font-size:10px;"> ppl</span>'
+        + '</td>'
+        + '<td style="padding:8px 12px;text-align:right;font-weight:900;color:'+col+';">' + netStr + '</td>'
+        + '</tr>';
+    });
+
+    // Totals row
+    var totTurnover = visibleMonths.reduce(function(s,m){ return s + m.turnover; }, 0);
+    var totProfit   = visibleMonths.reduce(function(s,m){ return s + m.profit;   }, 0);
+    var totNet      = totProfit - MONTHLY_OVERHEAD * visibleMonths.length;
+    var totCol      = totNet > 0 ? '#22c55e' : '#ef4444';
+    html += '<tr style="background:var(--surface2);border-top:2px solid var(--border);">'
+      + '<td style="padding:8px 12px;font-weight:900;color:var(--text);">Total</td>'
+      + '<td style="padding:8px 12px;text-align:right;font-weight:900;color:var(--text);">£' + Math.round(totTurnover).toLocaleString('en-GB') + '</td>'
+      + '<td style="padding:8px 12px;text-align:right;font-weight:900;color:'+totCol+';">£' + Math.round(totProfit).toLocaleString('en-GB') + '</td>'
+      + '<td style="padding:8px 12px;text-align:right;">—</td>'
+      + '<td style="padding:8px 12px;text-align:right;font-weight:900;color:'+totCol+';">' + (totNet >= 0 ? '+£' : '-£') + Math.abs(Math.round(totNet)).toLocaleString('en-GB') + '</td>'
+      + '</tr>';
+
+    html += '</tbody></table></div>'
+      + '<div style="font-size:10px;color:var(--muted);margin-top:8px;">Turnover = contract value spread evenly across job weeks. Profit = OH&P markup + £265/person/week wage margin. Net vs OH = profit minus £16,297/month overhead. Numbers are estimates — actual payment lags by AFP cycle.</div>';
+
+    el.innerHTML = html;
   };
 
   // ── dj- (director jobs tab) helper functions ────────────────────────────────
@@ -16085,8 +16207,8 @@ if (typeof showTab === 'function') {
         + '</div>'
         + '<div id="dj-suggestions-'+idx+'" style="margin-top:8px;font-size:11px;color:var(--muted);"></div>'
         + '<div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;">'
-        + '<label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="dj-job-tl-'+idx+'" '+(job.onTimeline!==false?'checked':'')+' style="accent-color:#f59e0b;"> Show on planner</label>'
-        + '<label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="dj-job-con-'+idx+'" '+(job.confirmed?'checked':'')+' style="accent-color:#22c55e;"> Confirmed (green bar)</label>'
+        + '<label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="dj-job-tl-'+idx+'" '+(job.onTimeline!==false?'checked':'')+' onchange="djAutoSave('+idx+')" style="accent-color:#f59e0b;"> Show on planner</label>'
+        + '<label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="dj-job-con-'+idx+'" '+(job.confirmed?'checked':'')+' onchange="djAutoSave('+idx+')" style="accent-color:#22c55e;"> Confirmed (green bar)</label>'
         + '</div>'
         + '<div style="margin-top:10px;">'
         + '<input id="dj-job-note-'+idx+'" type="text" value="'+(job.note||'')+'" placeholder="Status note — e.g. Week 3 of 17, drainage complete" style="width:100%;padding:6px 10px;border-radius:8px;border:1px dashed var(--border);font-size:12px;color:var(--muted);background:var(--surface2);">'
@@ -16196,17 +16318,44 @@ if (typeof showTab === 'function') {
     jobs[idx].confirmed  = conEl ? conEl.checked : false;
     jobs[idx].note    = g('dj-job-note-'+idx) || '';
     saveJobs(jobs); djRenderJobs();
-    // Sync planner if it's currently visible
+    // Always sync planner if it has been built
     try {
-      var plannerPanel = document.getElementById('dir-planner-panel');
-      if (plannerPanel && plannerPanel.innerHTML.length > 100) {
-        dpRenderTimeline();
-      }
+      if (document.getElementById('dp-tl-inner')) { dpRenderTimeline(); dpBuildMonthlySummary(); }
     } catch(e) {}
   };
 
   window.djDeleteJob = function(idx) {
     var jobs = loadJobs(); jobs.splice(idx,1); saveJobs(jobs); djRenderJobs();
+    try { if (document.getElementById('dp-tl-inner')) { dpRenderTimeline(); dpBuildMonthlySummary(); } } catch(e) {}
+  };
+
+  // ── Auto-save checkbox state and instantly refresh planner ────────────────
+  window.djAutoSave = function(idx) {
+    var jobs = loadJobs();
+    if (!jobs[idx]) return;
+    var tlEl  = document.getElementById('dj-job-tl-' + idx);
+    var conEl = document.getElementById('dj-job-con-' + idx);
+    if (tlEl)  jobs[idx].onTimeline = tlEl.checked;
+    if (conEl) jobs[idx].confirmed  = conEl.checked;
+    // Also update status from confirmed flag
+    if (jobs[idx].confirmed && jobs[idx].status === 'bidding') jobs[idx].status = 'running';
+    saveJobs(jobs);
+    // Instantly refresh the planner timeline if it exists
+    try {
+      if (document.getElementById('dp-tl-inner')) { dpRenderTimeline(); dpBuildMonthlySummary(); }
+    } catch(e) {}
+  };
+
+  // ── Add a job from the new Jobs tab (fixes focus to correct element) ───────
+  window.djAddJob = function() {
+    var jobs = loadJobs();
+    jobs.push({ id: Date.now(), name:'New job', value:0, weeks:8, people:3, ohp:15, profit:0, startWeek:0, onTimeline:true, confirmed:false, status:'bidding', note:'' });
+    saveJobs(jobs);
+    buildDirJobsTab();  // rebuild the whole tab
+    setTimeout(function() {
+      var nameEl = document.getElementById('dj-job-name-' + (jobs.length - 1));
+      if (nameEl) { nameEl.focus(); nameEl.select(); }
+    }, 120);
   };
 
   // ── Feature 1: Live recalculation on job cards ─────────────────────────────
@@ -16470,6 +16619,8 @@ if (typeof showTab === 'function') {
     } catch(e) {
       dpInner.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center;font-size:12px;">Timeline loading — add jobs on the Jobs tab first.</div>';
     }
+    // Always refresh monthly summary after timeline updates
+    try { dpBuildMonthlySummary(); } catch(e2) {}
   }
 
   function dpHealth() {
