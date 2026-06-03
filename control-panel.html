@@ -10507,7 +10507,7 @@ window.buildCommandCentre = function() {
   var summaryText = daysLate === null
     ? 'Loading project status…'
     : daysLate <= 0
-      ? 'This project is going well. Work is ' + actualPct + '% complete — ' + Math.abs(daysLate||0) + (daysLate<0?' days ahead of':(daysLate===0?' exactly on')) + ' schedule. Handover is due ' + endDate + '.'
+      ? 'This project is going well. Work is ' + actualPct + '% complete — ' + (daysLate<0?(Math.abs(daysLate)+' days ahead of schedule'):'exactly on schedule') + '. Handover is due ' + endDate + '.'
       : 'This project needs attention. Work is ' + actualPct + '% complete but is ' + daysLate + ' days behind schedule. Handover is due ' + endDate + ' — acceleration may be needed.';
 
   var html = '<div style="background:' + summaryColor + '12;border:1px solid ' + summaryColor + '44;border-radius:12px;padding:14px 18px;margin-bottom:14px;">'
