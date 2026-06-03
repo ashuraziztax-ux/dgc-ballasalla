@@ -16020,9 +16020,14 @@ window.mobDrawerTab = function(tabName) {
         if (!exists) { jobs.push(Object.assign({}, seed)); changed = true; }
       });
 
-      // Fix undefined onTimeline → true (never hide by accident)
+      // Fix undefined/null onTimeline → true (never hide by accident)
+      // Also: for seed jobs (id 1-7), if onTimeline was false but the job is confirmed/running/awarded, restore it
       jobs.forEach(function(j) {
         if (j.onTimeline === undefined || j.onTimeline === null) { j.onTimeline = true; changed = true; }
+        // Seed jobs that are active (not placeholder) should always show on planner by default
+        var isSeed = j.id >= 1 && j.id <= 6;
+        var isActive = j.status === 'running' || j.status === 'awarded' || j.status === 'bidding' || j.status === 'estimate';
+        if (isSeed && isActive && j.onTimeline === false) { j.onTimeline = true; changed = true; }
       });
 
       if (changed) saveJobs(jobs);
@@ -16092,10 +16097,15 @@ window.mobDrawerTab = function(tabName) {
     + '<div id="dj-result"></div>'
     + '</div>'
 
-    // Refresh / sync banner
-    + '<div style="padding:12px 16px;background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;">'
-    + '<div style="font-size:12px;color:#f59e0b;">Jobs saved here automatically appear on the Planner. Use Refresh to force a sync.</div>'
-    + '<button onclick="djSyncPlanner()" style="padding:7px 16px;background:#f59e0b;border:none;border-radius:8px;color:#1a1d27;font-size:12px;font-weight:900;cursor:pointer;white-space:nowrap;">🔄 Refresh Planner</button>'
+    // Planner controls banner
+    + '<div style="padding:12px 16px;background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2);border-radius:10px;margin-bottom:16px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">'
+    + '<div style="font-size:12px;color:#f59e0b;font-weight:700;">Planner controls — all positions save automatically when you drag</div>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+    + '<button onclick="djShowAllOnPlanner()" style="padding:8px 16px;background:#f59e0b;border:none;border-radius:8px;color:#1a1d27;font-size:12px;font-weight:900;cursor:pointer;flex:1;min-width:140px;">📋 Show ALL jobs on Planner</button>'
+    + '<button onclick="djSyncPlanner()" style="padding:8px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;flex:1;min-width:120px;">🔄 Refresh &amp; View Planner</button>'
+    + '</div>'
     + '</div>'
 
     // Completed jobs history (collapsed)
@@ -16136,9 +16146,12 @@ window.mobDrawerTab = function(tabName) {
     + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">'
     + '<div>'
     + '<div style="font-size:14px;font-weight:800;color:var(--text);">Year planner</div>'
-    + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">Drag bars · scroll left/right · bars show staff count</div>'
+    + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">Drag bars to plan · positions auto-save · scroll left/right</div>'
     + '</div>'
-    + '<button onclick="(function(){document.querySelectorAll(\'.tab-content\').forEach(function(t){t.classList.remove(\'active\');});var jt=document.getElementById(\'tab-dir-jobs\');if(jt){jt.classList.add(\'active\');try{buildDirJobsTab();}catch(e){}}document.querySelectorAll(\'#mobile-bottom-nav .mob-btn\').forEach(function(b){b.classList.remove(\'active\');});var mb=document.getElementById(\'mob-director\');if(mb)mb.classList.add(\'active\');})()" style="padding:6px 14px;background:rgba(148,163,184,0.1);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;">← Jobs</button>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+    + '<button onclick="djShowAllOnPlanner&&djShowAllOnPlanner()" style="padding:7px 14px;background:#f59e0b;border:none;border-radius:8px;color:#1a1d27;font-size:12px;font-weight:900;cursor:pointer;white-space:nowrap;">📋 Show All Jobs</button>'
+    + '<button onclick="(function(){document.querySelectorAll(\'.tab-content\').forEach(function(t){t.classList.remove(\'active\');});var jt=document.getElementById(\'tab-dir-jobs\');if(jt){jt.classList.add(\'active\');try{buildDirJobsTab();}catch(e){}}document.querySelectorAll(\'#mobile-bottom-nav .mob-btn\').forEach(function(b){b.classList.remove(\'active\');});var mb=document.getElementById(\'mob-director\');if(mb)mb.classList.add(\'active\');})()" style="padding:7px 14px;background:rgba(148,163,184,0.1);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">← Edit Jobs</button>'
+    + '</div>'
     + '</div>'
     + '<div id="dp-tl-wrap" style="overflow-x:auto;overflow-y:hidden;border-radius:10px;border:1px solid var(--border);-webkit-overflow-scrolling:touch;">'
     + '<div id="dp-tl-inner" style="position:relative;min-height:200px;"></div>'
@@ -16381,9 +16394,14 @@ window.mobDrawerTab = function(tabName) {
         + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px;margin-bottom:10px;">'
         + djJobField('Name','dj-job-name-'+idx,'text',job.name||'',idx)
         + djJobField('Value (£)','dj-job-val-'+idx,'number',job.value,idx)
-        + djJobField('Weeks','dj-job-wks-'+idx,'number',job.weeks,idx)
-        + djJobField('People','dj-job-ppl-'+idx,'number',job.people,idx)
+        + djJobField('Weeks on site','dj-job-wks-'+idx,'number',job.weeks,idx)
+        + djJobField('People needed','dj-job-ppl-'+idx,'number',job.people,idx)
         + djJobField('Profit % (OH&P)','dj-job-ohp-'+idx,'number',job.ohp||15,idx)
+        + '<div>'
+        + '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px;">Start (weeks from today)</div>'
+        + '<input id="dj-job-sw-'+idx+'" type="number" value="'+(job.startWeek||0)+'" placeholder="0 = this week" style="width:100%;padding:6px 9px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:700;background:var(--surface2);color:var(--text);" oninput="(function(){var v=parseInt(this.value);if(!isNaN(v)){var jj=window.loadJobs?window.loadJobs():[];if(jj['+idx+']){jj['+idx+'].startWeek=v;window.saveJobs&&window.saveJobs(jj);try{if(document.getElementById(\'dp-tl-inner\')){dpRenderTimeline();dpBuildMonthlySummary();}}catch(e){}}}}).call(this)">'
+        + '<div style="font-size:10px;color:var(--muted);margin-top:2px;">'+dateLabel+'</div>'
+        + '</div>'
         + '</div>'
         + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
         + '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px;">Profit on this job (£)</div>'
@@ -16401,9 +16419,17 @@ window.mobDrawerTab = function(tabName) {
         + '</div></div>'
         + '</div>'
         + '<div id="dj-suggestions-'+idx+'" style="margin-top:8px;font-size:11px;color:var(--muted);"></div>'
-        + '<div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;">'
-        + '<label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="dj-job-tl-'+idx+'" '+(job.onTimeline!==false?'checked':'')+' onchange="djAutoSave('+idx+')" style="accent-color:#f59e0b;"> Show on planner</label>'
-        + '<label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="dj-job-con-'+idx+'" '+(job.confirmed?'checked':'')+' onchange="djAutoSave('+idx+')" style="accent-color:#22c55e;"> Confirmed (green bar)</label>'
+        + '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--border);padding-top:10px;">'
+        // Show on planner — big toggle button
+        + '<label style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;background:'+(job.onTimeline!==false?'rgba(245,158,11,0.12)':'var(--surface2)')+';border:1px solid '+(job.onTimeline!==false?'#f59e0b88':'var(--border)')+';transition:all 0.15s;">'
+        + '<input type="checkbox" id="dj-job-tl-'+idx+'" '+(job.onTimeline!==false?'checked':'')+' onchange="djAutoSave('+idx+')" style="accent-color:#f59e0b;width:14px;height:14px;">'
+        + '<span style="font-size:12px;font-weight:700;color:'+(job.onTimeline!==false?'#f59e0b':'var(--muted)')+';">📅 Show on planner</span>'
+        + '</label>'
+        // Confirmed — big toggle button
+        + '<label style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;background:'+(job.confirmed?'rgba(34,197,94,0.12)':'var(--surface2)')+';border:1px solid '+(job.confirmed?'#22c55e88':'var(--border)')+';transition:all 0.15s;">'
+        + '<input type="checkbox" id="dj-job-con-'+idx+'" '+(job.confirmed?'checked':'')+' onchange="djAutoSave('+idx+')" style="accent-color:#22c55e;width:14px;height:14px;">'
+        + '<span style="font-size:12px;font-weight:700;color:'+(job.confirmed?'#22c55e':'var(--muted)')+';">✓ Confirmed</span>'
+        + '</label>'
         + '</div>'
         + '<div style="margin-top:10px;">'
         + '<input id="dj-job-note-'+idx+'" type="text" value="'+(job.note||'')+'" placeholder="Status note — e.g. Week 3 of 17, drainage complete" style="width:100%;padding:6px 10px;border-radius:8px;border:1px dashed var(--border);font-size:12px;color:var(--muted);background:var(--surface2);">'
@@ -16564,6 +16590,28 @@ window.mobDrawerTab = function(tabName) {
   };
 
   // ── Sync/refresh planner from Jobs tab ───────────────────────────────────
+  // ── Show ALL jobs on planner — one-click fix ──────────────────────────────
+  window.djShowAllOnPlanner = function() {
+    var jobs = loadJobs();
+    var changed = 0;
+    jobs.forEach(function(j) {
+      if (j.onTimeline !== true) { j.onTimeline = true; changed++; }
+    });
+    saveJobs(jobs);
+    // Rebuild jobs tab to reflect new checkboxes
+    buildDirJobsTab();
+    // Switch to planner and show result
+    document.querySelectorAll('.tab-content').forEach(function(t){ t.classList.remove('active'); });
+    var pt = document.getElementById('tab-dir-planner');
+    if (pt) {
+      pt.classList.add('active');
+      try { buildDirPlannerTab(); } catch(e) {}
+    }
+    document.querySelectorAll('#mobile-bottom-nav .mob-btn').forEach(function(b){ b.classList.remove('active'); });
+    var mb = document.getElementById('mob-director');
+    if (mb) mb.classList.add('active');
+  };
+
   window.djSyncPlanner = function() {
     loadJobs(); // auto-merges missing seeds
     buildDirJobsTab(); // refresh Jobs tab list
@@ -18057,6 +18105,14 @@ window.mobDrawerTab = function(tabName) {
       dirRenderTimeline(cid);
       dirRenderJobs();
       djRenderJobs();
+      // Show "auto-saved" toast so user knows position was saved
+      try {
+        var toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#22c55e;color:white;padding:8px 18px;border-radius:20px;font-size:12px;font-weight:800;z-index:9999;pointer-events:none;transition:opacity 0.4s;';
+        toast.textContent = '✓ Position saved';
+        document.body.appendChild(toast);
+        setTimeout(function(){ toast.style.opacity='0'; setTimeout(function(){ if(toast.parentNode)toast.parentNode.removeChild(toast); }, 400); }, 1500);
+      } catch(e2) {}
     };
 
     document.addEventListener('mousemove', _tlMoveHandler);
