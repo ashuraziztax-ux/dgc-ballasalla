@@ -1478,31 +1478,29 @@ function setMode(m) {
     }
   });
 
-  // Redirect to appropriate default tab for mode
-  var active = document.querySelector('.nav button.active');
-  var activeTxt = active ? active.textContent.trim() : '';
-  var hiddenInUser   = ['Financials','Variations','Staff Hours','Delays','Dashboard','Efficiency','Progress Report','Programme'];
-  var hiddenInClient = ['Staff Hours','Financials','Daily Log','Variations','Efficiency','Gantt Chart'];
-  var hidden = (m === 'admin' || m === 'director') ? [] : m === 'user' ? hiddenInUser : hiddenInClient;
-
+  // After mode change: check if the currently-active tab content is now hidden.
+  // If so, redirect to Programme (always visible). This fixes the blank-page-on-mode-switch bug
+  // that was caused by the default active tab (tab-dashboard/admin-only) being hidden in user/client mode.
   if (m === 'director') {
-    // Director mode: navigate to Jobs tab (first director-only tab)
-    var jobsBtn = document.querySelector('.nav button.director-only');
-    if (jobsBtn) { try { showTab('dir-jobs', jobsBtn); } catch(e){} }
-  } else if (m === 'client') {
-    // Client default first page = Programme
-    var fcBtn = null;
-    document.querySelectorAll('.nav button').forEach(function(b){
-      if (b.textContent.trim() === 'Programme') fcBtn = b;
-    });
-    if (fcBtn) { try { showTab('programme', fcBtn); } catch(e){} }
-  } else if (hidden.indexOf(activeTxt) >= 0) {
-    // Currently on a hidden tab — go to Programme (always visible)
-    var fcFallBtn = null;
-    document.querySelectorAll('.nav button').forEach(function(b){
-      if (!fcFallBtn && b.textContent.trim() === 'Programme') fcFallBtn = b;
-    });
-    if (fcFallBtn) { try { showTab('programme', fcFallBtn); } catch(e){} }
+    // Director mode: navigate to Jobs Pipeline tab
+    var _djBtn = document.querySelector('.nav button[onclick*="showTab(\'dir-jobs\'"]');
+    try { showTab('dir-jobs', _djBtn); } catch(e){}
+  } else {
+    // For any other mode, check if the currently active tab content is visible
+    // A tab is "visible" if it's in the DOM, has .active class, AND its computed display is not none
+    var _activeTabEl = document.querySelector('.tab-content.active');
+    var _activeTabVisible = _activeTabEl && getComputedStyle(_activeTabEl).display !== 'none';
+
+    if (!_activeTabVisible) {
+      // Active tab is hidden in this mode — go to Programme which is always visible
+      var _progBtn = document.querySelector('.nav button[onclick*="showTab(\'programme\'"]');
+      try { showTab('programme', _progBtn); } catch(e){
+        // Fallback: manually activate programme tab
+        document.querySelectorAll('.tab-content').forEach(function(t){ t.classList.remove('active'); });
+        var _progTab = document.getElementById('tab-programme');
+        if (_progTab) _progTab.classList.add('active');
+      }
+    }
   }
 
   try { sessionStorage.setItem('dgc_mode', m); } catch(e) {}
@@ -2115,7 +2113,7 @@ function gpExportCSV(){
 <div class="main">
 
 <!-- ═══════════════════════════════ DASHBOARD ═══════════════════════════════ -->
-<div id="tab-dashboard" class="tab-content active admin-only">
+<div id="tab-dashboard" class="tab-content admin-only">
   <!-- ── Data-freeze notice ─────────────────────────────────────────────── -->
   <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
               margin-bottom:14px;border-radius:8px;
@@ -2511,7 +2509,7 @@ function gpExportCSV(){
 </div>
 
 <!-- ═══════════════════════════════ PROGRAMME ═══════════════════════════════ -->
-<div id="tab-programme" class="tab-content">
+<div id="tab-programme" class="tab-content active">
   <div id="pv5-root"></div>
 </div>
 
@@ -10405,14 +10403,8 @@ function showTab(name, btn) {
       + '</div>';
   };
 
-  // Auto-render RAG on first load (dashboard is active by default)
-  try {
-    if (document.getElementById('tab-dashboard') &&
-        document.getElementById('tab-dashboard').classList.contains('active')) {
-      window.buildDashboardRAG();
-      window.buildCommandCentre();
-    }
-  } catch(e) {}
+  // Auto-render RAG (dashboard tab content builds when tab is opened via showTab)
+  // Note: tab-programme is now the default active tab, not tab-dashboard
 
 })();
 
@@ -11257,6 +11249,8 @@ window.addEventListener('DOMContentLoaded', () => {
   try { buildStateBanner();     }    catch(e) {}
   try { fetchRonalswayWeather(); }   catch(e) {}
   try { buildDashboardRAG(); }       catch(e) {}
+  // Programme is now the default landing tab — build it on load
+  try { if (isBallasallaActive()) buildProgrammeV135(); } catch(e) {}
 
   // ── Snapshot date banner + Last Updated / Correct From chips ─────────────
   try {
@@ -11544,6 +11538,24 @@ window.addEventListener('DOMContentLoaded', () => {
         w.appendChild(t);
       }
     });
+  })();
+
+  // ── Ensure a visible tab is shown on page load ───────────────────────────
+  // The default active tab (tab-dashboard) is admin-only and hidden in user/client mode.
+  // If no tab content is visible, auto-switch to Programme.
+  (function ensureVisibleTab() {
+    try {
+      var activeEl = document.querySelector('.tab-content.active');
+      if (!activeEl || getComputedStyle(activeEl).display === 'none') {
+        // No visible active tab — show Programme
+        document.querySelectorAll('.tab-content').forEach(function(t){ t.classList.remove('active'); });
+        var progTab = document.getElementById('tab-programme');
+        if (progTab) {
+          progTab.classList.add('active');
+          try { buildProgrammeV135(); } catch(e) {}
+        }
+      }
+    } catch(e) {}
   })();
 });
 
