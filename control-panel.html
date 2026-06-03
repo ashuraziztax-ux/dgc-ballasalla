@@ -15997,7 +15997,7 @@ window.mobDrawerTab = function(tabName) {
     { id:4, name:'Peel Breakwater (DOI)',      value:122995,  weeks:8,  people:5,  ohp:15, profit:0,     startWeek:10,  onTimeline:true,  confirmed:true,  status:'awarded',   note:'AWARDED — August start. Sewage treatment works, Peel harbour. £122,994 brick option. DOI client (IoM Govt).' },
     { id:5, name:'Utmost International (KEBH)',value:500000,  weeks:12, people:4,  ohp:15, profit:0,     startWeek:18,  onTimeline:true,  confirmed:false, status:'bidding',   note:'BIDDING — King Edward Bay House, Onchan. Car park waterproofing + structural repair. £500k Simon estimate.' },
     { id:6, name:'Glenfaba Ring Road (Est.)',  value:1700000, weeks:52, people:12, ohp:15, profit:0,     startWeek:18,  onTimeline:true,  confirmed:false, status:'estimate',  note:'ESTIMATE — Dandara ring road drainage. ~£1.7m, 4× Ballasalla scale. Kal Chudasama to confirm.' },
-    { id:7, name:'MU Flow Monitoring Ph.2',   value:500000,  weeks:26, people:3,  ohp:15, profit:0,     startWeek:52,  onTimeline:false, confirmed:false, status:'placeholder',note:'PLACEHOLDER — Manx Utilities, ~10 more sites. Not imminent.' }
+    { id:7, name:'MU Flow Monitoring Ph.2',   value:130000,  weeks:12, people:2,  ohp:15, profit:0,     startWeek:52,  onTimeline:false, confirmed:false, status:'placeholder',note:'PLACEHOLDER — Manx Utilities, ~10 more sites. ~£130k estimated. Not imminent.' }
   ];
 
   function loadJobs() {
@@ -16535,10 +16535,20 @@ window.mobDrawerTab = function(tabName) {
     // Also update status from confirmed flag
     if (jobs[idx].confirmed && jobs[idx].status === 'bidding') jobs[idx].status = 'running';
     saveJobs(jobs);
-    // Instantly refresh the planner timeline if it exists
+    // Refresh planner timeline if already open
     try {
       if (document.getElementById('dp-tl-inner')) { dpRenderTimeline(); dpBuildMonthlySummary(); }
     } catch(e) {}
+    // If planner tab is active (via classList) also rebuild it
+    try {
+      var pt = document.getElementById('tab-dir-planner');
+      if (pt && pt.classList.contains('active')) { buildDirPlannerTab(); }
+    } catch(e2) {}
+    // Visual flash on the checkbox label to confirm save
+    try {
+      var lbl = tlEl ? tlEl.closest('label') : (conEl ? conEl.closest('label') : null);
+      if (lbl) { lbl.style.color='#22c55e'; setTimeout(function(){ lbl.style.color=''; }, 600); }
+    } catch(e3) {}
   };
 
   // ── Add a job from the new Jobs tab (fixes focus to correct element) ───────
@@ -17213,7 +17223,21 @@ window.mobDrawerTab = function(tabName) {
       return Math.max(0, ew);
     }
     var totalProfit  = jobs.reduce(function(s,j){ return s + jobProfit(j); }, 0);
-    var totalPeople  = jobs.reduce(function(s,j){ return s + (j.people||0); }, 0);
+    // People on site RIGHT NOW — only count jobs running this week
+    var _msW3 = 7*24*60*60*1000, _now3 = new Date();
+    var totalPeople = jobs.reduce(function(s,j){
+      var sd = new Date(_now3.getTime() + (j.startWeek||0)*_msW3);
+      var ed = new Date(sd.getTime() + (j.weeks||1)*_msW3);
+      return (_now3 >= sd && _now3 <= ed) ? s + (j.people||0) : s;
+    }, 0);
+    // PEAK staff — worst-case week if all pipeline jobs come through
+    var peakPeopleDir = 0;
+    for (var _pw3 = -16; _pw3 < 104; _pw3++) {
+      var _wkS3 = jobs.reduce(function(acc,j3){
+        return (_pw3 >= (j3.startWeek||0) && _pw3 < (j3.startWeek||0)+(j3.weeks||1)) ? acc+(j3.people||0) : acc;
+      }, 0);
+      if (_wkS3 > peakPeopleDir) peakPeopleDir = _wkS3;
+    }
     var monthlyOhp = jobs.reduce(function(s,j){
       var wr = weeksRemaining(j);
       if (wr <= 0) return s;
@@ -17221,13 +17245,14 @@ window.mobDrawerTab = function(tabName) {
     }, 0);
     var monthlyNet   = monthlyOhp - MONTHLY_OVERHEAD;
     var peopleLeft   = CURRENT_STAFF - totalPeople;
+    var peakHire     = Math.max(0, peakPeopleDir - CURRENT_STAFF);
     var netCol       = monthlyNet > 5000 ? '#22c55e' : monthlyNet > 0 ? '#f59e0b' : '#ef4444';
 
     if (totalEl) totalEl.innerHTML =
     '<div style="border-top:2px solid var(--border);padding-top:16px;margin-top:4px;">'
-    + '<div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Combined — all jobs running right now</div>'
+    + '<div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Combined — all jobs in the pipeline</div>'
     + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:14px;">'
-    + dirNum('Total profit all jobs', fmt(totalProfit), 'across every active contract')
+    + dirNum('Total profit all jobs', fmt(totalProfit), 'across every contract in this list')
     + dirNum('Profit per month (avg)', fmt(monthlyOhp), 'spread over the active weeks of each job')
     + dirNum('Overhead per month', fmt(MONTHLY_OVERHEAD), 'fixed — same every month')
     + '<div style="background:var(--surface2);border:2px solid '+netCol+'44;border-radius:10px;padding:14px;text-align:center;">'
@@ -17236,15 +17261,21 @@ window.mobDrawerTab = function(tabName) {
     + '<div style="font-size:10px;color:'+netCol+';margin-top:2px;font-weight:700;">'+(monthlyNet>=0?'✓ Profitable':'⚠ Losing money')+' while these run</div>'
     + '</div>'
     + '</div>'
-    // People bar
-    + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">'
-    + '<div style="font-size:12px;font-weight:700;color:var(--text);">People deployed:</div>'
-    + '<div style="font-size:16px;font-weight:900;color:'+(totalPeople>CURRENT_STAFF?'#ef4444':'var(--text)')+';">'+totalPeople+' of '+CURRENT_STAFF+'</div>'
-    + (peopleLeft > 0 ? '<div style="font-size:11px;color:#22c55e;">· '+peopleLeft+' people free for more work</div>' : '')
-    + (peopleLeft < 0 ? '<div style="font-size:11px;color:#ef4444;">· Overcommitted by '+Math.abs(peopleLeft)+' — need to hire</div>' : '')
+    // Staff on site today
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">'
+    + '<div style="padding:12px 14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);">'
+    + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:6px;">On site right now</div>'
+    + '<div style="font-size:28px;font-weight:900;color:'+(totalPeople>CURRENT_STAFF?'#ef4444':'var(--text)')+';">'+totalPeople+' <span style="font-size:14px;color:var(--muted);font-weight:400;">of '+CURRENT_STAFF+'</span></div>'
+    + (peopleLeft > 0 ? '<div style="font-size:11px;color:#22c55e;margin-top:3px;">'+peopleLeft+' people available for more work</div>' : '')
+    + (peopleLeft < 0 ? '<div style="font-size:11px;color:#ef4444;margin-top:3px;">Already need '+Math.abs(peopleLeft)+' more people</div>' : '')
+    + (peopleLeft === 0 ? '<div style="font-size:11px;color:#f59e0b;margin-top:3px;">Fully deployed right now</div>' : '')
     + '</div>'
-    + '<div style="background:var(--border);border-radius:4px;height:10px;overflow:hidden;margin-bottom:14px;">'
-    + '<div style="width:'+Math.min(100,Math.round(totalPeople/CURRENT_STAFF*100))+'%;background:'+(totalPeople>CURRENT_STAFF?'#ef4444':'#22c55e')+';height:100%;border-radius:4px;"></div>'
+    // Peak staff if all pipeline jobs come through
+    + '<div style="padding:12px 14px;border-radius:10px;background:'+(peakHire>0?'rgba(239,68,68,0.08)':'rgba(34,197,94,0.06)')+';border:1px solid '+(peakHire>0?'#ef444433':'#22c55e33')+';">'
+    + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:6px;">If all jobs come through — peak</div>'
+    + '<div style="font-size:28px;font-weight:900;color:'+(peakHire>0?'#ef4444':'#22c55e')+';">'+peakPeopleDir+' <span style="font-size:14px;color:var(--muted);font-weight:400;">needed</span></div>'
+    + (peakHire > 0 ? '<div style="font-size:12px;color:#ef4444;font-weight:800;margin-top:3px;">Need to hire '+peakHire+' more people</div>' : '<div style="font-size:11px;color:#22c55e;margin-top:3px;">Within current team capacity</div>')
+    + '</div>'
     + '</div>'
     + (function(){
         var msPerWeek2 = 7*24*60*60*1000;
