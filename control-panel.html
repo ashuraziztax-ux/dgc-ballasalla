@@ -2086,12 +2086,12 @@ function gpExportCSV(){
 <div id="mobile-more-overlay" onclick="mobMoreClose()"></div>
 <div id="mobile-more-drawer">
   <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:0 8px 8px;">More</div>
-  <button class="mob-drawer-btn" onclick="mobDrawerTab('site-map')">🗺️ &nbsp;Site Map</button>
-  <button class="mob-drawer-btn" onclick="mobDrawerTab('risk')">⚠️ &nbsp;Risk Tickets</button>
-  <button class="mob-drawer-btn" onclick="mobDrawerTab('progress-report')">📄 &nbsp;Progress Report</button>
+  <button class="mob-drawer-btn" onclick="mobDrawerTab('sitemap')">🗺️ &nbsp;Site Map</button>
+  <button class="mob-drawer-btn" onclick="mobDrawerTab('risks')">⚠️ &nbsp;Risk Tickets</button>
+  <button class="mob-drawer-btn" onclick="mobDrawerTab('report')">📄 &nbsp;Progress Report</button>
   <button class="mob-drawer-btn" onclick="mobDrawerTab('daily')">📋 &nbsp;Daily Log</button>
-  <button class="mob-drawer-btn" onclick="mobDrawerTab('efficiency')">⚡ &nbsp;Efficiency</button>
-  <button class="mob-drawer-btn" onclick="mobDrawerTab('gantt')">📅 &nbsp;Gantt Chart</button>
+  <button class="mob-drawer-btn" onclick="mobDrawerTab('efficiency')">⚡ &nbsp;Velocity</button>
+  <button class="mob-drawer-btn" onclick="mobDrawerTab('gantt')">📅 &nbsp;Timeline</button>
   <button class="mob-drawer-btn" onclick="mobDrawerTab('drawings')">📐 &nbsp;Drawings</button>
   <button class="mob-drawer-btn" onclick="mobDrawerTab('materials')">📦 &nbsp;Materials</button>
   <button class="mob-drawer-btn" onclick="mobDrawerTab('staffhours')">👷 &nbsp;Staff Hours</button>
@@ -9155,6 +9155,7 @@ function showTab(name, btn) {
   if(name === 'hs')         { try { buildToolboxTalks(); } catch(e){} }
   if(name === 'documents')  { try { buildRFILog();       } catch(e){} }
   if(name === 'plant')      { try { buildOwnedPlant(); buildHirePlant(); } catch(e){} }
+  if(name === 'daily')      { try { buildGangLogForm(); } catch(e){} setTimeout(function(){ try { gpRenderHistory(); } catch(e2){} }, 80); }
   if(name === 'dashboard')  { try { buildDashboardRAG(); buildCommandCentre(); } catch(e){} }
   if(name === 'cashflow')   { try { buildCashFlowTab();   } catch(e){} }
   if(name === 'finalac')    { try { buildFinalAcTab();    } catch(e){} }
@@ -15186,13 +15187,16 @@ window.mobNav = function(section, btn) {
   // If switching to director, set director mode
   if (section === 'director') {
     setMode('director');
+    // Use classList correctly (not style.display which breaks all other tabs)
+    document.querySelectorAll('.tab-content').forEach(function(t){ t.classList.remove('active'); });
     var dirTab = document.querySelector('#tab-dir-jobs');
     if (dirTab) {
-      // Show the tab manually
-      document.querySelectorAll('.tab-content').forEach(function(t){ t.style.display='none'; });
-      dirTab.style.display = '';
+      dirTab.classList.add('active');
       try { buildDirJobsTab(); } catch(e){}
     }
+    document.querySelectorAll('#mobile-bottom-nav .mob-btn').forEach(function(b){ b.classList.remove('active'); });
+    var mb = document.getElementById('mob-director');
+    if (mb) mb.classList.add('active');
     return;
   }
 
@@ -15309,27 +15313,30 @@ window.mobDrawerTab = function(tabName) {
 };
 
 // Update bottom nav active state when top nav tab changes
-var _origShowTab = window.showTab;
-if (typeof showTab === 'function') {
-  var _mobNavHighlight = function(name) {
+// BUG FIX: the original code defined _mobNavHighlight but never hooked it up.
+// This wraps showTab (via window.showTab exposed at line 9122) to call the highlight.
+(function() {
+  var _origShowTab = window.showTab;
+  if (typeof _origShowTab !== 'function') return; // showTab not yet exposed — skip
+  window.showTab = function(name, btn) {
+    _origShowTab(name, btn);
+    // Highlight the correct mobile bottom nav button
     var prog = ['programme','sitemap','efficiency','gantt','drawings','materials','staffhours','report'];
     var dir  = ['dir-jobs','dir-planner','dir-rates','dir-intel'];
     var fin  = ['financial','delays','variations','dashboard','data','cashflow','finalac'];
     var site = ['daily','risks'];
-
     var section = null;
     if (prog.indexOf(name) >= 0) section = 'mob-programme';
     else if (dir.indexOf(name) >= 0) section = 'mob-director';
     else if (fin.indexOf(name) >= 0) section = 'mob-finance';
     else if (site.indexOf(name) >= 0) section = 'mob-site';
-
     if (section) {
       document.querySelectorAll('#mobile-bottom-nav .mob-btn').forEach(function(b){ b.classList.remove('active'); });
       var activeBtn = document.getElementById(section);
       if (activeBtn) activeBtn.classList.add('active');
     }
   };
-}
+})();
 
 </script>
 <!-- Zone Health Modal (v27) -->
@@ -16025,6 +16032,9 @@ if (typeof showTab === 'function') {
     }
   }
   function saveJobs(jobs) { try { localStorage.setItem('dgc_jobs', JSON.stringify(jobs)); } catch(e) {} }
+  // Expose to global scope so buildCommandCentre and other global functions can call loadJobs
+  window.loadJobs = loadJobs;
+  window.saveJobs = saveJobs;
 
   window.buildDirectorsTab = function() {
     var el = document.getElementById('directors-panel');
@@ -16052,7 +16062,7 @@ if (typeof showTab === 'function') {
     + '<div style="background:#f59e0b;color:#1a1d27;border-radius:8px;padding:5px 13px;font-size:15px;font-weight:900;">📊 Jobs</div>'
     + '<div style="color:#94a3b8;font-size:12px;">Add every active or upcoming contract.</div>'
     + '</div>'
-    + '<button onclick="(function(){document.querySelectorAll(\'.tab-content\').forEach(function(t){t.style.display=\'none\';});var pt=document.getElementById(\'tab-dir-planner\');if(pt){pt.style.display=\'\';try{buildDirPlannerTab();}catch(e){}}document.querySelectorAll(\'#mobile-bottom-nav .mob-btn\').forEach(function(b){b.classList.remove(\'active\');});var mb=document.getElementById(\'mob-director\');if(mb)mb.classList.add(\'active\');})()" style="padding:6px 14px;background:rgba(245,158,11,0.15);border:1px solid #f59e0b88;border-radius:8px;color:#f59e0b;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">📅 View Planner →</button>'
+    + '<button onclick="(function(){document.querySelectorAll(\'.tab-content\').forEach(function(t){t.classList.remove(\'active\');});var pt=document.getElementById(\'tab-dir-planner\');if(pt){pt.classList.add(\'active\');try{buildDirPlannerTab();}catch(e){}}document.querySelectorAll(\'#mobile-bottom-nav .mob-btn\').forEach(function(b){b.classList.remove(\'active\');});var mb=document.getElementById(\'mob-director\');if(mb)mb.classList.add(\'active\');})()" style="padding:6px 14px;background:rgba(245,158,11,0.15);border:1px solid #f59e0b88;border-radius:8px;color:#f59e0b;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">📅 View Planner →</button>'
     + '</div>'
 
     // Portfolio card
@@ -16128,7 +16138,7 @@ if (typeof showTab === 'function') {
     + '<div style="font-size:14px;font-weight:800;color:var(--text);">Year planner</div>'
     + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">Drag bars · scroll left/right · bars show staff count</div>'
     + '</div>'
-    + '<button onclick="(function(){document.querySelectorAll(\'.tab-content\').forEach(function(t){t.style.display=\'none\';});var jt=document.getElementById(\'tab-dir-jobs\');if(jt){jt.style.display=\'\';try{buildDirJobsTab();}catch(e){}}document.querySelectorAll(\'#mobile-bottom-nav .mob-btn\').forEach(function(b){b.classList.remove(\'active\');});var mb=document.getElementById(\'mob-director\');if(mb)mb.classList.add(\'active\');})()" style="padding:6px 14px;background:rgba(148,163,184,0.1);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;">← Jobs</button>'
+    + '<button onclick="(function(){document.querySelectorAll(\'.tab-content\').forEach(function(t){t.classList.remove(\'active\');});var jt=document.getElementById(\'tab-dir-jobs\');if(jt){jt.classList.add(\'active\');try{buildDirJobsTab();}catch(e){}}document.querySelectorAll(\'#mobile-bottom-nav .mob-btn\').forEach(function(b){b.classList.remove(\'active\');});var mb=document.getElementById(\'mob-director\');if(mb)mb.classList.add(\'active\');})()" style="padding:6px 14px;background:rgba(148,163,184,0.1);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;">← Jobs</button>'
     + '</div>'
     + '<div id="dp-tl-wrap" style="overflow-x:auto;overflow-y:hidden;border-radius:10px;border:1px solid var(--border);-webkit-overflow-scrolling:touch;">'
     + '<div id="dp-tl-inner" style="position:relative;min-height:200px;"></div>'
@@ -16547,11 +16557,11 @@ if (typeof showTab === 'function') {
   window.djSyncPlanner = function() {
     loadJobs(); // auto-merges missing seeds
     buildDirJobsTab(); // refresh Jobs tab list
-    // Switch to Planner and build it ONCE
-    document.querySelectorAll('.tab-content').forEach(function(t){ t.style.display='none'; });
+    // Switch to Planner — use classList (not style.display which breaks all other tabs)
+    document.querySelectorAll('.tab-content').forEach(function(t){ t.classList.remove('active'); });
     var pt = document.getElementById('tab-dir-planner');
     if (pt) {
-      pt.style.display = '';
+      pt.classList.add('active');
       try { buildDirPlannerTab(); } catch(e) {}
     }
     document.querySelectorAll('#mobile-bottom-nav .mob-btn').forEach(function(b){ b.classList.remove('active'); });
