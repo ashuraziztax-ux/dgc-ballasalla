@@ -16020,14 +16020,25 @@ window.mobDrawerTab = function(tabName) {
         if (!exists) { jobs.push(Object.assign({}, seed)); changed = true; }
       });
 
-      // Fix undefined/null onTimeline → true (never hide by accident)
-      // Also: for seed jobs (id 1-7), if onTimeline was false but the job is confirmed/running/awarded, restore it
+      // Fix undefined/null onTimeline → true
       jobs.forEach(function(j) {
         if (j.onTimeline === undefined || j.onTimeline === null) { j.onTimeline = true; changed = true; }
-        // Seed jobs that are active (not placeholder) should always show on planner by default
-        var isSeed = j.id >= 1 && j.id <= 6;
-        var isActive = j.status === 'running' || j.status === 'awarded' || j.status === 'bidding' || j.status === 'estimate';
-        if (isSeed && isActive && j.onTimeline === false) { j.onTimeline = true; changed = true; }
+      });
+
+      // ONE-TIME v224 migration: show all jobs on planner by default on first v224+ load.
+      // After this flag is set, user's manual hide choices are respected permanently.
+      // User can always use "Show ALL Jobs" button to reset.
+      if (!localStorage.getItem('dgc_v224_init')) {
+        jobs.forEach(function(j) { j.onTimeline = true; });
+        localStorage.setItem('dgc_v224_init', '1');
+        changed = true;
+      }
+
+      // ONE-TIME value fix: MU Flow was incorrectly seeded at £500,000. Correct to £130,000.
+      jobs.forEach(function(j) {
+        if ((j.id === 7 || (j.name && j.name.toLowerCase().indexOf('mu flow') >= 0)) && j.value === 500000) {
+          j.value = 130000; j.weeks = 12; j.people = 2; changed = true;
+        }
       });
 
       if (changed) saveJobs(jobs);
