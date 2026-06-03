@@ -2016,24 +2016,28 @@ function gpExportCSV(){
 </div>
 
 <div class="nav">
+  <!-- ── Core tabs — always visible for all roles ────────── -->
   <button onclick="showTab('programme',this)">Programme</button>
-  <button onclick="showTab('sitemap',this)">Site Map</button>
-  <button onclick="showTab('report',this)">Progress Report</button>
+  <button onclick="showTab('daily',this)" class="no-client">Daily Log</button>
   <button onclick="showTab('risks',this)" id="nav-risks-btn">Risk Tickets</button>
-  <span class="nav-sep"></span>
-  <button class="no-client" onclick="showTab('efficiency',this)">Velocity</button>
-  <button class="no-client" onclick="showTab('gantt',this)">Timeline</button>
-  <button class="no-client" onclick="showTab('daily',this)">Daily Log</button>
   <button onclick="showTab('drawings',this)">Drawings</button>
-  <button class="no-client" onclick="showTab('materials',this)">Materials</button>
+  <button class="admin-only" onclick="showTab('dashboard',this)">Command Centre</button>
   <span class="nav-sep"></span>
-  <button class="admin-only" onclick="showTab('staffhours',this)">Timesheets</button>
-  <button class="admin-only" onclick="showTab('financial',this)">AFP &amp; Payment</button>
-  <button class="admin-only" onclick="showTab('delays',this)">Delays &amp; EOT</button>
-  <button class="admin-only" onclick="showTab('variations',this)">Variations</button>
-  <button class="active admin-only" onclick="showTab('dashboard',this)">Command Centre</button>
-  <button class="admin-only" onclick="showTab('data',this)">Analytics</button>
-  <button class="admin-only" onclick="showTab('setup',this)">Project Setup</button>
+  <!-- ── Additional site team tabs ────────────────────────── -->
+  <button onclick="showTab('sitemap',this)" class="no-client">Site Map</button>
+  <button onclick="showTab('report',this)">Progress Report</button>
+  <button class="no-client" onclick="showTab('gantt',this)">Timeline</button>
+  <!-- ── Admin drawer button — desktop access to all admin tabs ── -->
+  <button class="admin-only" onclick="openAdminDrawer()" style="background:rgba(245,158,11,0.12);border-color:#f59e0b55;color:#f59e0b;font-weight:800;">⚙ More</button>
+  <!-- ── All admin-only tabs HIDDEN from main nav — in admin drawer instead ── -->
+  <button class="admin-only nav-hidden" onclick="showTab('staffhours',this)">Timesheets</button>
+  <button class="admin-only nav-hidden" onclick="showTab('financial',this)">AFP &amp; Payment</button>
+  <button class="admin-only nav-hidden" onclick="showTab('delays',this)">Delays &amp; EOT</button>
+  <button class="admin-only nav-hidden" onclick="showTab('variations',this)">Variations</button>
+  <button class="admin-only nav-hidden" onclick="showTab('efficiency',this)">Velocity</button>
+  <button class="admin-only nav-hidden no-client" onclick="showTab('materials',this)">Materials</button>
+  <button class="admin-only nav-hidden" onclick="showTab('data',this)">Analytics</button>
+  <button class="admin-only nav-hidden" onclick="showTab('setup',this)">Project Setup</button>
   <!-- Preview tabs hidden from main nav — accessible via admin drawer only -->
   <button class="admin-only preview-tab nav-hidden" onclick="showTab('hs',this)" data-drawer-group="coming-soon" data-drawer-label="Health &amp; Safety" data-drawer-desc="Safety records, toolbox talks, COSHH">H&amp;S</button>
   <button class="admin-only preview-tab nav-hidden" onclick="showTab('valuations',this)" data-drawer-group="commercial" data-drawer-label="Payment Certificates" data-drawer-desc="Client payment certificates — what Dandara have agreed to pay">Valuations</button>
