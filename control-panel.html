@@ -919,9 +919,9 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 /* Nav section dividers */
 .nav-sep { width: 1px; height: 20px; background: #2e3347; margin: 0 4px; align-self: center; flex-shrink: 0; display: inline-block; }
 
-/* Better preview-tab styling — don't show word "preview", show subtle dot */
-.nav button.preview-tab { opacity: 0.6; }
-.nav button.preview-tab::after { content: "•"; font-size: 6px; vertical-align: super; margin-left: 2px; color: #64748b; font-weight: 900; }
+/* Preview tabs hidden from main nav — only accessible via admin drawer */
+.nav button.preview-tab { display: none !important; }
+.nav button.nav-hidden { display: none !important; }
 
 /* Improved KPI cards */
 .kpi-card, .stat-card { border-radius: 10px; }
@@ -2019,35 +2019,37 @@ function gpExportCSV(){
   <button onclick="showTab('programme',this)">Programme</button>
   <button onclick="showTab('sitemap',this)">Site Map</button>
   <button onclick="showTab('report',this)">Progress Report</button>
-  <button onclick="showTab('risks',this)">Risk Tickets</button>
-  <span class="nav-sep"></span><button class="no-client" onclick="showTab('efficiency',this)">Efficiency</button>
-  <button class="no-client" onclick="showTab('gantt',this)">Gantt Chart</button>
-  <button class="no-client" onclick="showTab('daily',this)">Daily Log</button>
-  <button onclick="showTab('drawings',this)">&#128196; Drawings</button>
-  <button class="no-client" onclick="showTab('materials',this)">&#128230; Materials</button>
-  <span class="nav-sep"></span><button class="admin-only" onclick="showTab('staffhours',this)">Staff Hours</button>
-  <button class="admin-only" onclick="showTab('financial',this)">Financials</button>
-  <button class="admin-only" onclick="showTab('delays',this)">Delays</button>
-  <button class="admin-only" onclick="showTab('variations',this)">Variations</button>
-  <button class="active admin-only" onclick="showTab('dashboard',this)">Dashboard</button>
-  <button class="admin-only" onclick="showTab('data',this)">&#128202; Data</button>
-  <button class="admin-only" onclick="showTab('setup',this)">&#9881; Setup</button>
+  <button onclick="showTab('risks',this)" id="nav-risks-btn">Risk Tickets</button>
   <span class="nav-sep"></span>
-  <button class="admin-only preview-tab" onclick="showTab('hs',this)">H&amp;S</button>
-  <button class="admin-only preview-tab" onclick="showTab('valuations',this)">Valuations</button>
-  <button class="admin-only preview-tab" onclick="showTab('plant',this)">Plant</button>
-  <button class="admin-only preview-tab" onclick="showTab('documents',this)">Documents</button>
-  <button class="admin-only preview-tab" onclick="showTab('cashflow',this)">Cash Flow</button>
-  <button class="admin-only preview-tab" onclick="showTab('finalac',this)">Final A/c</button>
-  <button class="admin-only preview-tab" onclick="showTab('waste',this)">Waste &amp; Spoil</button>
-  <button class="admin-only preview-tab" onclick="showTab('doi',this)">DOI / Licences</button>
-  <button class="admin-only preview-tab" onclick="showTab('tender',this)">Tender / Quote</button>
-  <button class="admin-only preview-tab" onclick="showTab('handover',this)">Handover</button>
+  <button class="no-client" onclick="showTab('efficiency',this)">Velocity</button>
+  <button class="no-client" onclick="showTab('gantt',this)">Timeline</button>
+  <button class="no-client" onclick="showTab('daily',this)">Daily Log</button>
+  <button onclick="showTab('drawings',this)">Drawings</button>
+  <button class="no-client" onclick="showTab('materials',this)">Materials</button>
+  <span class="nav-sep"></span>
+  <button class="admin-only" onclick="showTab('staffhours',this)">Timesheets</button>
+  <button class="admin-only" onclick="showTab('financial',this)">AFP &amp; Payment</button>
+  <button class="admin-only" onclick="showTab('delays',this)">Delays &amp; EOT</button>
+  <button class="admin-only" onclick="showTab('variations',this)">Variations</button>
+  <button class="active admin-only" onclick="showTab('dashboard',this)">Command Centre</button>
+  <button class="admin-only" onclick="showTab('data',this)">Analytics</button>
+  <button class="admin-only" onclick="showTab('setup',this)">Project Setup</button>
+  <!-- Preview tabs hidden from main nav — accessible via admin drawer only -->
+  <button class="admin-only preview-tab nav-hidden" onclick="showTab('hs',this)" data-drawer-group="coming-soon" data-drawer-label="Health &amp; Safety" data-drawer-desc="Safety records, toolbox talks, COSHH">H&amp;S</button>
+  <button class="admin-only preview-tab nav-hidden" onclick="showTab('valuations',this)" data-drawer-group="commercial" data-drawer-label="Payment Certificates" data-drawer-desc="Client payment certificates — what Dandara have agreed to pay">Valuations</button>
+  <button class="admin-only preview-tab nav-hidden" onclick="showTab('plant',this)" data-drawer-group="site-records" data-drawer-label="Plant &amp; Equipment" data-drawer-desc="DGC-owned plant ROI, hire tracker">Plant</button>
+  <button class="admin-only preview-tab nav-hidden" onclick="showTab('documents',this)" data-drawer-group="site-records" data-drawer-label="Contract Documents" data-drawer-desc="Contract documents, notices, correspondence">Documents</button>
+  <button class="admin-only preview-tab nav-hidden" onclick="showTab('cashflow',this)" data-drawer-group="commercial" data-drawer-label="Cash Flow" data-drawer-desc="Monthly income vs expenditure forecast">Cash Flow</button>
+  <button class="admin-only preview-tab nav-hidden" onclick="showTab('finalac',this)" data-drawer-group="commercial" data-drawer-label="Final Account" data-drawer-desc="End-of-project financial settlement with Dandara">Final A/c</button>
+  <button class="admin-only preview-tab nav-hidden" onclick="showTab('waste',this)" data-drawer-group="site-records" data-drawer-label="Waste &amp; Spoil" data-drawer-desc="Excavated material disposal records">Waste</button>
+  <button class="admin-only preview-tab nav-hidden" onclick="showTab('doi',this)" data-drawer-group="coming-soon" data-drawer-label="Licences &amp; Permits" data-drawer-desc="DOI road licences, permits to work">DOI</button>
+  <button class="admin-only preview-tab nav-hidden" onclick="showTab('tender',this)" data-drawer-group="coming-soon" data-drawer-label="Tender &amp; Quote" data-drawer-desc="Pricing and tender management">Tender</button>
+  <button class="admin-only preview-tab nav-hidden" onclick="showTab('handover',this)" data-drawer-group="coming-soon" data-drawer-label="Handover" data-drawer-desc="Project close-out and handover documentation">Handover</button>
   <button class="admin-only" id="directors-nav-btn" style="display:none;"></button>
-  <button class="director-only" onclick="showTab('dir-jobs',this)">Jobs</button>
-  <button class="director-only" onclick="showTab('dir-planner',this)">Job Planner</button>
-  <button class="director-only" onclick="showTab('dir-rates',this)">Rates</button>
-  <button class="director-only" onclick="showTab('dir-intel',this)">Gang Intel</button>
+  <button class="director-only" onclick="showTab('dir-jobs',this)">Jobs Pipeline</button>
+  <button class="director-only" onclick="showTab('dir-planner',this)">Resource Planner</button>
+  <button class="director-only" onclick="showTab('dir-rates',this)">Rate Card</button>
+  <button class="director-only" onclick="showTab('dir-intel',this)">Business Intel</button>
 </div>
 
 <div id="state-banner"></div>
@@ -2055,24 +2057,24 @@ function gpExportCSV(){
 <!-- ═══ MOBILE BOTTOM NAVIGATION ═══ -->
 <div id="mobile-bottom-nav">
   <button class="mob-btn active" id="mob-programme" onclick="mobNav('programme',this)">
-    <span class="mob-icon">📊</span>
+    <span class="mob-icon">📅</span>
     Programme
   </button>
   <button class="mob-btn" id="mob-director" onclick="mobNav('director',this)">
     <span class="mob-icon">💼</span>
-    Jobs
+    Director
   </button>
   <button class="mob-btn" id="mob-finance" onclick="mobNav('finance',this)">
-    <span class="mob-icon">💰</span>
-    Finance
+    <span class="mob-icon">£</span>
+    Commercial
   </button>
   <button class="mob-btn" id="mob-site" onclick="mobNav('site',this)">
-    <span class="mob-icon">🏗️</span>
-    Site
+    <span class="mob-icon">📋</span>
+    Daily Log
   </button>
   <button class="mob-btn" id="mob-admin" onclick="openAdminDrawer()">
-    <span class="mob-icon">⚙</span>
-    Admin
+    <span class="mob-icon">⋮</span>
+    More
   </button>
 </div>
 
@@ -2121,6 +2123,12 @@ function gpExportCSV(){
     </div>
   </div>
   <!-- ── Admin Control Panel ── -->
+  <!-- ── Command Centre tiles ── -->
+  <div id="cc-tiles" style="margin-bottom:16px;"></div>
+
+  <!-- ── Developer tools (heat map etc) — collapsed ── -->
+  <details class="admin-only" style="margin-bottom:14px;">
+    <summary style="font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;user-select:none;padding:6px 0;border-top:1px solid var(--border);padding-top:10px;margin-top:4px;">⚙ Developer tools (heat map, analytics export)</summary>
   <div id="admin-control-panel" class="card admin-only" style="margin-bottom:16px;border:2px solid var(--accent);">
     <div class="card-title" style="color:var(--accent);">⚙ Admin Control Panel</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;">
@@ -2148,6 +2156,8 @@ function gpExportCSV(){
       </div>
     </div>
   </div>
+  </details>
+
   <div id="rag-status-bar" style="margin-bottom:10px;"></div>
   <div id="alerts-area" style="margin-bottom:14px;"></div>
 
@@ -9141,7 +9151,7 @@ function showTab(name, btn) {
   if(name === 'hs')         { try { buildToolboxTalks(); } catch(e){} }
   if(name === 'documents')  { try { buildRFILog();       } catch(e){} }
   if(name === 'plant')      { try { buildOwnedPlant(); buildHirePlant(); } catch(e){} }
-  if(name === 'dashboard')  { try { buildDashboardRAG();  } catch(e){} }
+  if(name === 'dashboard')  { try { buildDashboardRAG(); buildCommandCentre(); } catch(e){} }
   if(name === 'cashflow')   { try { buildCashFlowTab();   } catch(e){} }
   if(name === 'finalac')    { try { buildFinalAcTab();    } catch(e){} }
   if(name === 'directors')  { try { buildDirectorsTab();  } catch(e){} }
@@ -10395,10 +10405,130 @@ function showTab(name, btn) {
     if (document.getElementById('tab-dashboard') &&
         document.getElementById('tab-dashboard').classList.contains('active')) {
       window.buildDashboardRAG();
+      window.buildCommandCentre();
     }
   } catch(e) {}
 
 })();
+
+// ── Command Centre — 6 intelligent tiles ─────────────────────────────────────
+window.buildCommandCentre = function() {
+  var el = document.getElementById('cc-tiles');
+  if (!el) return;
+
+  var DS = window.DS || {};
+  var today = new Date();
+  var fmtDate = function(d){ return d ? new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '—'; };
+  var fmt = function(n){ return typeof n === 'number' ? '£' + Math.round(n).toLocaleString('en-GB') : '—'; };
+
+  // ── Tile 1: Programme Health ──────────────────────────────────────
+  var daysLate = typeof DS.daysLateEarly === 'number' ? DS.daysLateEarly : null;
+  var actualPct = typeof DS.actualPct === 'number' ? DS.actualPct.toFixed(0) : '—';
+  var plannedPct = typeof DS.plannedPct === 'number' ? DS.plannedPct.toFixed(0) : '—';
+  var progCol = daysLate === null ? '#94a3b8' : daysLate <= 0 ? '#22c55e' : daysLate <= 7 ? '#f59e0b' : '#ef4444';
+  var progStatus = daysLate === null ? 'Loading…' : daysLate === 0 ? 'On programme' : daysLate < 0 ? Math.abs(daysLate) + ' days ahead' : daysLate + ' days behind';
+  var progDetail = actualPct + '% complete — plan was ' + plannedPct + '% by today';
+  var endDate = (DS.PROJECT_END instanceof Date) ? fmtDate(DS.PROJECT_END) : '3 Jul 2026';
+
+  // ── Tile 2: AFP & Payment ─────────────────────────────────────────
+  var AFP_SUBMITTED = 128109;
+  var AFP_NUM = 3;
+  var AFP_DATE = '22 May 2026';
+  var AFP_DUE = new Date('2026-06-05');
+  var daysUntilAfp = Math.round((AFP_DUE - today) / 86400000);
+  var afpCol = daysUntilAfp > 0 ? '#f59e0b' : '#ef4444';
+  var afpStatus = daysUntilAfp > 0 ? 'Due in ' + daysUntilAfp + ' days' : Math.abs(daysUntilAfp) + ' days overdue — chase Sophie';
+  var afpDetail = 'AFP' + AFP_NUM + ' — £' + AFP_SUBMITTED.toLocaleString('en-GB') + ' submitted ' + AFP_DATE;
+
+  // ── Tile 3: Open Risks ────────────────────────────────────────────
+  var risks = [];
+  try { risks = JSON.parse(localStorage.getItem('dgc_risk_tickets') || '[]'); } catch(e) {}
+  var openRisks = risks.filter(function(r){ return r.status !== 'closed' && r.status !== 'resolved'; });
+  var criticalRisks = openRisks.filter(function(r){ return r.severity === 'critical' || r.severity === 'high'; });
+  var riskCol = criticalRisks.length > 0 ? '#ef4444' : openRisks.length > 0 ? '#f59e0b' : '#22c55e';
+  var riskStatus = openRisks.length === 0 ? 'No open issues' : openRisks.length + ' open' + (criticalRisks.length ? ', ' + criticalRisks.length + ' critical' : '');
+  var riskDetail = openRisks.length === 0 ? 'All issues resolved or closed' : 'Tap Risk Tickets to view and action';
+
+  // ── Tile 4: Pipeline (next 8 weeks) ──────────────────────────────
+  try {
+    var jobs = typeof loadJobs === 'function' ? loadJobs() : [];
+    var weeksWithWork = 0;
+    for (var w = 0; w < 8; w++) {
+      var hasWork = jobs.some(function(j) {
+        if (j.onTimeline === false) return false;
+        var sw = j.startWeek || 0;
+        return w >= sw && w < sw + (j.weeks || 1);
+      });
+      if (hasWork) weeksWithWork++;
+    }
+    var pipelineCol = weeksWithWork >= 6 ? '#22c55e' : weeksWithWork >= 3 ? '#f59e0b' : '#ef4444';
+    var pipelineStatus = weeksWithWork + '/8 weeks covered';
+    var pipelineDetail = weeksWithWork < 8 ? (8 - weeksWithWork) + ' gap weeks — check Resource Planner' : 'Full pipeline — no gaps in next 8 weeks';
+  } catch(e) {
+    var pipelineCol = '#94a3b8', pipelineStatus = '—', pipelineDetail = 'Open Resource Planner to view';
+  }
+
+  // ── Tile 5: Commercial Position ───────────────────────────────────
+  var CONTRACT_VAL = 450142;
+  var CLAIMED_TO_DATE = 128109 + 156739; // AFP3 + AFP1
+  var CERTIFIED_TO_DATE = 156739;        // AFP1 certified
+  var claimedPct = Math.round(CLAIMED_TO_DATE / CONTRACT_VAL * 100);
+  var progPct = typeof DS.actualPct === 'number' ? Math.round(DS.actualPct) : 71;
+  var commDiff = claimedPct - progPct;
+  var commCol = Math.abs(commDiff) <= 5 ? '#22c55e' : '#f59e0b';
+  var commStatus = claimedPct + '% of contract claimed';
+  var commDetail = 'We are ' + progPct + '% complete — claimed ' + (commDiff >= 0 ? commDiff + '% ahead of programme' : Math.abs(commDiff) + '% behind programme');
+
+  // ── Tile 6: Next Milestone ────────────────────────────────────────
+  var milestones = [
+    { date: '2026-06-10', label: 'Gang C starts Drain Run H–J' },
+    { date: '2026-06-15', label: 'All kerbs & drainage complete (target)' },
+    { date: '2026-07-03', label: 'Site completion — hand over to Dandara' }
+  ];
+  var nextMs = milestones.find(function(m){ return new Date(m.date) >= today; });
+  var msCol = '#38bdf8';
+  var msStatus = nextMs ? nextMs.label : 'All milestones passed';
+  var msDaysAway = nextMs ? Math.round((new Date(nextMs.date) - today) / 86400000) : null;
+  var msDetail = nextMs ? (msDaysAway <= 0 ? 'TODAY' : 'In ' + msDaysAway + ' days — ' + fmtDate(nextMs.date)) : 'Project near completion';
+
+  // ── Render tiles ──────────────────────────────────────────────────
+  function tile(icon, heading, status, statusCol, detail, onclick) {
+    var clickStyle = onclick ? 'cursor:pointer;' : '';
+    var onclickAttr = onclick ? ' onclick="' + onclick + '"' : '';
+    return '<div' + onclickAttr + ' style="' + clickStyle + 'padding:16px 18px;border-radius:12px;background:var(--surface);border:1px solid var(--border);border-left:4px solid ' + statusCol + ';display:flex;flex-direction:column;gap:4px;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow=\'0 4px 20px rgba(0,0,0,0.15)\'" onmouseout="this.style.boxShadow=\'none\'">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">'
+      + '<span style="font-size:18px;">' + icon + '</span>'
+      + '<span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);">' + heading + '</span>'
+      + '</div>'
+      + '<div style="font-size:20px;font-weight:900;color:' + statusCol + ';line-height:1.2;">' + status + '</div>'
+      + '<div style="font-size:12px;color:var(--muted);line-height:1.4;">' + detail + '</div>'
+      + '</div>';
+  }
+
+  // Plain-English project summary banner
+  var summaryColor = daysLate === null ? '#94a3b8' : daysLate <= 0 ? '#22c55e' : '#f59e0b';
+  var summaryText = daysLate === null
+    ? 'Loading project status…'
+    : daysLate <= 0
+      ? 'This project is going well. Work is ' + actualPct + '% complete — ' + Math.abs(daysLate||0) + (daysLate<0?' days ahead of':(daysLate===0?' exactly on')) + ' schedule. Handover is due ' + endDate + '.'
+      : 'This project needs attention. Work is ' + actualPct + '% complete but is ' + daysLate + ' days behind schedule. Handover is due ' + endDate + ' — acceleration may be needed.';
+
+  var html = '<div style="background:' + summaryColor + '12;border:1px solid ' + summaryColor + '44;border-radius:12px;padding:14px 18px;margin-bottom:14px;">'
+    + '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:' + summaryColor + ';margin-bottom:6px;">📍 Project Status — Ballasalla Phase 4</div>'
+    + '<div style="font-size:15px;font-weight:600;color:var(--text);line-height:1.5;">' + summaryText + '</div>'
+    + '</div>';
+
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:16px;">';
+  html += tile('📅', 'Programme', progStatus, progCol, progDetail, "showTab('programme',null)");
+  html += tile('£',  'AFP & Payment', afpStatus, afpCol, afpDetail, "showTab('financial',null)");
+  html += tile('⚠️',  'Risk Tickets', riskStatus, riskCol, riskDetail, "showTab('risks',null)");
+  html += tile('💼', 'Pipeline (next 8 wks)', pipelineStatus, pipelineCol, pipelineDetail, "showTab('dir-planner',null)");
+  html += tile('📊', 'Commercial Position', commStatus, commCol, commDetail, "showTab('financial',null)");
+  html += tile('🏁', 'Next Milestone', msStatus, msCol, msDetail, "showTab('programme',null)");
+  html += '</div>';
+
+  el.innerHTML = html;
+};
 // ══════════════════════════════════════════════════════════════════════════════
 
 // ═══════════════════ FINAL ACCOUNT TAB v119 ═══════════════════════
@@ -15034,9 +15164,9 @@ function closeZoneHealth() {
 
 var MOB_NAV_MAP = {
   'programme': 'programme',
-  'director':  'dir-jobs',   // default Director tab
-  'finance':   'financials',
-  'site':      'daily',
+  'director':  'dir-jobs',    // default Director tab
+  'finance':   'financial',   // AFP & Payment (renamed from financials)
+  'site':      'daily',       // Daily Log
 };
 
 window.mobNav = function(section, btn) {
@@ -15075,24 +15205,75 @@ window.mobNav = function(section, btn) {
   }, 50);
 };
 
-// ── Admin Drawer ──────────────────────────────────────────────
+// ── Admin Drawer — grouped by section ─────────────────────────
 window.openAdminDrawer = function() {
-  // Build list of admin tabs dynamically
   var drawerContent = document.getElementById('admin-drawer-content');
-  if (drawerContent) {
-    var adminTabs = Array.from(document.querySelectorAll('.nav button.admin-only')).filter(function(b) {
-      return getComputedStyle(b).display !== 'none';
-    });
-    drawerContent.innerHTML = adminTabs.length
-      ? adminTabs.map(function(btn) {
-          var label = btn.textContent.trim();
-          var onclick = btn.getAttribute('onclick') || '';
-          return '<button onclick="closeAdminDrawer();' + onclick + '" style="display:flex;align-items:center;gap:10px;width:100%;padding:12px 10px;background:none;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600;text-align:left;cursor:pointer;border-radius:6px;">' + label + '</button>';
-        }).join('')
-      : '<div style="color:var(--muted);font-size:12px;padding:10px;">Switch to Admin mode first to see admin tabs.</div>';
-  }
-  // Switch to admin mode to populate tabs
+  if (!drawerContent) return;
   setMode('admin');
+
+  // Helper: build a tab button for the drawer
+  function drawerBtn(tabId, icon, label, desc, isPreview) {
+    var onclick = "closeAdminDrawer();showTab('" + tabId + "',document.querySelector('[onclick*=\\'" + tabId + "\\']')||this);";
+    var previewBadge = isPreview ? '<span style="font-size:9px;font-weight:800;background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;border-radius:4px;padding:1px 5px;margin-left:6px;">SOON</span>' : '';
+    return '<button onclick="' + onclick + '" style="display:flex;align-items:flex-start;gap:10px;width:100%;padding:10px 4px;background:none;border:none;border-bottom:1px solid var(--border);color:var(--text);text-align:left;cursor:pointer;">'
+      + '<span style="font-size:18px;width:26px;flex-shrink:0;text-align:center;margin-top:1px;">' + icon + '</span>'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:13px;font-weight:700;color:var(--text);line-height:1.3;">' + label + previewBadge + '</div>'
+      + '<div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4;">' + desc + '</div>'
+      + '</div>'
+      + '</button>';
+  }
+
+  function drawerSection(title, color, buttons) {
+    return '<div style="padding:10px 4px 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:' + color + ';border-bottom:1px solid ' + color + '33;margin-bottom:2px;">' + title + '</div>'
+      + buttons.join('');
+  }
+
+  var html = '';
+
+  // ── Core navigation (quick access) ──
+  html += drawerSection('⚡ Quick Access', '#f59e0b', [
+    drawerBtn('dashboard', '🎯', 'Command Centre', 'Your main dashboard — project status at a glance', false),
+    drawerBtn('daily',     '📋', 'Daily Log',       'Record today\'s gang output and site events', false),
+    drawerBtn('risks',     '⚠️',  'Risk Tickets',   'Open issues and risks on site', false),
+  ]);
+
+  // ── Commercial ──
+  html += drawerSection('💰 Commercial', '#22c55e', [
+    drawerBtn('financial',  '£',  'AFP & Payment',       'Payment applications — what we\'ve claimed and what\'s been certified', false),
+    drawerBtn('variations', '📝', 'Variations',          'Changes to the contract scope — submitted and agreed amounts', false),
+    drawerBtn('delays',     '⏱',  'Delays & EOT',        'Time extensions claimed due to client delays or unforeseen events', false),
+    drawerBtn('cashflow',   '📈', 'Cash Flow',           'Monthly income vs fixed costs forecast', true),
+    drawerBtn('finalac',    '🏁', 'Final Account',       'End-of-project financial settlement with the client', true),
+    drawerBtn('valuations', '✅', 'Payment Certificates','What the client has formally agreed to pay', true),
+  ]);
+
+  // ── Analytics & Reports ──
+  html += drawerSection('📊 Analytics & Reports', '#38bdf8', [
+    drawerBtn('efficiency', '⚡', 'Velocity',          'Gang output rates — how fast we\'re going vs target', false),
+    drawerBtn('data',       '📊', 'Analytics',         'Charts and trends: output data, earned value, programme burn', false),
+    drawerBtn('staffhours', '🕐', 'Timesheets',        'Who worked, when, and on what', false),
+    drawerBtn('dir-intel',  '🧠', 'Business Intel',    'Gang performance scores, benchmark comparison, suggestions', false),
+  ]);
+
+  // ── Site Records ──
+  html += drawerSection('🏗 Site Records', '#a78bfa', [
+    drawerBtn('materials', '📦', 'Materials',           'Materials on order and delivered to site', false),
+    drawerBtn('hs',        '🦺', 'Health & Safety',     'Toolbox talks, COSHH records, permits to work', true),
+    drawerBtn('documents', '📁', 'Contract Documents',  'Formal contract documents, correspondence, instructions', true),
+    drawerBtn('plant',     '🚜', 'Plant & Equipment',   'DGC-owned plant ROI tracker and hire records', true),
+    drawerBtn('waste',     '♻️', 'Waste & Spoil',       'Excavated material disposal and waste records', true),
+  ]);
+
+  // ── Setup & Config ──
+  html += drawerSection('⚙️ Setup & Config', '#94a3b8', [
+    drawerBtn('setup',     '⚙️', 'Project Setup',       'Import GanttPro programme, configure project data, set milestones', false),
+    drawerBtn('doi',       '📋', 'Licences & Permits',  'DOI road licences, permits to work, statutory notices', true),
+    drawerBtn('tender',    '📂', 'Tender & Quote',      'Pricing, tender submission, rate build-ups', true),
+    drawerBtn('handover',  '🏠', 'Handover',            'Project close-out checklist and handover documentation', true),
+  ]);
+
+  drawerContent.innerHTML = html;
   document.getElementById('admin-drawer').style.display = 'block';
   document.getElementById('admin-drawer-overlay').style.display = 'block';
 };
@@ -15127,10 +15308,10 @@ window.mobDrawerTab = function(tabName) {
 var _origShowTab = window.showTab;
 if (typeof showTab === 'function') {
   var _mobNavHighlight = function(name) {
-    var prog = ['programme','site-map','efficiency','gantt','daily','drawings','materials','staffhours','risk'];
+    var prog = ['programme','sitemap','efficiency','gantt','drawings','materials','staffhours','report'];
     var dir  = ['dir-jobs','dir-planner','dir-rates','dir-intel'];
-    var fin  = ['financials','delays','variations','dashboard'];
-    var site = ['daily','risk'];
+    var fin  = ['financial','delays','variations','dashboard','data','cashflow','finalac'];
+    var site = ['daily','risks'];
 
     var section = null;
     if (prog.indexOf(name) >= 0) section = 'mob-programme';
