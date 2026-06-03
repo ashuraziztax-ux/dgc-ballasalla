@@ -8327,7 +8327,7 @@ function buildEfficiencyTab() {
   effLog = effLog.slice().reverse();
 
   // ── Intelligence layer — calculate what the app knows and how confident it is ─
-  var allLogData2 = lsGet('dgc_log', {}) || {};
+  var allLogData2 = lsGet('dgc_log', '{}') || {};
   var allDates2   = Object.keys(allLogData2).sort();
   var totalGangDays = 0, totalDisruptedDays = 0;
   var actMap2 = {}, gangMap2 = {};
@@ -8607,7 +8607,7 @@ function buildEfficiencyTab() {
   // ════════════════════════════════════════
   // CARD 2 — Activity breakdown from daily log
   // ════════════════════════════════════════
-  var allLogData = lsGet('dgc_log', {}) || {};
+  var allLogData = lsGet('dgc_log', '{}') || {};
   var allDates   = Object.keys(allLogData).sort();
   var actMap = {}, gangMap = {}, dayCount = 0;
 
@@ -9138,7 +9138,7 @@ function showTab(name, btn) {
   }
   if(name === 'sitemap')  buildSiteMap();
   if(name === 'staffhours') buildStaffHours();
-  if(name === 'efficiency') buildEfficiencyTab();
+  if(name === 'efficiency') { try { buildEfficiencyTab(); } catch(e) { var ep=document.getElementById('efficiency-panel'); if(ep) ep.innerHTML='<div style="padding:20px;color:var(--muted);">Velocity data loading — log some daily output first to build up data.</div>'; } }
   if(name === 'programme')  {
     if (!isBallasallaActive()) {
       var _ppname = localStorage.getItem('dgc_active_project') || 'This project';
