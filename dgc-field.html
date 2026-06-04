@@ -369,21 +369,11 @@ var _uname='';
   addAL();addAL();addAL();
   addNoise();addNoise();addNoise();
   addItem();addItem();
+  // Pre-select last used name in dropdown (still requires pressing Start)
   var s=localStorage.getItem('dgc_uname');
   if(s){
-    _uname=s;
-    document.getElementById('ub').textContent=s;
-    document.getElementById('fm').value=s;
-    // Pre-select saved name in the dropdown if it matches
     var sel=document.getElementById('ln');
-    if(sel){
-      for(var oi=0;oi<sel.options.length;oi++){
-        if(sel.options[oi].value===s){sel.selectedIndex=oi;break;}
-      }
-    }
-    document.getElementById('ls').style.display='none';
-    document.getElementById('app').style.display='block';
-    loadAchv();loadHist();
+    if(sel){for(var oi=0;oi<sel.options.length;oi++){if(sel.options[oi].value===s){sel.selectedIndex=oi;break;}}}
   }
 })();
 
@@ -448,29 +438,41 @@ function fetchWx(){fetch('https://api.open-meteo.com/v1/forecast?latitude=54.083
 function getPlan(){var teams=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var rows=div.querySelectorAll('.trow');var tasks=[];rows.forEach(function(r){var ins=r.querySelectorAll('input');var desc=ins[0].value.trim();if(desc)tasks.push({desc:desc,target:parseFloat(ins[1].value)||100});});if(tasks.length)teams.push({team:TLTRS[i]||('T'+(i+1)),tasks:tasks});});return teams;}
 function getAlloc(){var a=[];document.querySelectorAll('.tblk[id^="al"]').forEach(function(div,i){var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};a.push({team:TLTRS[i]||('T'+(i+1)),lead:g('ali'+i+'l'),ops:[g('ali'+i+'o0'),g('ali'+i+'o1'),g('ali'+i+'o2')].filter(Boolean),plantOk:document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on'),initials:g('ali'+i+'in')});});return a;}
 
+function noNet(){toast('No internet — check your connection','err');}
+
 function submitEOD(){
+  if(!sb){noNet();return;}
   var date=document.getElementById('fd').value;
-  if(!date){toast('Set the date','err');return;}
+  if(!date){toast('Set the date first','err');return;}
   var noise=[];document.querySelectorAll('.nr').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value)noise.push({time:ins[0].value,db:parseFloat(ins[1].value)});});
   var items=[];document.querySelectorAll('.ir').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value.trim())items.push({qty:ins[0].value,item:ins[1].value,source:ins[2].value});});
   var data={type:'dgc-eod',date:date,projectRef:PROJECT_REF,submittedBy:_uname||'Unknown',submittedAt:new Date().toISOString(),
     header:{sm:document.getElementById('fm').value,weather:document.getElementById('fw').value,temp:document.getElementById('ft').value},
-    meeting:{time:document.getElementById('fbt').value,topics:document.getElementById('ftp').value,risks:document.getElementById('frk').value,visitors:document.getElementById('fv').value},eodResponsibility:{person:document.getElementById('feod-resp').value,team:document.getElementById('feod-team').value},
+    meeting:{time:document.getElementById('fbt').value,topics:document.getElementById('ftp').value,risks:document.getElementById('frk').value,visitors:document.getElementById('fv').value},
+    eodResponsibility:{person:document.getElementById('feod-resp').value,team:document.getElementById('feod-team').value},
     plan:getPlan(),alloc:getAlloc(),sessions:document.getElementById('fses').value,
     noise:noise,checks:Object.assign({},CHK),obs:document.getElementById('fob').value,items:items,comms:Object.assign({},COM),notes:document.getElementById('fnt').value};
-  localStorage.setItem('dgc_eod_'+date,JSON.stringify(data));
-  var all=JSON.parse(localStorage.getItem('dgc_all_eod')||'[]');all=all.filter(function(r){return r.date!==date;});all.unshift(data);localStorage.setItem('dgc_all_eod',JSON.stringify(all.slice(0,50)));
-  if(sb){sb.from('daily_records').upsert({project_ref:PROJECT_REF,gang:_uname||'Unknown',date:date,data:data,updated_at:new Date().toISOString()},{onConflict:'project_ref,gang,date'}).then(function(r){toast(r.error?'Saved locally - sync failed':'Saved to cloud');});}
-  else toast('Saved');
+  var btn=document.querySelector('[onclick="submitEOD()"]');if(btn){btn.textContent='Saving...';btn.disabled=true;}
+  sb.from('daily_records').upsert({project_ref:PROJECT_REF,gang:_uname||'Unknown',date:date,data:data,updated_at:new Date().toISOString()},{onConflict:'project_ref,gang,date'})
+    .then(function(r){
+      if(btn){btn.textContent='✓ Saved';setTimeout(function(){btn.textContent='📤 Submit & Save';btn.disabled=false;},2000);}
+      if(r.error){toast('Save failed: '+r.error.message,'err');}
+      else{toast('Saved to cloud ✓');}
+    })
+    .catch(function(e){if(btn){btn.textContent='📤 Submit & Save';btn.disabled=false;}toast('Save failed — no internet?','err');});
 }
 
 function loadAchv(){
+  if(!sb){document.getElementById('achv-none').style.display='';return;}
   var yest=new Date();yest.setDate(yest.getDate()-1);var ys=yest.toISOString().slice(0,10);
   document.getElementById('achv-sub').textContent='Based on plan from '+fmtD(ys);
-  var local=localStorage.getItem('dgc_eod_'+ys);
-  if(local){buildAchv(JSON.parse(local));return;}
-  if(sb){sb.from('daily_records').select('data').eq('project_ref',PROJECT_REF).eq('date',ys).limit(5).then(function(r){var found=r.data&&r.data.find(function(x){return x.data&&x.data.plan&&x.data.plan.length>0;});if(found)buildAchv(found.data);else document.getElementById('achv-none').style.display='';}).catch(function(){document.getElementById('achv-none').style.display='';});}
-  else document.getElementById('achv-none').style.display='';
+  sb.from('daily_records').select('data').eq('project_ref',PROJECT_REF).eq('date',ys).not('gang','like','ACHV_%').limit(10)
+    .then(function(r){
+      var found=r.data&&r.data.find(function(x){return x.data&&x.data.plan&&x.data.plan.length>0;});
+      if(found)buildAchv(found.data);
+      else document.getElementById('achv-none').style.display='';
+    })
+    .catch(function(){document.getElementById('achv-none').style.display='';});
 }
 function buildAchv(data){
   var plan=data.plan||[];var tasks=[];
@@ -509,29 +511,43 @@ function calcEff(){
   document.getElementById('eff-b').style.width=Math.min(100,eff)+'%';document.getElementById('eff-b').style.background=col;
 }
 function submitAchv(){
+  if(!sb){noNet();return;}
   var tasks=window._atasks;if(!tasks)return;
   var actuals=tasks.map(function(t,i){return{team:t.team,desc:t.desc,target:t.target,actual:parseFloat((document.getElementById('ap'+i)||{}).value)||null,note:(document.getElementById('an'+i)||{}).value||''};});
   var totT=0,totA=0,cnt=0;actuals.forEach(function(a){if(a.actual!==null){totT+=a.target||100;totA+=a.actual;cnt++;}});
   var eff=cnt>0?Math.round(totA/totT*100):null;
   var rec={type:'dgc-achv',date:tod(),submittedBy:_uname,submittedAt:new Date().toISOString(),tasks:actuals,efficiency:eff,notes:(document.getElementById('fan')||{}).value||''};
-  localStorage.setItem('dgc_achv_'+tod(),JSON.stringify(rec));
-  var all=JSON.parse(localStorage.getItem('dgc_all_achv')||'[]');all=all.filter(function(r){return r.date!==tod();});all.unshift(rec);localStorage.setItem('dgc_all_achv',JSON.stringify(all.slice(0,50)));
-  if(sb){sb.from('daily_records').upsert({project_ref:PROJECT_REF,gang:'ACHV_'+_uname,date:tod(),data:rec,updated_at:new Date().toISOString()},{onConflict:'project_ref,gang,date'}).then(function(r){toast(r.error?'Saved locally':'Saved - '+eff+'% efficiency');});}
-  else toast('Saved - '+eff+'% efficiency');
+  sb.from('daily_records').upsert({project_ref:PROJECT_REF,gang:'ACHV_'+_uname,date:tod(),data:rec,updated_at:new Date().toISOString()},{onConflict:'project_ref,gang,date'})
+    .then(function(r){toast(r.error?'Save failed: '+r.error.message:'Saved — '+eff+'% efficiency ✓');});
 }
 
 function loadHist(){
-  var eods=JSON.parse(localStorage.getItem('dgc_all_eod')||'[]');
-  var achvs=JSON.parse(localStorage.getItem('dgc_all_achv')||'[]');
-  var amap={};achvs.forEach(function(a){amap[a.date]=a;});
   var el=document.getElementById('hist');
-  if(!eods.length){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">No records yet</div>';return;}
-  el.innerHTML=eods.slice(0,20).map(function(r){
-    var a=amap[r.date];
-    var effHtml=a&&a.efficiency!==null?'<span style="color:'+(a.efficiency>=90?'#22c55e':a.efficiency>=70?'#f59e0b':'#ef4444')+';font-weight:900;margin-left:8px;">'+a.efficiency+'% efficiency</span>':'';
-    var plan=(r.plan||[]).map(function(t){return '<span style="color:'+(t.team==='A'?'#f59e0b':t.team==='B'?'#38bdf8':'#a78bfa')+';font-weight:800;">'+t.team+':</span> '+(t.tasks||[]).map(function(tk){return tk.desc+(tk.target?' ('+tk.target+'%)':'');}).join(', ');}).join('<br>');
-    return '<div style="background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:12px;margin-bottom:8px;"><div style="font-size:10px;font-weight:800;color:var(--acc);margin-bottom:3px;">'+fmtD(r.date)+effHtml+'</div><div style="font-size:11px;color:var(--muted);line-height:1.6;">'+(r.header&&r.header.sm?'<strong>SM:</strong> '+r.header.sm+'<br>':'')+(plan?plan:'')+'</div></div>';
-  }).join('');
+  if(!sb){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">No internet connection</div>';return;}
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Loading...</div>';
+  // Load EOD records (not achievement records)
+  sb.from('daily_records').select('date,gang,data').eq('project_ref',PROJECT_REF).not('gang','like','ACHV_%').order('date',{ascending:false}).limit(30)
+    .then(function(eodRes){
+      var eods=eodRes.data||[];
+      // Also load achievement records for efficiency scores
+      return sb.from('daily_records').select('date,gang,data').eq('project_ref',PROJECT_REF).like('gang','ACHV_%').order('date',{ascending:false}).limit(30)
+        .then(function(achvRes){
+          var achvs=achvRes.data||[];
+          var amap={};achvs.forEach(function(a){if(a.data&&a.data.efficiency!=null)amap[a.date]=a.data;});
+          if(!eods.length){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">No records yet — submit your first EOD plan to see history</div>';return;}
+          // Group by date, pick the most complete record per date
+          var byDate={};eods.forEach(function(r){if(!byDate[r.date]||(r.data&&r.data.plan&&r.data.plan.length>0))byDate[r.date]=r;});
+          var dates=Object.keys(byDate).sort().reverse();
+          el.innerHTML=dates.slice(0,20).map(function(d){
+            var r=byDate[d].data||{};var a=amap[d];
+            var effHtml=a&&a.efficiency!=null?'<span style="color:'+(a.efficiency>=90?'#22c55e':a.efficiency>=70?'#f59e0b':'#ef4444')+';font-weight:900;margin-left:8px;">'+a.efficiency+'% efficiency</span>':'';
+            var plan=(r.plan||[]).map(function(t){return '<span style="color:'+(t.team==='A'?'#f59e0b':t.team==='B'?'#38bdf8':'#a78bfa')+';font-weight:800;">'+t.team+':</span> '+(t.tasks||[]).map(function(tk){return tk.desc+(tk.target?' ('+tk.target+'%)':'');}).join(', ');}).join('<br>');
+            var sm=r.header&&r.header.sm?r.header.sm:'';var wx=r.header&&r.header.weather?r.header.weather:'';
+            return '<div style="background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:12px;margin-bottom:8px;"><div style="font-size:10px;font-weight:800;color:var(--acc);margin-bottom:3px;">'+fmtD(d)+effHtml+'</div><div style="font-size:11px;color:var(--muted);line-height:1.7;">'+(sm?'<strong>SM:</strong> '+esc(sm)+(wx?' &middot; '+esc(wx):'')+'<br>':'')+(plan||'<em>No plan recorded</em>')+'</div></div>';
+          }).join('');
+        });
+    })
+    .catch(function(){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--red);font-size:13px;">Failed to load — check internet</div>';});
 }
 
 
