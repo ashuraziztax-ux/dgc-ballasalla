@@ -20,75 +20,182 @@ var PROJECT_REF='BA4';
   --acc:#f59e0b;--green:#22c55e;--red:#ef4444;--blue:#38bdf8;
   --txt:#f1f5f9;--muted:#64748b;
   --navy:#1e3a4a;--logo-filter:brightness(0) invert(1);
+  --radius:14px;--radius-sm:10px;
 }
 body.light{
-  --bg:#f8fafc;--surf:#ffffff;--s2:#f1f5f9;--bdr:#e2e8f0;
+  --bg:#f0f2f7;--surf:#ffffff;--s2:#f1f5f9;--bdr:#d4dae6;
   --txt:#1e293b;--muted:#64748b;--navy:#1e3a4a;
   --logo-filter:none;
 }
-html,body{min-height:100%;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;transition:background .2s,color .2s;}
-.dgc-logo{height:36px;object-fit:contain;filter:var(--logo-filter);}
-.dgc-logo-lg{height:56px;object-fit:contain;margin-bottom:16px;}
-.theme-btn{background:none;border:1px solid var(--bdr);border-radius:8px;color:var(--muted);font-size:16px;width:36px;height:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+html,body{min-height:100%;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;transition:background .2s,color .2s;font-size:15px;line-height:1.45;}
+
+/* ── HEADER ── */
+.dgc-logo{height:34px;object-fit:contain;filter:var(--logo-filter);}
+.theme-btn{background:none;border:1px solid var(--bdr);border-radius:10px;color:var(--muted);font-size:18px;width:44px;height:44px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:border-color .15s,color .15s;}
 .theme-btn:hover{border-color:var(--acc);color:var(--acc);}
-.user-chip{font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;background:rgba(245,158,11,.15);color:var(--acc);border:1px solid rgba(245,158,11,.3);cursor:pointer;white-space:nowrap;}
-.user-chip:hover{background:rgba(245,158,11,.25);}
-.mic{display:flex;align-items:center;gap:8px;padding:12px 14px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:10px;color:var(--blue);font-size:13px;font-weight:800;cursor:pointer;width:100%;margin-bottom:8px;font-family:inherit;min-height:44px;}
-.mic.on{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.35);color:var(--red);animation:bl 1s infinite;}
+.user-chip{font-size:12px;font-weight:800;padding:8px 14px;border-radius:22px;background:rgba(245,158,11,.15);color:var(--acc);border:1px solid rgba(245,158,11,.35);cursor:pointer;white-space:nowrap;min-height:44px;display:flex;align-items:center;line-height:1;transition:background .15s;}
+.user-chip:hover{background:rgba(245,158,11,.28);}
+.hdr{background:var(--surf);border-bottom:2px solid var(--bdr);padding:max(14px,env(safe-area-inset-top)) 16px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.25);}
+
+/* ── LAYOUT ── */
+.main{padding:14px 14px 8px;max-width:860px;margin:0 auto;}
+
+/* ── SECTION HEADERS ── */
+.sec{margin:20px 0 12px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.sec-inner{display:flex;flex-direction:column;gap:2px;border-left:3px solid var(--acc);padding-left:10px;}
+.sec-t{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.09em;color:var(--acc);}
+.sec-s{font-size:11px;color:var(--muted);font-weight:500;}
+/* Legacy sec-t/sec-s used directly in .sec (no .sec-inner wrapper) */
+.sec > .sec-t{border-left:3px solid var(--acc);padding-left:10px;}
+.sec > .sec-s{font-size:11px;color:var(--muted);}
+
+/* ── CARDS ── */
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.18);}
+
+/* ── LABELS ── */
+label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);display:block;margin-bottom:6px;}
+
+/* ── FORM CONTROLS ── */
+input,select,textarea{
+  width:100%;padding:13px 14px;background:var(--s2);border:1.5px solid var(--bdr);
+  border-radius:var(--radius-sm);color:var(--txt);font-size:15px;font-weight:600;
+  outline:none;appearance:none;-webkit-appearance:none;font-family:inherit;
+  min-height:48px;line-height:1.4;transition:border-color .15s,box-shadow .15s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(245,158,11,.18);}
+textarea{resize:vertical;line-height:1.5;min-height:80px;}
+select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2364748b' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:38px;
+}
+
+/* ── GRID HELPERS ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mb8{margin-bottom:8px;}.mb12{margin-bottom:12px;}
+
+/* ── BUTTONS ── */
+.btn{
+  padding:13px 18px;border-radius:var(--radius-sm);font-size:14px;font-weight:800;
+  cursor:pointer;border:none;font-family:inherit;min-height:48px;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  transition:opacity .15s,filter .15s;
+}
+.btn:active{opacity:.82;}
+.btn-acc{background:var(--acc);color:#0f1117;width:100%;letter-spacing:.01em;}
+.btn-acc:hover{filter:brightness(1.08);}
+.btn-ghost{background:var(--s2);border:1.5px solid var(--bdr);color:var(--txt);}
+.btn-ghost:hover{border-color:var(--acc);color:var(--acc);}
+.btn-red{background:rgba(239,68,68,.1);border:1.5px solid rgba(239,68,68,.3);color:var(--red);}
+.btn-blue{background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.3);color:var(--blue);}
+.btn-sm{padding:9px 13px;font-size:12px;border-radius:8px;min-height:40px;width:auto;}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+
+/* ── SUBMIT / PRIMARY CTA ── */
+.btn-submit{
+  background:var(--acc);color:#0f1117;width:100%;font-size:16px;font-weight:900;
+  min-height:58px;border-radius:var(--radius);letter-spacing:.02em;
+  box-shadow:0 4px 18px rgba(245,158,11,.35);
+}
+.btn-submit:hover{filter:brightness(1.1);}
+.btn-submit:active{box-shadow:0 2px 8px rgba(245,158,11,.25);}
+
+/* ── TEAM BLOCKS ── */
+.tblk{background:var(--s2);border:1.5px solid var(--bdr);border-radius:var(--radius);padding:14px;margin-bottom:10px;}
 .tblk-hd{cursor:pointer;user-select:none;}
 .tblk-body{}
 .collapsed .tblk-body{display:none;}
-.hdr{background:var(--surf);border-bottom:1px solid var(--bdr);padding:max(12px,env(safe-area-inset-top)) 14px 12px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;}
-.logo{width:30px;height:30px;background:var(--acc);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#1a1d27;font-size:11px;flex-shrink:0;}
-.main{padding:12px;max-width:860px;margin:0 auto;}
-.sec{margin:16px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--acc);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
-.sec-t{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--acc);}
-.sec-s{font-size:10px;color:var(--muted);}
-.card{background:var(--surf);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:10px;}
-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px;}
-input,select,textarea{width:100%;padding:9px 11px;background:var(--s2);border:1px solid var(--bdr);border-radius:9px;color:var(--txt);font-size:13px;font-weight:600;outline:none;appearance:none;-webkit-appearance:none;font-family:inherit;}
-input:focus,select:focus,textarea:focus{border-color:var(--acc);}
-textarea{resize:vertical;line-height:1.5;}
-select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%2364748b' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:32px;}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.mb8{margin-bottom:8px;}.mb12{margin-bottom:12px;}
-.btn{padding:10px 16px;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;border:none;font-family:inherit;}
-.btn-acc{background:var(--acc);color:#1a1d27;width:100%;}
-.btn-ghost{background:var(--s2);border:1px solid var(--bdr);color:var(--txt);}
-.btn-red{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--red);}
-.btn-blue{background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);color:var(--blue);}
-.btn-sm{padding:6px 11px;font-size:11px;border-radius:7px;width:auto;}
-.btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
-.tblk{background:var(--s2);border:1px solid var(--bdr);border-radius:11px;padding:12px;margin-bottom:8px;}
-.thd{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-.tdot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.trow{display:grid;grid-template-columns:1fr 65px 28px;gap:6px;align-items:center;margin-bottom:6px;}
-.trow input{padding:8px 9px;font-size:12px;}
-.chki{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--bdr);cursor:pointer;}
+.thd{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.tdot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+
+/* ── TABLE ROWS ── */
+.trow{display:grid;grid-template-columns:1fr 72px 40px;gap:6px;align-items:center;margin-bottom:8px;}
+.trow input{padding:11px 10px;font-size:13px;min-height:44px;}
+
+/* ── CHECKLIST ── */
+.chki{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--bdr);cursor:pointer;}
 .chki:last-child{border:none;}
-.chkb{width:22px;height:22px;border-radius:6px;border:2px solid var(--bdr);background:none;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;margin-top:1px;}
+.chkb{width:30px;height:30px;min-width:30px;border-radius:8px;border:2px solid var(--bdr);background:none;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;margin-top:1px;transition:background .15s,border-color .15s;}
 .chkb.on{background:var(--green);border-color:var(--green);}
-.nr{display:grid;grid-template-columns:90px 1fr 28px;gap:6px;align-items:center;margin-bottom:6px;}
-.ir{display:grid;grid-template-columns:58px 1fr 88px 28px;gap:5px;align-items:center;margin-bottom:5px;}
-.nr input,.ir input{padding:7px 9px;font-size:12px;}
-.del{width:28px;height:28px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--red);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.mic{display:flex;align-items:center;gap:7px;padding:8px 12px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:8px;color:var(--blue);font-size:11px;font-weight:700;cursor:pointer;width:100%;margin-bottom:6px;font-family:inherit;}
-.mic.on{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.3);color:var(--red);animation:bl 1s infinite;}
-@keyframes bl{0%,100%{opacity:1}50%{opacity:.55}}
-.cr{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bdr);cursor:pointer;}
+
+/* ── NOISE / ITEMS ROWS ── */
+.nr{display:grid;grid-template-columns:100px 1fr 40px;gap:6px;align-items:center;margin-bottom:8px;}
+.ir{display:grid;grid-template-columns:62px 1fr 92px 40px;gap:5px;align-items:center;margin-bottom:6px;}
+.nr input,.ir input{padding:10px 10px;font-size:13px;min-height:44px;}
+
+/* ── DELETE BUTTON ── */
+.del{width:40px;height:40px;min-width:40px;background:var(--s2);border:1.5px solid var(--bdr);border-radius:8px;color:var(--red);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,border-color .15s;}
+.del:hover{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.4);}
+.del:active{opacity:.75;}
+
+/* ── MIC / VOICE BUTTON ── */
+.mic{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 16px;
+  background:rgba(56,189,248,.08);border:1.5px solid rgba(56,189,248,.28);
+  border-radius:var(--radius-sm);color:var(--blue);
+  font-size:14px;font-weight:800;cursor:pointer;width:100%;
+  margin-bottom:8px;font-family:inherit;min-height:52px;
+  transition:background .15s,border-color .15s;
+}
+.mic:hover{background:rgba(56,189,248,.15);border-color:rgba(56,189,248,.5);}
+.mic .mic-icon{font-size:22px;line-height:1;flex-shrink:0;}
+.mic.on{background:rgba(239,68,68,.13);border-color:rgba(239,68,68,.4);color:var(--red);animation:bl 1s infinite;}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.6}}
+
+/* ── COMMS CHECKLIST ── */
+.cr{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--bdr);cursor:pointer;}
 .cr:last-child{border:none;}
-.ptick{width:26px;height:26px;border-radius:6px;border:2px solid var(--bdr);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.ptick{width:32px;height:32px;min-width:32px;border-radius:8px;border:2px solid var(--bdr);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;transition:background .15s,border-color .15s;}
 .ptick.on{background:var(--green);border-color:var(--green);}
-.eb{background:var(--bdr);border-radius:4px;height:8px;overflow:hidden;margin:8px 0 3px;}
-.ef{height:100%;border-radius:4px;transition:width .4s;}
-.lock{position:fixed;inset:0;background:#0a0d14;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;}
-.bnav{background:var(--surf);border-top:1px solid var(--bdr);display:flex;padding-bottom:env(safe-area-inset-bottom);position:sticky;bottom:0;z-index:100;}
-.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;background:none;border:none;color:var(--muted);font-size:9px;font-weight:800;cursor:pointer;gap:3px;text-transform:uppercase;}
-.nb .ni{font-size:20px;}.nb.active{color:var(--acc);}
+
+/* ── EFFICIENCY BAR ── */
+.eb{background:var(--bdr);border-radius:6px;height:10px;overflow:hidden;margin:10px 0 4px;}
+.ef{height:100%;border-radius:6px;transition:width .4s;}
+
+/* ── LOGIN SCREEN ── */
+.lock{
+  position:fixed;inset:0;background:linear-gradient(160deg,#0a0d14 0%,#111827 60%,#0d1520 100%);
+  z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:28px 24px;text-align:center;
+}
+.lock-card{
+  background:rgba(26,29,39,.9);border:1px solid rgba(245,158,11,.2);
+  border-radius:20px;padding:28px 24px;width:100%;max-width:340px;
+  box-shadow:0 8px 40px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.04);
+}
+
+/* ── BOTTOM NAV ── */
+.bnav{
+  background:var(--surf);border-top:2px solid var(--bdr);display:flex;
+  padding-bottom:env(safe-area-inset-bottom);position:sticky;bottom:0;z-index:100;
+  box-shadow:0 -2px 12px rgba(0,0,0,.22);
+}
+.nb{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:10px 4px;background:none;border:none;color:var(--muted);
+  font-size:10px;font-weight:800;cursor:pointer;gap:4px;text-transform:uppercase;
+  letter-spacing:.04em;min-height:56px;transition:color .15s;
+}
+.nb .ni{font-size:24px;line-height:1;}
+.nb.active{color:var(--acc);}
+.nb.active .ni{filter:drop-shadow(0 0 6px rgba(245,158,11,.45));}
+
+/* ── TABS ── */
 .tab{display:none;}.tab.active{display:block;}
-.toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:9px 18px;border-radius:18px;font-size:12px;font-weight:800;z-index:9999;pointer-events:none;opacity:0;transition:opacity .3s;white-space:nowrap;}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+  background:var(--green);color:#fff;padding:12px 22px;border-radius:22px;
+  font-size:13px;font-weight:800;z-index:9999;pointer-events:none;
+  opacity:0;transition:opacity .3s;white-space:nowrap;
+  box-shadow:0 4px 16px rgba(0,0,0,.35);
+}
 .toast.show{opacity:1;}.toast.err{background:var(--red);}
-.sess-hd{font-size:10px;font-weight:900;padding:6px 10px;border-radius:7px;margin-bottom:8px;}
+
+/* ── MISC ── */
+.sess-hd{font-size:11px;font-weight:900;padding:7px 12px;border-radius:8px;margin-bottom:8px;}
+
 @media print{
   .bnav,.hdr,.no-print,.mic,.del,.btns,button{display:none!important;}
   body{background:#fff;color:#000;}
@@ -103,13 +210,14 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <body>
 
 <div class="lock" id="ls">
-  <img src="dgc-logo-white.png" alt="DGC" style="height:64px;object-fit:contain;filter:brightness(0) invert(1);margin-bottom:12px;">
-  <div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-.3px;margin-bottom:2px;">DGC Daily Sheet</div>
-  <div style="font-size:12px;color:rgba(255,255,255,.45);margin-bottom:28px;">Ballasalla Phase 4</div>
-  <div style="width:100%;max-width:300px;">
-    <div class="mb8"><label style="color:rgba(255,255,255,.5);">Who are you?</label>
-      <select id="ln" style="font-size:15px;padding:12px 14px;font-weight:700;border-radius:10px;background:var(--s2);border:1px solid var(--bdr);color:var(--txt);width:100%;-webkit-appearance:none;appearance:none;cursor:pointer;">
-        <option value="">-- Select your name --</option>
+  <div class="lock-card">
+    <img src="dgc-logo-white.png" alt="DGC" style="height:60px;object-fit:contain;filter:brightness(0) invert(1);margin-bottom:16px;">
+    <div style="font-size:24px;font-weight:900;color:#fff;letter-spacing:-.4px;margin-bottom:4px;">DGC Daily Sheet</div>
+    <div style="font-size:13px;color:rgba(255,255,255,.45);font-weight:500;margin-bottom:28px;letter-spacing:.02em;">Ballasalla Phase 4</div>
+    <div class="mb12">
+      <label style="color:rgba(255,255,255,.55);text-align:left;display:block;">Who are you?</label>
+      <select id="ln" style="font-size:16px;padding:14px 16px;font-weight:700;border-radius:12px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);color:#fff;width:100%;-webkit-appearance:none;appearance:none;cursor:pointer;min-height:54px;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23f59e0b' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 14px center;">
+        <option value="">— Select your name —</option>
         <option value="David Smith">David Smith</option>
         <option value="James Cosgrove">James Cosgrove</option>
         <option value="Stephen Lamb">Stephen Lamb</option>
@@ -126,7 +234,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <option value="Liam Smith">Liam Smith</option>
       </select>
     </div>
-    <button class="btn btn-acc" onclick="doLogin()" style="min-height:48px;font-size:15px;">Start &#8594;</button>
+    <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;">Start &rarr;</button>
+    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group</div>
   </div>
 </div>
 
@@ -138,9 +247,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <div class="hdr">
-  <img id="hdr-logo" class="dgc-logo" src="dgc-logo-white.png" alt="DGC" style="height:32px;">
-  <div style="margin-left:auto;display:flex;align-items:center;gap:6px;">
-    <button class="btn btn-blue btn-sm no-print" onclick="window.print()" title="Print tomorrow's plan" style="min-width:36px;min-height:36px;">&#128424;</button>
+  <img id="hdr-logo" class="dgc-logo" src="dgc-logo-white.png" alt="DGC">
+  <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+    <button class="btn btn-blue btn-sm no-print" onclick="window.print()" title="Print tomorrow's plan" style="min-width:44px;min-height:44px;font-size:18px;padding:0;">&#128424;</button>
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
     <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
     <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span>
@@ -151,7 +260,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <!-- EOD PLANNER -->
 <div class="tab active" id="tab-eod">
-  <div class="sec"><span class="sec-t">&#128203; End of Day &mdash; Plan for Tomorrow</span><span class="sec-s" id="dl"></span></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; End of Day &mdash; Plan for Tomorrow</span><span class="sec-s" id="dl"></span></div></div>
   <div class="card g2" style="gap:8px;margin-bottom:10px;">
     <div><label>Date</label><input type="date" id="fd"></div>
     <div><label>Site Manager</label><input type="text" id="fm" list="nl" onclick="nc(this)" onblur="nb2(this)" placeholder="Tap to pick"></div>
@@ -163,7 +272,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
   </div>
 
-  <div class="sec"><span class="sec-t">&#127749; Tomorrow's Morning Meeting</span><span class="sec-s">What you'll say at 7:30</span></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#127749; Tomorrow's Morning Meeting</span><span class="sec-s">What you'll say at 7:30</span></div></div>
   <div class="card">
     <div class="g2 mb8">
       <div><label>Meeting time</label><input type="time" id="fbt" value="07:30"></div>
@@ -171,19 +280,19 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
     <div class="mb8">
       <label>Topics for tomorrow's briefing</label>
-      <button class="mic" id="mic-top" onclick="vm('top','ftp')"><span>&#127908;</span> Dictate topics</button>
+      <button class="mic" id="mic-top" onclick="vm('top','ftp')"><span class="mic-icon">&#127908;</span><span>Dictate topics</span></button>
       <textarea id="ftp" rows="2" placeholder="What you'll tell the gang at 7:30 tomorrow..."></textarea>
     </div>
     <div>
       <label>Key risks for tomorrow</label>
-      <button class="mic" id="mic-rsk" onclick="vm('rsk','frk')"><span>&#127908;</span> Dictate risks</button>
+      <button class="mic" id="mic-rsk" onclick="vm('rsk','frk')"><span class="mic-icon">&#127908;</span><span>Dictate risks</span></button>
       <textarea id="frk" rows="2" placeholder="e.g. HV permit needed Zone 9, deep excavation Plot 11..."></textarea>
     </div>
   </div>
 
   <div class="sec">
-    <div><span class="sec-t">&#128208; Tomorrow's Plan</span><div class="sec-s" style="margin-top:2px;">What each team will do &middot; set target % by end of day</div></div>
-    <div style="display:flex;gap:5px;" class="no-print">
+    <div class="sec-inner"><span class="sec-t">&#128208; Tomorrow's Plan</span><span class="sec-s">What each team will do &middot; set target % by end of day</span></div>
+    <div style="display:flex;gap:6px;" class="no-print">
       <button class="btn btn-ghost btn-sm" onclick="addPerson()">+ Person</button>
       <button class="btn btn-ghost btn-sm" onclick="addPT()">+ Team</button>
     </div>
@@ -191,9 +300,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div id="pt-container"></div>
 
   <!-- EOD RESPONSIBILITY -->
-  <div class="sec"><span class="sec-t">&#128274; EOD Responsibility for Tomorrow</span><span class="sec-s">Who's in charge of end-of-day checks?</span></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128274; EOD Responsibility for Tomorrow</span><span class="sec-s">Who's in charge of end-of-day checks?</span></div></div>
   <div class="card">
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Pick who is responsible for the security checklist and site clean-up at the end of tomorrow. This gets recorded so it's clear before the day starts.</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.55;">Pick who is responsible for the security checklist and site clean-up at the end of tomorrow. This gets recorded so it's clear before the day starts.</div>
     <div class="g2">
       <div>
         <label>EOD responsible person</label>
@@ -213,94 +322,94 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
   </div>
 
-  <div class="sec"><span class="sec-t">&#128119; Team Allocation &amp; Plant Checks</span></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128119; Team Allocation &amp; Plant Checks</span></div></div>
   <div id="al-container"></div>
 
-  <div class="sec"><span class="sec-t">&#9203; Session Times</span></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#9203; Session Times</span></div></div>
   <div class="card">
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
-      <div style="border-left:3px solid var(--acc);padding-left:8px;"><div style="font-size:10px;font-weight:900;color:var(--acc);">07:30 &ndash; 10:00</div><div style="font-size:9px;color:var(--muted);">Morning</div></div>
-      <div style="border-left:3px solid var(--blue);padding-left:8px;"><div style="font-size:10px;font-weight:900;color:var(--blue);">10:30 &ndash; 13:00</div><div style="font-size:9px;color:var(--muted);">Mid-morning</div></div>
-      <div style="border-left:3px solid var(--green);padding-left:8px;"><div style="font-size:10px;font-weight:900;color:var(--green);">13:30 &ndash; 17:30</div><div style="font-size:9px;color:var(--muted);">Afternoon</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
+      <div style="border-left:3px solid var(--acc);padding-left:9px;"><div style="font-size:11px;font-weight:900;color:var(--acc);line-height:1.3;">07:30–10:00</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Morning</div></div>
+      <div style="border-left:3px solid var(--blue);padding-left:9px;"><div style="font-size:11px;font-weight:900;color:var(--blue);line-height:1.3;">10:30–13:00</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Mid-morning</div></div>
+      <div style="border-left:3px solid var(--green);padding-left:9px;"><div style="font-size:11px;font-weight:900;color:var(--green);line-height:1.3;">13:30–17:30</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Afternoon</div></div>
     </div>
-    <button class="mic" id="mic-ses" onclick="vm('ses','fses')"><span>&#127908;</span> Dictate session notes</button>
+    <button class="mic" id="mic-ses" onclick="vm('ses','fses')"><span class="mic-icon">&#127908;</span><span>Dictate session notes</span></button>
     <textarea id="fses" rows="3" placeholder="How the day went across all three sessions..."></textarea>
   </div>
 
-  <div class="sec"><span class="sec-t">&#128202; Noise Readings</span><span class="sec-s">3 spot readings required</span></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128202; Noise Readings</span><span class="sec-s">3 spot readings required</span></div></div>
   <div class="card">
-    <div style="font-size:10px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:90px 1fr 28px;gap:6px;margin-bottom:5px;"><span>Time</span><span>Level (dB)</span><span></span></div>
+    <div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:100px 1fr 40px;gap:6px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;"><span>Time</span><span>Level (dB)</span><span></span></div>
     <div id="nr-c"></div>
     <button class="btn btn-ghost btn-sm" onclick="addNoise()">+ Reading</button>
   </div>
 
 <!-- EOD checklist removed - delegated separately -->
 
-  <div class="sec"><span class="sec-t">&#9888;&#65039; Observations / Issues</span></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#9888;&#65039; Observations / Issues</span></div></div>
   <div class="card">
-    <button class="mic" id="mic-obs" onclick="vm('obs','fob')"><span>&#127908;</span> Dictate observations</button>
+    <button class="mic" id="mic-obs" onclick="vm('obs','fob')"><span class="mic-icon">&#127908;</span><span>Dictate observations</span></button>
     <textarea id="fob" rows="3" placeholder="Near misses, damage, unusual ground, anything worth recording..."></textarea>
   </div>
 
-  <div class="sec"><span class="sec-t">&#128230; Items Required for Tomorrow</span></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128230; Items Required for Tomorrow</span></div></div>
   <div class="card">
-    <div style="font-size:10px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:58px 1fr 88px 28px;gap:5px;margin-bottom:5px;"><span>Qty</span><span>Item</span><span>Source</span><span></span></div>
+    <div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:62px 1fr 92px 40px;gap:5px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;"><span>Qty</span><span>Item</span><span>Source</span><span></span></div>
     <div id="ir-c"></div>
-    <div class="btns" style="margin-top:6px;">
+    <div class="btns" style="margin-top:8px;">
       <button class="btn btn-ghost btn-sm" onclick="addItem()">+ Item</button>
-      <button class="btn btn-blue btn-sm" onclick="sendToTrello()" id="trello-btn" style="display:flex;align-items:center;gap:5px;">&#9992; Send to Brad via Trello</button>
+      <button class="btn btn-blue btn-sm" onclick="sendToTrello()" id="trello-btn">&#9992; Send to Brad via Trello</button>
     </div>
-    <div id="trello-status" style="font-size:11px;margin-top:6px;"></div>
+    <div id="trello-status" style="font-size:12px;font-weight:600;margin-top:8px;"></div>
   </div>
 
-  <div class="sec"><span class="sec-t">&#128241; Comms Done</span></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128241; Comms Done</span></div></div>
   <div class="card" id="comms-c"></div>
 
-  <div class="sec"><span class="sec-t">&#128211; Site Notes</span></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Site Notes</span></div></div>
   <div class="card">
-    <button class="mic" id="mic-nt" onclick="vm('nt','fnt')"><span>&#127908;</span> Record site notes</button>
+    <button class="mic" id="mic-nt" onclick="vm('nt','fnt')"><span class="mic-icon">&#127908;</span><span>Record site notes</span></button>
     <textarea id="fnt" rows="4" placeholder="Manager notes for today..."></textarea>
   </div>
 
-  <div class="btns no-print">
-    <button class="btn btn-acc" style="flex:2;" onclick="submitEOD()">&#128228; Submit &amp; Save</button>
-    <button class="btn btn-ghost" onclick="window.print()">&#128424; Print</button>
+  <div class="no-print" style="margin-top:16px;">
+    <button class="btn btn-submit" onclick="submitEOD()">&#128228; Submit &amp; Save</button>
+    <button class="btn btn-ghost" onclick="window.print()" style="width:100%;margin-top:10px;min-height:48px;">&#128424; Print Tomorrow's Plan</button>
   </div>
   <div style="height:20px;"></div>
 </div>
 
 <!-- HOW DID WE DO -->
 <div class="tab" id="tab-achv">
-  <div class="sec"><span class="sec-t">&#9989; How Did We Do?</span><span class="sec-s" id="achv-sub">Loading...</span></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#9989; How Did We Do?</span><span class="sec-s" id="achv-sub">Loading...</span></div></div>
   <div id="achv-none" style="display:none;" class="card">
-    <div style="text-align:center;padding:24px;color:var(--muted);">
-      <div style="font-size:32px;margin-bottom:8px;">&#128203;</div>
-      <div style="font-size:13px;font-weight:600;">No plan found for yesterday</div>
-      <div style="font-size:11px;margin-top:4px;">Fill in today's EOD plan &mdash; tomorrow you can record how you got on</div>
+    <div style="text-align:center;padding:32px 16px;color:var(--muted);">
+      <div style="font-size:40px;margin-bottom:12px;opacity:.7;">&#128203;</div>
+      <div style="font-size:15px;font-weight:700;color:var(--txt);margin-bottom:6px;">No plan found for yesterday</div>
+      <div style="font-size:13px;line-height:1.6;">Fill in today's EOD plan &mdash;<br>tomorrow you can record how you got on.</div>
     </div>
   </div>
   <div id="achv-score" style="display:none;" class="card">
-    <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">Overall Efficiency</div>
-    <div id="eff-n" style="font-size:52px;font-weight:900;line-height:1;"></div>
-    <div id="eff-l" style="font-size:12px;color:var(--muted);margin-top:4px;"></div>
-    <div class="eb"><div id="eff-b" class="ef"></div></div>
-    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);"><span>0%</span><span id="eff-p"></span><span>100%</span></div>
+    <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Overall Efficiency</div>
+    <div id="eff-n" style="font-size:58px;font-weight:900;line-height:1;letter-spacing:-.02em;"></div>
+    <div id="eff-l" style="font-size:13px;font-weight:600;color:var(--muted);margin-top:6px;"></div>
+    <div class="eb" style="margin-top:14px;"><div id="eff-b" class="ef"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px;"><span>0%</span><span id="eff-p"></span><span>100%</span></div>
   </div>
   <div id="achv-rows"></div>
   <div id="achv-form" style="display:none;">
-    <div class="sec"><span class="sec-t">&#128211; Notes on Today's Output</span></div>
+    <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Notes on Today's Output</span></div></div>
     <div class="card">
-      <button class="mic" id="mic-an" onclick="vm('an','fan')"><span>&#127908;</span> Dictate notes</button>
+      <button class="mic" id="mic-an" onclick="vm('an','fan')"><span class="mic-icon">&#127908;</span><span>Dictate notes</span></button>
       <textarea id="fan" rows="3" placeholder="Why things took longer or faster than planned..."></textarea>
     </div>
-    <button class="btn btn-acc" onclick="submitAchv()">&#128190; Save Achievement Record</button>
+    <button class="btn btn-submit" onclick="submitAchv()">&#128190; Save Achievement Record</button>
     <div style="height:20px;"></div>
   </div>
 </div>
 
 <!-- HISTORY -->
 <div class="tab" id="tab-hist">
-  <div class="sec"><span class="sec-t">&#128218; History</span></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128218; History</span></div></div>
   <div id="hist"></div>
 </div>
 
@@ -396,7 +505,7 @@ function addPT(){
   var i=PT_I++,l=TLTRS[i]||('T'+(i+1)),c=TCOLS[i]||'#94a3b8';
   var d=document.createElement('div');d.className='tblk';d.id='pt'+i;
   d.innerHTML='<div class="thd"><div class="tdot" style="background:'+c+'"></div><div style="font-size:13px;font-weight:800;">Team '+l+'</div><div style="margin-left:auto;display:flex;gap:5px;"><button class="btn btn-ghost btn-sm" onclick="addTask('+i+')">+ Task</button><button class="btn btn-red btn-sm" onclick="this.closest(\'.tblk\').remove()">x</button></div></div>'+
-    '<div style="font-size:10px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:1fr 65px 28px;gap:6px;padding:0 2px 5px;"><span>Task / Activity</span><span>Target %</span><span></span></div>'+
+    '<div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:1fr 72px 40px;gap:6px;padding:0 2px 6px;text-transform:uppercase;letter-spacing:.05em;"><span>Task / Activity</span><span>Target %</span><span></span></div>'+
     '<div id="ptt'+i+'"></div>';
   document.getElementById('pt-container').appendChild(d);
   addTask(i);
@@ -645,17 +754,17 @@ function toast(m,t){var el=document.getElementById('toast');el.textContent=m;el.
 </script>
 
 <!-- CLAUDE AI SETUP MODAL -->
-<div id="claude-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:400;align-items:center;justify-content:center;padding:20px;">
-  <div style="background:var(--surf);border-radius:14px;padding:20px;max-width:400px;width:100%;border:1px solid var(--bdr);">
-    <div style="font-size:16px;font-weight:900;margin-bottom:4px;">&#129302; Claude AI Settings</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:16px;">Your key is stored only on this device. Get one at <strong>console.anthropic.com</strong> &rarr; API Keys.</div>
+<div id="claude-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:400;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--surf);border-radius:18px;padding:24px;max-width:400px;width:100%;border:1px solid var(--bdr);box-shadow:0 8px 40px rgba(0,0,0,.5);">
+    <div style="font-size:18px;font-weight:900;margin-bottom:6px;">&#129302; Claude AI Settings</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.55;">Your key is stored only on this device. Get one at <strong>console.anthropic.com</strong> &rarr; API Keys.</div>
     <div class="mb12"><label>Claude API Key</label>
-      <input type="password" id="cl-key-in" placeholder="sk-ant-api03-..." style="font-size:13px;letter-spacing:2px;">
+      <input type="password" id="cl-key-in" placeholder="sk-ant-api03-..." style="font-size:14px;letter-spacing:2px;">
     </div>
-    <div style="font-size:10px;color:var(--muted);background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px;margin-bottom:14px;">
+    <div style="font-size:12px;color:var(--muted);background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.22);border-radius:10px;padding:12px;margin-bottom:16px;line-height:1.55;">
       &#9888; Never share your API key. If you've shared it in a chat, delete it at console.anthropic.com and create a new one.
     </div>
-    <div style="display:flex;gap:8px;">
+    <div style="display:flex;gap:10px;">
       <button class="btn btn-acc" onclick="saveClaudeKey()" style="flex:2;">Save Key</button>
       <button class="btn btn-ghost" onclick="document.getElementById('claude-modal').style.display='none';" style="flex:1;">Cancel</button>
     </div>
