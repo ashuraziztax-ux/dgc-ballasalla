@@ -9,7 +9,7 @@
 <script>
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
-var CLAUDE_KEY='PASTE_CLAUDE_API_KEY_HERE';
+var CLAUDE_KEY=''; // loaded from localStorage — enter via Settings button
 var PROJECT_REF='BA4';
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -145,8 +145,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div style="font-size:10px;color:var(--muted);">Ballasalla Phase 4</div>
   </div>
   <div style="margin-left:auto;display:flex;align-items:center;gap:6px;">
-    <button class="btn btn-blue btn-sm no-print" onclick="window.print()" title="Print tomorrow's plan" style="min-width:36px;min-height:36px;">&#128424;</button>
-    <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
+    <button class="btn btn-blue btn-sm no-print" onclick="window.print()" title="Print" style="min-width:36px;min-height:36px;">&#128424;</button>
+    <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Dark/light">&#9790;</button>
+    <button class="theme-btn no-print" onclick="showClaudeSetup()" title="Claude AI settings" id="claude-status-btn">&#129302;</button>
     <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span>
   </div>
 </div>
@@ -349,6 +350,7 @@ var TLTRS=['A','B','C','D','E'];
 var CHK={},COM={},PT_I=0,AL_I=0,NR_I=0,IR_I=0;
 var _mic=null,_ma=null;
 var _uname='';
+var _ma_target=null;
 
 (function init(){
   rebuildNL();
@@ -429,8 +431,75 @@ function addAL(){
 function addNoise(t,v){NR_I++;var id='nr'+NR_I;var r=document.createElement('div');r.className='nr';r.id=id;r.innerHTML='<input type="time" value="'+(t||'')+'"><input type="number" placeholder="dB" min="0" max="140" value="'+(v||'')+'"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('nr-c').appendChild(r);}
 function addItem(q,it,s){IR_I++;var id='ir'+IR_I;var r=document.createElement('div');r.className='ir';r.id=id;r.innerHTML='<input placeholder="Qty" value="'+(q||'')+'"><input placeholder="Item" value="'+(it||'')+'"><input placeholder="Supplier" value="'+(s||'')+'"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('ir-c').appendChild(r);}
 
-function vm(id,tid){if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){toast('Voice needs Chrome on iPhone/Android','err');return;}if(_ma===id){stopV();return;}if(_ma)stopV();_ma=id;var btn=document.getElementById('mic-'+id);btn.classList.add('on');btn.querySelector('span').textContent='[stop]';var SR=window.SpeechRecognition||window.webkitSpeechRecognition;_mic=new SR();_mic.continuous=true;_mic.interimResults=true;_mic.lang='en-GB';var final='',existing=document.getElementById(tid).value;_mic.onresult=function(e){var interim='';for(var i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';else interim+=e.results[i][0].transcript;}document.getElementById(tid).value=(existing?existing+' ':'')+(final+interim).trim();};_mic.onerror=_mic.onend=function(){stopV();};_mic.start();}
-function stopV(){if(_mic){try{_mic.stop();}catch(e){}}_mic=null;if(_ma){var btn=document.getElementById('mic-'+_ma);if(btn){btn.classList.remove('on');btn.querySelector('span').textContent='[mic]';}_ma=null;}}
+function vm(id,tid){if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){toast('Voice needs Chrome on iPhone/Android','err');return;}if(_ma===id){stopV();return;}if(_ma)stopV();_ma=id;_ma_target=tid;var btn=document.getElementById('mic-'+id);btn.classList.add('on');btn.querySelector('span').textContent='[stop]';var SR=window.SpeechRecognition||window.webkitSpeechRecognition;_mic=new SR();_mic.continuous=true;_mic.interimResults=true;_mic.lang='en-GB';var final='',existing=document.getElementById(tid).value;_mic.onresult=function(e){var interim='';for(var i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';else interim+=e.results[i][0].transcript;}document.getElementById(tid).value=(existing?existing+' ':'')+(final+interim).trim();};_mic.onerror=_mic.onend=function(){stopV(_ma_target);};_mic.start();}
+function stopV(targetId){
+  if(_mic){try{_mic.stop();}catch(e){}}_mic=null;
+  if(_ma){
+    var btn=document.getElementById('mic-'+_ma);
+    if(btn){btn.classList.remove('on');btn.querySelector('span').textContent='[mic]';}
+    // After stopping, run Claude correction on the dictated text
+    if(targetId){
+      var txt=document.getElementById(targetId);
+      if(txt&&txt.value&&txt.value.length>8){
+        setTimeout(function(){aiCorrect(txt.value,targetId);},300);
+      }
+    }
+    _ma=null;
+  }
+}
+
+function aiCorrect(text,targetId){
+  var key=localStorage.getItem('dgc_claude_key');
+  if(!key)return; // No key — skip correction silently
+  
+  var prompt='You are helping a drainage and groundwork contractor on the Isle of Man fill in a daily site log. The following text was dictated on a construction site using speech-to-text and may have errors. Correct any obvious mistakes based on construction context. Site: Ballasalla Phase 4, drainage and groundworks. Common terms: manhole, chamber, invert level, bedding, haunching, gully, S4.1-S4.6, F4.1-F4.6, 110mm pipe, 150mm, 225mm, subbase, kerbing, tarmac, concrete, footings, LOLER, PUWER. Staff names: '+NAMES.join(', ')+'. Return ONLY the corrected text, no explanation. If correct already, return unchanged.';
+  
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':key,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-client-side-api-key-access':'true'
+    },
+    body:JSON.stringify({
+      model:'claude-haiku-4-5',
+      max_tokens:500,
+      messages:[{role:'user',content:prompt+'
+
+Text to correct: "'+text+'"'}]
+    })
+  })
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(!d.content||!d.content[0])return;
+    var corrected=d.content[0].text.trim();
+    if(corrected===text||!corrected)return;
+    // Show diff overlay
+    showDiff(text,corrected,targetId);
+  })
+  .catch(function(){}); // Silent fail — dictation still works
+}
+
+function showDiff(original,corrected,targetId){
+  var existingDiff=document.getElementById('diff-'+targetId);
+  if(existingDiff)existingDiff.remove();
+  var el=document.getElementById(targetId);
+  if(!el)return;
+  var diff=document.createElement('div');
+  diff.id='diff-'+targetId;
+  diff.style.cssText='background:var(--s2);border:1px solid var(--bdr);border-radius:8px;padding:10px;margin-top:5px;font-size:11px;';
+  diff.innerHTML='<div style="color:var(--muted);font-weight:800;font-size:9px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">&#129302; AI suggested correction</div>'+
+    '<div style="color:var(--red);text-decoration:line-through;margin-bottom:3px;">'+esc(original)+'</div>'+
+    '<div style="color:var(--green);font-weight:700;margin-bottom:8px;">&#8594; '+esc(corrected)+'</div>'+
+    '<div style="display:flex;gap:6px;">'+
+      '<button class="btn btn-green btn-sm" onclick="acceptDiff(''+targetId+'',''+corrected.replace(/'/g,"\'")+'')" style="flex:1;">&#10003; Accept</button>'+
+      '<button class="btn btn-ghost btn-sm" onclick="rejectDiff(''+targetId+'')" style="flex:1;">Keep original</button>'+
+    '</div>';
+  el.parentNode.insertBefore(diff,el.nextSibling);
+}
+function acceptDiff(targetId,corrected){document.getElementById(targetId).value=corrected;rejectDiff(targetId);}
+function rejectDiff(targetId){var d=document.getElementById('diff-'+targetId);if(d)d.remove();}
 
 function fetchWx(){fetch('https://api.open-meteo.com/v1/forecast?latitude=54.0833&longitude=-4.6333&current=temperature_2m,weathercode&timezone=Europe%2FLondon').then(function(r){return r.json();}).then(function(d){if(!d.current)return;var t=Math.round(d.current.temperature_2m);var wm={0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',51:'Light drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',80:'Showers'};document.getElementById('ft').value=t;toast((wm[d.current.weathercode]||'Code '+d.current.weathercode)+', '+t+'C');}).catch(function(){toast('Cannot fetch weather','err');});}
 
@@ -524,6 +593,39 @@ function loadHist(){
 }
 
 
+
+// ── CLAUDE KEY SETUP ────────────────────────────────────────────
+function showClaudeSetup(){
+  var existing=localStorage.getItem('dgc_claude_key');
+  var inp=document.getElementById('claude-key-input');
+  if(inp&&existing) inp.value=existing;
+  var st=document.getElementById('claude-key-status');
+  if(st) st.textContent=existing?'✓ Key saved — voice AI active':'No key — voice will transcribe without AI correction';
+  if(st) st.style.color=existing?'var(--green)':'var(--muted)';
+  document.getElementById('claude-modal').style.display='flex';
+}
+function saveClaudeKey(){
+  var k=(document.getElementById('claude-key-input')||{}).value;
+  if(!k||!k.trim()){toast('Enter a key','err');return;}
+  k=k.trim();
+  if(!k.startsWith('sk-ant')){toast('Key should start with sk-ant...','err');return;}
+  localStorage.setItem('dgc_claude_key',k);
+  document.getElementById('claude-modal').style.display='none';
+  document.getElementById('claude-status-btn').textContent='\u{1F916}';
+  document.getElementById('claude-status-btn').style.color='var(--green)';
+  toast('Claude AI active — voice corrections enabled');
+}
+function clearClaudeKey(){
+  localStorage.removeItem('dgc_claude_key');
+  var inp=document.getElementById('claude-key-input');
+  if(inp)inp.value='';
+  toast('Claude key cleared');
+}
+function checkClaudeKeyStatus(){
+  var k=localStorage.getItem('dgc_claude_key');
+  var btn=document.getElementById('claude-status-btn');
+  if(btn){btn.style.color=k?'var(--green)':'var(--muted)';}
+}
 // ── TRELLO INTEGRATION ────────────────────────────────────────────
 function getTrelloCfg(){return JSON.parse(localStorage.getItem('dgc_trello_cfg')||'null');}
 function saveTrelloConfig(){
@@ -648,6 +750,28 @@ function fmtD(s){if(!s)return'';return new Date(s+'T12:00:00').toLocaleDateStrin
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function toast(m,t){var el=document.getElementById('toast');el.textContent=m;el.className='toast show'+(t==='err'?' err':'');setTimeout(function(){el.classList.remove('show');},2500);}
 </script>
+
+<!-- CLAUDE API SETUP -->
+<div id="claude-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--surf);border-radius:14px;padding:20px;max-width:380px;width:100%;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+      <span style="font-size:20px;">&#129302;</span>
+      <div style="font-size:14px;font-weight:800;">Claude AI — Smart Voice Correction</div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">Enter your API key once. It stays in this browser only — never sent to anyone except Anthropic when correcting voice dictation.</div>
+    <div class="mb8">
+      <label>Claude API Key</label>
+      <input type="password" id="claude-key-input" placeholder="sk-ant-api03-..." style="font-family:monospace;font-size:12px;">
+    </div>
+    <div id="claude-key-status" style="font-size:11px;margin-bottom:10px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-acc" onclick="saveClaudeKey()" style="flex:2;">Save Key</button>
+      <button class="btn btn-red btn-sm" onclick="clearClaudeKey()" style="flex:1;">Clear</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('claude-modal').style.display='none';" style="flex:1;">Close</button>
+    </div>
+    <div style="font-size:10px;color:var(--muted);margin-top:10px;">Get a key at <strong>console.anthropic.com</strong> → API Keys → Create Key. Costs a fraction of a penny per voice correction.</div>
+  </div>
+</div>
 
 <!-- TRELLO SETUP MODAL -->
 <div id="trello-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;">
