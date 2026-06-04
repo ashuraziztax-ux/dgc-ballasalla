@@ -164,23 +164,19 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <div class="lock" id="lock-screen">
   <div class="lock-logo">DGC</div>
   <div class="lock-t">DGC Daily Sheet</div>
-  <div class="lock-s">Enter your name and the site password</div>
+  <div class="lock-s">Enter your name to begin</div>
   <div style="width:100%;max-width:340px;">
     <div style="margin-bottom:8px;">
       <label>Your name</label>
       <input type="text" id="login-name" placeholder="e.g. David Smith" autocomplete="off" list="names-list">
       <datalist id="names-list"></datalist>
     </div>
-    <div style="margin-bottom:14px;">
-      <label>Site password</label>
-      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
-    </div>
-    <button class="btn btn-acc" onclick="doLogin()">Enter Site →</button>
+    <button class="btn btn-acc" onclick="doLogin()">Start →</button>
   </div>
 </div>
 
 <!-- ══════════════ MAIN APP ══════════════ -->
-<div id="app" style="display:none;">
+<div id="app">
 
 <div class="hdr">
   <div class="logo">DGC</div>
@@ -484,15 +480,13 @@ var _mic = null, _micActive = null;
 // ══════════════════════════════════════════════════════════════════
 function doLogin(){
   var name = document.getElementById('login-name').value.trim();
-  var pass = document.getElementById('login-pass').value;
-  if (!name) { toast('Enter your name','err'); return; }
-  if (pass !== APP_PASS) { toast('Incorrect password','err'); return; }
+  if (!name) { toast('Enter your name to continue','err'); return; }
   S.userName = name;
+  localStorage.setItem('dgc_user_name', name);
   document.getElementById('user-badge').textContent = name;
   document.getElementById('f-mgr').value = name;
   document.getElementById('f-submit-name').value = name;
   document.getElementById('lock-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
   loadHistory();
 }
 
