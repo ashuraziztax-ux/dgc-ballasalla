@@ -6,533 +6,987 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f1117">
-<title>DGC Site App</title>
+<title>DGC Daily Sheet</title>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     CONFIG — swap these values after Supabase setup
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+var SUPA_URL    = 'PASTE_SUPABASE_URL_HERE';       // e.g. https://xxxxxxx.supabase.co
+var SUPA_KEY    = 'PASTE_SUPABASE_ANON_KEY_HERE';  // starts eyJhbGciOi...
+var CLAUDE_KEY  = 'PASTE_CLAUDE_API_KEY_HERE';     // starts sk-ant-api03-...
+var APP_PASS    = 'dgc2026';                        // shared site password — change this
+var PROJECT_REF = 'BA4';                            // Ballasalla Phase 4
+</script>
+
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
-  --bg:#0f1117;--surface:#1a1d27;--s2:#232736;--border:#2e3347;
+  --bg:#0f1117;--surf:#1a1d27;--s2:#232736;--bdr:#2e3347;
   --acc:#f59e0b;--green:#22c55e;--red:#ef4444;--blue:#38bdf8;--purple:#a78bfa;
-  --text:#f1f5f9;--muted:#64748b;
+  --txt:#f1f5f9;--muted:#64748b;
 }
-html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+html,body{min-height:100%;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
 
-/* HEADER */
-.hdr{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);padding:max(10px,env(safe-area-inset-top)) 14px 10px;display:flex;align-items:center;gap:10px;}
-.logo{width:30px;height:30px;background:var(--acc);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#1a1d27;font-size:11px;flex-shrink:0;}
-.hdr-t{font-size:14px;font-weight:800;}
+/* ── LAYOUT ── */
+.hdr{background:var(--surf);border-bottom:1px solid var(--bdr);padding:max(12px,env(safe-area-inset-top)) 14px 12px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;}
+.logo{width:32px;height:32px;background:var(--acc);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#1a1d27;font-size:11px;flex-shrink:0;}
+.hdr-t{font-size:15px;font-weight:800;}
 .hdr-s{font-size:10px;color:var(--muted);}
-.hdr-d{margin-left:auto;font-size:11px;color:var(--muted);font-weight:600;text-align:right;}
+.hdr-r{margin-left:auto;display:flex;align-items:center;gap:6px;}
+.badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3);}
+.badge.amber{background:rgba(245,158,11,.15);color:var(--acc);border-color:rgba(245,158,11,.3);}
 
-/* MAIN */
-.main{position:fixed;top:66px;bottom:calc(56px + env(safe-area-inset-bottom));left:0;right:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px;}
+.main{padding:12px;max-width:900px;margin:0 auto;}
 
-/* BOTTOM NAV */
-.bnav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--surface);border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom);}
-.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 4px;background:none;border:none;color:var(--muted);font-size:9px;font-weight:800;cursor:pointer;gap:2px;text-transform:uppercase;letter-spacing:.05em;}
-.nb .ni{font-size:19px;}
-.nb.active{color:var(--acc);}
+/* ── SECTION HEADERS ── */
+.sec{margin:16px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--acc);display:flex;align-items:center;gap:8px;}
+.sec-t{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--acc);}
 
-/* TABS */
-.tab{display:none;}.tab.active{display:block;}
+/* ── CARDS ── */
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:10px;}
 
-/* SECTION HEADER */
-.sec-hd{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--acc);margin:14px 0 8px;padding-left:2px;}
-
-/* CARDS */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;}
-
-/* FORM */
+/* ── FORM ELEMENTS ── */
 label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px;}
-input,select,textarea{width:100%;padding:9px 11px;background:var(--s2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:13px;font-weight:600;outline:none;appearance:none;-webkit-appearance:none;font-family:inherit;}
+input,select,textarea{width:100%;padding:9px 11px;background:var(--s2);border:1px solid var(--bdr);border-radius:9px;color:var(--txt);font-size:13px;font-weight:600;outline:none;appearance:none;-webkit-appearance:none;font-family:inherit;}
 input:focus,select:focus,textarea:focus{border-color:var(--acc);}
 textarea{resize:vertical;line-height:1.5;}
 select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%2364748b' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:32px;}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
-.mb6{margin-bottom:6px;}
-.mb10{margin-bottom:10px;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;}
+.mb8{margin-bottom:8px;}
+.mb12{margin-bottom:12px;}
 
-/* TEAM BLOCK */
-.team-blk{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;}
-.team-hd{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
-.tdot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
-.tname{font-size:12px;font-weight:800;color:var(--text);}
-
-/* PROGRESS SLOT */
-.slot{border-left:3px solid var(--acc);padding-left:10px;margin-bottom:10px;}
-.slot-time{font-size:11px;font-weight:800;color:var(--acc);margin-bottom:6px;}
-.slot-time.midday{color:var(--blue);border-color:var(--blue);}
-.slot-time.eod{color:var(--green);border-color:var(--green);}
-.slot4{display:grid;grid-template-columns:1fr 70px 60px 50px;gap:6px;margin-top:6px;}
-.slot4 input{padding:7px 9px;font-size:12px;}
-
-/* OUTPUT TABLE */
-.out-hd{display:grid;grid-template-columns:1fr 60px 55px 75px 30px;gap:5px;margin-bottom:5px;padding:0 2px;}
-.out-hd span{font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);}
-.out-row{display:grid;grid-template-columns:1fr 60px 55px 75px 30px;gap:5px;margin-bottom:5px;align-items:center;}
-.out-row input,.out-row select{padding:7px 8px;font-size:12px;}
-.del{width:28px;height:28px;background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--red);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-
-/* VOICE + BUTTONS */
-.rec-btn{display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:9px;color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px;}
-.rec-btn.on{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.35);color:var(--red);animation:blink 1s infinite;}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.55}}
-.btn{padding:10px 16px;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;border:none;font-family:inherit;}
+/* ── BUTTONS ── */
+.btn{padding:10px 16px;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;border:none;font-family:inherit;transition:opacity .15s;}
+.btn:active{opacity:.7;}
 .btn-acc{background:var(--acc);color:#1a1d27;width:100%;}
-.btn-ghost{background:var(--s2);border:1px solid var(--border);color:var(--text);}
+.btn-ghost{background:var(--s2);border:1px solid var(--bdr);color:var(--txt);}
+.btn-green{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:var(--green);}
+.btn-red{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--red);}
+.btn-blue{background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);color:var(--blue);}
 .btn-sm{padding:6px 11px;font-size:11px;border-radius:7px;width:auto;}
-.btns-row{display:flex;gap:6px;margin-top:8px;}
+.btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
 
-/* HISTORY */
-.log-card{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px;margin-bottom:7px;position:relative;}
-.log-dt{font-size:10px;font-weight:800;color:var(--acc);margin-bottom:3px;}
-.log-body{font-size:11px;color:var(--muted);line-height:1.6;}
-.log-del{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;}
+/* ── TEAM BLOCK ── */
+.team-blk{background:var(--s2);border:1px solid var(--bdr);border-radius:11px;padding:12px;margin-bottom:8px;}
+.team-hd{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.tdot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.tname{font-size:13px;font-weight:800;color:var(--txt);}
+.tact{margin-left:auto;display:flex;gap:6px;}
 
-/* PROGRAMME */
-.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px;}
-.tile{background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:9px;text-align:center;}
-.tile-v{font-size:19px;font-weight:900;color:var(--text);line-height:1;}
-.tile-l{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:3px;}
-.pbar-wrap{background:var(--border);border-radius:4px;height:5px;overflow:hidden;margin-bottom:6px;}
-.pbar{height:100%;border-radius:4px;background:var(--green);}
-.zcard{background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:11px 13px;margin-bottom:7px;border-left:4px solid var(--acc);}
-.zcard.zdone{border-left-color:var(--green);opacity:.5;}
-.zcard.zon{border-left-color:var(--blue);}
-.zn{font-size:13px;font-weight:800;color:var(--text);margin-bottom:1px;}
-.zm{font-size:10px;color:var(--muted);margin-bottom:6px;}
-.task-row{display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;}
-.task-row:last-child{border:none;}
-.chk{width:17px;height:17px;border-radius:4px;border:2px solid var(--border);background:none;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;}
-.chk.ck{background:var(--green);border-color:var(--green);}
-.tn{flex:1;color:var(--text);font-weight:600;}
-.tn.ck{text-decoration:line-through;color:var(--muted);}
-.test{font-size:9px;color:var(--muted);white-space:nowrap;}
-.tgang{font-size:10px;font-weight:800;padding:2px 8px;border-radius:5px;cursor:pointer;background:var(--surface);border:1px solid var(--border);color:var(--muted);white-space:nowrap;}
-.tgang.ga{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3);color:var(--acc);}
-.tgang.gb{background:rgba(56,189,248,.12);border-color:rgba(56,189,248,.3);color:var(--blue);}
-.tgang.gc{background:rgba(167,139,250,.12);border-color:rgba(167,139,250,.3);color:var(--purple);}
+/* ── TIME SLOT ── */
+.slot{border-left:3px solid var(--acc);padding-left:10px;margin-bottom:10px;}
+.slot.midday{border-color:var(--blue);}
+.slot.eod{border-color:var(--green);}
+.slot-t{font-size:10px;font-weight:900;color:var(--acc);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;}
+.slot.midday .slot-t{color:var(--blue);}
+.slot.eod .slot-t{color:var(--green);}
+.slot-grid{display:grid;grid-template-columns:1fr 80px 55px;gap:6px;margin-top:6px;}
+.slot-grid input,.slot-grid textarea{padding:7px 9px;font-size:12px;}
 
-.toast{position:fixed;bottom:65px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:8px 16px;border-radius:18px;font-size:12px;font-weight:800;z-index:9999;pointer-events:none;opacity:0;transition:opacity .3s;white-space:nowrap;}
+/* ── VOICE BUTTON ── */
+.mic-btn{display:flex;align-items:center;gap:7px;padding:8px 12px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:8px;color:var(--blue);font-size:11px;font-weight:700;cursor:pointer;width:100%;margin-bottom:6px;font-family:inherit;}
+.mic-btn.on{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.3);color:var(--red);animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.55}}
+
+/* ── CHECKLIST ── */
+.check-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--bdr);cursor:pointer;}
+.check-item:last-child{border:none;}
+.chk-box{width:22px;height:22px;border-radius:6px;border:2px solid var(--bdr);background:none;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s;margin-top:1px;}
+.chk-box.on{background:var(--green);border-color:var(--green);}
+.chk-lbl{font-size:12px;font-weight:600;color:var(--txt);line-height:1.4;flex:1;}
+.chk-counter{font-size:28px;font-weight:900;color:var(--txt);text-align:center;margin-bottom:10px;}
+.chk-counter span{font-size:14px;color:var(--muted);font-weight:600;}
+
+/* ── NOISE READINGS ── */
+.noise-row{display:grid;grid-template-columns:100px 1fr 30px;gap:6px;align-items:center;margin-bottom:6px;}
+.noise-row input{padding:7px 9px;font-size:13px;}
+.del-btn{width:28px;height:28px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--red);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+
+/* ── ITEMS TABLE ── */
+.item-row{display:grid;grid-template-columns:65px 1fr 100px 28px;gap:5px;align-items:center;margin-bottom:5px;}
+.item-row input{padding:7px 8px;font-size:12px;}
+
+/* ── PLANT CHECKS ── */
+.plant-chk{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--s2);border:1px solid var(--bdr);border-radius:8px;margin-bottom:6px;}
+.plant-lbl{flex:1;font-size:12px;font-weight:700;color:var(--txt);}
+.plant-tick{width:28px;height:28px;border-radius:6px;border:2px solid var(--bdr);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.plant-tick.on{background:var(--green);border-color:var(--green);}
+
+/* ── COMMS CHECKS ── */
+.comm-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bdr);cursor:pointer;}
+.comm-row:last-child{border:none;}
+
+/* ── HISTORY ── */
+.hist-card{background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:12px;margin-bottom:8px;position:relative;}
+.hist-dt{font-size:10px;font-weight:800;color:var(--acc);margin-bottom:3px;}
+.hist-body{font-size:11px;color:var(--muted);line-height:1.6;}
+.hist-del{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;}
+
+/* ── STATUS / TOAST ── */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:9px 18px;border-radius:18px;font-size:12px;font-weight:800;z-index:9999;pointer-events:none;opacity:0;transition:opacity .3s;white-space:nowrap;}
 .toast.show{opacity:1;}
+.toast.err{background:var(--red);}
 
-.empty{text-align:center;padding:24px;color:var(--muted);}
+/* ── LOCK SCREEN ── */
+.lock{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+.lock-logo{width:60px;height:60px;background:var(--acc);border-radius:16px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#1a1d27;font-size:22px;margin-bottom:20px;}
+.lock-t{font-size:20px;font-weight:900;margin-bottom:4px;}
+.lock-s{font-size:12px;color:var(--muted);margin-bottom:24px;}
+.lock input{padding:12px;font-size:16px;border-radius:10px;margin-bottom:8px;text-align:center;}
+.lock .btn{margin-top:4px;}
+
+/* ── BOTTOM NAV ── */
+.bnav{background:var(--surf);border-top:1px solid var(--bdr);display:flex;padding-bottom:env(safe-area-inset-bottom);position:sticky;bottom:0;z-index:100;}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;background:none;border:none;color:var(--muted);font-size:9px;font-weight:800;cursor:pointer;gap:3px;text-transform:uppercase;letter-spacing:.05em;}
+.nb .ni{font-size:20px;}
+.nb.active{color:var(--acc);}
+
+.tab{display:none;}.tab.active{display:block;}
+
+.empty{text-align:center;padding:32px;color:var(--muted);}
+
+/* ── AI CORRECTION DIFF ── */
+.diff-box{background:var(--s2);border:1px solid var(--bdr);border-radius:9px;padding:10px;margin-top:6px;}
+.diff-orig{color:var(--red);text-decoration:line-through;font-size:11px;}
+.diff-new{color:var(--green);font-size:12px;font-weight:700;margin-top:4px;}
+.diff-btns{display:flex;gap:6px;margin-top:8px;}
 </style>
 </head>
 <body>
 
-<!-- Header -->
+<!-- ══════════════ LOCK SCREEN ══════════════ -->
+<div class="lock" id="lock-screen">
+  <div class="lock-logo">DGC</div>
+  <div class="lock-t">DGC Daily Sheet</div>
+  <div class="lock-s">Enter your name and the site password</div>
+  <div style="width:100%;max-width:340px;">
+    <div style="margin-bottom:8px;">
+      <label>Your name</label>
+      <input type="text" id="login-name" placeholder="e.g. David Smith" autocomplete="off" list="names-list">
+      <datalist id="names-list"></datalist>
+    </div>
+    <div style="margin-bottom:14px;">
+      <label>Site password</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn btn-acc" onclick="doLogin()">Enter Site →</button>
+  </div>
+</div>
+
+<!-- ══════════════ MAIN APP ══════════════ -->
+<div id="app" style="display:none;">
+
 <div class="hdr">
   <div class="logo">DGC</div>
-  <div><div class="hdr-t">DGC Daily Log</div><div class="hdr-s">Ballasalla Phase 4</div></div>
-  <div class="hdr-d" id="hd"></div>
+  <div>
+    <div class="hdr-t">DGC Daily Sheet</div>
+    <div class="hdr-s" id="hdr-sub">Ballasalla Phase 4</div>
+  </div>
+  <div class="hdr-r">
+    <span class="badge" id="save-badge" style="display:none;">Saved ✓</span>
+    <span id="user-badge" class="badge amber"></span>
+  </div>
 </div>
 
 <div class="main">
 
-  <!-- ═══════════════════ DAILY LOG ═══════════════════ -->
+  <!-- ══════════ DAILY LOG TAB ══════════ -->
   <div class="tab active" id="tab-log">
 
-    <!-- Basic info -->
-    <div class="sec-hd">📋 DGC Daily Log</div>
-    <div class="card">
-      <div class="row2 mb10">
-        <div><label>Date</label><input type="date" id="l-date"></div>
-        <div><label>Site Manager</label><input type="text" id="l-mgr" placeholder="Name"></div>
+    <!-- A: Header info -->
+    <div class="sec"><span class="sec-t">📋 DGC Form DGC-01/02</span></div>
+    <div class="card g2 mb8" style="gap:8px;">
+      <div><label>Date</label><input type="date" id="f-date"></div>
+      <div><label>Site Manager</label><input type="text" id="f-mgr" placeholder="Name" list="names-list"></div>
+      <div><label>Weather</label>
+        <select id="f-weather">
+          <option value="">Select…</option>
+          <option>Fine &amp; dry</option><option>Overcast</option><option>Light rain</option>
+          <option>Heavy rain</option><option>Wind &amp; rain</option><option>Hot &amp; sunny</option>
+          <option>Cold &amp; dry</option><option>Frost</option>
+        </select>
       </div>
-      <div class="row2">
-        <div>
-          <label>Weather</label>
-          <select id="l-weather">
+      <div><label>Temp (°C)</label>
+        <div style="display:flex;gap:5px;">
+          <input type="number" id="f-temp" placeholder="°C" style="flex:1;">
+          <button class="btn btn-blue btn-sm" onclick="fetchWeather()" title="Get live weather from Ronaldsway">🌤</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- B: Morning briefing -->
+    <div class="sec"><span class="sec-t">🌅 Morning Briefing</span></div>
+    <div class="card">
+      <div class="g2 mb8">
+        <div><label>Time held</label><input type="time" id="f-brief-time" value="07:30"></div>
+        <div><label>Visitors / Inductions</label><input type="text" id="f-visitors" placeholder="None / names"></div>
+      </div>
+      <div class="mb8">
+        <label>Topics covered</label>
+        <button class="mic-btn" id="mic-topics" onclick="toggleMic('topics','f-topics')"><span>🎤</span>Dictate topics</button>
+        <textarea id="f-topics" rows="2" placeholder="Toolbox talk topics, hazards, works plan for today…"></textarea>
+        <div id="diff-topics"></div>
+      </div>
+      <div>
+        <label>Key risks for today</label>
+        <button class="mic-btn" id="mic-risks" onclick="toggleMic('risks','f-risks')"><span>🎤</span>Dictate risks</button>
+        <textarea id="f-risks" rows="2" placeholder="e.g. Deep excavation Plot 11, HV cable Zone 9, live road…"></textarea>
+        <div id="diff-risks"></div>
+      </div>
+    </div>
+
+    <!-- C: Teams -->
+    <div class="sec" style="justify-content:space-between;">
+      <span class="sec-t">👷 Teams &amp; Daily Output</span>
+      <button class="btn btn-ghost btn-sm" onclick="addTeam()">+ Add Team</button>
+    </div>
+    <div id="teams-container"></div>
+
+    <!-- D: Noise readings -->
+    <div class="sec"><span class="sec-t">📊 Noise Readings</span></div>
+    <div class="card">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">3 spot readings required per day. Time + dB level.</div>
+      <div style="font-size:10px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:100px 1fr 30px;gap:6px;padding:0 2px;margin-bottom:4px;"><span>Time</span><span>Level (dB)</span><span></span></div>
+      <div id="noise-rows"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addNoise()">+ Add reading</button>
+    </div>
+
+    <!-- E: EOD Checklist -->
+    <div class="sec"><span class="sec-t">🔒 End of Day Security Checklist</span></div>
+    <div class="card">
+      <div class="chk-counter"><span id="chk-count">0</span> / 15 <span>items complete</span></div>
+      <div id="eod-checklist"></div>
+    </div>
+
+    <!-- F: Observations -->
+    <div class="sec"><span class="sec-t">⚠️ Observations / Dangers / Issues</span></div>
+    <div class="card">
+      <button class="mic-btn" id="mic-obs" onclick="toggleMic('obs','f-obs')"><span>🎤</span>Dictate observations</button>
+      <textarea id="f-obs" rows="3" placeholder="Near misses, damage, unusual ground conditions, anything worth noting…"></textarea>
+      <div id="diff-obs"></div>
+    </div>
+
+    <!-- G: Items required -->
+    <div class="sec"><span class="sec-t">📦 Items Required for Tomorrow</span></div>
+    <div class="card">
+      <div style="font-size:10px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:65px 1fr 100px 28px;gap:5px;margin-bottom:5px;padding:0 2px;"><span>Qty</span><span>Item / Description</span><span>Source</span><span></span></div>
+      <div id="items-rows"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addItem()">+ Add item</button>
+    </div>
+
+    <!-- H: Comms -->
+    <div class="sec"><span class="sec-t">📱 Comms &amp; Tomorrow's Plan</span></div>
+    <div class="card" id="comms-section"></div>
+
+    <!-- I: EOD Declaration -->
+    <div class="sec"><span class="sec-t">✅ EOD Declaration</span></div>
+    <div class="card">
+      <div class="g2 mb12">
+        <div><label>Submitted by</label><input type="text" id="f-submit-name" placeholder="Name" list="names-list"></div>
+        <div><label>Everything complete?</label>
+          <select id="f-complete">
             <option value="">Select…</option>
-            <option>Fine & dry</option>
-            <option>Overcast</option>
-            <option>Light rain</option>
-            <option>Heavy rain</option>
-            <option>Wind & rain</option>
-            <option>Cold & dry</option>
-            <option>Hot & sunny</option>
-            <option>Frost</option>
+            <option value="yes">Yes — all done</option>
+            <option value="no">No — outstanding items</option>
           </select>
         </div>
-        <div><label>Temperature (°C)</label><input type="number" id="l-temp" placeholder="e.g. 14"></div>
       </div>
-    </div>
-
-    <!-- Teams & Allocation -->
-    <div class="sec-hd">👷 Teams &amp; Allocation</div>
-    <div class="team-blk">
-      <div class="team-hd"><div class="tdot" style="background:#f59e0b"></div><div class="tname">Team A — Lead + Operatives</div></div>
-      <input type="text" id="t-a" placeholder="e.g. David Smith (lead) — John, Mike, Carl, Cossie">
-    </div>
-    <div class="team-blk">
-      <div class="team-hd"><div class="tdot" style="background:#38bdf8"></div><div class="tname">Team B — Lead + Operatives</div></div>
-      <input type="text" id="t-b" placeholder="e.g. Harry Harrison (lead) — Tom, Brad, Josef">
-    </div>
-    <div class="team-blk">
-      <div class="team-hd"><div class="tdot" style="background:#a78bfa"></div><div class="tname">Team C — Lead + Operatives</div></div>
-      <input type="text" id="t-c" placeholder="e.g. Lewis (lead) — 3 operatives">
-    </div>
-
-    <!-- Morning Briefing -->
-    <div class="sec-hd">🌅 Morning Briefing</div>
-    <div class="card">
-      <div class="row2 mb10">
-        <div><label>Time held</label><input type="time" id="b-time"></div>
-        <div><label>Visitors / Inductions</label><input type="text" id="b-visitors" placeholder="Names or none"></div>
+      <div id="outstanding-div" style="display:none;margin-bottom:12px;">
+        <label>Outstanding items / reason</label>
+        <textarea id="f-outstanding" rows="2" placeholder="What wasn't done and why…"></textarea>
       </div>
-      <div class="mb10"><label>Topics covered</label><input type="text" id="b-topics" placeholder="e.g. HV permit, hot works, zone access…"></div>
-      <div><label>Key risks identified</label><input type="text" id="b-risks" placeholder="e.g. Live HV cable Zone 9, excavation depth…"></div>
-    </div>
 
-    <!-- Progress Markers -->
-    <div class="sec-hd">📍 Progress Markers</div>
-    <div class="card">
-
-      <div class="slot">
-        <div class="slot-time">10:00 — Morning</div>
-        <label>Work done / Progress</label>
-        <textarea id="p-am" rows="3" placeholder="What has been completed this morning across all gangs…"></textarea>
-        <div class="slot4">
-          <div><label>Issues / Blockers</label><input type="text" id="p-am-iss" placeholder="Any delays…"></div>
-          <div><label>% Done</label><input type="number" id="p-am-pct" placeholder="%" min="0" max="100"></div>
-          <div><label>Zone</label><input type="text" id="p-am-zone" placeholder="e.g. G"></div>
-          <div><label>Initials</label><input type="text" id="p-am-init" placeholder="DS"></div>
+      <!-- Yesterday sign-off prompt -->
+      <div id="yesterday-banner" style="display:none;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:9px;padding:12px;margin-bottom:12px;">
+        <div style="font-size:12px;font-weight:800;color:var(--acc);">⚠️ Yesterday's EOD — have you reviewed it?</div>
+        <div style="font-size:11px;color:var(--muted);margin:4px 0 8px;">Before submitting today, confirm yesterday's end of day was checked.</div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-green btn-sm" onclick="confirmYesterday(true)">✓ Yes, checked &amp; fine</button>
+          <button class="btn btn-ghost btn-sm" onclick="confirmYesterday(false)">Issues — noted below</button>
         </div>
       </div>
 
-      <div class="slot" style="border-left-color:var(--blue);">
-        <div class="slot-time" style="color:var(--blue);">13:00 — Midday</div>
-        <label>Work done / Progress</label>
-        <textarea id="p-mid" rows="3" placeholder="Midday update — progress, any issues since morning…"></textarea>
-        <div class="slot4">
-          <div><label>Issues / Blockers</label><input type="text" id="p-mid-iss" placeholder="Any delays…"></div>
-          <div><label>% Done</label><input type="number" id="p-mid-pct" placeholder="%" min="0" max="100"></div>
-          <div><label>Zone</label><input type="text" id="p-mid-zone" placeholder="e.g. H"></div>
-          <div><label>Initials</label><input type="text" id="p-mid-init" placeholder="DS"></div>
-        </div>
-      </div>
-
-      <div class="slot" style="border-left-color:var(--green);">
-        <div class="slot-time" style="color:var(--green);">17:00 — End of Day</div>
-        <label>Work done / Progress</label>
-        <textarea id="p-eod" rows="3" placeholder="End of day summary — total output, signed off for the day…"></textarea>
-        <div class="slot4">
-          <div><label>Issues / Blockers</label><input type="text" id="p-eod-iss" placeholder="Outstanding…"></div>
-          <div><label>% Done</label><input type="number" id="p-eod-pct" placeholder="%" min="0" max="100"></div>
-          <div><label>Zone</label><input type="text" id="p-eod-zone" placeholder="e.g. I"></div>
-          <div><label>Initials</label><input type="text" id="p-eod-init" placeholder="DS"></div>
-        </div>
-      </div>
+      <button class="btn btn-acc" onclick="submitLog()">📤 Submit Daily Sheet</button>
     </div>
 
-    <!-- Gang Output Record -->
-    <div class="sec-hd">📊 Gang Output Record</div>
+    <!-- Site Diary -->
+    <div class="sec"><span class="sec-t">📓 Site Diary / Manager Notes</span></div>
     <div class="card">
-      <div class="out-hd"><span>Activity</span><span>Qty</span><span>Unit</span><span>Gang/Zone</span><span></span></div>
-      <div id="out-rows"></div>
-      <button class="btn btn-ghost btn-sm" onclick="addOut()" style="margin-bottom:4px;">+ Add row</button>
+      <button class="mic-btn" id="mic-diary" onclick="toggleMic('diary','f-diary')"><span>🎤</span>Record site diary — tap &amp; speak</button>
+      <textarea id="f-diary" rows="5" placeholder="Anything else — manager diary, voice notes, additional context…"></textarea>
+      <div id="diff-diary"></div>
     </div>
 
-    <!-- Site Diary + Voice -->
-    <div class="sec-hd">📓 Site Diary</div>
-    <div class="card">
-      <button class="rec-btn" id="rec-btn" onclick="toggleVoice()">
-        <span id="rec-icon">🎤</span>
-        <span id="rec-lbl">Record — tap and speak your site diary</span>
-      </button>
-      <textarea id="diary" rows="6" placeholder="Site diary — speak or type. Record events, instructions received, problems, visitors, any issues that may become claims…"></textarea>
-      <div class="btns-row">
-        <button class="btn btn-acc" onclick="saveLog()">💾 Save Log</button>
-        <button class="btn btn-ghost btn-sm" onclick="clearForm()">Clear</button>
-      </div>
-    </div>
+  </div><!-- /tab-log -->
 
-    <!-- History -->
-    <div class="sec-hd">📚 Recent Log Entries <span id="log-cnt" style="background:var(--acc);color:#1a1d27;border-radius:6px;padding:1px 7px;font-size:10px;font-weight:900;margin-left:4px;">0</span></div>
-    <div id="log-hist"></div>
-    <div style="height:16px;"></div>
-
+  <!-- ══════════ HISTORY TAB ══════════ -->
+  <div class="tab" id="tab-hist">
+    <div class="sec"><span class="sec-t">📚 Past Submissions</span></div>
+    <div id="hist-list"></div>
   </div>
 
-  <!-- ═══════════════════ PROGRAMME ═══════════════════ -->
-  <div class="tab" id="tab-prog">
-    <div class="sec-hd">📐 What's Left — Ballasalla Phase 4</div>
+</div><!-- /main -->
 
-    <div class="tiles" id="prog-tiles"></div>
-
-    <div class="card" style="padding:11px 13px;margin-bottom:8px;">
-      <div style="font-size:12px;font-weight:800;margin-bottom:3px;">Overall progress</div>
-      <div class="pbar-wrap"><div class="pbar" id="ov-bar" style="width:71%"></div></div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-weight:700;"><span>71% complete</span><span>Target: 3 Jul 2026</span></div>
-    </div>
-
-    <div style="font-size:11px;color:var(--muted);margin-bottom:8px;padding:0 2px;">Tap gang badge to assign. Tick task when done. Shows estimated days remaining per task.</div>
-
-    <div id="zone-list"></div>
-    <div style="height:16px;"></div>
-  </div>
-
-</div>
-
-<!-- Bottom Nav -->
 <div class="bnav">
-  <button class="nb active" id="nav-log" onclick="sw('log',this)">
-    <span class="ni">📋</span>Daily Log
-  </button>
-  <button class="nb" id="nav-prog" onclick="sw('prog',this)">
-    <span class="ni">📐</span>Programme
-  </button>
+  <button class="nb active" id="nav-log" onclick="sw('log',this)"><span class="ni">📋</span>Daily Sheet</button>
+  <button class="nb" id="nav-hist" onclick="sw('hist',this)"><span class="ni">📚</span>History</button>
 </div>
+
+</div><!-- /app -->
 
 <div class="toast" id="toast"></div>
 
 <script>
-var LS='siteapp_log_v2', LP='siteapp_prog_v2';
-function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
-function ld(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
-function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2200);}
-function today(){return new Date().toISOString().slice(0,10);}
-function fmtD(s){if(!s)return'—';return new Date(s+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});}
+// ══════════════════════════════════════════════════════════════════
+// SUPABASE INIT
+// ══════════════════════════════════════════════════════════════════
+var sb = null;
+try {
+  if (SUPA_URL !== 'PASTE_SUPABASE_URL_HERE') {
+    sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+  }
+} catch(e) {}
 
-// Init
-(function(){
-  var d=new Date();
-  document.getElementById('hd').textContent=d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'long'});
-  document.getElementById('l-date').value=today();
-  addOut();addOut();addOut();
-  renderHist();
+// ══════════════════════════════════════════════════════════════════
+// STAFF NAMES (loaded from Obsidian data + defaults)
+// ══════════════════════════════════════════════════════════════════
+var STAFF_NAMES = [
+  // From DGC Obsidian / wages data — update as needed
+  'David Smith','Harry Harrison','Ash Aziz',
+  'Bradley','Lewis','Cossie','Dean','Craig',
+  'Josef','Brad','Tom','Mike','Carl','John',
+  'Danny','Sam','Chris'
+];
+
+// DGC construction vocabulary for voice AI correction
+var DGC_VOCAB = [
+  // Drain sizes
+  '110mm','150mm','225mm','300mm',
+  // Drain components
+  'chamber','manhole','backdrop','gully','invert','soffit','cover level',
+  'bedding','haunching','surround','pipe run','lateral',
+  // Zone/section refs
+  'S4.1','S4.2','S4.3','S4.4','S4.5','S4.6',
+  'F4.1','F4.2','F4.3','F4.4','F4.5',
+  'MH','MHS','HV cable','HV permit',
+  // Activities
+  'excavation','backfill','compaction','reinstatement','kerbing','subbase',
+  'tarmac','concrete','footing','slab','blockwork','scaffold',
+  'LOLER','PUWER','H&S','toolbox talk','induction',
+  // Plant
+  'excavator','dumper','compactor','telehandler','generator','pump',
+  // People (so it doesn't mishear)
+  ...STAFF_NAMES,
+  // DGC specific
+  'Dandara','Ballasalla','Glenfaba','AFP','EOT','variation','prelims'
+];
+
+// EOD 15-item checklist
+var EOD_ITEMS = [
+  {k:'site_clean',      l:'Site &amp; compound clean — presentable'},
+  {k:'bins_emptied',    l:'Bins emptied'},
+  {k:'floors_swept',    l:'Floors swept'},
+  {k:'welfare_clean',   l:'Welfare facilities clean &amp; tidy'},
+  {k:'tools_stored',    l:'All tools stored neatly / locked away'},
+  {k:'materials_safe',  l:'Materials stacked safely'},
+  {k:'fall_protect',    l:'Fall protection around open trenches / excavations'},
+  {k:'fencing_secure',  l:'Fencing / Heras secure'},
+  {k:'plant_immob',     l:'Plant immobilised, keys removed'},
+  {k:'keys_locked',     l:'All plant keys locked in blue canteen'},
+  {k:'cabins_locked',   l:'All cabins locked'},
+  {k:'generator_off',   l:'Generator switched off'},
+  {k:'site_hs',         l:'Site ready for unannounced H&amp;S inspection'},
+  {k:'noise_readings',  l:'Daily noise readings completed (3 spot readings)'},
+  {k:'timesheets',      l:'Timesheets / Discovery sheets filled in (if required)'}
+];
+
+var COMMS_ITEMS = [
+  {k:'whatsapp', l:'Site condition images sent to client WhatsApp group'},
+  {k:'eod_filed',l:'EOD checklist filed in site office'},
+  {k:'plan_ready',l:'Daily Plan &amp; Noise Sheet completed for tomorrow'},
+  {k:'plan_briefed',l:'Plan briefed / ready for AM toolbox talk'}
+];
+
+// TEAM COLOURS
+var TEAM_COLS = ['#f59e0b','#38bdf8','#a78bfa','#22c55e','#fb923c','#ec4899','#14b8a6'];
+var TEAM_LETTERS = ['A','B','C','D','E','F','G'];
+
+// ══════════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════════
+var S = { userName:'', teams:[], eodChecks:{}, commsChecks:{}, noiseRows:0, itemRows:0 };
+var _mic = null, _micActive = null;
+
+// ══════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════
+(function init(){
+  // Populate datalist for name autocomplete
+  var dl = document.getElementById('names-list');
+  STAFF_NAMES.forEach(function(n){ var o=document.createElement('option'); o.value=n; dl.appendChild(o); });
+
+  // Set today's date
+  document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+
+  // Build EOD checklist
+  var cl = document.getElementById('eod-checklist');
+  EOD_ITEMS.forEach(function(item){
+    S.eodChecks[item.k] = false;
+    var div = document.createElement('div');
+    div.className = 'check-item';
+    div.id = 'ci-'+item.k;
+    div.onclick = function(){ toggleCheck(item.k, div); };
+    div.innerHTML = '<div class="chk-box" id="chkb-'+item.k+'"></div><div class="chk-lbl">'+item.l+'</div>';
+    cl.appendChild(div);
+  });
+
+  // Build comms section
+  var cs = document.getElementById('comms-section');
+  COMMS_ITEMS.forEach(function(item){
+    S.commsChecks[item.k] = false;
+    var div = document.createElement('div');
+    div.className = 'comm-row';
+    div.onclick = function(){
+      S.commsChecks[item.k] = !S.commsChecks[item.k];
+      div.querySelector('.chk-box')[S.commsChecks[item.k]?'classList':'classList'][S.commsChecks[item.k]?'add':'remove']('on');
+      div.querySelector('.chk-box').textContent = S.commsChecks[item.k]?'✓':'';
+    };
+    div.innerHTML = '<div class="chk-box"></div><div class="chk-lbl">'+item.l+'</div>';
+    cs.appendChild(div);
+  });
+
+  // Default 3 teams
+  addTeam(); addTeam(); addTeam();
+
+  // Default noise rows
+  addNoise(); addNoise(); addNoise();
+
+  // Default item rows
+  addItem(); addItem();
+
+  // Outstanding toggle
+  document.getElementById('f-complete').addEventListener('change', function(){
+    document.getElementById('outstanding-div').style.display = this.value==='no'?'':'none';
+  });
+
+  // Check if yesterday needs review
+  checkYesterdayReview();
 })();
 
-// Tab switch
-function sw(name,btn){
+// ══════════════════════════════════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════════════════════════════════
+function doLogin(){
+  var name = document.getElementById('login-name').value.trim();
+  var pass = document.getElementById('login-pass').value;
+  if (!name) { toast('Enter your name','err'); return; }
+  if (pass !== APP_PASS) { toast('Incorrect password','err'); return; }
+  S.userName = name;
+  document.getElementById('user-badge').textContent = name;
+  document.getElementById('f-mgr').value = name;
+  document.getElementById('f-submit-name').value = name;
+  document.getElementById('lock-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  loadHistory();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════════════════════════
+function sw(name, btn){
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
   document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('active');});
   document.getElementById('tab-'+name).classList.add('active');
   btn.classList.add('active');
-  if(name==='prog')renderProg();
-  if(name==='log')renderHist();
+  if (name==='hist') loadHistory();
 }
 
-// Output rows
-var _oc=0;
-function addOut(a,q,u,g){
-  _oc++;
-  var id='or'+_oc;
-  var row=document.createElement('div');
-  row.className='out-row';row.id=id;
-  row.innerHTML=
-    '<input type="text" placeholder="Activity description" value="'+(a||'')+'">'+
-    '<input type="number" placeholder="Qty" min="0" step="0.5" value="'+(q||'')+'">'+
-    '<input type="text" placeholder="m/m²/nr" value="'+(u||'')+'">'+
-    '<input type="text" placeholder="Gang A / G" value="'+(g||'')+'">'+
-    '<button class="del" onclick="this.closest(\'.out-row\').remove()">×</button>';
-  document.getElementById('out-rows').appendChild(row);
-}
-function getOut(){
-  var rows=document.querySelectorAll('.out-row');
-  var out=[];
-  rows.forEach(function(r){
-    var ins=r.querySelectorAll('input');
-    var act=ins[0].value.trim();
-    if(act) out.push({act:act,qty:ins[1].value.trim(),unit:ins[2].value.trim(),gang:ins[3].value.trim()});
-  });
-  return out;
+// ══════════════════════════════════════════════════════════════════
+// TEAMS
+// ══════════════════════════════════════════════════════════════════
+function addTeam(){
+  var idx = S.teams.length;
+  var letter = TEAM_LETTERS[idx] || ('T'+(idx+1));
+  var col = TEAM_COLS[idx] || '#94a3b8';
+  var team = { letter:letter, collapsed:false };
+  S.teams.push(team);
+
+  var div = document.createElement('div');
+  div.className = 'team-blk';
+  div.id = 'team-'+idx;
+  div.innerHTML =
+    '<div class="team-hd">' +
+      '<div class="tdot" style="background:'+col+'"></div>' +
+      '<div class="tname">Team '+letter+'</div>' +
+      '<div class="tact">' +
+        '<button class="btn btn-ghost btn-sm" onclick="toggleTeam('+idx+')">▾</button>' +
+        '<button class="btn btn-red btn-sm" onclick="removeTeam('+idx+')">✕</button>' +
+      '</div>' +
+    '</div>' +
+    '<div id="team-body-'+idx+'">' +
+      // Names
+      '<div style="margin-bottom:8px;">' +
+        '<label>Lead / Foreman</label>' +
+        '<input type="text" id="t'+idx+'-lead" placeholder="Name" list="names-list">' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;" id="t'+idx+'-ops">' +
+        opInput(idx,0) + opInput(idx,1) + opInput(idx,2) + opInput(idx,3) +
+      '</div>' +
+      // Plant check
+      '<div class="plant-chk mb8">' +
+        '<div class="plant-lbl">Team '+letter+' — plant checks done</div>' +
+        '<div style="display:flex;align-items:center;gap:6px;">' +
+          '<div class="plant-tick" id="ptick-'+idx+'" onclick="togglePlantCheck('+idx+')"></div>' +
+          '<input type="text" id="t'+idx+'-initials" placeholder="Initials" style="width:60px;">' +
+        '</div>' +
+      '</div>' +
+      // Time slots
+      timeSlot(idx,'am','10:00 — Morning','') +
+      timeSlot(idx,'mid','13:00 — Midday','midday') +
+      timeSlot(idx,'eod','17:00 — End of Day','eod') +
+    '</div>';
+
+  document.getElementById('teams-container').appendChild(div);
 }
 
-// Voice
-var _rec=null,_recActive=false;
-function toggleVoice(){
-  if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){
-    toast('⚠ Voice not supported — try Chrome on iOS');return;
+function opInput(tidx, opIdx){
+  return '<div><label>Operative '+(opIdx+1)+'</label><input type="text" id="t'+tidx+'-op'+opIdx+'" placeholder="Name" list="names-list"></div>';
+}
+
+function timeSlot(tidx, slot, label, cls){
+  var slotId = 't'+tidx+'-'+slot;
+  return '<div class="slot '+(cls||'')+' mb8">' +
+    '<div class="slot-t">'+label+'</div>' +
+    '<div>' +
+      '<button class="mic-btn" id="mic-'+slotId+'" onclick="toggleMic(\''+slotId+'\',\''+slotId+'-prog\')"><span>🎤</span>Dictate progress</button>' +
+      '<textarea id="'+slotId+'-prog" rows="2" placeholder="Progress / work completed…"></textarea>' +
+      '<div id="diff-'+slotId+'"></div>' +
+    '</div>' +
+    '<div class="slot-grid">' +
+      '<div><label>Issues / Blockers</label><input type="text" id="'+slotId+'-iss" placeholder="Any issues…"></div>' +
+      '<div><label>% Done</label><input type="number" id="'+slotId+'-pct" placeholder="%" min="0" max="100"></div>' +
+      '<div><label>Initials</label><input type="text" id="'+slotId+'-init" placeholder="JS"></div>' +
+    '</div>' +
+  '</div>';
+}
+
+function toggleTeam(idx){
+  var body = document.getElementById('team-body-'+idx);
+  var btn = document.querySelector('#team-'+idx+' .btn-ghost.btn-sm');
+  var hidden = body.style.display==='none';
+  body.style.display = hidden?'':'none';
+  btn.textContent = hidden?'▾':'▸';
+}
+
+function removeTeam(idx){
+  if (!confirm('Remove Team '+TEAM_LETTERS[idx]+'?')) return;
+  var el = document.getElementById('team-'+idx);
+  if (el) el.remove();
+}
+
+function togglePlantCheck(idx){
+  var tick = document.getElementById('ptick-'+idx);
+  var on = tick.classList.toggle('on');
+  tick.textContent = on?'✓':'';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// NOISE READINGS
+// ══════════════════════════════════════════════════════════════════
+function addNoise(t, v){
+  S.noiseRows++;
+  var id = 'nr'+S.noiseRows;
+  var row = document.createElement('div');
+  row.className = 'noise-row'; row.id = id;
+  row.innerHTML =
+    '<input type="time" id="'+id+'-t" value="'+(t||'')+'" placeholder="Time">' +
+    '<input type="number" id="'+id+'-v" value="'+(v||'')+'" placeholder="dB level" min="0" max="140" step="0.1">' +
+    '<button class="del-btn" onclick="document.getElementById(\''+id+'\').remove()">×</button>';
+  document.getElementById('noise-rows').appendChild(row);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ITEMS REQUIRED
+// ══════════════════════════════════════════════════════════════════
+function addItem(q,it,src){
+  S.itemRows++;
+  var id = 'ir'+S.itemRows;
+  var row = document.createElement('div');
+  row.className = 'item-row'; row.id = id;
+  row.innerHTML =
+    '<input type="text" id="'+id+'-q" placeholder="Qty" value="'+(q||'')+'">' +
+    '<input type="text" id="'+id+'-i" placeholder="Item / Description" value="'+(it||'')+'">' +
+    '<input type="text" id="'+id+'-s" placeholder="Supplier" value="'+(src||'')+'">' +
+    '<button class="del-btn" onclick="document.getElementById(\''+id+'\').remove()">×</button>';
+  document.getElementById('items-rows').appendChild(row);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// EOD CHECKLIST
+// ══════════════════════════════════════════════════════════════════
+function toggleCheck(key, div){
+  S.eodChecks[key] = !S.eodChecks[key];
+  var box = document.getElementById('chkb-'+key);
+  if (S.eodChecks[key]){ box.classList.add('on'); box.textContent='✓'; }
+  else { box.classList.remove('on'); box.textContent=''; }
+  updateCheckCount();
+}
+function updateCheckCount(){
+  var done = Object.values(S.eodChecks).filter(Boolean).length;
+  document.getElementById('chk-count').textContent = done;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// VOICE / AI DICTATION
+// ══════════════════════════════════════════════════════════════════
+function toggleMic(micId, targetId){
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)){
+    toast('Voice not supported on this browser','err'); return;
   }
-  if(_recActive){stopRec();return;}
-  _recActive=true;
-  var btn=document.getElementById('rec-btn');
+  if (_micActive === micId){ stopMic(); return; }
+  if (_micActive) stopMic();
+  _micActive = micId;
+
+  var btn = document.getElementById('mic-'+micId);
   btn.classList.add('on');
-  document.getElementById('rec-icon').textContent='⏹';
-  document.getElementById('rec-lbl').textContent='Recording… tap to stop';
-  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  _rec=new SR();_rec.continuous=true;_rec.interimResults=true;_rec.lang='en-GB';
-  var final='',existing=document.getElementById('diary').value;
-  _rec.onresult=function(e){
-    var interim='';
-    for(var i=e.resultIndex;i<e.results.length;i++){
-      if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';
-      else interim+=e.results[i][0].transcript;
+  btn.querySelector('span').textContent = '⏹';
+
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  _mic = new SR();
+  _mic.continuous = true;
+  _mic.interimResults = true;
+  _mic.lang = 'en-GB';
+  // Feed construction vocabulary as grammar hints (supported in some browsers)
+  try {
+    var SGL = window.SpeechGrammarList || window.webkitSpeechGrammarList;
+    if (SGL) {
+      var gl = new SGL();
+      gl.addFromString('#JSGF V1.0; grammar dgc; public <term> = ' + DGC_VOCAB.join(' | ') + ';', 1);
+      _mic.grammars = gl;
     }
-    document.getElementById('diary').value=(existing?existing+' ':'')+(final+interim).trim();
+  } catch(e){}
+
+  var final = '', existing = document.getElementById(targetId).value;
+  _mic.onresult = function(e){
+    var interim = '';
+    for (var i = e.resultIndex; i < e.results.length; i++){
+      if (e.results[i].isFinal) final += e.results[i][0].transcript + ' ';
+      else interim += e.results[i][0].transcript;
+    }
+    document.getElementById(targetId).value = (existing ? existing + ' ' : '') + (final + interim).trim();
   };
-  _rec.onerror=_rec.onend=function(){stopRec();};
-  _rec.start();
-}
-function stopRec(){
-  if(_rec){try{_rec.stop();}catch(e){}}_rec=null;_recActive=false;
-  document.getElementById('rec-btn').classList.remove('on');
-  document.getElementById('rec-icon').textContent='🎤';
-  document.getElementById('rec-lbl').textContent='Record — tap and speak your site diary';
-}
-
-// Save log
-function saveLog(){
-  var date=document.getElementById('l-date').value||today();
-  var entry={
-    id:Date.now(), date:date,
-    mgr:document.getElementById('l-mgr').value.trim(),
-    weather:document.getElementById('l-weather').value,
-    temp:document.getElementById('l-temp').value,
-    teams:{
-      a:document.getElementById('t-a').value.trim(),
-      b:document.getElementById('t-b').value.trim(),
-      c:document.getElementById('t-c').value.trim()
-    },
-    briefing:{
-      time:document.getElementById('b-time').value,
-      visitors:document.getElementById('b-visitors').value.trim(),
-      topics:document.getElementById('b-topics').value.trim(),
-      risks:document.getElementById('b-risks').value.trim()
-    },
-    progress:{
-      am:{text:document.getElementById('p-am').value.trim(),iss:document.getElementById('p-am-iss').value.trim(),pct:document.getElementById('p-am-pct').value,zone:document.getElementById('p-am-zone').value.trim(),init:document.getElementById('p-am-init').value.trim()},
-      mid:{text:document.getElementById('p-mid').value.trim(),iss:document.getElementById('p-mid-iss').value.trim(),pct:document.getElementById('p-mid-pct').value,zone:document.getElementById('p-mid-zone').value.trim(),init:document.getElementById('p-mid-init').value.trim()},
-      eod:{text:document.getElementById('p-eod').value.trim(),iss:document.getElementById('p-eod-iss').value.trim(),pct:document.getElementById('p-eod-pct').value,zone:document.getElementById('p-eod-zone').value.trim(),init:document.getElementById('p-eod-init').value.trim()}
-    },
-    output:getOut(),
-    diary:document.getElementById('diary').value.trim()
+  _mic.onerror = _mic.onend = function(){
+    stopMic();
+    // After stopping, optionally run Claude correction
+    var txt = document.getElementById(targetId).value;
+    if (txt && CLAUDE_KEY !== 'PASTE_CLAUDE_API_KEY_HERE' && txt.length > 10) {
+      aiCorrect(txt, targetId, micId.replace('mic-',''));
+    }
   };
-  var logs=ld(LS,[]);
-  logs.unshift(entry);
-  sv(LS,logs);
-  clearForm();
-  renderHist();
-  toast('✓ Log saved — '+fmtD(date));
+  _mic.start();
 }
 
-function clearForm(){
-  ['l-mgr','l-temp','t-a','t-b','t-c','b-visitors','b-topics','b-risks',
-   'p-am','p-am-iss','p-am-pct','p-am-zone','p-am-init',
-   'p-mid','p-mid-iss','p-mid-pct','p-mid-zone','p-mid-init',
-   'p-eod','p-eod-iss','p-eod-pct','p-eod-zone','p-eod-init','diary'
-  ].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
-  document.getElementById('l-date').value=today();
-  document.getElementById('l-weather').value='';
-  document.getElementById('b-time').value='';
-  document.getElementById('out-rows').innerHTML='';_oc=0;
-  addOut();addOut();addOut();
+function stopMic(){
+  if (_mic){ try{ _mic.stop(); }catch(e){} _mic = null; }
+  if (_micActive){
+    var btn = document.getElementById('mic-'+_micActive);
+    if (btn){ btn.classList.remove('on'); btn.querySelector('span').textContent = '🎤'; }
+    _micActive = null;
+  }
 }
 
-function delLog(id){
-  if(!confirm('Delete this entry?'))return;
-  var logs=ld(LS,[]).filter(function(e){return e.id!==id;});
-  sv(LS,logs);renderHist();
+// ── Claude AI voice correction ────────────────────────────────────
+function aiCorrect(text, targetId, diffId){
+  var prompt = 'You are helping a drainage and groundwork contractor on the Isle of Man. The following text was dictated on a construction site and may have speech-to-text errors. Correct any obvious errors based on construction context. The site is Ballasalla Phase 4, a residential development. Common terms: manhole, chamber, invert, bedding, haunching, gully, drain run, S4.1 through S4.6, F4.1-F4.6, 110mm, 150mm, 225mm, LOLER, PUWER, H&S, subbase, kerbing, tarmac, Dandara. Staff names: ' + STAFF_NAMES.join(', ') + '.\n\nDictated text: "' + text + '"\n\nReturn ONLY the corrected text. If the text seems correct already, return it unchanged. No explanation.';
+
+  fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': CLAUDE_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-client-side-api-key-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5',
+      max_tokens: 500,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (!d.content || !d.content[0]) return;
+    var corrected = d.content[0].text.trim();
+    if (corrected === text) return; // No change needed
+    showDiff(text, corrected, targetId, 'diff-'+diffId);
+  })
+  .catch(function(){ /* silent fail */ });
 }
 
-function renderHist(){
-  var logs=ld(LS,[]);
-  document.getElementById('log-cnt').textContent=logs.length;
-  var el=document.getElementById('log-hist');
-  if(!logs.length){
-    el.innerHTML='<div class="empty"><div style="font-size:32px;margin-bottom:8px;">📝</div><div style="font-size:13px;font-weight:600;">No entries yet</div><div style="font-size:11px;margin-top:3px;">Complete the log above and save</div></div>';
+function showDiff(original, corrected, targetId, diffContainerId){
+  var el = document.getElementById(diffContainerId);
+  if (!el) return;
+  el.innerHTML =
+    '<div class="diff-box">' +
+    '<div style="font-size:10px;font-weight:800;color:var(--muted);margin-bottom:4px;">AI suggested correction:</div>' +
+    '<div class="diff-orig">' + escHtml(original) + '</div>' +
+    '<div class="diff-new">→ ' + escHtml(corrected) + '</div>' +
+    '<div class="diff-btns">' +
+      '<button class="btn btn-green btn-sm" onclick="acceptCorrection(\''+targetId+'\',\''+escAttr(corrected)+'\',\''+diffContainerId+'\')">✓ Accept</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="rejectCorrection(\''+diffContainerId+'\')">Keep original</button>' +
+    '</div>' +
+    '</div>';
+}
+
+function acceptCorrection(targetId, corrected, diffId){
+  document.getElementById(targetId).value = corrected;
+  document.getElementById(diffId).innerHTML = '';
+}
+function rejectCorrection(diffId){
+  document.getElementById(diffId).innerHTML = '';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// LIVE WEATHER
+// ══════════════════════════════════════════════════════════════════
+function fetchWeather(){
+  // Ronaldsway Airport, Isle of Man
+  fetch('https://api.open-meteo.com/v1/forecast?latitude=54.0833&longitude=-4.6333&current=temperature_2m,weathercode&timezone=Europe%2FLondon')
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (!d.current) return;
+    var temp = Math.round(d.current.temperature_2m);
+    var code = d.current.weathercode;
+    var wMap = {0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',51:'Light drizzle',53:'Drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Light snow',80:'Light showers',81:'Rain showers',82:'Heavy showers',95:'Thunderstorm'};
+    var desc = wMap[code] || ('Code '+code);
+    document.getElementById('f-temp').value = temp;
+    document.getElementById('f-weather').value = '';
+    // Set nearest matching option
+    var sel = document.getElementById('f-weather');
+    for (var i = 0; i < sel.options.length; i++){
+      if (desc.toLowerCase().includes('rain') && sel.options[i].text.toLowerCase().includes('rain')){ sel.selectedIndex=i; break; }
+      if (desc.toLowerCase().includes('clear') || desc.toLowerCase().includes('sun')){ sel.value='Hot & sunny'; break; }
+    }
+    toast('Weather: '+desc+', '+temp+'°C');
+  })
+  .catch(function(){ toast('Could not fetch weather','err'); });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// YESTERDAY REVIEW CHECK
+// ══════════════════════════════════════════════════════════════════
+function checkYesterdayReview(){
+  // Check localStorage for yesterday's record — show banner if EOD was done but not reviewed
+  var yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+  var yKey = 'dgc_field_eod_'+yesterday.toISOString().slice(0,10);
+  var yData = localStorage.getItem(yKey);
+  if (yData){
+    var y = JSON.parse(yData);
+    if (!y.reviewed){
+      document.getElementById('yesterday-banner').style.display = 'block';
+    }
+  }
+}
+function confirmYesterday(ok){
+  var yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+  var yKey = 'dgc_field_eod_'+yesterday.toISOString().slice(0,10);
+  var yData = localStorage.getItem(yKey);
+  if (yData){
+    var y = JSON.parse(yData);
+    y.reviewed = true;
+    y.reviewedBy = S.userName;
+    y.reviewedOk = ok;
+    y.reviewedAt = new Date().toISOString();
+    localStorage.setItem(yKey, JSON.stringify(y));
+  }
+  document.getElementById('yesterday-banner').style.display = 'none';
+  toast(ok ? '✓ Yesterday confirmed' : '⚠ Issues noted');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// COLLECT FORM DATA
+// ══════════════════════════════════════════════════════════════════
+function collectForm(){
+  var teams = [];
+  S.teams.forEach(function(t, idx){
+    var body = document.getElementById('team-body-'+idx);
+    if (!body) return;
+    var ops = [];
+    for (var o=0;o<4;o++){
+      var v = (document.getElementById('t'+idx+'-op'+o)||{}).value;
+      if (v && v.trim()) ops.push(v.trim());
+    }
+    var slots = {};
+    ['am','mid','eod'].forEach(function(s){
+      var sid = 't'+idx+'-'+s;
+      slots[s] = {
+        progress: (document.getElementById(sid+'-prog')||{}).value||'',
+        issues:   (document.getElementById(sid+'-iss')||{}).value||'',
+        pct:      (document.getElementById(sid+'-pct')||{}).value||'',
+        initials: (document.getElementById(sid+'-init')||{}).value||''
+      };
+    });
+    teams.push({
+      letter: t.letter,
+      lead: (document.getElementById('t'+idx+'-lead')||{}).value||'',
+      operatives: ops,
+      plantCheck: document.getElementById('ptick-'+idx)&&document.getElementById('ptick-'+idx).classList.contains('on'),
+      plantInitials: (document.getElementById('t'+idx+'-initials')||{}).value||'',
+      slots: slots
+    });
+  });
+
+  var noise = [];
+  document.querySelectorAll('.noise-row').forEach(function(r){
+    var t=r.querySelector('input[type="time"]'), v=r.querySelectorAll('input')[1];
+    if (t&&v&&v.value) noise.push({time:t.value, db:parseFloat(v.value)});
+  });
+
+  var items = [];
+  document.querySelectorAll('.item-row').forEach(function(r){
+    var ins=r.querySelectorAll('input');
+    if (ins[1]&&ins[1].value.trim()) items.push({qty:ins[0].value,item:ins[1].value,source:ins[2].value});
+  });
+
+  return {
+    type: 'dgc-daily-sheet',
+    date: document.getElementById('f-date').value,
+    projectRef: PROJECT_REF,
+    status: 'submitted',
+    header: {
+      siteManager: document.getElementById('f-mgr').value,
+      weather: document.getElementById('f-weather').value,
+      temp: document.getElementById('f-temp').value
+    },
+    briefing: {
+      time: document.getElementById('f-brief-time').value,
+      topics: document.getElementById('f-topics').value,
+      visitors: document.getElementById('f-visitors').value,
+      risks: document.getElementById('f-risks').value
+    },
+    teams: teams,
+    noiseReadings: noise,
+    eodChecklist: Object.assign({}, S.eodChecks),
+    observations: document.getElementById('f-obs').value,
+    itemsRequired: items,
+    comms: Object.assign({}, S.commsChecks),
+    allComplete: document.getElementById('f-complete').value,
+    outstanding: document.getElementById('f-outstanding').value,
+    diary: document.getElementById('f-diary').value,
+    submittedBy: document.getElementById('f-submit-name').value,
+    submittedAt: new Date().toISOString()
+  };
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SUBMIT
+// ══════════════════════════════════════════════════════════════════
+function submitLog(){
+  var data = collectForm();
+  if (!data.header.siteManager) { toast('Enter site manager name','err'); return; }
+  if (!data.date) { toast('Set the date','err'); return; }
+
+  // Always save to localStorage (works offline)
+  var lsKey = 'dgc_field_eod_'+data.date;
+  localStorage.setItem(lsKey, JSON.stringify(data));
+  var allLogs = JSON.parse(localStorage.getItem('dgc_field_all_logs')||'[]');
+  // Remove any existing entry for this date
+  allLogs = allLogs.filter(function(l){ return l.date !== data.date; });
+  allLogs.unshift(data);
+  localStorage.setItem('dgc_field_all_logs', JSON.stringify(allLogs));
+
+  // Save to Supabase if configured
+  if (sb) {
+    sb.from('daily_records').upsert({
+      project_ref: PROJECT_REF,
+      gang: data.submittedBy || 'Unknown',
+      date: data.date,
+      data: data,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'project_ref,gang,date' })
+    .then(function(res){
+      if (res.error) {
+        toast('Saved locally — cloud sync failed','err');
+      } else {
+        showSaved();
+      }
+    });
+  } else {
+    showSaved();
+  }
+}
+
+function showSaved(){
+  var badge = document.getElementById('save-badge');
+  badge.style.display = '';
+  toast('✓ Daily sheet submitted');
+  setTimeout(function(){ badge.style.display='none'; }, 3000);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// HISTORY
+// ══════════════════════════════════════════════════════════════════
+function loadHistory(){
+  var logs = JSON.parse(localStorage.getItem('dgc_field_all_logs')||'[]');
+
+  // Also try Supabase
+  if (sb) {
+    sb.from('daily_records')
+      .select('*')
+      .eq('project_ref', PROJECT_REF)
+      .order('date', { ascending: false })
+      .limit(30)
+      .then(function(res){
+        if (res.data && res.data.length) {
+          renderHistory(res.data.map(function(r){ return r.data; }));
+        } else {
+          renderHistory(logs);
+        }
+      }).catch(function(){ renderHistory(logs); });
+  } else {
+    renderHistory(logs);
+  }
+}
+
+function renderHistory(logs){
+  var el = document.getElementById('hist-list');
+  if (!logs.length){
+    el.innerHTML = '<div class="empty"><div style="font-size:36px;margin-bottom:8px;">📋</div><div style="font-size:13px;font-weight:600;">No submissions yet</div></div>';
     return;
   }
-  el.innerHTML=logs.slice(0,15).map(function(e){
-    var teams=[e.teams.a&&'<span style="color:#f59e0b;font-weight:800;">A:</span> '+e.teams.a,
-               e.teams.b&&'<span style="color:#38bdf8;font-weight:800;">B:</span> '+e.teams.b,
-               e.teams.c&&'<span style="color:#a78bfa;font-weight:800;">C:</span> '+e.teams.c].filter(Boolean).join('<br>');
-    var out=(e.output||[]).filter(function(o){return o.act;}).map(function(o){return (o.qty?o.qty+' '+(o.unit||'')+' ':'')+'<strong>'+o.act+'</strong>'+(o.gang?' ['+o.gang+']':'');}).join(' · ');
-    var eod=e.progress&&e.progress.eod&&e.progress.eod.text;
-    return '<div class="log-card">'+
-      '<button class="log-del" onclick="delLog('+e.id+')">×</button>'+
-      '<div class="log-dt">'+fmtD(e.date)+(e.mgr?' — '+e.mgr:'')+(e.weather?' · '+e.weather:'')+(e.temp?' '+e.temp+'°C':'')+'</div>'+
-      '<div class="log-body">'+
-        (teams?'<div style="margin-bottom:3px;">'+teams+'</div>':'')+
-        (out?'<div style="margin-bottom:3px;color:var(--text);">'+out+'</div>':'')+
-        (eod?'<div style="color:var(--green);">EOD: '+eod+'</div>':'')+
-        (e.diary?'<div style="margin-top:3px;font-style:italic;color:var(--blue);">'+e.diary.slice(0,120)+(e.diary.length>120?'…':'')+'</div>':'')+
-      '</div>'+
+  el.innerHTML = logs.slice(0,20).map(function(log){
+    var teams = (log.teams||[]).map(function(t){
+      return '<span style="color:var(--acc);font-weight:800;">'+t.letter+':</span> '+(t.lead||'')+(t.operatives&&t.operatives.length?' + '+t.operatives.join(', '):'');
+    }).join('<br>');
+    var eodPct = Math.round(Object.values(log.eodChecklist||{}).filter(Boolean).length / 15 * 100);
+    return '<div class="hist-card">' +
+      '<div class="hist-dt">'+fmtDate(log.date)+(log.header&&log.header.weather?' — '+log.header.weather:'')+(log.header&&log.header.temp?' '+log.header.temp+'°C':'')+'</div>' +
+      '<div class="hist-body">' +
+        (log.header&&log.header.siteManager?'<strong>SM:</strong> '+log.header.siteManager+'<br>':'')+
+        (teams?teams+'<br>':'')+
+        '<span style="color:var(--green);">EOD checklist: '+eodPct+'%</span>'+
+        (log.diary&&log.diary.length>5?'<br><em style="color:var(--blue);">'+log.diary.slice(0,100)+(log.diary.length>100?'…':'')+'</em>':'')+
+      '</div>' +
       '</div>';
   }).join('');
 }
 
-// ══════════════════════ PROGRAMME ══════════════════════
-var ZONES=[
-  {id:'zg',name:'Zone G — Lower Road',pct:77,on:true,tasks:[
-    {id:'g1',name:'Kerbing — Lower Road',est:3,gang:'',done:false},
-    {id:'g2',name:'Type 1 subbase — Lower Road',est:2,gang:'',done:false},
-    {id:'g3',name:'Tarmac roadbase — Lower Road',est:2,gang:'',done:false}]},
-  {id:'zh',name:'Zone H — Soft Drain',pct:0,on:true,tasks:[
-    {id:'h1',name:'Drain Run H–J (Gang C, 10 Jun)',est:5,gang:'C',done:false},
-    {id:'h2',name:'Bedding &amp; backfill Zones H/I/J',est:3,gang:'',done:false},
-    {id:'h3',name:'Chamber connections',est:1,gang:'',done:false}]},
-  {id:'zi',name:'Zone I — Soft Drain',pct:0,on:true,tasks:[
-    {id:'i1',name:'Drain Run I',est:3,gang:'C',done:false},
-    {id:'i2',name:'Backdrop to existing MH (end of run)',est:1,gang:'',done:false}]},
-  {id:'zj',name:'Zone J — Soft Drain',pct:0,on:true,tasks:[
-    {id:'j1',name:'Drain Run J',est:4,gang:'C',done:false}]},
-  {id:'zs',name:'Slab Works — Plots 7–11',pct:30,on:true,tasks:[
-    {id:'s1',name:'Remaining footings — unstarted plots',est:4,gang:'',done:false},
-    {id:'s2',name:'Concrete slab pours',est:5,gang:'',done:false},
-    {id:'s3',name:'Insulation (Jabfloor) — lead time risk',est:0,gang:'',done:false}]},
-  {id:'zk',name:'Kerbing &amp; Subbase — Zones E/F',pct:50,on:true,tasks:[
-    {id:'k1',name:'Kerbing remaining sections',est:3,gang:'',done:false},
-    {id:'k2',name:'Subbase completion',est:2,gang:'',done:false}]},
-  {id:'zd',name:'Demob &amp; Handover',pct:0,on:false,tasks:[
-    {id:'d1',name:'Jet wash all manholes + CCTV survey',est:2,gang:'',done:false},
-    {id:'d2',name:'Site tidy, remove compound',est:2,gang:'',done:false},
-    {id:'d3',name:'Snagging walkthrough with Dandara',est:1,gang:'',done:false}]}
-];
-
-function ldProg(){
-  var s=ld(LP,null);if(!s)return;
-  ZONES.forEach(function(z){z.tasks.forEach(function(t){var d=s[t.id];if(d){t.done=d.done;t.gang=d.gang||t.gang;}});});
-}
-function svProg(){var s={};ZONES.forEach(function(z){z.tasks.forEach(function(t){s[t.id]={done:t.done,gang:t.gang};});});sv(LP,s);}
-
-function cycleGang(tid){
-  var gs=['','A','B','C'];
-  ZONES.forEach(function(z){z.tasks.forEach(function(t){if(t.id===tid){var i=gs.indexOf(t.gang||'');t.gang=gs[(i+1)%gs.length];}});});
-  svProg();renderProg();
-}
-function togTask(tid){
-  ZONES.forEach(function(z){z.tasks.forEach(function(t){if(t.id===tid)t.done=!t.done;});});
-  svProg();renderProg();
-}
-
-function renderProg(){
-  ldProg();
-  var tot=0,dn=0,remD=0;
-  ZONES.forEach(function(z){z.tasks.forEach(function(t){tot++;if(t.done)dn++;if(!t.done)remD+=t.est||0;});});
-  var pct=Math.round(dn/Math.max(1,tot)*100);
-
-  document.getElementById('prog-tiles').innerHTML=
-    '<div class="tile"><div class="tile-v">'+dn+'/'+tot+'</div><div class="tile-l">Tasks done</div></div>'+
-    '<div class="tile"><div class="tile-v">~'+remD+'d</div><div class="tile-l">Days left</div></div>'+
-    '<div class="tile"><div class="tile-v">'+pct+'%</div><div class="tile-l">Complete</div></div>';
-
-  document.getElementById('zone-list').innerHTML=ZONES.map(function(z){
-    var zd=z.tasks.filter(function(t){return t.done;}).length;
-    var zt=z.tasks.length;
-    var zp=Math.round(zd/Math.max(1,zt)*100);
-    var allDone=zd===zt;
-    var remDays=z.tasks.filter(function(t){return!t.done;}).reduce(function(s,t){return s+(t.est||0);},0);
-
-    var tasksHtml=z.tasks.map(function(t){
-      var gc=t.gang?'g'+t.gang.toLowerCase():'';
-      var gl=t.gang?'Gang '+t.gang:'Assign';
-      return '<div class="task-row">'+
-        '<div class="chk'+(t.done?' ck':'')+ '" onclick="togTask(\''+t.id+'\')">'+(t.done?'✓':'')+'</div>'+
-        '<div class="tn'+(t.done?' ck':'')+'">'+t.name+'</div>'+
-        '<div class="test">'+(t.est?'~'+t.est+'d':'—')+'</div>'+
-        '<button class="tgang '+gc+'" onclick="cycleGang(\''+t.id+'\')">'+gl+'</button>'+
-        '</div>';
-    }).join('');
-
-    return '<div class="zcard'+(allDone?' zdone':z.on?' zon':'')+'">'+
-      '<div class="zn">'+z.name+'</div>'+
-      '<div class="zm">'+zd+'/'+zt+' done &nbsp;·&nbsp; ~'+remDays+' days remaining</div>'+
-      '<div class="pbar-wrap"><div class="pbar" style="width:'+zp+'%"></div></div>'+
-      tasksHtml+'</div>';
-  }).join('');
+// ══════════════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════════════
+function fmtDate(s){ if(!s)return'—'; return new Date(s+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'}); }
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s){ return escHtml(s).replace(/'/g,'&#39;'); }
+function toast(m,type){
+  var t=document.getElementById('toast');
+  t.textContent=m;t.className='toast show'+(type==='err'?' err':'');
+  setTimeout(function(){t.classList.remove('show');},2500);
 }
 </script>
 </body>
