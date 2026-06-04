@@ -168,7 +168,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div style="width:100%;max-width:340px;">
     <div style="margin-bottom:8px;">
       <label>Your name</label>
-      <input type="text" id="login-name" placeholder="e.g. David Smith" autocomplete="off" list="names-list">
+      <input type="text" id="login-name" placeholder="Tap to pick your name" autocomplete="off" list="names-list" onclick="nameInputClick(this)" onblur="nameInputBlur(this)">
       <datalist id="names-list"></datalist>
     </div>
     <button class="btn btn-acc" onclick="doLogin()">Start →</button>
@@ -238,9 +238,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
 
     <!-- C: Teams -->
-    <div class="sec" style="justify-content:space-between;">
+    <div class="sec" style="justify-content:space-between;flex-wrap:wrap;gap:6px;">
       <span class="sec-t">👷 Teams &amp; Daily Output</span>
-      <button class="btn btn-ghost btn-sm" onclick="addTeam()">+ Add Team</button>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost btn-sm" onclick="addStaffMember()">+ Add Person</button>
+        <button class="btn btn-ghost btn-sm" onclick="addTeam()">+ Add Team</button>
+      </div>
     </div>
     <div id="teams-container"></div>
 
@@ -352,13 +355,58 @@ try {
 // ══════════════════════════════════════════════════════════════════
 // STAFF NAMES (loaded from Obsidian data + defaults)
 // ══════════════════════════════════════════════════════════════════
-var STAFF_NAMES = [
-  // From DGC Obsidian / wages data — update as needed
-  'David Smith','Harry Harrison','Ash Aziz',
-  'Bradley','Lewis','Cossie','Dean','Craig',
-  'Josef','Brad','Tom','Mike','Carl','John',
-  'Danny','Sam','Chris'
-];
+var STAFF_NAMES = loadStaffNames();
+
+function loadStaffNames() {
+  // Real DGC staff from wages (HR & Staff/Staff List.md — last reconciled 1 Jun 2026)
+  var base = [
+    'Ash Aziz',
+    'Harry Harrison',
+    'David Smith',
+    'Bradley McKevitt',
+    'Daniel Seed',
+    'Dean Garrett',
+    'Jake Whetnall',
+    'James Cosgrove',
+    'James Shannon',
+    'Lee Clinton',
+    'Lewis Peck',
+    'Liam Smith',
+    'Stephen Lamb',
+    'Stephen Smithies'
+  ];
+  // Merge with any custom names added on the fly
+  var extras = JSON.parse(localStorage.getItem('dgc_extra_staff') || '[]');
+  return base.concat(extras.filter(function(n){ return base.indexOf(n) < 0; }));
+}
+
+function addStaffMember() {
+  var name = prompt('Enter new team member name:');
+  if (!name || !name.trim()) return;
+  name = name.trim();
+  var extras = JSON.parse(localStorage.getItem('dgc_extra_staff') || '[]');
+  if (extras.indexOf(name) < 0) extras.push(name);
+  localStorage.setItem('dgc_extra_staff', JSON.stringify(extras));
+  STAFF_NAMES = loadStaffNames();
+  rebuildNamelists();
+  toast(name + ' added to team list');
+}
+
+function rebuildNamelists() {
+  var dl = document.getElementById('names-list');
+  if (!dl) return;
+  dl.innerHTML = '';
+  STAFF_NAMES.forEach(function(n){ var o=document.createElement('option'); o.value=n; dl.appendChild(o); });
+}
+
+// Name input helper — on click show full list
+function nameInputClick(el) {
+  el._prev = el.value;
+  el.value = '';
+}
+function nameInputBlur(el) {
+  if (!el.value.trim() && el._prev) el.value = el._prev;
+}
 
 // DGC construction vocabulary for voice AI correction
 var DGC_VOCAB = [
@@ -424,8 +472,7 @@ var _mic = null, _micActive = null;
 // ══════════════════════════════════════════════════════════════════
 (function init(){
   // Populate datalist for name autocomplete
-  var dl = document.getElementById('names-list');
-  STAFF_NAMES.forEach(function(n){ var o=document.createElement('option'); o.value=n; dl.appendChild(o); });
+  rebuildNamelists();
 
   // Set today's date
   document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
@@ -550,7 +597,7 @@ function addTeam(){
 }
 
 function opInput(tidx, opIdx){
-  return '<div><label>Operative '+(opIdx+1)+'</label><input type="text" id="t'+tidx+'-op'+opIdx+'" placeholder="Name" list="names-list"></div>';
+  return '<div><label>Operative '+(opIdx+1)+'</label><input type="text" id="t'+tidx+'-op'+opIdx+'" placeholder="Tap to pick" list="names-list" onclick="nameInputClick(this)" onblur="nameInputBlur(this)"></div>';
 }
 
 function timeSlot(tidx, slot, label, cls){
