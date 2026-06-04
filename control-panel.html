@@ -16151,109 +16151,192 @@ window.mobDrawerTab = function(tabName) {
     djRenderHistory();
   };
 
-  // ── Director: Job Planner tab — completely standalone ─────────────────────
+  // ── Director: Job Planner — combined timeline + job cards ─────────────────
   window.buildDirPlannerTab = function() {
     var el = document.getElementById('dir-planner-panel');
     if (!el) return;
 
-    var html = '<div style="max-width:960px;padding:0 0 20px;">'
+    var html = '<div style="padding:0 0 24px;">'
 
-    // Header
-    + '<div style="background:#1a1d27;border-radius:14px;padding:18px 22px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">'
-    + '<div style="background:#f59e0b;color:#1a1d27;border-radius:8px;padding:5px 13px;font-size:15px;font-weight:900;">📅 Job Planner</div>'
-    + '<div style="color:#94a3b8;font-size:12px;">Drag job bars to plan the year. Overlapping bars show combined staff needed. Red gaps = money lost with no work.</div>'
-    + '</div>'
-
-    // Timeline card
-    + '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:20px;">'
-    + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">'
-    + '<div>'
-    + '<div style="font-size:14px;font-weight:800;color:var(--text);">Year planner</div>'
-    + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">Drag bars to plan · positions auto-save · scroll left/right</div>'
+    // ── Header ──
+    + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">'
+    + '<div style="display:flex;align-items:center;gap:10px;">'
+    + '<div style="background:#f59e0b;color:#1a1d27;border-radius:8px;padding:5px 12px;font-size:14px;font-weight:900;">📅 Job Planner</div>'
+    + '<div style="font-size:11px;color:var(--muted);">Drag bars · positions auto-save · edit jobs below</div>'
     + '</div>'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
-    + '<button onclick="djShowAllOnPlanner&&djShowAllOnPlanner()" style="padding:7px 14px;background:#f59e0b;border:none;border-radius:8px;color:#1a1d27;font-size:12px;font-weight:900;cursor:pointer;white-space:nowrap;">📋 Show All Jobs</button>'
-    + '<button onclick="(function(){document.querySelectorAll(\'.tab-content\').forEach(function(t){t.classList.remove(\'active\');});var jt=document.getElementById(\'tab-dir-jobs\');if(jt){jt.classList.add(\'active\');try{buildDirJobsTab();}catch(e){}}document.querySelectorAll(\'#mobile-bottom-nav .mob-btn\').forEach(function(b){b.classList.remove(\'active\');});var mb=document.getElementById(\'mob-director\');if(mb)mb.classList.add(\'active\');})()" style="padding:7px 14px;background:rgba(148,163,184,0.1);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">← Edit Jobs</button>'
+    + '<button onclick="djShowAllOnPlanner&&djShowAllOnPlanner()" style="padding:7px 14px;background:#f59e0b;border:none;border-radius:8px;color:#1a1d27;font-size:12px;font-weight:900;cursor:pointer;">📋 Show All</button>'
+    + '<button onclick="djAddJob&&djAddJob()" style="padding:7px 14px;background:rgba(245,158,11,0.12);border:1px solid #f59e0b55;border-radius:8px;color:#f59e0b;font-size:12px;font-weight:800;cursor:pointer;">+ Add Job</button>'
     + '</div>'
     + '</div>'
-    + '<div id="dp-tl-wrap" style="overflow-x:auto;overflow-y:hidden;border-radius:10px;border:1px solid var(--border);-webkit-overflow-scrolling:touch;">'
+
+    // ── TIMELINE — full width, prominent ──
+    + '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:4px;overflow:hidden;">'
+    + '<div id="dp-tl-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;">'
     + '<div id="dp-tl-inner" style="position:relative;min-height:200px;"></div>'
     + '</div>'
-    + '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--muted);">'
-    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#22c55e;border-radius:2px;display:inline-block;"></span>Running</span>'
-    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#3b82f6;border-radius:2px;display:inline-block;"></span>Awarded</span>'
-    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#f59e0b;border-radius:2px;display:inline-block;"></span>Bidding</span>'
-    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#fb923c;border-radius:2px;display:inline-block;opacity:0.8;"></span>Estimate</span>'
-    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#ef4444;border-radius:2px;display:inline-block;opacity:0.5;"></span>Gap (no revenue)</span>'
-    + '</div>'
     + '</div>'
 
-    // Monthly cashflow summary card
-    + '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:20px;">'
-    + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:3px;">📆 Monthly cashflow — what you earn when jobs overlap</div>'
-    + '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Turnover = what you invoice. Profit = what you keep after labour. OH cover = how much of your £16,297/month fixed costs are covered.</div>'
-    + '<div id="dp-monthly-summary"></div>'
+    // Legend
+    + '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;padding:6px 4px;font-size:11px;color:var(--muted);">'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;background:#22c55e;border-radius:2px;display:inline-block;"></span>Running</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;background:#3b82f6;border-radius:2px;display:inline-block;"></span>Awarded</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;background:#f59e0b;border-radius:2px;display:inline-block;"></span>Bidding</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;background:#fb923c;border-radius:2px;display:inline-block;opacity:.8;"></span>Estimate</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;background:#ef4444;border-radius:2px;display:inline-block;opacity:.5;"></span>Gap / no work</span>'
     + '</div>'
 
-    // Company health card
-    + '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:22px;">'
-    + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:3px;">Is the company making money right now?</div>'
-    + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Fixed costs are £16,297/month no matter what. This shows if current work is covering them.</div>'
-    + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">'
-    + '<div style="font-size:13px;font-weight:700;color:var(--text);">Productive people on work right now:</div>'
-    + '<input id="dp-health-n" type="number" min="0" max="30" value="8" oninput="dpHealth()" style="width:75px;padding:8px 10px;border-radius:10px;border:1px solid var(--border);font-size:20px;font-weight:900;text-align:center;background:var(--surface2);color:var(--text);">'
-    + '</div>'
-    + '<div id="dp-health-result"></div>'
-    + '</div>'
-
-    // Smart slot finder card
-    + '<div class="card" style="border-radius:12px;margin-bottom:14px;padding:20px;">'
-    + '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">🔍 When can I fit a new job?</div>'
-    + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Enter the new job details. The planner will find the best gap in your current schedule.</div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">'
-    + '<div><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Weeks needed</div>'
-    + '<input id="dp-find-weeks" type="number" value="8" min="1" max="52" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);font-size:18px;font-weight:900;background:var(--surface2);color:var(--text);text-align:center;"></div>'
-    + '<div><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">People needed</div>'
-    + '<input id="dp-find-people" type="number" value="4" min="1" max="20" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);font-size:18px;font-weight:900;background:var(--surface2);color:var(--text);text-align:center;"></div>'
-    + '<div style="display:flex;align-items:flex-end;">'
-    + '<button onclick="dpFindSlot()" style="width:100%;padding:11px;background:#f59e0b;border:none;border-radius:8px;color:#1a1d27;font-size:13px;font-weight:900;cursor:pointer;">Find best slot ›</button>'
-    + '</div></div>'
-    + '<div id="dp-find-result"></div>'
-    + '</div>'
-
-    // Benchmarks (collapsed)
-    + '<details>'
-    + '<summary style="font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;user-select:none;padding:6px 0;">▸ Past jobs — what did they earn?</summary>'
-    + '<div class="card" style="border-radius:12px;margin-top:10px;padding:18px;">'
-    + '<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">A good DGC job earns £700–900 per person per week. Below £600 is thin. Save jobs here to build a reference library.</div>'
-    + '<div id="dp-bm"></div>'
-    + '<button onclick="dpSaveBenchmark()" style="margin-top:10px;padding:7px 14px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">+ Save current price check result</button>'
-    + '</div>'
+    // ── MONTHLY CASHFLOW (collapsed) ──
+    + '<details style="margin-bottom:12px;">'
+    + '<summary style="font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;user-select:none;padding:4px 0;">📆 Monthly cashflow — click to expand</summary>'
+    + '<div style="margin-top:8px;"><div id="dp-monthly-summary"></div></div>'
     + '</details>'
+
+    // ── JOB CARDS — compact inline editing ──
+    + '<div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px;margin-top:4px;">All Jobs — edit values, drag timeline bars to reposition</div>'
+    + '<div id="dp-job-cards"></div>'
 
     + '</div>';
 
     el.innerHTML = html;
 
-    // Auto-calculate active staff from confirmed jobs
-    var _jobs = loadJobs();
-    var _today = new Date();
-    var _msW = 7*24*60*60*1000;
-    var _activeCount = 0;
-    _jobs.forEach(function(j){
-      if (!j.confirmed) return;
-      var sd = new Date(_today.getTime() + (j.startWeek||0)*_msW);
-      var ed = new Date(sd.getTime() + (j.weeks||1)*_msW);
-      if (_today >= sd && _today <= ed) _activeCount += (j.people||0);
-    });
-    var _hEl = document.getElementById('dp-health-n');
-    if (_hEl) _hEl.value = _activeCount;
-
-    // Render timeline using the existing function but pointing at dp-tl-inner
     dpRenderTimeline();
-    dpHealth();
-    dpRenderBM();
     dpBuildMonthlySummary();
+    dpRenderJobCards();
+  };
+
+  // ── Compact job cards for the planner tab ─────────────────────────────────
+  window.dpRenderJobCards = function() {
+    var el = document.getElementById('dp-job-cards');
+    if (!el) return;
+    var jobs = loadJobs();
+    var msW = 7*24*60*60*1000;
+    var today = new Date();
+    var fmtD = function(d){ return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'}); };
+
+    var statusColors = { running:'#22c55e', awarded:'#3b82f6', bidding:'#f59e0b', estimate:'#fb923c', placeholder:'#94a3b8' };
+    var statusOptions = ['running','awarded','bidding','estimate','placeholder'];
+
+    el.innerHTML = jobs.map(function(job, idx) {
+      var col = statusColors[job.status] || '#94a3b8';
+      var sd = new Date(today.getTime() + (job.startWeek||0)*msW);
+      var ed = new Date(sd.getTime() + (job.weeks||1)*msW);
+      var dateRange = fmtD(sd) + ' → ' + fmtD(ed);
+      var profit = jobProfit(job);
+      var pmpw = (job.people > 0 && job.weeks > 0) ? Math.round((profit + job.people * AVG_WAGE_MARGIN_PW * job.weeks) / job.people / job.weeks) : 0;
+      var pmpwCol = pmpw >= 700 ? '#22c55e' : pmpw >= 500 ? '#f59e0b' : '#ef4444';
+
+      var statusOpts = statusOptions.map(function(s){ return '<option value="'+s+'"'+(job.status===s?' selected':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</option>'; }).join('');
+
+      return '<div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid '+col+';border-radius:12px;padding:14px 16px;margin-bottom:8px;">'
+
+        // Top row: name + date range + profit metric + actions
+        + '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">'
+        + '<div style="flex:1;min-width:160px;">'
+        + '<input id="dpj-name-'+idx+'" value="'+escHtml(job.name||'')+'" placeholder="Job name" oninput="dpjLive('+idx+')" style="font-size:14px;font-weight:800;background:transparent;border:none;border-bottom:1px dashed var(--border);border-radius:0;padding:2px 0;color:var(--text);width:100%;outline:none;">'
+        + '<div style="font-size:10px;color:var(--muted);margin-top:2px;">📅 '+dateRange+'</div>'
+        + '</div>'
+        + '<div style="text-align:right;flex-shrink:0;">'
+        + '<div style="font-size:11px;font-weight:900;color:'+pmpwCol+';">£'+pmpw+'<span style="font-size:9px;font-weight:700;color:var(--muted);">/person/wk</span></div>'
+        + '<div style="font-size:10px;color:var(--muted);">£'+Math.round(profit/1000)+'k profit</div>'
+        + '</div>'
+        + '<button onclick="dpjSave('+idx+')" style="padding:6px 12px;background:rgba(34,197,94,.1);border:1px solid #22c55e44;border-radius:7px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">✓ Save</button>'
+        + '<button onclick="djDeleteJob('+idx+')" style="padding:6px 10px;background:transparent;border:1px solid #ef444444;border-radius:7px;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">✕</button>'
+        + '</div>'
+
+        // Input grid
+        + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:7px;margin-bottom:10px;">'
+        + dpjField('Value (£)', 'dpj-val-'+idx, 'number', job.value, idx)
+        + dpjField('Weeks', 'dpj-wks-'+idx, 'number', job.weeks, idx)
+        + dpjField('People', 'dpj-ppl-'+idx, 'number', job.people, idx)
+        + dpjField('OH&P %', 'dpj-ohp-'+idx, 'number', job.ohp||15, idx)
+        + '<div>'
+        + '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px;">Start (wks)</div>'
+        + '<input id="dpj-sw-'+idx+'" type="number" value="'+(job.startWeek||0)+'" oninput="dpjSw('+idx+',this.value)" style="width:100%;padding:6px 8px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:700;background:var(--surface2);color:var(--text);">'
+        + '</div>'
+        + '<div>'
+        + '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px;">Status</div>'
+        + '<select id="dpj-stat-'+idx+'" oninput="dpjLive('+idx+')" style="width:100%;padding:6px 8px;border-radius:8px;border:1px solid var(--border);font-size:12px;font-weight:700;background:var(--surface2);color:'+col+';border-color:'+col+'44;">'+statusOpts+'</select>'
+        + '</div>'
+        + '</div>'
+
+        // Toggles + note
+        + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+        + '<label style="cursor:pointer;display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px;background:'+(job.onTimeline!==false?'rgba(245,158,11,.1)':'var(--surface2)')+';border:1px solid '+(job.onTimeline!==false?'#f59e0b55':'var(--border)')+'">'
+        + '<input type="checkbox" id="dpj-tl-'+idx+'" '+(job.onTimeline!==false?'checked':'')+' onchange="dpjToggle('+idx+')" style="accent-color:#f59e0b;">'
+        + '<span style="font-size:11px;font-weight:700;color:'+(job.onTimeline!==false?'#f59e0b':'var(--muted)')+';">On timeline</span>'
+        + '</label>'
+        + '<label style="cursor:pointer;display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px;background:'+(job.confirmed?'rgba(34,197,94,.1)':'var(--surface2)')+';border:1px solid '+(job.confirmed?'#22c55e55':'var(--border)')+'">'
+        + '<input type="checkbox" id="dpj-con-'+idx+'" '+(job.confirmed?'checked':'')+' onchange="dpjToggle('+idx+')" style="accent-color:#22c55e;">'
+        + '<span style="font-size:11px;font-weight:700;color:'+(job.confirmed?'#22c55e':'var(--muted)')+';">Confirmed</span>'
+        + '</label>'
+        + '<input id="dpj-note-'+idx+'" type="text" value="'+(job.note||'')+'" placeholder="Status note…" style="flex:1;min-width:120px;padding:5px 9px;border-radius:7px;border:1px dashed var(--border);font-size:11px;color:var(--muted);background:var(--surface2);">'
+        + '</div>'
+
+        + '</div>';
+    }).join('');
+
+    // Add job button at bottom
+    el.innerHTML += '<button onclick="djAddJob&&djAddJob()" style="width:100%;padding:12px;background:rgba(245,158,11,.08);border:1px dashed #f59e0b55;border-radius:12px;color:#f59e0b;font-size:13px;font-weight:800;cursor:pointer;margin-top:4px;">+ Add New Job</button>';
+  };
+
+  function dpjField(label, id, type, val, idx) {
+    return '<div>'
+      + '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px;">'+label+'</div>'
+      + '<input id="'+id+'" type="'+type+'" value="'+(val===0?'0':(val||''))+'" oninput="dpjLive('+idx+')" style="width:100%;padding:6px 8px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:700;background:var(--surface2);color:var(--text);">'
+      + '</div>';
+  }
+
+  function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+  window.dpjLive = function(idx) {
+    // No full re-render — just update profit display if it exists
+  };
+
+  window.dpjSw = function(idx, val) {
+    var jobs = loadJobs();
+    if (!jobs[idx]) return;
+    var sw = parseInt(val);
+    if (!isNaN(sw)) {
+      jobs[idx].startWeek = sw;
+      saveJobs(jobs);
+      try { dpRenderTimeline(); dpBuildMonthlySummary(); } catch(e) {}
+    }
+  };
+
+  window.dpjToggle = function(idx) {
+    var jobs = loadJobs();
+    if (!jobs[idx]) return;
+    var tlEl = document.getElementById('dpj-tl-'+idx);
+    var conEl = document.getElementById('dpj-con-'+idx);
+    if (tlEl) jobs[idx].onTimeline = tlEl.checked;
+    if (conEl) jobs[idx].confirmed = conEl.checked;
+    saveJobs(jobs);
+    try { dpRenderTimeline(); dpBuildMonthlySummary(); } catch(e) {}
+    // Re-render the card toggles visually
+    try { dpRenderJobCards(); } catch(e) {}
+  };
+
+  window.dpjSave = function(idx) {
+    var jobs = loadJobs();
+    if (!jobs[idx]) return;
+    var g = function(id){ var e=document.getElementById(id); return e?e.value:''; };
+    jobs[idx].name    = g('dpj-name-'+idx) || jobs[idx].name;
+    jobs[idx].value   = parseFloat(g('dpj-val-'+idx)) || jobs[idx].value;
+    jobs[idx].weeks   = parseInt(g('dpj-wks-'+idx)) || jobs[idx].weeks;
+    jobs[idx].people  = parseInt(g('dpj-ppl-'+idx)) || jobs[idx].people;
+    jobs[idx].ohp     = parseFloat(g('dpj-ohp-'+idx)) || jobs[idx].ohp || 15;
+    jobs[idx].startWeek = parseInt(g('dpj-sw-'+idx)) || 0;
+    jobs[idx].status  = g('dpj-stat-'+idx) || jobs[idx].status;
+    jobs[idx].note    = g('dpj-note-'+idx) || '';
+    var tlEl = document.getElementById('dpj-tl-'+idx);
+    var conEl = document.getElementById('dpj-con-'+idx);
+    if (tlEl) jobs[idx].onTimeline = tlEl.checked;
+    if (conEl) jobs[idx].confirmed = conEl.checked;
+    saveJobs(jobs);
+    try { dpRenderTimeline(); dpBuildMonthlySummary(); dpRenderJobCards(); } catch(e) {}
+    // Toast
+    try { var t=document.createElement('div'); t.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#22c55e;color:white;padding:8px 18px;border-radius:20px;font-size:12px;font-weight:800;z-index:9999;pointer-events:none;'; t.textContent='✓ Saved'; document.body.appendChild(t); setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},1500); } catch(e2) {}
   };
 
   // ── Monthly cashflow summary ──────────────────────────────────────────────
@@ -16605,11 +16688,20 @@ window.mobDrawerTab = function(tabName) {
     var jobs = loadJobs();
     jobs.push({ id: Date.now(), name:'New job', value:0, weeks:8, people:3, ohp:15, profit:0, startWeek:0, onTimeline:true, confirmed:false, status:'bidding', note:'' });
     saveJobs(jobs);
-    buildDirJobsTab();  // rebuild the whole tab
-    setTimeout(function() {
-      var nameEl = document.getElementById('dj-job-name-' + (jobs.length - 1));
-      if (nameEl) { nameEl.focus(); nameEl.select(); }
-    }, 120);
+    // Rebuild whichever view is active
+    try {
+      var plannerPanel = document.getElementById('tab-dir-planner');
+      if (plannerPanel && plannerPanel.classList.contains('active')) {
+        dpRenderTimeline(); dpRenderJobCards(); dpBuildMonthlySummary();
+        // Scroll to bottom so new card is visible
+        setTimeout(function(){
+          var cards = document.getElementById('dp-job-cards');
+          if (cards) cards.lastElementChild && cards.lastElementChild.scrollIntoView({behavior:'smooth'});
+        }, 200);
+        return;
+      }
+    } catch(e) {}
+    buildDirJobsTab();
   };
 
   // ── Sync/refresh planner from Jobs tab ───────────────────────────────────
