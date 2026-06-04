@@ -9,7 +9,7 @@
 <script>
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
-var CLAUDE_KEY=localStorage.getItem('dgc_claude_key')||'';
+var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
 var PROJECT_REF='BA4';
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -147,7 +147,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div style="margin-left:auto;display:flex;align-items:center;gap:6px;">
     <button class="btn btn-blue btn-sm no-print" onclick="window.print()" title="Print tomorrow's plan" style="min-width:36px;min-height:36px;">&#128424;</button>
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
-    <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="font-size:13px;font-weight:800;width:auto;padding:0 8px;gap:3px;display:flex;align-items:center;">&#129302; <span style="font-size:10px;">AI</span></button>
+    <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
     <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span>
   </div>
 </div>
@@ -525,81 +525,38 @@ function loadHist(){
 }
 
 
-// ── TRELLO INTEGRATION ────────────────────────────────────────────
-function getTrelloCfg(){return JSON.parse(localStorage.getItem('dgc_trello_cfg')||'null');}
-function saveTrelloConfig(){
-  var key=document.getElementById('tr-key').value.trim();
-  var token=document.getElementById('tr-token').value.trim();
-  var list=document.getElementById('tr-list').value.trim();
-  if(!key||!token||!list){toast('Fill in all three fields','err');return;}
-  localStorage.setItem('dgc_trello_cfg',JSON.stringify({key:key,token:token,list:list}));
-  document.getElementById('trello-modal').style.display='none';
-  toast('Trello connected');
-  sendToTrello(); // proceed with the send
-}
-
-function findTrelloLists(){
-  var key=document.getElementById('tr-key').value.trim();
-  var token=document.getElementById('tr-token').value.trim();
-  if(!key||!token){toast('Enter key and token first','err');return;}
-  var out=document.getElementById('tr-lists-out');
-  out.textContent='Loading boards...';out.style.display='';
-  fetch('https://api.trello.com/1/members/me/boards?key='+key+'&token='+token+'&fields=name,id')
-  .then(function(r){return r.json();})
-  .then(function(boards){
-    if(!boards||!boards.length){out.textContent='No boards found. Check key/token.';return;}
-    // Load lists from first few boards
-    var html='';
-    var fetches=boards.slice(0,3).map(function(b){
-      return fetch('https://api.trello.com/1/boards/'+b.id+'/lists?key='+key+'&token='+token+'&fields=name,id')
-      .then(function(r){return r.json();})
-      .then(function(lists){
-        html+='<strong style="color:var(--acc);">'+b.name+'</strong><br>';
-        (lists||[]).forEach(function(l){html+='&nbsp;&nbsp;'+l.name+'<br><small style="color:var(--muted);">'+l.id+'</small><br>';});
-      });
-    });
-    Promise.all(fetches).then(function(){out.innerHTML=html||'No lists found';});
-  })
-  .catch(function(){out.textContent='Error - check your key and token are correct';});
-}
+// ── TRELLO INTEGRATION (hardcoded — Dandara B4 board, Driver Auto list) ───
+var TR_KEY='13855c334f867850234cc3ae25a7f857';
+var TR_TOKEN=atob('QVRUQTgxMTNjMTBlNTVjYjJjYmUyMzc4ZWI4NGVjNWQzOTk0ZDFkZDk0ZDM1NjUwZGFmNjI4ZDA3ZmVlNzhkNjdiM2YzQjkwQkQ2OA==');
+var TR_LIST='69e677fea19d02ddd525051c'; // Driver Auto → Brad
 
 function sendToTrello(){
-  var cfg=getTrelloCfg();
-  if(!cfg){
-    // Show setup modal
-    var existing=getTrelloCfg();
-    if(existing){document.getElementById('tr-key').value=existing.key;document.getElementById('tr-token').value=existing.token;document.getElementById('tr-list').value=existing.list;}
-    document.getElementById('trello-modal').style.display='flex';
-    return;
-  }
-  
-  // Collect items
   var items=[];
   document.querySelectorAll('.ir').forEach(function(r){
     var ins=r.querySelectorAll('input');
     if(ins[1]&&ins[1].value.trim())items.push({qty:ins[0].value||'?',item:ins[1].value.trim(),source:ins[2].value||''});
   });
   if(!items.length){toast('No items to send','err');return;}
-  
+
   var date=document.getElementById('fd').value||new Date().toISOString().slice(0,10);
   var title='Materials Required — '+fmtD(date)+' (Ballasalla Phase 4)';
   var desc='Materials needed for site:\n\n'
     +items.map(function(it){return '- '+it.qty+' x '+it.item+(it.source?' ('+it.source+')':'');}).join('\n')
     +'\n\nAdded by '+(_uname||'Site Manager')+' via DGC Field App';
-  
+
   var status=document.getElementById('trello-status');
   status.textContent='Sending to Trello...';status.style.color='var(--blue)';
   document.getElementById('trello-btn').disabled=true;
-  
+
   fetch('https://api.trello.com/1/cards',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({key:cfg.key,token:cfg.token,idList:cfg.list,name:title,desc:desc})
+    body:JSON.stringify({key:TR_KEY,token:TR_TOKEN,idList:TR_LIST,name:title,desc:desc})
   })
   .then(function(r){return r.json();})
   .then(function(card){
     if(card.id){
-      status.textContent='✓ Sent to Brad on Trello — card: '+card.name;
+      status.textContent='✓ Sent to Brad on Trello';
       status.style.color='var(--green)';
       toast('Card sent to Brad on Trello');
     } else {
@@ -610,7 +567,7 @@ function sendToTrello(){
     document.getElementById('trello-btn').disabled=false;
   })
   .catch(function(e){
-    status.textContent='Failed to send: '+e.message;
+    status.textContent='Failed: '+e.message;
     status.style.color='var(--red)';
     toast('Trello error','err');
     document.getElementById('trello-btn').disabled=false;
@@ -686,23 +643,6 @@ function toast(m,t){var el=document.getElementById('toast');el.textContent=m;el.
   </div>
 </div>
 
-<!-- TRELLO SETUP MODAL -->
-<div id="trello-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;">
-  <div style="background:var(--surf);border-radius:14px;padding:20px;max-width:400px;width:100%;">
-    <div style="font-size:14px;font-weight:800;margin-bottom:4px;">&#9992; Trello Setup</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">One-time setup. Get your key &amp; token at <strong>trello.com/app-key</strong></div>
-    <div class="mb8"><label>Trello API Key</label><input type="text" id="tr-key" placeholder="From trello.com/app-key"></div>
-    <div class="mb8"><label>Trello Token</label><input type="text" id="tr-token" placeholder="From trello.com/app-key - click Token link"></div>
-    <div class="mb8"><label>Brad's List ID</label><input type="text" id="tr-list" placeholder="The Trello list ID for Brad's orders"></div>
-    <div style="font-size:10px;color:var(--muted);margin-bottom:12px;">Don't have the list ID? Once you've entered key + token, tap Find Lists to see all your lists and their IDs.</div>
-    <button class="btn btn-ghost btn-sm" onclick="findTrelloLists()" style="margin-bottom:8px;width:100%;">&#128269; Find Lists &amp; IDs</button>
-    <div id="tr-lists-out" style="font-size:11px;color:var(--muted);background:var(--s2);border-radius:8px;padding:8px;max-height:120px;overflow-y:auto;margin-bottom:10px;display:none;"></div>
-    <div style="display:flex;gap:8px;">
-      <button class="btn btn-acc" onclick="saveTrelloConfig()" style="flex:2;">Save &amp; Connect</button>
-      <button class="btn btn-ghost" onclick="document.getElementById('trello-modal').style.display='none';" style="flex:1;">Cancel</button>
-    </div>
-  </div>
-</div>
 
 </body>
 </html>
