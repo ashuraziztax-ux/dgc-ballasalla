@@ -8,312 +8,279 @@
 <meta name="theme-color" content="#0f1117">
 <title>DGC Site App</title>
 <style>
-* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
-:root {
-  --bg:#0f1117; --surface:#1a1d27; --s2:#232736; --border:#2e3347;
-  --acc:#f59e0b; --green:#22c55e; --red:#ef4444; --blue:#38bdf8;
-  --text:#f1f5f9; --muted:#64748b;
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--s2:#232736;--border:#2e3347;
+  --acc:#f59e0b;--green:#22c55e;--red:#ef4444;--blue:#38bdf8;--purple:#a78bfa;
+  --text:#f1f5f9;--muted:#64748b;
 }
-html,body { height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
 
-.header {
-  position:fixed; top:0; left:0; right:0; z-index:100;
-  background:var(--surface); border-bottom:1px solid var(--border);
-  padding:max(10px,env(safe-area-inset-top)) 14px 10px;
-  display:flex; align-items:center; gap:10px;
-}
-.logo { width:30px;height:30px;background:var(--acc);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#1a1d27;font-size:12px;flex-shrink:0; }
-.hdr-title { font-size:15px;font-weight:800; }
-.hdr-sub { font-size:10px;color:var(--muted); }
-.hdr-day { margin-left:auto;text-align:right;font-size:11px;color:var(--muted);font-weight:600; }
+/* HEADER */
+.hdr{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);padding:max(10px,env(safe-area-inset-top)) 14px 10px;display:flex;align-items:center;gap:10px;}
+.logo{width:30px;height:30px;background:var(--acc);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#1a1d27;font-size:11px;flex-shrink:0;}
+.hdr-t{font-size:14px;font-weight:800;}
+.hdr-s{font-size:10px;color:var(--muted);}
+.hdr-d{margin-left:auto;font-size:11px;color:var(--muted);font-weight:600;text-align:right;}
 
-.main {
-  position:fixed; top:68px; bottom:calc(58px + env(safe-area-inset-bottom));
-  left:0;right:0; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:10px;
-}
+/* MAIN */
+.main{position:fixed;top:66px;bottom:calc(56px + env(safe-area-inset-bottom));left:0;right:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px;}
 
-.bottom-nav {
-  position:fixed;bottom:0;left:0;right:0;z-index:100;
-  background:var(--surface);border-top:1px solid var(--border);
-  display:flex;padding-bottom:env(safe-area-inset-bottom);
-}
-.nav-btn {
-  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:7px 4px;background:none;border:none;color:var(--muted);
-  font-size:9px;font-weight:800;cursor:pointer;gap:2px;
-  text-transform:uppercase;letter-spacing:.05em;
-}
-.nav-btn .ni { font-size:20px; }
-.nav-btn.active { color:var(--acc); }
+/* BOTTOM NAV */
+.bnav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--surface);border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom);}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 4px;background:none;border:none;color:var(--muted);font-size:9px;font-weight:800;cursor:pointer;gap:2px;text-transform:uppercase;letter-spacing:.05em;}
+.nb .ni{font-size:19px;}
+.nb.active{color:var(--acc);}
 
-.tab { display:none; }
-.tab.active { display:block; }
+/* TABS */
+.tab{display:none;}.tab.active{display:block;}
 
-.card { background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px; }
-.card-hd { font-size:12px;font-weight:800;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px; }
-.badge { background:var(--acc);color:#1a1d27;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:900; }
+/* SECTION HEADER */
+.sec-hd{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--acc);margin:14px 0 8px;padding-left:2px;}
 
-label { font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px; }
-input,select,textarea {
-  width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--border);
-  border-radius:10px;color:var(--text);font-size:14px;font-weight:600;outline:none;
-  appearance:none;-webkit-appearance:none;font-family:inherit;
-}
-input:focus,select:focus,textarea:focus { border-color:var(--acc); }
-textarea { resize:vertical;min-height:80px;line-height:1.5; }
-select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2364748b' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px; }
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;}
 
-.grid2 { display:grid;grid-template-columns:1fr 1fr;gap:8px; }
-.grid3 { display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px; }
-.mb8 { margin-bottom:8px; }
-.mb12 { margin-bottom:12px; }
+/* FORM */
+label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px;}
+input,select,textarea{width:100%;padding:9px 11px;background:var(--s2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:13px;font-weight:600;outline:none;appearance:none;-webkit-appearance:none;font-family:inherit;}
+input:focus,select:focus,textarea:focus{border-color:var(--acc);}
+textarea{resize:vertical;line-height:1.5;}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%2364748b' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:32px;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+.mb6{margin-bottom:6px;}
+.mb10{margin-bottom:10px;}
 
-.btn { padding:11px 18px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;border:none;font-family:inherit; }
-.btn-primary { background:var(--acc);color:#1a1d27;width:100%; }
-.btn-ghost { background:var(--s2);border:1px solid var(--border);color:var(--text); }
-.btn-green { background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:var(--green); }
-.btn-red { background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--red); }
-.btn-sm { padding:7px 12px;font-size:12px;border-radius:8px;width:auto; }
+/* TEAM BLOCK */
+.team-blk{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;}
+.team-hd{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
+.tdot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.tname{font-size:12px;font-weight:800;color:var(--text);}
 
-/* GANG SECTION */
-.gang-block { background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px; }
-.gang-hd { display:flex;align-items:center;gap:8px;margin-bottom:10px; }
-.gang-dot { width:10px;height:10px;border-radius:50%;flex-shrink:0; }
-.gang-name { font-size:13px;font-weight:800;color:var(--text); }
-.gang-toggle { margin-left:auto;font-size:11px;color:var(--muted);cursor:pointer;background:none;border:none;color:var(--muted); }
+/* PROGRESS SLOT */
+.slot{border-left:3px solid var(--acc);padding-left:10px;margin-bottom:10px;}
+.slot-time{font-size:11px;font-weight:800;color:var(--acc);margin-bottom:6px;}
+.slot-time.midday{color:var(--blue);border-color:var(--blue);}
+.slot-time.eod{color:var(--green);border-color:var(--green);}
+.slot4{display:grid;grid-template-columns:1fr 70px 60px 50px;gap:6px;margin-top:6px;}
+.slot4 input{padding:7px 9px;font-size:12px;}
 
-.act-row { display:grid;grid-template-columns:1fr 65px 60px 32px;gap:5px;align-items:center;margin-bottom:6px; }
-.act-row input { padding:8px 9px;font-size:13px; }
-.del-btn { width:32px;height:32px;background:var(--s2);border:1px solid var(--border);border-radius:7px;color:var(--red);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+/* OUTPUT TABLE */
+.out-hd{display:grid;grid-template-columns:1fr 60px 55px 75px 30px;gap:5px;margin-bottom:5px;padding:0 2px;}
+.out-hd span{font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);}
+.out-row{display:grid;grid-template-columns:1fr 60px 55px 75px 30px;gap:5px;margin-bottom:5px;align-items:center;}
+.out-row input,.out-row select{padding:7px 8px;font-size:12px;}
+.del{width:28px;height:28px;background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--red);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 
-/* VOICE BUTTON */
-.voice-btn {
-  display:flex;align-items:center;gap:8px;padding:10px 14px;
-  background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);
-  border-radius:10px;color:var(--blue);font-size:12px;font-weight:700;
-  cursor:pointer;width:100%;margin-bottom:8px;
-}
-.voice-btn.recording { background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.4);color:var(--red);animation:pulse 1s infinite; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+/* VOICE + BUTTONS */
+.rec-btn{display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:9px;color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px;}
+.rec-btn.on{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.35);color:var(--red);animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.55}}
+.btn{padding:10px 16px;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;border:none;font-family:inherit;}
+.btn-acc{background:var(--acc);color:#1a1d27;width:100%;}
+.btn-ghost{background:var(--s2);border:1px solid var(--border);color:var(--text);}
+.btn-sm{padding:6px 11px;font-size:11px;border-radius:7px;width:auto;}
+.btns-row{display:flex;gap:6px;margin-top:8px;}
 
 /* HISTORY */
-.entry { padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;position:relative; }
-.entry-date { font-size:10px;font-weight:800;color:var(--acc);margin-bottom:3px; }
-.entry-gangs { font-size:11px;color:var(--text);font-weight:700;margin-bottom:4px; }
-.entry-detail { font-size:11px;color:var(--muted);line-height:1.5; }
-.entry-note { font-size:11px;color:var(--blue);margin-top:4px;font-style:italic; }
-.entry-del { position:absolute;top:8px;right:8px;background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px; }
+.log-card{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px;margin-bottom:7px;position:relative;}
+.log-dt{font-size:10px;font-weight:800;color:var(--acc);margin-bottom:3px;}
+.log-body{font-size:11px;color:var(--muted);line-height:1.6;}
+.log-del{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;}
 
 /* PROGRAMME */
-.zone-card {
-  background:var(--s2);border:1px solid var(--border);border-radius:12px;
-  padding:12px 14px;margin-bottom:8px;border-left:4px solid var(--acc);
-  transition:border-color .2s;
-}
-.zone-card.done { border-left-color:var(--green);opacity:.5; }
-.zone-card.active-zone { border-left-color:var(--blue); }
-.zone-name { font-size:13px;font-weight:800;color:var(--text);margin-bottom:2px; }
-.zone-meta { font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5; }
-.zone-tasks { margin-bottom:8px; }
-.task-row {
-  display:flex;align-items:center;gap:8px;padding:7px 0;
-  border-bottom:1px solid var(--border); font-size:12px;
-}
-.task-row:last-child { border-bottom:none; }
-.task-check { width:18px;height:18px;border-radius:5px;border:2px solid var(--border);background:none;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center; }
-.task-check.done { background:var(--green);border-color:var(--green); }
-.task-name { flex:1;color:var(--text);font-weight:600; }
-.task-name.done { text-decoration:line-through;color:var(--muted); }
-.task-est { font-size:10px;color:var(--muted);white-space:nowrap; }
-.task-gang { font-size:10px;font-weight:800;white-space:nowrap;padding:2px 7px;border-radius:5px;cursor:pointer;background:var(--s2);border:1px solid var(--border);color:var(--muted); }
-.task-gang.assigned { background:rgba(56,189,248,.15);border-color:rgba(56,189,248,.3);color:var(--blue); }
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px;}
+.tile{background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:9px;text-align:center;}
+.tile-v{font-size:19px;font-weight:900;color:var(--text);line-height:1;}
+.tile-l{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:3px;}
+.pbar-wrap{background:var(--border);border-radius:4px;height:5px;overflow:hidden;margin-bottom:6px;}
+.pbar{height:100%;border-radius:4px;background:var(--green);}
+.zcard{background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:11px 13px;margin-bottom:7px;border-left:4px solid var(--acc);}
+.zcard.zdone{border-left-color:var(--green);opacity:.5;}
+.zcard.zon{border-left-color:var(--blue);}
+.zn{font-size:13px;font-weight:800;color:var(--text);margin-bottom:1px;}
+.zm{font-size:10px;color:var(--muted);margin-bottom:6px;}
+.task-row{display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.task-row:last-child{border:none;}
+.chk{width:17px;height:17px;border-radius:4px;border:2px solid var(--border);background:none;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;}
+.chk.ck{background:var(--green);border-color:var(--green);}
+.tn{flex:1;color:var(--text);font-weight:600;}
+.tn.ck{text-decoration:line-through;color:var(--muted);}
+.test{font-size:9px;color:var(--muted);white-space:nowrap;}
+.tgang{font-size:10px;font-weight:800;padding:2px 8px;border-radius:5px;cursor:pointer;background:var(--surface);border:1px solid var(--border);color:var(--muted);white-space:nowrap;}
+.tgang.ga{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3);color:var(--acc);}
+.tgang.gb{background:rgba(56,189,248,.12);border-color:rgba(56,189,248,.3);color:var(--blue);}
+.tgang.gc{background:rgba(167,139,250,.12);border-color:rgba(167,139,250,.3);color:var(--purple);}
 
-.prog-bar-wrap { background:var(--border);border-radius:4px;height:6px;margin-bottom:8px;overflow:hidden; }
-.prog-bar { height:100%;border-radius:4px;background:var(--green);transition:width .4s; }
+.toast{position:fixed;bottom:65px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:8px 16px;border-radius:18px;font-size:12px;font-weight:800;z-index:9999;pointer-events:none;opacity:0;transition:opacity .3s;white-space:nowrap;}
+.toast.show{opacity:1;}
 
-/* SUMMARY TILES */
-.tiles { display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px; }
-.tile { background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center; }
-.tile-val { font-size:20px;font-weight:900;color:var(--text);line-height:1; }
-.tile-lbl { font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:3px; }
-
-.empty { text-align:center;padding:28px 16px;color:var(--muted); }
-.empty-icon { font-size:36px;margin-bottom:8px; }
-
-.toast { position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:9px 18px;border-radius:20px;font-size:13px;font-weight:800;z-index:9999;pointer-events:none;opacity:0;transition:opacity .3s;white-space:nowrap; }
-.toast.show { opacity:1; }
-
-/* GANG COLOUR DOTS */
-.dot-a { background:#f59e0b; }
-.dot-b { background:#38bdf8; }
-.dot-c { background:#a78bfa; }
+.empty{text-align:center;padding:24px;color:var(--muted);}
 </style>
 </head>
 <body>
 
-<div class="header">
+<!-- Header -->
+<div class="hdr">
   <div class="logo">DGC</div>
-  <div>
-    <div class="hdr-title">Site App</div>
-    <div class="hdr-sub">Ballasalla Phase 4</div>
-  </div>
-  <div class="hdr-day" id="hdr-day"></div>
+  <div><div class="hdr-t">DGC Daily Log</div><div class="hdr-s">Ballasalla Phase 4</div></div>
+  <div class="hdr-d" id="hd"></div>
 </div>
 
 <div class="main">
 
-  <!-- ═══════════ DAILY DIARY TAB ═══════════ -->
-  <div class="tab active" id="tab-diary">
+  <!-- ═══════════════════ DAILY LOG ═══════════════════ -->
+  <div class="tab active" id="tab-log">
 
+    <!-- Basic info -->
+    <div class="sec-hd">📋 DGC Daily Log</div>
     <div class="card">
-      <div class="card-hd">📅 Daily Site Diary</div>
-
-      <div class="grid2 mb12">
-        <div><label>Date</label><input type="date" id="d-date"></div>
-        <div><label>Site conditions</label><input type="text" id="d-conditions" placeholder="Weather, access issues…"></div>
+      <div class="row2 mb10">
+        <div><label>Date</label><input type="date" id="l-date"></div>
+        <div><label>Site Manager</label><input type="text" id="l-mgr" placeholder="Name"></div>
       </div>
-
-      <!-- Gang A -->
-      <div class="gang-block" id="block-a">
-        <div class="gang-hd">
-          <div class="gang-dot dot-a"></div>
-          <div class="gang-name">Gang A</div>
-          <button class="gang-toggle" onclick="toggleGang('a')">▾ hide</button>
+      <div class="row2">
+        <div>
+          <label>Weather</label>
+          <select id="l-weather">
+            <option value="">Select…</option>
+            <option>Fine & dry</option>
+            <option>Overcast</option>
+            <option>Light rain</option>
+            <option>Heavy rain</option>
+            <option>Wind & rain</option>
+            <option>Cold & dry</option>
+            <option>Hot & sunny</option>
+            <option>Frost</option>
+          </select>
         </div>
-        <div id="gang-a-body">
-          <div class="mb8">
-            <label>Who was on site (Gang A)</label>
-            <input type="text" id="da-people" placeholder="e.g. David, John, Mike — 5 people total">
-          </div>
-          <div class="mb8">
-            <label style="margin-bottom:6px;">What they did today</label>
-            <div style="font-size:10px;color:var(--muted);margin-bottom:6px;display:grid;grid-template-columns:1fr 65px 60px 32px;gap:5px;padding:0 2px;">
-              <span>Activity</span><span>Qty</span><span>Unit</span><span></span>
-            </div>
-            <div id="acts-a"></div>
-            <button class="btn btn-ghost btn-sm" onclick="addAct('a')" style="margin-bottom:8px;">+ Add</button>
-          </div>
-          <div class="mb8">
-            <div class="voice-btn" id="vbtn-a" onclick="toggleVoice('a')">
-              <span id="vbtn-a-icon">🎤</span>
-              <span id="vbtn-a-lbl">Dictate gang note — tap &amp; speak</span>
-            </div>
-            <textarea id="da-note" placeholder="Issues, instructions received, problems, anything important…" rows="3"></textarea>
-          </div>
-        </div>
+        <div><label>Temperature (°C)</label><input type="number" id="l-temp" placeholder="e.g. 14"></div>
       </div>
+    </div>
 
-      <!-- Gang B -->
-      <div class="gang-block" id="block-b">
-        <div class="gang-hd">
-          <div class="gang-dot dot-b"></div>
-          <div class="gang-name">Gang B</div>
-          <button class="gang-toggle" onclick="toggleGang('b')">▾ hide</button>
-        </div>
-        <div id="gang-b-body">
-          <div class="mb8">
-            <label>Who was on site (Gang B)</label>
-            <input type="text" id="db-people" placeholder="e.g. Harry, Tom — 4 people">
-          </div>
-          <div class="mb8">
-            <label style="margin-bottom:6px;">What they did today</label>
-            <div style="font-size:10px;color:var(--muted);margin-bottom:6px;display:grid;grid-template-columns:1fr 65px 60px 32px;gap:5px;padding:0 2px;">
-              <span>Activity</span><span>Qty</span><span>Unit</span><span></span>
-            </div>
-            <div id="acts-b"></div>
-            <button class="btn btn-ghost btn-sm" onclick="addAct('b')" style="margin-bottom:8px;">+ Add</button>
-          </div>
-          <div class="mb8">
-            <div class="voice-btn" id="vbtn-b" onclick="toggleVoice('b')">
-              <span id="vbtn-b-icon">🎤</span>
-              <span id="vbtn-b-lbl">Dictate gang note — tap &amp; speak</span>
-            </div>
-            <textarea id="db-note" placeholder="Issues, progress, anything important…" rows="3"></textarea>
-          </div>
-        </div>
+    <!-- Teams & Allocation -->
+    <div class="sec-hd">👷 Teams &amp; Allocation</div>
+    <div class="team-blk">
+      <div class="team-hd"><div class="tdot" style="background:#f59e0b"></div><div class="tname">Team A — Lead + Operatives</div></div>
+      <input type="text" id="t-a" placeholder="e.g. David Smith (lead) — John, Mike, Carl, Cossie">
+    </div>
+    <div class="team-blk">
+      <div class="team-hd"><div class="tdot" style="background:#38bdf8"></div><div class="tname">Team B — Lead + Operatives</div></div>
+      <input type="text" id="t-b" placeholder="e.g. Harry Harrison (lead) — Tom, Brad, Josef">
+    </div>
+    <div class="team-blk">
+      <div class="team-hd"><div class="tdot" style="background:#a78bfa"></div><div class="tname">Team C — Lead + Operatives</div></div>
+      <input type="text" id="t-c" placeholder="e.g. Lewis (lead) — 3 operatives">
+    </div>
+
+    <!-- Morning Briefing -->
+    <div class="sec-hd">🌅 Morning Briefing</div>
+    <div class="card">
+      <div class="row2 mb10">
+        <div><label>Time held</label><input type="time" id="b-time"></div>
+        <div><label>Visitors / Inductions</label><input type="text" id="b-visitors" placeholder="Names or none"></div>
       </div>
+      <div class="mb10"><label>Topics covered</label><input type="text" id="b-topics" placeholder="e.g. HV permit, hot works, zone access…"></div>
+      <div><label>Key risks identified</label><input type="text" id="b-risks" placeholder="e.g. Live HV cable Zone 9, excavation depth…"></div>
+    </div>
 
-      <!-- Gang C -->
-      <div class="gang-block" id="block-c">
-        <div class="gang-hd">
-          <div class="gang-dot dot-c"></div>
-          <div class="gang-name">Gang C</div>
-          <button class="gang-toggle" onclick="toggleGang('c')">▾ hide</button>
-        </div>
-        <div id="gang-c-body">
-          <div class="mb8">
-            <label>Who was on site (Gang C)</label>
-            <input type="text" id="dc-people" placeholder="e.g. Brad, Cossie, Josef">
-          </div>
-          <div class="mb8">
-            <label style="margin-bottom:6px;">What they did today</label>
-            <div style="font-size:10px;color:var(--muted);margin-bottom:6px;display:grid;grid-template-columns:1fr 65px 60px 32px;gap:5px;padding:0 2px;">
-              <span>Activity</span><span>Qty</span><span>Unit</span><span></span>
-            </div>
-            <div id="acts-c"></div>
-            <button class="btn btn-ghost btn-sm" onclick="addAct('c')" style="margin-bottom:8px;">+ Add</button>
-          </div>
-          <div class="mb8">
-            <div class="voice-btn" id="vbtn-c" onclick="toggleVoice('c')">
-              <span id="vbtn-c-icon">🎤</span>
-              <span id="vbtn-c-lbl">Dictate gang note — tap &amp; speak</span>
-            </div>
-            <textarea id="dc-note" placeholder="Issues, progress, anything important…" rows="3"></textarea>
-          </div>
+    <!-- Progress Markers -->
+    <div class="sec-hd">📍 Progress Markers</div>
+    <div class="card">
+
+      <div class="slot">
+        <div class="slot-time">10:00 — Morning</div>
+        <label>Work done / Progress</label>
+        <textarea id="p-am" rows="3" placeholder="What has been completed this morning across all gangs…"></textarea>
+        <div class="slot4">
+          <div><label>Issues / Blockers</label><input type="text" id="p-am-iss" placeholder="Any delays…"></div>
+          <div><label>% Done</label><input type="number" id="p-am-pct" placeholder="%" min="0" max="100"></div>
+          <div><label>Zone</label><input type="text" id="p-am-zone" placeholder="e.g. G"></div>
+          <div><label>Initials</label><input type="text" id="p-am-init" placeholder="DS"></div>
         </div>
       </div>
 
-      <!-- Site-wide note -->
-      <div class="mb12">
-        <label>Site-wide note / manager diary entry</label>
-        <div class="voice-btn" id="vbtn-site" onclick="toggleVoice('site')">
-          <span id="vbtn-site-icon">🎤</span>
-          <span id="vbtn-site-lbl">Dictate site diary note — tap &amp; speak</span>
+      <div class="slot" style="border-left-color:var(--blue);">
+        <div class="slot-time" style="color:var(--blue);">13:00 — Midday</div>
+        <label>Work done / Progress</label>
+        <textarea id="p-mid" rows="3" placeholder="Midday update — progress, any issues since morning…"></textarea>
+        <div class="slot4">
+          <div><label>Issues / Blockers</label><input type="text" id="p-mid-iss" placeholder="Any delays…"></div>
+          <div><label>% Done</label><input type="number" id="p-mid-pct" placeholder="%" min="0" max="100"></div>
+          <div><label>Zone</label><input type="text" id="p-mid-zone" placeholder="e.g. H"></div>
+          <div><label>Initials</label><input type="text" id="p-mid-init" placeholder="DS"></div>
         </div>
-        <textarea id="d-site-note" placeholder="Overall site diary — anything from today that needs recording. Speak or type." rows="4"></textarea>
       </div>
 
-      <button class="btn btn-primary" onclick="saveDiary()">💾 Save Today's Diary</button>
+      <div class="slot" style="border-left-color:var(--green);">
+        <div class="slot-time" style="color:var(--green);">17:00 — End of Day</div>
+        <label>Work done / Progress</label>
+        <textarea id="p-eod" rows="3" placeholder="End of day summary — total output, signed off for the day…"></textarea>
+        <div class="slot4">
+          <div><label>Issues / Blockers</label><input type="text" id="p-eod-iss" placeholder="Outstanding…"></div>
+          <div><label>% Done</label><input type="number" id="p-eod-pct" placeholder="%" min="0" max="100"></div>
+          <div><label>Zone</label><input type="text" id="p-eod-zone" placeholder="e.g. I"></div>
+          <div><label>Initials</label><input type="text" id="p-eod-init" placeholder="DS"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gang Output Record -->
+    <div class="sec-hd">📊 Gang Output Record</div>
+    <div class="card">
+      <div class="out-hd"><span>Activity</span><span>Qty</span><span>Unit</span><span>Gang/Zone</span><span></span></div>
+      <div id="out-rows"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addOut()" style="margin-bottom:4px;">+ Add row</button>
+    </div>
+
+    <!-- Site Diary + Voice -->
+    <div class="sec-hd">📓 Site Diary</div>
+    <div class="card">
+      <button class="rec-btn" id="rec-btn" onclick="toggleVoice()">
+        <span id="rec-icon">🎤</span>
+        <span id="rec-lbl">Record — tap and speak your site diary</span>
+      </button>
+      <textarea id="diary" rows="6" placeholder="Site diary — speak or type. Record events, instructions received, problems, visitors, any issues that may become claims…"></textarea>
+      <div class="btns-row">
+        <button class="btn btn-acc" onclick="saveLog()">💾 Save Log</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearForm()">Clear</button>
+      </div>
     </div>
 
     <!-- History -->
-    <div class="card">
-      <div class="card-hd">📚 Past Entries <span id="diary-count" class="badge">0</span></div>
-      <div id="diary-history"></div>
-    </div>
+    <div class="sec-hd">📚 Recent Log Entries <span id="log-cnt" style="background:var(--acc);color:#1a1d27;border-radius:6px;padding:1px 7px;font-size:10px;font-weight:900;margin-left:4px;">0</span></div>
+    <div id="log-hist"></div>
+    <div style="height:16px;"></div>
 
   </div>
 
-  <!-- ═══════════ PROGRAMME TAB ═══════════ -->
+  <!-- ═══════════════════ PROGRAMME ═══════════════════ -->
   <div class="tab" id="tab-prog">
+    <div class="sec-hd">📐 What's Left — Ballasalla Phase 4</div>
 
-    <!-- Summary -->
     <div class="tiles" id="prog-tiles"></div>
 
-    <div class="card" style="padding:12px 14px;margin-bottom:8px;">
-      <div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:3px;">What's left on Ballasalla Phase 4</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Tap a task to assign a gang. Tick when complete. Estimated days shown at current pace.</div>
-      <div class="prog-bar-wrap"><div class="prog-bar" id="overall-bar" style="width:71%"></div></div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-weight:700;">
-        <span>71% complete</span><span>Ends 3 Jul 2026</span>
-      </div>
+    <div class="card" style="padding:11px 13px;margin-bottom:8px;">
+      <div style="font-size:12px;font-weight:800;margin-bottom:3px;">Overall progress</div>
+      <div class="pbar-wrap"><div class="pbar" id="ov-bar" style="width:71%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-weight:700;"><span>71% complete</span><span>Target: 3 Jul 2026</span></div>
     </div>
 
-    <!-- Zone cards -->
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px;padding:0 2px;">Tap gang badge to assign. Tick task when done. Shows estimated days remaining per task.</div>
+
     <div id="zone-list"></div>
-
-    <div style="padding:8px 0 20px;font-size:11px;color:var(--muted);text-align:center;">
-      Estimated days based on current gang output rate.<br>Tap task gang badge to cycle through Gang A / B / C.
-    </div>
+    <div style="height:16px;"></div>
   </div>
 
 </div>
 
-<div class="bottom-nav">
-  <button class="nav-btn active" id="nav-diary" onclick="switchTab('diary',this)">
-    <span class="ni">📋</span>Daily Diary
+<!-- Bottom Nav -->
+<div class="bnav">
+  <button class="nb active" id="nav-log" onclick="sw('log',this)">
+    <span class="ni">📋</span>Daily Log
   </button>
-  <button class="nav-btn" id="nav-prog" onclick="switchTab('prog',this)">
+  <button class="nb" id="nav-prog" onclick="sw('prog',this)">
     <span class="ni">📐</span>Programme
   </button>
 </div>
@@ -321,343 +288,251 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
 <div class="toast" id="toast"></div>
 
 <script>
-var LS_DIARY = 'site_diary_v1';
-var LS_PROG  = 'site_prog_v1';
+var LS='siteapp_log_v2', LP='siteapp_prog_v2';
+function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function ld(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2200);}
+function today(){return new Date().toISOString().slice(0,10);}
+function fmtD(s){if(!s)return'—';return new Date(s+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});}
 
-function save(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch(e){} }
-function load(k,d){ try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;} }
-function toast(msg){
-  var t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  setTimeout(function(){t.classList.remove('show');},2000);
-}
-function todayStr(){ return new Date().toISOString().slice(0,10); }
-function fmtDate(s){
-  if(!s)return'—';
-  return new Date(s+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
-}
-
-// ── Header date ──────────────────────────────────────────────────────────────
+// Init
 (function(){
   var d=new Date();
-  document.getElementById('hdr-day').textContent=d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'long'});
-  document.getElementById('d-date').value=todayStr();
-  addAct('a'); addAct('b'); addAct('c');
-  renderDiaryHistory();
+  document.getElementById('hd').textContent=d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'long'});
+  document.getElementById('l-date').value=today();
+  addOut();addOut();addOut();
+  renderHist();
 })();
 
-// ── Tab switch ───────────────────────────────────────────────────────────────
-function switchTab(name,btn){
+// Tab switch
+function sw(name,btn){
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
-  document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('active');});
   document.getElementById('tab-'+name).classList.add('active');
   btn.classList.add('active');
-  if(name==='prog') renderProgramme();
-  if(name==='diary') renderDiaryHistory();
+  if(name==='prog')renderProg();
+  if(name==='log')renderHist();
 }
 
-// ── Gang collapse ────────────────────────────────────────────────────────────
-function toggleGang(g){
-  var body=document.getElementById('gang-'+g+'-body');
-  var btn=document.querySelector('#block-'+g+' .gang-toggle');
-  var hidden=body.style.display==='none';
-  body.style.display=hidden?'':'none';
-  btn.textContent=hidden?'▾ hide':'▸ show';
-}
-
-// ── Activity rows ────────────────────────────────────────────────────────────
-var _actCounts={a:0,b:0,c:0};
-function addAct(g,act,qty,unit){
-  _actCounts[g]++;
-  var id='act-'+g+'-'+_actCounts[g];
+// Output rows
+var _oc=0;
+function addOut(a,q,u,g){
+  _oc++;
+  var id='or'+_oc;
   var row=document.createElement('div');
-  row.className='act-row';row.id=id;
+  row.className='out-row';row.id=id;
   row.innerHTML=
-    '<input type="text" placeholder="e.g. 110mm drain, kerbing, concrete" value="'+(act||'')+'">'+
-    '<input type="number" placeholder="qty" min="0" step="0.5" value="'+(qty||'')+'">'+
-    '<input type="text" placeholder="m/m²/nr" value="'+(unit||'')+'">'+
-    '<button class="del-btn" onclick="this.closest(\'.act-row\').remove()">×</button>';
-  document.getElementById('acts-'+g).appendChild(row);
+    '<input type="text" placeholder="Activity description" value="'+(a||'')+'">'+
+    '<input type="number" placeholder="Qty" min="0" step="0.5" value="'+(q||'')+'">'+
+    '<input type="text" placeholder="m/m²/nr" value="'+(u||'')+'">'+
+    '<input type="text" placeholder="Gang A / G" value="'+(g||'')+'">'+
+    '<button class="del" onclick="this.closest(\'.out-row\').remove()">×</button>';
+  document.getElementById('out-rows').appendChild(row);
 }
-function getActs(g){
-  var rows=document.querySelectorAll('#acts-'+g+' .act-row');
-  var acts=[];
+function getOut(){
+  var rows=document.querySelectorAll('.out-row');
+  var out=[];
   rows.forEach(function(r){
     var ins=r.querySelectorAll('input');
     var act=ins[0].value.trim();
-    if(act) acts.push({act:act,qty:ins[1].value.trim(),unit:ins[2].value.trim()});
+    if(act) out.push({act:act,qty:ins[1].value.trim(),unit:ins[2].value.trim(),gang:ins[3].value.trim()});
   });
-  return acts;
+  return out;
 }
 
-// ── Voice input ──────────────────────────────────────────────────────────────
-var _voiceActive=null;
-var _recognition=null;
-
-function toggleVoice(gangId){
-  if(!('webkitSpeechRecognition' in window||'SpeechRecognition' in window)){
-    toast('⚠ Voice not supported on this browser');return;
+// Voice
+var _rec=null,_recActive=false;
+function toggleVoice(){
+  if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){
+    toast('⚠ Voice not supported — try Chrome on iOS');return;
   }
-  if(_voiceActive===gangId){
-    stopVoice();return;
-  }
-  if(_voiceActive) stopVoice();
-  _voiceActive=gangId;
-  var btn=document.getElementById('vbtn-'+gangId);
-  var icon=document.getElementById('vbtn-'+gangId+'-icon');
-  var lbl=document.getElementById('vbtn-'+gangId+'-lbl');
-  btn.classList.add('recording');
-  icon.textContent='⏹';
-  lbl.textContent='Recording… tap to stop';
-
+  if(_recActive){stopRec();return;}
+  _recActive=true;
+  var btn=document.getElementById('rec-btn');
+  btn.classList.add('on');
+  document.getElementById('rec-icon').textContent='⏹';
+  document.getElementById('rec-lbl').textContent='Recording… tap to stop';
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  _recognition=new SR();
-  _recognition.continuous=true;
-  _recognition.interimResults=true;
-  _recognition.lang='en-GB';
-
-  var finalText='';
-  var noteId=gangId==='site'?'d-site-note':'d'+gangId+'-note';
-  var existing=document.getElementById(noteId).value;
-
-  _recognition.onresult=function(e){
+  _rec=new SR();_rec.continuous=true;_rec.interimResults=true;_rec.lang='en-GB';
+  var final='',existing=document.getElementById('diary').value;
+  _rec.onresult=function(e){
     var interim='';
     for(var i=e.resultIndex;i<e.results.length;i++){
-      if(e.results[i].isFinal) finalText+=e.results[i][0].transcript+' ';
+      if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';
       else interim+=e.results[i][0].transcript;
     }
-    document.getElementById(noteId).value=(existing?(existing+' '):'')+(finalText+interim).trim();
+    document.getElementById('diary').value=(existing?existing+' ':'')+(final+interim).trim();
   };
-  _recognition.onerror=function(){ stopVoice(); };
-  _recognition.onend=function(){ stopVoice(); };
-  _recognition.start();
+  _rec.onerror=_rec.onend=function(){stopRec();};
+  _rec.start();
+}
+function stopRec(){
+  if(_rec){try{_rec.stop();}catch(e){}}_rec=null;_recActive=false;
+  document.getElementById('rec-btn').classList.remove('on');
+  document.getElementById('rec-icon').textContent='🎤';
+  document.getElementById('rec-lbl').textContent='Record — tap and speak your site diary';
 }
 
-function stopVoice(){
-  if(_recognition){ try{_recognition.stop();}catch(e){} _recognition=null; }
-  if(_voiceActive){
-    var btn=document.getElementById('vbtn-'+_voiceActive);
-    var icon=document.getElementById('vbtn-'+_voiceActive+'-icon');
-    var lbl=document.getElementById('vbtn-'+_voiceActive+'-lbl');
-    if(btn){btn.classList.remove('recording');}
-    if(icon) icon.textContent='🎤';
-    if(lbl) lbl.textContent='Dictate gang note — tap & speak';
-    _voiceActive=null;
-  }
+// Save log
+function saveLog(){
+  var date=document.getElementById('l-date').value||today();
+  var entry={
+    id:Date.now(), date:date,
+    mgr:document.getElementById('l-mgr').value.trim(),
+    weather:document.getElementById('l-weather').value,
+    temp:document.getElementById('l-temp').value,
+    teams:{
+      a:document.getElementById('t-a').value.trim(),
+      b:document.getElementById('t-b').value.trim(),
+      c:document.getElementById('t-c').value.trim()
+    },
+    briefing:{
+      time:document.getElementById('b-time').value,
+      visitors:document.getElementById('b-visitors').value.trim(),
+      topics:document.getElementById('b-topics').value.trim(),
+      risks:document.getElementById('b-risks').value.trim()
+    },
+    progress:{
+      am:{text:document.getElementById('p-am').value.trim(),iss:document.getElementById('p-am-iss').value.trim(),pct:document.getElementById('p-am-pct').value,zone:document.getElementById('p-am-zone').value.trim(),init:document.getElementById('p-am-init').value.trim()},
+      mid:{text:document.getElementById('p-mid').value.trim(),iss:document.getElementById('p-mid-iss').value.trim(),pct:document.getElementById('p-mid-pct').value,zone:document.getElementById('p-mid-zone').value.trim(),init:document.getElementById('p-mid-init').value.trim()},
+      eod:{text:document.getElementById('p-eod').value.trim(),iss:document.getElementById('p-eod-iss').value.trim(),pct:document.getElementById('p-eod-pct').value,zone:document.getElementById('p-eod-zone').value.trim(),init:document.getElementById('p-eod-init').value.trim()}
+    },
+    output:getOut(),
+    diary:document.getElementById('diary').value.trim()
+  };
+  var logs=ld(LS,[]);
+  logs.unshift(entry);
+  sv(LS,logs);
+  clearForm();
+  renderHist();
+  toast('✓ Log saved — '+fmtD(date));
 }
 
-// ── Save diary ───────────────────────────────────────────────────────────────
-function saveDiary(){
-  var date=document.getElementById('d-date').value||todayStr();
-  var conditions=document.getElementById('d-conditions').value.trim();
-  var siteNote=document.getElementById('d-site-note').value.trim();
-
-  var gangs={};
-  ['a','b','c'].forEach(function(g){
-    var people=document.getElementById('d'+g+'-people').value.trim();
-    var note=document.getElementById('d'+g+'-note').value.trim();
-    var acts=getActs(g);
-    if(people||acts.length||note){
-      gangs[g]={people:people,acts:acts,note:note};
-    }
-  });
-
-  if(!Object.keys(gangs).length&&!siteNote){
-    toast('⚠ Add at least one gang or site note');return;
-  }
-
-  var entries=load(LS_DIARY,[]);
-  entries.unshift({
-    id:Date.now(), date:date, conditions:conditions,
-    gangs:gangs, siteNote:siteNote
-  });
-  save(LS_DIARY,entries);
-
-  // Clear form
-  ['a','b','c'].forEach(function(g){
-    document.getElementById('d'+g+'-people').value='';
-    document.getElementById('d'+g+'-note').value='';
-    document.getElementById('acts-'+g).innerHTML='';
-    _actCounts[g]=0;
-    addAct(g);
-  });
-  document.getElementById('d-conditions').value='';
-  document.getElementById('d-site-note').value='';
-  document.getElementById('d-date').value=todayStr();
-
-  renderDiaryHistory();
-  toast('✓ Diary saved for '+fmtDate(date));
+function clearForm(){
+  ['l-mgr','l-temp','t-a','t-b','t-c','b-visitors','b-topics','b-risks',
+   'p-am','p-am-iss','p-am-pct','p-am-zone','p-am-init',
+   'p-mid','p-mid-iss','p-mid-pct','p-mid-zone','p-mid-init',
+   'p-eod','p-eod-iss','p-eod-pct','p-eod-zone','p-eod-init','diary'
+  ].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('l-date').value=today();
+  document.getElementById('l-weather').value='';
+  document.getElementById('b-time').value='';
+  document.getElementById('out-rows').innerHTML='';_oc=0;
+  addOut();addOut();addOut();
 }
 
-// ── Render diary history ─────────────────────────────────────────────────────
-function deleteDiary(id){
-  if(!confirm('Delete this diary entry?'))return;
-  var entries=load(LS_DIARY,[]).filter(function(e){return e.id!==id;});
-  save(LS_DIARY,entries);
-  renderDiaryHistory();
+function delLog(id){
+  if(!confirm('Delete this entry?'))return;
+  var logs=ld(LS,[]).filter(function(e){return e.id!==id;});
+  sv(LS,logs);renderHist();
 }
 
-function renderDiaryHistory(){
-  var entries=load(LS_DIARY,[]);
-  document.getElementById('diary-count').textContent=entries.length;
-  var el=document.getElementById('diary-history');
-  if(!entries.length){
-    el.innerHTML='<div class="empty"><div class="empty-icon">📝</div><div style="font-size:13px;font-weight:600;color:var(--muted);">No entries yet</div><div style="font-size:11px;color:var(--muted);margin-top:4px;">Save your first diary above</div></div>';
+function renderHist(){
+  var logs=ld(LS,[]);
+  document.getElementById('log-cnt').textContent=logs.length;
+  var el=document.getElementById('log-hist');
+  if(!logs.length){
+    el.innerHTML='<div class="empty"><div style="font-size:32px;margin-bottom:8px;">📝</div><div style="font-size:13px;font-weight:600;">No entries yet</div><div style="font-size:11px;margin-top:3px;">Complete the log above and save</div></div>';
     return;
   }
-  var gangLabels={a:'<span style="color:#f59e0b;font-weight:800;">Gang A</span>',b:'<span style="color:#38bdf8;font-weight:800;">Gang B</span>',c:'<span style="color:#a78bfa;font-weight:800;">Gang C</span>'};
-  el.innerHTML=entries.slice(0,20).map(function(e){
-    var gangHtml=Object.keys(e.gangs||{}).map(function(g){
-      var gd=e.gangs[g];
-      var acts=(gd.acts||[]).map(function(a){return(a.qty?a.qty+' '+(a.unit||'')+' ':'')+'<strong>'+a.act+'</strong>';}).join(' · ');
-      return '<div style="margin-bottom:4px;">'+gangLabels[g]+(gd.people?' — '+gd.people:'')+(acts?'<br><span style="color:var(--muted);">'+acts+'</span>':'')+(gd.note?'<br><em style="color:var(--muted);">'+gd.note+'</em>':'')+'</div>';
-    }).join('');
-    var cond=e.conditions?'<div style="font-size:10px;color:var(--blue);margin-bottom:4px;">🌤 '+e.conditions+'</div>':'';
-    return '<div class="entry">'+
-      '<button class="entry-del" onclick="deleteDiary('+e.id+')">×</button>'+
-      '<div class="entry-date">'+fmtDate(e.date)+'</div>'+
-      cond+gangHtml+
-      (e.siteNote?'<div class="entry-note">📝 '+e.siteNote+'</div>':'')+
+  el.innerHTML=logs.slice(0,15).map(function(e){
+    var teams=[e.teams.a&&'<span style="color:#f59e0b;font-weight:800;">A:</span> '+e.teams.a,
+               e.teams.b&&'<span style="color:#38bdf8;font-weight:800;">B:</span> '+e.teams.b,
+               e.teams.c&&'<span style="color:#a78bfa;font-weight:800;">C:</span> '+e.teams.c].filter(Boolean).join('<br>');
+    var out=(e.output||[]).filter(function(o){return o.act;}).map(function(o){return (o.qty?o.qty+' '+(o.unit||'')+' ':'')+'<strong>'+o.act+'</strong>'+(o.gang?' ['+o.gang+']':'');}).join(' · ');
+    var eod=e.progress&&e.progress.eod&&e.progress.eod.text;
+    return '<div class="log-card">'+
+      '<button class="log-del" onclick="delLog('+e.id+')">×</button>'+
+      '<div class="log-dt">'+fmtD(e.date)+(e.mgr?' — '+e.mgr:'')+(e.weather?' · '+e.weather:'')+(e.temp?' '+e.temp+'°C':'')+'</div>'+
+      '<div class="log-body">'+
+        (teams?'<div style="margin-bottom:3px;">'+teams+'</div>':'')+
+        (out?'<div style="margin-bottom:3px;color:var(--text);">'+out+'</div>':'')+
+        (eod?'<div style="color:var(--green);">EOD: '+eod+'</div>':'')+
+        (e.diary?'<div style="margin-top:3px;font-style:italic;color:var(--blue);">'+e.diary.slice(0,120)+(e.diary.length>120?'…':'')+'</div>':'')+
+      '</div>'+
       '</div>';
   }).join('');
 }
 
-// ══════════════════════════ PROGRAMME ═══════════════════════════════════════
-// Remaining tasks per zone — real Ballasalla data
+// ══════════════════════ PROGRAMME ══════════════════════
 var ZONES=[
-  { id:'z7', name:'Zone G — Lower Road', section:'G', pct:77, active:true,
-    tasks:[
-      {id:'g1',name:'Kerbing — Lower Road',est:3,gang:'',done:false},
-      {id:'g2',name:'Type 1 subbase — Lower Road',est:2,gang:'',done:false},
-      {id:'g3',name:'Tarmac roadbase — Lower Road',est:2,gang:'',done:false}
-    ]
-  },
-  { id:'z8', name:'Zone H — Soft Drain', section:'H', pct:0, active:true,
-    tasks:[
-      {id:'h1',name:'Drain Run H-J (Gang C starts 10 Jun)',est:5,gang:'C',done:false},
-      {id:'h2',name:'Bedding & backfill',est:2,gang:'',done:false},
-      {id:'h3',name:'Chamber connections',est:1,gang:'',done:false}
-    ]
-  },
-  { id:'z9', name:'Zone I — Soft Drain', section:'I', pct:0, active:true,
-    tasks:[
-      {id:'i1',name:'Drain Run I (10 Jun start)',est:3,gang:'C',done:false},
-      {id:'i2',name:'Backfill & reinstate',est:1,gang:'',done:false}
-    ]
-  },
-  { id:'z10', name:'Zone J — Soft Drain', section:'J', pct:0, active:true,
-    tasks:[
-      {id:'j1',name:'Drain Run J (10 Jun start)',est:4,gang:'C',done:false},
-      {id:'j2',name:'Backdrop to existing MH',est:1,gang:'',done:false}
-    ]
-  },
-  { id:'zs', name:'Slab Works — Plots 7–11', section:'Slabs', pct:30, active:true,
-    tasks:[
-      {id:'s1',name:'Footings remaining plots',est:4,gang:'',done:false},
-      {id:'s2',name:'Concrete slab pours',est:5,gang:'',done:false},
-      {id:'s3',name:'Blockwork walls starter',est:3,gang:'',done:false}
-    ]
-  },
-  { id:'z12', name:'Demob & Handover', section:'Demob', pct:0, active:false,
-    tasks:[
-      {id:'d1',name:'Jet wash all manholes',est:1,gang:'',done:false},
-      {id:'d2',name:'CCTV drainage survey',est:2,gang:'',done:false},
-      {id:'d3',name:'Site tidy and demob',est:2,gang:'',done:false},
-      {id:'d4',name:'Handover walkthrough',est:1,gang:'',done:false}
-    ]
-  }
+  {id:'zg',name:'Zone G — Lower Road',pct:77,on:true,tasks:[
+    {id:'g1',name:'Kerbing — Lower Road',est:3,gang:'',done:false},
+    {id:'g2',name:'Type 1 subbase — Lower Road',est:2,gang:'',done:false},
+    {id:'g3',name:'Tarmac roadbase — Lower Road',est:2,gang:'',done:false}]},
+  {id:'zh',name:'Zone H — Soft Drain',pct:0,on:true,tasks:[
+    {id:'h1',name:'Drain Run H–J (Gang C, 10 Jun)',est:5,gang:'C',done:false},
+    {id:'h2',name:'Bedding &amp; backfill Zones H/I/J',est:3,gang:'',done:false},
+    {id:'h3',name:'Chamber connections',est:1,gang:'',done:false}]},
+  {id:'zi',name:'Zone I — Soft Drain',pct:0,on:true,tasks:[
+    {id:'i1',name:'Drain Run I',est:3,gang:'C',done:false},
+    {id:'i2',name:'Backdrop to existing MH (end of run)',est:1,gang:'',done:false}]},
+  {id:'zj',name:'Zone J — Soft Drain',pct:0,on:true,tasks:[
+    {id:'j1',name:'Drain Run J',est:4,gang:'C',done:false}]},
+  {id:'zs',name:'Slab Works — Plots 7–11',pct:30,on:true,tasks:[
+    {id:'s1',name:'Remaining footings — unstarted plots',est:4,gang:'',done:false},
+    {id:'s2',name:'Concrete slab pours',est:5,gang:'',done:false},
+    {id:'s3',name:'Insulation (Jabfloor) — lead time risk',est:0,gang:'',done:false}]},
+  {id:'zk',name:'Kerbing &amp; Subbase — Zones E/F',pct:50,on:true,tasks:[
+    {id:'k1',name:'Kerbing remaining sections',est:3,gang:'',done:false},
+    {id:'k2',name:'Subbase completion',est:2,gang:'',done:false}]},
+  {id:'zd',name:'Demob &amp; Handover',pct:0,on:false,tasks:[
+    {id:'d1',name:'Jet wash all manholes + CCTV survey',est:2,gang:'',done:false},
+    {id:'d2',name:'Site tidy, remove compound',est:2,gang:'',done:false},
+    {id:'d3',name:'Snagging walkthrough with Dandara',est:1,gang:'',done:false}]}
 ];
 
-function loadProg(){
-  var saved=load(LS_PROG,null);
-  if(!saved) return ZONES;
-  // Merge saved task state into ZONES
-  ZONES.forEach(function(z){
-    z.tasks.forEach(function(t){
-      var s=saved[t.id];
-      if(s){t.done=s.done;t.gang=s.gang||t.gang;}
-    });
-  });
-  return ZONES;
+function ldProg(){
+  var s=ld(LP,null);if(!s)return;
+  ZONES.forEach(function(z){z.tasks.forEach(function(t){var d=s[t.id];if(d){t.done=d.done;t.gang=d.gang||t.gang;}});});
 }
-function saveProg(){
-  var state={};
-  ZONES.forEach(function(z){z.tasks.forEach(function(t){state[t.id]={done:t.done,gang:t.gang};});});
-  save(LS_PROG,state);
+function svProg(){var s={};ZONES.forEach(function(z){z.tasks.forEach(function(t){s[t.id]={done:t.done,gang:t.gang};});});sv(LP,s);}
+
+function cycleGang(tid){
+  var gs=['','A','B','C'];
+  ZONES.forEach(function(z){z.tasks.forEach(function(t){if(t.id===tid){var i=gs.indexOf(t.gang||'');t.gang=gs[(i+1)%gs.length];}});});
+  svProg();renderProg();
+}
+function togTask(tid){
+  ZONES.forEach(function(z){z.tasks.forEach(function(t){if(t.id===tid)t.done=!t.done;});});
+  svProg();renderProg();
 }
 
-function cycleGang(taskId){
-  var gangs=['','A','B','C'];
-  ZONES.forEach(function(z){
-    z.tasks.forEach(function(t){
-      if(t.id===taskId){
-        var idx=gangs.indexOf(t.gang||'');
-        t.gang=gangs[(idx+1)%gangs.length];
-      }
-    });
-  });
-  saveProg();
-  renderProgramme();
-}
-function toggleTask(taskId){
-  ZONES.forEach(function(z){
-    z.tasks.forEach(function(t){
-      if(t.id===taskId) t.done=!t.done;
-    });
-  });
-  saveProg();
-  renderProgramme();
-}
+function renderProg(){
+  ldProg();
+  var tot=0,dn=0,remD=0;
+  ZONES.forEach(function(z){z.tasks.forEach(function(t){tot++;if(t.done)dn++;if(!t.done)remD+=t.est||0;});});
+  var pct=Math.round(dn/Math.max(1,tot)*100);
 
-function renderProgramme(){
-  loadProg();
-  var totalTasks=0,doneTasks=0,totalDays=0,remainDays=0;
-  ZONES.forEach(function(z){
-    z.tasks.forEach(function(t){
-      totalTasks++;
-      if(t.done) doneTasks++;
-      totalDays+=t.est||0;
-      if(!t.done) remainDays+=t.est||0;
-    });
-  });
-
-  // Tiles
   document.getElementById('prog-tiles').innerHTML=
-    tile(doneTasks+'/'+totalTasks,'Tasks done')+
-    tile(remainDays+'d','Remaining est.')+
-    tile(Math.round((doneTasks/Math.max(1,totalTasks))*100)+'%','Completion');
+    '<div class="tile"><div class="tile-v">'+dn+'/'+tot+'</div><div class="tile-l">Tasks done</div></div>'+
+    '<div class="tile"><div class="tile-v">~'+remD+'d</div><div class="tile-l">Days left</div></div>'+
+    '<div class="tile"><div class="tile-v">'+pct+'%</div><div class="tile-l">Complete</div></div>';
 
-  // Zone list
-  var el=document.getElementById('zone-list');
-  el.innerHTML=ZONES.map(function(z){
-    var zoneDone=z.tasks.filter(function(t){return t.done;}).length;
-    var zoneTotal=z.tasks.length;
-    var zonePct=Math.round(zoneDone/Math.max(1,zoneTotal)*100);
-    var allDone=zoneDone===zoneTotal;
-    var gangCols={A:'color:#f59e0b',B:'color:#38bdf8',C:'color:#a78bfa','':''};
+  document.getElementById('zone-list').innerHTML=ZONES.map(function(z){
+    var zd=z.tasks.filter(function(t){return t.done;}).length;
+    var zt=z.tasks.length;
+    var zp=Math.round(zd/Math.max(1,zt)*100);
+    var allDone=zd===zt;
+    var remDays=z.tasks.filter(function(t){return!t.done;}).reduce(function(s,t){return s+(t.est||0);},0);
 
     var tasksHtml=z.tasks.map(function(t){
-      var gangStyle=t.gang?gangCols[t.gang]:'';
-      var gangLabel=t.gang?'Gang '+t.gang:'Assign';
+      var gc=t.gang?'g'+t.gang.toLowerCase():'';
+      var gl=t.gang?'Gang '+t.gang:'Assign';
       return '<div class="task-row">'+
-        '<div class="task-check'+(t.done?' done':'')+ '" onclick="toggleTask(\''+t.id+'\')">'+(t.done?'✓':'')+'</div>'+
-        '<div class="task-name'+(t.done?' done':'')+'">'+t.name+'</div>'+
-        '<div class="task-est">~'+t.est+'d</div>'+
-        '<button class="task-gang'+(t.gang?' assigned':'')+ '" style="'+gangStyle+'" onclick="cycleGang(\''+t.id+'\')">'+gangLabel+'</button>'+
+        '<div class="chk'+(t.done?' ck':'')+ '" onclick="togTask(\''+t.id+'\')">'+(t.done?'✓':'')+'</div>'+
+        '<div class="tn'+(t.done?' ck':'')+'">'+t.name+'</div>'+
+        '<div class="test">'+(t.est?'~'+t.est+'d':'—')+'</div>'+
+        '<button class="tgang '+gc+'" onclick="cycleGang(\''+t.id+'\')">'+gl+'</button>'+
         '</div>';
     }).join('');
 
-    return '<div class="zone-card'+(allDone?' done':z.active?' active-zone':'')+'">'+
-      '<div class="zone-name">'+z.name+'</div>'+
-      '<div class="zone-meta">'+zoneDone+'/'+zoneTotal+' tasks complete &nbsp;·&nbsp; ~'+z.tasks.filter(function(t){return!t.done;}).reduce(function(s,t){return s+t.est;},0)+'d remaining</div>'+
-      '<div class="prog-bar-wrap"><div class="prog-bar" style="width:'+zonePct+'%"></div></div>'+
-      '<div class="zone-tasks">'+tasksHtml+'</div>'+
-      '</div>';
+    return '<div class="zcard'+(allDone?' zdone':z.on?' zon':'')+'">'+
+      '<div class="zn">'+z.name+'</div>'+
+      '<div class="zm">'+zd+'/'+zt+' done &nbsp;·&nbsp; ~'+remDays+' days remaining</div>'+
+      '<div class="pbar-wrap"><div class="pbar" style="width:'+zp+'%"></div></div>'+
+      tasksHtml+'</div>';
   }).join('');
-}
-
-function tile(val,lbl){
-  return '<div class="tile"><div class="tile-val">'+val+'</div><div class="tile-lbl">'+lbl+'</div></div>';
 }
 </script>
 </body>
