@@ -81,7 +81,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .ptick.on{background:var(--green);border-color:var(--green);}
 .eb{background:var(--bdr);border-radius:4px;height:8px;overflow:hidden;margin:8px 0 3px;}
 .ef{height:100%;border-radius:4px;transition:width .4s;}
-.lock{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+.lock{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;}
 .bnav{background:var(--surf);border-top:1px solid var(--bdr);display:flex;padding-bottom:env(safe-area-inset-bottom);position:sticky;bottom:0;z-index:100;}
 .nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;background:none;border:none;color:var(--muted);font-size:9px;font-weight:800;cursor:pointer;gap:3px;text-transform:uppercase;}
 .nb .ni{font-size:20px;}.nb.active{color:var(--acc);}
@@ -107,11 +107,27 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div style="font-size:18px;font-weight:900;margin-bottom:3px;color:var(--txt);">Daily Sheet</div>
   <div style="font-size:11px;color:var(--muted);margin-bottom:20px;">Ballasalla Phase 4</div>
   <div style="width:100%;max-width:300px;">
-    <div class="mb8"><label>Your name</label>
-      <input type="text" id="ln" placeholder="Tap to pick" list="nl" onclick="nc(this)" onblur="nb2(this)" autocomplete="off">
+    <div class="mb8"><label>Who are you?</label>
+      <select id="ln" style="font-size:15px;padding:12px 14px;font-weight:700;border-radius:10px;background:var(--s2);border:1px solid var(--bdr);color:var(--txt);width:100%;-webkit-appearance:none;appearance:none;cursor:pointer;">
+        <option value="">-- Select your name --</option>
+        <option value="David Smith">David Smith</option>
+        <option value="James Cosgrove">James Cosgrove</option>
+        <option value="Stephen Lamb">Stephen Lamb</option>
+        <option value="Ash Aziz">Ash Aziz</option>
+        <option value="Harry Harrison">Harry Harrison</option>
+        <option value="Bradley McKevitt">Bradley McKevitt</option>
+        <option value="Dean Garrett">Dean Garrett</option>
+        <option value="Craig">Craig</option>
+        <option value="Daniel Seed">Daniel Seed</option>
+        <option value="Jake Whetnall">Jake Whetnall</option>
+        <option value="James Shannon">James Shannon</option>
+        <option value="Lee Clinton">Lee Clinton</option>
+        <option value="Lewis Peck">Lewis Peck</option>
+        <option value="Liam Smith">Liam Smith</option>
+      </select>
       <datalist id="nl"></datalist>
     </div>
-    <button class="btn btn-acc" onclick="doLogin()">Start &#8594;</button>
+    <button class="btn btn-acc" onclick="doLogin()" style="min-height:48px;font-size:15px;">Start &#8594;</button>
   </div>
 </div>
 
@@ -338,13 +354,9 @@ var _uname='';
   rebuildNL();
   document.getElementById('fd').value=tod();
   document.getElementById('dl').textContent=fmtD(tod());
-  EODS.forEach(function(e){
-    CHK[e.k]=false;
-    var d=document.createElement('div');d.className='chki';
-    d.onclick=function(){CHK[e.k]=!CHK[e.k];var b=d.querySelector('.chkb');b.classList.toggle('on',CHK[e.k]);b.textContent=CHK[e.k]?'✓':'';document.getElementById('chkn').textContent=Object.values(CHK).filter(Boolean).length;};
-    d.innerHTML='<div class="chkb"></div><div style="font-size:12px;font-weight:600;color:var(--txt);line-height:1.4;flex:1;">'+e.l+'</div>';
-    document.getElementById('chklist').appendChild(d);
-  });
+  // EOD checklist removed from this form (delegated separately)
+  // Keep CHK state object in case it's referenced elsewhere
+  EODS.forEach(function(e){ CHK[e.k]=false; });
   COMMS.forEach(function(c){
     COM[c.k]=false;
     var d=document.createElement('div');d.className='cr';
@@ -357,10 +369,39 @@ var _uname='';
   addNoise();addNoise();addNoise();
   addItem();addItem();
   var s=localStorage.getItem('dgc_uname');
-  if(s){_uname=s;document.getElementById('ub').textContent=s;document.getElementById('fm').value=s;document.getElementById('ls').style.display='none';document.getElementById('app').style.display='block';loadAchv();loadHist();}
+  if(s){
+    _uname=s;
+    document.getElementById('ub').textContent=s;
+    document.getElementById('fm').value=s;
+    // Pre-select saved name in the dropdown if it matches
+    var sel=document.getElementById('ln');
+    if(sel){
+      for(var oi=0;oi<sel.options.length;oi++){
+        if(sel.options[oi].value===s){sel.selectedIndex=oi;break;}
+      }
+    }
+    document.getElementById('ls').style.display='none';
+    document.getElementById('app').style.display='block';
+    loadAchv();loadHist();
+  }
 })();
 
-function doLogin(){var n=document.getElementById('ln').value.trim();if(!n){toast('Enter your name','err');return;}_uname=n;localStorage.setItem('dgc_uname',n);document.getElementById('ub').textContent=n;document.getElementById('fm').value=n;document.getElementById('ls').style.display='none';document.getElementById('app').style.display='block';loadAchv();loadHist();}
+function doLogin(){
+  var el=document.getElementById('ln');
+  var n=(el?el.value:'').trim();
+  if(!n||n==='-- Select your name --'){
+    // Shake the select to indicate they need to pick
+    if(el){el.style.borderColor='var(--red)';setTimeout(function(){el.style.borderColor='';},1500);}
+    return;
+  }
+  _uname=n;
+  localStorage.setItem('dgc_uname',n);
+  document.getElementById('ub').textContent=n;
+  document.getElementById('fm').value=n;
+  document.getElementById('ls').style.display='none';
+  document.getElementById('app').style.display='block';
+  loadAchv();loadHist();
+}
 
 function sw(name,btn){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('active');});document.getElementById('tab-'+name).classList.add('active');btn.classList.add('active');if(name==='hist')loadHist();if(name==='achv')loadAchv();}
 
@@ -587,14 +628,15 @@ function toggleTheme(){
   if(logo) logo.src=isLight?'dgc-logo-dark.png':'dgc-logo-white.png';
 }
 function changeUser(){
-  var n=prompt('Change name:',_uname||'');
-  if(!n||!n.trim())return;
-  n=n.trim();
-  _uname=n;
-  localStorage.setItem('dgc_uname',n);
-  document.getElementById('ub').textContent=n;
-  document.getElementById('fm').value=n;
-  toast('Name changed to '+n);
+  // Show lock screen again so they can re-select from dropdown
+  var sel=document.getElementById('ln');
+  if(sel&&_uname){
+    for(var oi=0;oi<sel.options.length;oi++){
+      if(sel.options[oi].value===_uname){sel.selectedIndex=oi;break;}
+    }
+  }
+  document.getElementById('ls').style.display='flex';
+  document.getElementById('app').style.display='none';
 }
 // Restore theme on load
 (function(){
