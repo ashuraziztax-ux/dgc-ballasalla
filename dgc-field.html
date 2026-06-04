@@ -125,7 +125,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <option value="Lewis Peck">Lewis Peck</option>
         <option value="Liam Smith">Liam Smith</option>
       </select>
-      <datalist id="nl"></datalist>
     </div>
     <button class="btn btn-acc" onclick="doLogin()" style="min-height:48px;font-size:15px;">Start &#8594;</button>
   </div>
@@ -316,6 +315,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <button class="nb" id="nav-hist" onclick="sw('hist',this)"><span class="ni">&#128218;</span>History</button>
 </div>
 </div><!-- /app -->
+<datalist id="nl"></datalist>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -423,15 +423,25 @@ function addAL(){
   var inp=function(id,ph){return '<input type="text" id="'+id+'" placeholder="'+ph+'" list="nl" onclick="nc(this)" onblur="nb2(this)">';};
   d.innerHTML='<div class="thd"><div class="tdot" style="background:'+c+'"></div><div style="font-size:13px;font-weight:800;">Team '+l+'</div><button class="btn btn-red btn-sm" style="margin-left:auto;" onclick="this.closest(\'.tblk\').remove()">x</button></div>'+
     '<div class="g2" style="margin-bottom:8px;"><div><label>Lead</label>'+inp('ali'+i+'l','Tap to pick')+'</div><div><label>Op 1</label>'+inp('ali'+i+'o0','Tap to pick')+'</div><div><label>Op 2</label>'+inp('ali'+i+'o1','Tap to pick')+'</div><div><label>Op 3</label>'+inp('ali'+i+'o2','Tap to pick')+'</div></div>'+
-    '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;"><div style="flex:1;font-size:12px;font-weight:700;">Team '+l+' plant checks confirmed</div><div style="display:flex;align-items:center;gap:6px;"><div class="ptick" id="ptick'+i+'" onclick="var t=this;t.classList.toggle(\'on\');t.textContent=t.classList.contains(\'on\')?\'checkmark\':\'\';"></div><input type="text" id="ali'+i+'in" placeholder="Initials" style="width:60px;padding:7px 8px;font-size:12px;"></div></div>';
+    '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;"><div style="flex:1;font-size:12px;font-weight:700;">Team '+l+' plant checks confirmed</div><div style="display:flex;align-items:center;gap:6px;"><div class="ptick" id="ptick'+i+'" onclick="var t=this;t.classList.toggle(\'on\');t.textContent=t.classList.contains(\'on\')?\'✓\':\'\';"></div><input type="text" id="ali'+i+'in" placeholder="Initials" style="width:60px;padding:7px 8px;font-size:12px;"></div></div>';
   document.getElementById('al-container').appendChild(d);
 }
 
 function addNoise(t,v){NR_I++;var id='nr'+NR_I;var r=document.createElement('div');r.className='nr';r.id=id;r.innerHTML='<input type="time" value="'+(t||'')+'"><input type="number" placeholder="dB" min="0" max="140" value="'+(v||'')+'"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('nr-c').appendChild(r);}
 function addItem(q,it,s){IR_I++;var id='ir'+IR_I;var r=document.createElement('div');r.className='ir';r.id=id;r.innerHTML='<input placeholder="Qty" value="'+(q||'')+'"><input placeholder="Item" value="'+(it||'')+'"><input placeholder="Supplier" value="'+(s||'')+'"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('ir-c').appendChild(r);}
 
-function vm(id,tid){if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){toast('Voice needs Chrome on iPhone/Android','err');return;}if(_ma===id){stopV();return;}if(_ma)stopV();_ma=id;var btn=document.getElementById('mic-'+id);btn.classList.add('on');btn.querySelector('span').textContent='[stop]';var SR=window.SpeechRecognition||window.webkitSpeechRecognition;_mic=new SR();_mic.continuous=true;_mic.interimResults=true;_mic.lang='en-GB';var final='',existing=document.getElementById(tid).value;_mic.onresult=function(e){var interim='';for(var i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';else interim+=e.results[i][0].transcript;}document.getElementById(tid).value=(existing?existing+' ':'')+(final+interim).trim();};_mic.onerror=_mic.onend=function(){stopV();};_mic.start();}
-function stopV(){if(_mic){try{_mic.stop();}catch(e){}}_mic=null;if(_ma){var btn=document.getElementById('mic-'+_ma);if(btn){btn.classList.remove('on');btn.querySelector('span').textContent='[mic]';}_ma=null;}}
+var MIC_ICON='🎙';
+function vm(id,tid){if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){toast('Voice needs Chrome on Android or Safari on iOS','err');return;}if(_ma===id){stopV();return;}if(_ma)stopV();_ma=id;_mid=tid;var btn=document.getElementById('mic-'+id);btn.classList.add('on');btn.querySelector('span').textContent='⏹ Stop';var SR=window.SpeechRecognition||window.webkitSpeechRecognition;_mic=new SR();_mic.continuous=true;_mic.interimResults=true;_mic.lang='en-GB';var final='',existing=document.getElementById(tid).value;_mic.onresult=function(e){var interim='';for(var i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';else interim+=e.results[i][0].transcript;}document.getElementById(tid).value=(existing?existing+' ':'')+(final+interim).trim();};_mic.onerror=function(){stopV();};_mic.onend=function(){var captured=final.trim();stopV();if(captured&&CLAUDE_KEY)aiClean(tid,captured);}; _mic.start();}
+var _mid='';
+function stopV(){if(_mic){try{_mic.stop();}catch(e){}}_mic=null;if(_ma){var btn=document.getElementById('mic-'+_ma);if(btn){btn.classList.remove('on');var sp=btn.querySelector('span');if(sp)sp.textContent=MIC_ICON;}_ma=null;}}
+function aiClean(tid,raw){
+  var ta=document.getElementById(tid);if(!ta)return;
+  toast('Cleaning up with AI...');
+  fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:'Fix the grammar and punctuation of this voice transcript from a UK construction site manager. Keep all the meaning and facts. Return ONLY the corrected text, no explanation:\n\n'+raw}]})})
+  .then(function(r){return r.json();})
+  .then(function(d){if(d.content&&d.content[0]){ta.value=d.content[0].text.trim();toast('AI cleaned up ✓');}})
+  .catch(function(){/* silently ignore — raw transcript already in field */});}
+
 
 function fetchWx(){fetch('https://api.open-meteo.com/v1/forecast?latitude=54.0833&longitude=-4.6333&current=temperature_2m,weathercode&timezone=Europe%2FLondon').then(function(r){return r.json();}).then(function(d){if(!d.current)return;var t=Math.round(d.current.temperature_2m);var wm={0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',51:'Light drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',80:'Showers'};document.getElementById('ft').value=t;toast((wm[d.current.weathercode]||'Code '+d.current.weathercode)+', '+t+'C');}).catch(function(){toast('Cannot fetch weather','err');});}
 
@@ -548,11 +558,8 @@ function sendToTrello(){
   status.textContent='Sending to Trello...';status.style.color='var(--blue)';
   document.getElementById('trello-btn').disabled=true;
 
-  fetch('https://api.trello.com/1/cards',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({key:TR_KEY,token:TR_TOKEN,idList:TR_LIST,name:title,desc:desc})
-  })
+  var turl='https://api.trello.com/1/cards?key='+encodeURIComponent(TR_KEY)+'&token='+encodeURIComponent(TR_TOKEN)+'&idList='+encodeURIComponent(TR_LIST)+'&name='+encodeURIComponent(title)+'&desc='+encodeURIComponent(desc);
+  fetch(turl,{method:'POST'})
   .then(function(r){return r.json();})
   .then(function(card){
     if(card.id){
