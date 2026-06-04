@@ -81,7 +81,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .ptick.on{background:var(--green);border-color:var(--green);}
 .eb{background:var(--bdr);border-radius:4px;height:8px;overflow:hidden;margin:8px 0 3px;}
 .ef{height:100%;border-radius:4px;transition:width .4s;}
-.lock{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;}
+.lock{position:fixed;inset:0;background:#0a0d14;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;}
 .bnav{background:var(--surf);border-top:1px solid var(--bdr);display:flex;padding-bottom:env(safe-area-inset-bottom);position:sticky;bottom:0;z-index:100;}
 .nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;background:none;border:none;color:var(--muted);font-size:9px;font-weight:800;cursor:pointer;gap:3px;text-transform:uppercase;}
 .nb .ni{font-size:20px;}.nb.active{color:var(--acc);}
@@ -103,11 +103,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <body>
 
 <div class="lock" id="ls">
-  <img class="dgc-logo-lg" src="dgc-logo-white.png" alt="Drainage &amp; Groundwork Contractors" style="height:60px;margin-bottom:20px;">
-  <div style="font-size:18px;font-weight:900;margin-bottom:3px;color:var(--txt);">Daily Sheet</div>
-  <div style="font-size:11px;color:var(--muted);margin-bottom:20px;">Ballasalla Phase 4</div>
+  <img src="dgc-logo-white.png" alt="DGC" style="height:64px;object-fit:contain;filter:brightness(0) invert(1);margin-bottom:12px;">
+  <div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-.3px;margin-bottom:2px;">DGC Daily Sheet</div>
+  <div style="font-size:12px;color:rgba(255,255,255,.45);margin-bottom:28px;">Ballasalla Phase 4</div>
   <div style="width:100%;max-width:300px;">
-    <div class="mb8"><label>Who are you?</label>
+    <div class="mb8"><label style="color:rgba(255,255,255,.5);">Who are you?</label>
       <select id="ln" style="font-size:15px;padding:12px 14px;font-weight:700;border-radius:10px;background:var(--s2);border:1px solid var(--bdr);color:var(--txt);width:100%;-webkit-appearance:none;appearance:none;cursor:pointer;">
         <option value="">-- Select your name --</option>
         <option value="David Smith">David Smith</option>
