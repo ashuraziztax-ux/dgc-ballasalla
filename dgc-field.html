@@ -9,7 +9,7 @@
 <script>
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
-var CLAUDE_KEY='PASTE_CLAUDE_API_KEY_HERE';
+var CLAUDE_KEY=localStorage.getItem('dgc_claude_key')||'';
 var PROJECT_REF='BA4';
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -147,6 +147,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div style="margin-left:auto;display:flex;align-items:center;gap:6px;">
     <button class="btn btn-blue btn-sm no-print" onclick="window.print()" title="Print tomorrow's plan" style="min-width:36px;min-height:36px;">&#128424;</button>
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
+    <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="font-size:13px;font-weight:800;width:auto;padding:0 8px;gap:3px;display:flex;align-items:center;">&#129302; <span style="font-size:10px;">AI</span></button>
     <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span>
   </div>
 </div>
@@ -633,16 +634,57 @@ function changeUser(){
   document.getElementById('ls').style.display='flex';
   document.getElementById('app').style.display='none';
 }
-// Restore theme on load
+// Restore theme + Claude key status on load
 (function(){
   var t=localStorage.getItem('dgc_theme');
   if(t==='light'){document.body.classList.add('light');setTimeout(function(){var btn=document.getElementById('theme-btn');if(btn)btn.textContent='\u263D';var logo=document.getElementById('hdr-logo');if(logo)logo.src='dgc-logo-dark.png';},50);}
+  // Show green AI button if key already saved
+  if(localStorage.getItem('dgc_claude_key')){
+    setTimeout(function(){
+      var ab=document.getElementById('ai-btn');
+      if(ab){ab.style.borderColor='var(--green)';ab.style.color='var(--green)';}
+    },200);
+  }
 })();
+function showClaudeSetup(){
+  var m=document.getElementById('claude-modal');
+  if(!m){alert('Claude modal not found — refresh the page first.');return;}
+  document.getElementById('cl-key-in').value=localStorage.getItem('dgc_claude_key')||'';
+  m.style.display='flex';
+}
+function saveClaudeKey(){
+  var k=document.getElementById('cl-key-in').value.trim();
+  if(!k){alert('Please paste your Claude API key first.');return;}
+  localStorage.setItem('dgc_claude_key',k);
+  CLAUDE_KEY=k;
+  document.getElementById('ai-btn').style.borderColor='var(--green)';
+  document.getElementById('ai-btn').style.color='var(--green)';
+  document.getElementById('claude-modal').style.display='none';
+  toast('Claude AI key saved ✓','');
+}
 function tod(){return new Date().toISOString().slice(0,10);}
 function fmtD(s){if(!s)return'';return new Date(s+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function toast(m,t){var el=document.getElementById('toast');el.textContent=m;el.className='toast show'+(t==='err'?' err':'');setTimeout(function(){el.classList.remove('show');},2500);}
 </script>
+
+<!-- CLAUDE AI SETUP MODAL -->
+<div id="claude-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:400;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--surf);border-radius:14px;padding:20px;max-width:400px;width:100%;border:1px solid var(--bdr);">
+    <div style="font-size:16px;font-weight:900;margin-bottom:4px;">&#129302; Claude AI Settings</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:16px;">Your key is stored only on this device. Get one at <strong>console.anthropic.com</strong> &rarr; API Keys.</div>
+    <div class="mb12"><label>Claude API Key</label>
+      <input type="password" id="cl-key-in" placeholder="sk-ant-api03-..." style="font-size:13px;letter-spacing:2px;">
+    </div>
+    <div style="font-size:10px;color:var(--muted);background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px;margin-bottom:14px;">
+      &#9888; Never share your API key. If you've shared it in a chat, delete it at console.anthropic.com and create a new one.
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-acc" onclick="saveClaudeKey()" style="flex:2;">Save Key</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('claude-modal').style.display='none';" style="flex:1;">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <!-- TRELLO SETUP MODAL -->
 <div id="trello-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;">
