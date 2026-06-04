@@ -15,8 +15,29 @@ var PROJECT_REF='BA4';
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-:root{--bg:#0f1117;--surf:#1a1d27;--s2:#232736;--bdr:#2e3347;--acc:#f59e0b;--green:#22c55e;--red:#ef4444;--blue:#38bdf8;--txt:#f1f5f9;--muted:#64748b;}
-html,body{min-height:100%;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+:root{
+  --bg:#0f1117;--surf:#1a1d27;--s2:#232736;--bdr:#2e3347;
+  --acc:#f59e0b;--green:#22c55e;--red:#ef4444;--blue:#38bdf8;
+  --txt:#f1f5f9;--muted:#64748b;
+  --navy:#1e3a4a;--logo-filter:brightness(0) invert(1);
+}
+body.light{
+  --bg:#f8fafc;--surf:#ffffff;--s2:#f1f5f9;--bdr:#e2e8f0;
+  --txt:#1e293b;--muted:#64748b;--navy:#1e3a4a;
+  --logo-filter:none;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;transition:background .2s,color .2s;}
+.dgc-logo{height:36px;object-fit:contain;filter:var(--logo-filter);}
+.dgc-logo-lg{height:56px;object-fit:contain;margin-bottom:16px;}
+.theme-btn{background:none;border:1px solid var(--bdr);border-radius:8px;color:var(--muted);font-size:16px;width:36px;height:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.theme-btn:hover{border-color:var(--acc);color:var(--acc);}
+.user-chip{font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;background:rgba(245,158,11,.15);color:var(--acc);border:1px solid rgba(245,158,11,.3);cursor:pointer;white-space:nowrap;}
+.user-chip:hover{background:rgba(245,158,11,.25);}
+.mic{display:flex;align-items:center;gap:8px;padding:12px 14px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:10px;color:var(--blue);font-size:13px;font-weight:800;cursor:pointer;width:100%;margin-bottom:8px;font-family:inherit;min-height:44px;}
+.mic.on{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.35);color:var(--red);animation:bl 1s infinite;}
+.tblk-hd{cursor:pointer;user-select:none;}
+.tblk-body{}
+.collapsed .tblk-body{display:none;}
 .hdr{background:var(--surf);border-bottom:1px solid var(--bdr);padding:max(12px,env(safe-area-inset-top)) 14px 12px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;}
 .logo{width:30px;height:30px;background:var(--acc);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#1a1d27;font-size:11px;flex-shrink:0;}
 .main{padding:12px;max-width:860px;margin:0 auto;}
@@ -68,14 +89,22 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:9px 18px;border-radius:18px;font-size:12px;font-weight:800;z-index:9999;pointer-events:none;opacity:0;transition:opacity .3s;white-space:nowrap;}
 .toast.show{opacity:1;}.toast.err{background:var(--red);}
 .sess-hd{font-size:10px;font-weight:900;padding:6px 10px;border-radius:7px;margin-bottom:8px;}
-@media print{.bnav,.hdr,.no-print,.mic,.del,.btns{display:none!important;}body{background:#fff;color:#000;}.tblk,.card{border:1px solid #ccc;background:#fff;}.sec-t{color:#000;}}
+@media print{
+  .bnav,.hdr,.no-print,.mic,.del,.btns,button{display:none!important;}
+  body{background:#fff;color:#000;}
+  .tblk,.card{border:1px solid #ccc;background:#fff;page-break-inside:avoid;}
+  .sec-t{color:#1e3a4a;}
+  .tblk-body{display:block!important;}
+  #print-header{display:block!important;}
+}
+#print-header{display:none;}
 </style>
 </head>
 <body>
 
 <div class="lock" id="ls">
-  <div style="width:48px;height:48px;background:var(--acc);border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#1a1d27;font-size:18px;margin-bottom:16px;">DGC</div>
-  <div style="font-size:18px;font-weight:900;margin-bottom:3px;">DGC Daily Sheet</div>
+  <img class="dgc-logo-lg" src="dgc-logo-white.png" alt="Drainage &amp; Groundwork Contractors" style="height:60px;margin-bottom:20px;">
+  <div style="font-size:18px;font-weight:900;margin-bottom:3px;color:var(--txt);">Daily Sheet</div>
   <div style="font-size:11px;color:var(--muted);margin-bottom:20px;">Ballasalla Phase 4</div>
   <div style="width:100%;max-width:300px;">
     <div class="mb8"><label>Your name</label>
@@ -87,13 +116,22 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <div id="app" style="display:none;">
+<!-- PRINT HEADER (only shows when printing) -->
+<div id="print-header" style="padding:16px 0 12px;border-bottom:2px solid #1e3a4a;margin-bottom:16px;display:flex;align-items:center;gap:12px;">
+  <img src="dgc-logo-dark.png" style="height:40px;object-fit:contain;">
+  <div><div style="font-size:14px;font-weight:900;color:#1e3a4a;">DGC Daily Sheet</div><div style="font-size:11px;color:#64748b;">Ballasalla Phase 4</div></div>
+</div>
+
 <div class="hdr">
-  <div class="logo">DGC</div>
-  <div><div style="font-size:14px;font-weight:800;">DGC Daily Sheet</div><div style="font-size:10px;color:var(--muted);">Ballasalla Phase 4</div></div>
+  <img id="hdr-logo" class="dgc-logo" src="dgc-logo-white.png" alt="DGC" style="height:32px;">
+  <div style="display:flex;flex-direction:column;justify-content:center;">
+    <div style="font-size:11px;font-weight:700;color:var(--muted);">Daily Sheet</div>
+    <div style="font-size:10px;color:var(--muted);">Ballasalla Phase 4</div>
+  </div>
   <div style="margin-left:auto;display:flex;align-items:center;gap:6px;">
-    <button class="btn btn-blue btn-sm no-print" onclick="window.print()">&#128424;</button>
-    <span id="ub" style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;background:rgba(245,158,11,.15);color:var(--acc);border:1px solid rgba(245,158,11,.3);"></span>
-    <button class="btn btn-ghost btn-sm no-print" onclick="if(confirm('Switch user?')){localStorage.removeItem('dgc_uname');location.reload();}">&#8617;</button>
+    <button class="btn btn-blue btn-sm no-print" onclick="window.print()" title="Print tomorrow's plan" style="min-width:36px;min-height:36px;">&#128424;</button>
+    <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
+    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span>
   </div>
 </div>
 
@@ -541,6 +579,28 @@ Added by '+(_uname||'Site Manager')+' via DGC Field App';
     document.getElementById('trello-btn').disabled=false;
   });
 }
+function toggleTheme(){
+  var isLight=document.body.classList.toggle('light');
+  localStorage.setItem('dgc_theme',isLight?'light':'dark');
+  document.getElementById('theme-btn').textContent=isLight?'\u263D':'\u2600';
+  var logo=document.getElementById('hdr-logo');
+  if(logo) logo.src=isLight?'dgc-logo-dark.png':'dgc-logo-white.png';
+}
+function changeUser(){
+  var n=prompt('Change name:',_uname||'');
+  if(!n||!n.trim())return;
+  n=n.trim();
+  _uname=n;
+  localStorage.setItem('dgc_uname',n);
+  document.getElementById('ub').textContent=n;
+  document.getElementById('fm').value=n;
+  toast('Name changed to '+n);
+}
+// Restore theme on load
+(function(){
+  var t=localStorage.getItem('dgc_theme');
+  if(t==='light'){document.body.classList.add('light');setTimeout(function(){var btn=document.getElementById('theme-btn');if(btn)btn.textContent='\u263D';var logo=document.getElementById('hdr-logo');if(logo)logo.src='dgc-logo-dark.png';},50);}
+})();
 function tod(){return new Date().toISOString().slice(0,10);}
 function fmtD(s){if(!s)return'';return new Date(s+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
