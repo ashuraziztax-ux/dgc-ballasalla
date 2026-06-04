@@ -140,6 +140,29 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   </div>
   <div id="pt-container"></div>
 
+  <!-- EOD RESPONSIBILITY -->
+  <div class="sec"><span class="sec-t">&#128274; EOD Responsibility for Tomorrow</span><span class="sec-s">Who's in charge of end-of-day checks?</span></div>
+  <div class="card">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Pick who is responsible for the security checklist and site clean-up at the end of tomorrow. This gets recorded so it's clear before the day starts.</div>
+    <div class="g2">
+      <div>
+        <label>EOD responsible person</label>
+        <input type="text" id="feod-resp" placeholder="Tap to pick" list="nl" onclick="nc(this)" onblur="nb2(this)">
+      </div>
+      <div>
+        <label>EOD team</label>
+        <select id="feod-team">
+          <option value="">Select team...</option>
+          <option value="A">Team A</option>
+          <option value="B">Team B</option>
+          <option value="C">Team C</option>
+          <option value="D">Team D</option>
+          <option value="E">Team E</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
   <div class="sec"><span class="sec-t">&#128119; Team Allocation &amp; Plant Checks</span></div>
   <div id="al-container"></div>
 
@@ -161,11 +184,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <button class="btn btn-ghost btn-sm" onclick="addNoise()">+ Reading</button>
   </div>
 
-  <div class="sec"><span class="sec-t">&#128274; End of Day Security Checklist</span></div>
-  <div class="card">
-    <div style="font-size:26px;font-weight:900;text-align:center;margin-bottom:10px;"><span id="chkn">0</span> / 15 <span style="font-size:13px;color:var(--muted);">complete</span></div>
-    <div id="chklist"></div>
-  </div>
+<!-- EOD checklist removed - delegated separately -->
 
   <div class="sec"><span class="sec-t">&#9888;&#65039; Observations / Issues</span></div>
   <div class="card">
@@ -177,7 +196,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="card">
     <div style="font-size:10px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:58px 1fr 88px 28px;gap:5px;margin-bottom:5px;"><span>Qty</span><span>Item</span><span>Source</span><span></span></div>
     <div id="ir-c"></div>
-    <button class="btn btn-ghost btn-sm" onclick="addItem()">+ Item</button>
+    <div class="btns" style="margin-top:6px;">
+      <button class="btn btn-ghost btn-sm" onclick="addItem()">+ Item</button>
+      <button class="btn btn-blue btn-sm" onclick="sendToTrello()" id="trello-btn" style="display:flex;align-items:center;gap:5px;">&#9992; Send to Brad via Trello</button>
+    </div>
+    <div id="trello-status" style="font-size:11px;margin-top:6px;"></div>
   </div>
 
   <div class="sec"><span class="sec-t">&#128241; Comms Done</span></div>
@@ -342,7 +365,7 @@ function submitEOD(){
   var items=[];document.querySelectorAll('.ir').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value.trim())items.push({qty:ins[0].value,item:ins[1].value,source:ins[2].value});});
   var data={type:'dgc-eod',date:date,projectRef:PROJECT_REF,submittedBy:_uname||'Unknown',submittedAt:new Date().toISOString(),
     header:{sm:document.getElementById('fm').value,weather:document.getElementById('fw').value,temp:document.getElementById('ft').value},
-    meeting:{time:document.getElementById('fbt').value,topics:document.getElementById('ftp').value,risks:document.getElementById('frk').value,visitors:document.getElementById('fv').value},
+    meeting:{time:document.getElementById('fbt').value,topics:document.getElementById('ftp').value,risks:document.getElementById('frk').value,visitors:document.getElementById('fv').value},eodResponsibility:{person:document.getElementById('feod-resp').value,team:document.getElementById('feod-team').value},
     plan:getPlan(),alloc:getAlloc(),sessions:document.getElementById('fses').value,
     noise:noise,checks:Object.assign({},CHK),obs:document.getElementById('fob').value,items:items,comms:Object.assign({},COM),notes:document.getElementById('fnt').value};
   localStorage.setItem('dgc_eod_'+date,JSON.stringify(data));
@@ -421,10 +444,126 @@ function loadHist(){
   }).join('');
 }
 
+
+// ── TRELLO INTEGRATION ────────────────────────────────────────────
+function getTrelloCfg(){return JSON.parse(localStorage.getItem('dgc_trello_cfg')||'null');}
+function saveTrelloConfig(){
+  var key=document.getElementById('tr-key').value.trim();
+  var token=document.getElementById('tr-token').value.trim();
+  var list=document.getElementById('tr-list').value.trim();
+  if(!key||!token||!list){toast('Fill in all three fields','err');return;}
+  localStorage.setItem('dgc_trello_cfg',JSON.stringify({key:key,token:token,list:list}));
+  document.getElementById('trello-modal').style.display='none';
+  toast('Trello connected');
+  sendToTrello(); // proceed with the send
+}
+
+function findTrelloLists(){
+  var key=document.getElementById('tr-key').value.trim();
+  var token=document.getElementById('tr-token').value.trim();
+  if(!key||!token){toast('Enter key and token first','err');return;}
+  var out=document.getElementById('tr-lists-out');
+  out.textContent='Loading boards...';out.style.display='';
+  fetch('https://api.trello.com/1/members/me/boards?key='+key+'&token='+token+'&fields=name,id')
+  .then(function(r){return r.json();})
+  .then(function(boards){
+    if(!boards||!boards.length){out.textContent='No boards found. Check key/token.';return;}
+    // Load lists from first few boards
+    var html='';
+    var fetches=boards.slice(0,3).map(function(b){
+      return fetch('https://api.trello.com/1/boards/'+b.id+'/lists?key='+key+'&token='+token+'&fields=name,id')
+      .then(function(r){return r.json();})
+      .then(function(lists){
+        html+='<strong style="color:var(--acc);">'+b.name+'</strong><br>';
+        (lists||[]).forEach(function(l){html+='&nbsp;&nbsp;'+l.name+'<br><small style="color:var(--muted);">'+l.id+'</small><br>';});
+      });
+    });
+    Promise.all(fetches).then(function(){out.innerHTML=html||'No lists found';});
+  })
+  .catch(function(){out.textContent='Error - check your key and token are correct';});
+}
+
+function sendToTrello(){
+  var cfg=getTrelloCfg();
+  if(!cfg){
+    // Show setup modal
+    var existing=getTrelloCfg();
+    if(existing){document.getElementById('tr-key').value=existing.key;document.getElementById('tr-token').value=existing.token;document.getElementById('tr-list').value=existing.list;}
+    document.getElementById('trello-modal').style.display='flex';
+    return;
+  }
+  
+  // Collect items
+  var items=[];
+  document.querySelectorAll('.ir').forEach(function(r){
+    var ins=r.querySelectorAll('input');
+    if(ins[1]&&ins[1].value.trim())items.push({qty:ins[0].value||'?',item:ins[1].value.trim(),source:ins[2].value||''});
+  });
+  if(!items.length){toast('No items to send','err');return;}
+  
+  var date=document.getElementById('fd').value||new Date().toISOString().slice(0,10);
+  var title='Materials Required — '+fmtD(date)+' (Ballasalla Phase 4)';
+  var desc='Materials needed for site:
+
+'
+    +items.map(function(it){return '• '+it.qty+' x '+it.item+(it.source?' — '+it.source:'');}).join('
+')
+    +'
+
+Added by '+(_uname||'Site Manager')+' via DGC Field App';
+  
+  var status=document.getElementById('trello-status');
+  status.textContent='Sending to Trello...';status.style.color='var(--blue)';
+  document.getElementById('trello-btn').disabled=true;
+  
+  fetch('https://api.trello.com/1/cards',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({key:cfg.key,token:cfg.token,idList:cfg.list,name:title,desc:desc})
+  })
+  .then(function(r){return r.json();})
+  .then(function(card){
+    if(card.id){
+      status.textContent='✓ Sent to Brad on Trello — card: '+card.name;
+      status.style.color='var(--green)';
+      toast('Card sent to Brad on Trello');
+    } else {
+      status.textContent='Error: '+(card.message||JSON.stringify(card));
+      status.style.color='var(--red)';
+      toast('Trello error','err');
+    }
+    document.getElementById('trello-btn').disabled=false;
+  })
+  .catch(function(e){
+    status.textContent='Failed to send: '+e.message;
+    status.style.color='var(--red)';
+    toast('Trello error','err');
+    document.getElementById('trello-btn').disabled=false;
+  });
+}
 function tod(){return new Date().toISOString().slice(0,10);}
 function fmtD(s){if(!s)return'';return new Date(s+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function toast(m,t){var el=document.getElementById('toast');el.textContent=m;el.className='toast show'+(t==='err'?' err':'');setTimeout(function(){el.classList.remove('show');},2500);}
 </script>
+
+<!-- TRELLO SETUP MODAL -->
+<div id="trello-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--surf);border-radius:14px;padding:20px;max-width:400px;width:100%;">
+    <div style="font-size:14px;font-weight:800;margin-bottom:4px;">&#9992; Trello Setup</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">One-time setup. Get your key &amp; token at <strong>trello.com/app-key</strong></div>
+    <div class="mb8"><label>Trello API Key</label><input type="text" id="tr-key" placeholder="From trello.com/app-key"></div>
+    <div class="mb8"><label>Trello Token</label><input type="text" id="tr-token" placeholder="From trello.com/app-key - click Token link"></div>
+    <div class="mb8"><label>Brad's List ID</label><input type="text" id="tr-list" placeholder="The Trello list ID for Brad's orders"></div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:12px;">Don't have the list ID? Once you've entered key + token, tap Find Lists to see all your lists and their IDs.</div>
+    <button class="btn btn-ghost btn-sm" onclick="findTrelloLists()" style="margin-bottom:8px;width:100%;">&#128269; Find Lists &amp; IDs</button>
+    <div id="tr-lists-out" style="font-size:11px;color:var(--muted);background:var(--s2);border-radius:8px;padding:8px;max-height:120px;overflow-y:auto;margin-bottom:10px;display:none;"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-acc" onclick="saveTrelloConfig()" style="flex:2;">Save &amp; Connect</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('trello-modal').style.display='none';" style="flex:1;">Cancel</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
