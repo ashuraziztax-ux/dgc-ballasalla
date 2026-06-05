@@ -45,15 +45,14 @@ html,body{min-height:100%;background:var(--bg);color:var(--txt);font-family:-app
 .sec-inner{display:flex;flex-direction:column;gap:2px;border-left:3px solid var(--acc);padding-left:10px;}
 .sec-t{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.09em;color:var(--acc);}
 .sec-s{font-size:11px;color:var(--muted);font-weight:500;}
-/* Legacy sec-t/sec-s used directly in .sec (no .sec-inner wrapper) */
-.sec > .sec-t{border-left:3px solid var(--acc);padding-left:10px;}
-.sec > .sec-s{font-size:11px;color:var(--muted);}
+/* All .sec blocks use .sec-inner wrapper — legacy direct rule removed */
 
 /* ── CARDS ── */
 .card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.18);}
 
 /* ── LABELS ── */
-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);display:block;margin-bottom:6px;}
+label{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:rgba(241,245,249,.65);display:block;margin-bottom:6px;}
+body.light label{color:rgba(30,41,59,.65);}
 
 /* ── FORM CONTROLS ── */
 input,select,textarea{
@@ -173,8 +172,8 @@ select{
 .nb{
   flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:10px 4px;background:none;border:none;color:var(--muted);
-  font-size:10px;font-weight:800;cursor:pointer;gap:4px;text-transform:uppercase;
-  letter-spacing:.04em;min-height:56px;transition:color .15s;
+  font-size:11px;font-weight:800;cursor:pointer;gap:4px;text-transform:uppercase;
+  letter-spacing:.02em;min-height:56px;transition:color .15s;
 }
 .nb .ni{font-size:24px;line-height:1;}
 .nb.active{color:var(--acc);}
@@ -185,7 +184,7 @@ select{
 
 /* ── TOAST ── */
 .toast{
-  position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+  position:fixed;bottom:calc(env(safe-area-inset-bottom, 0px) + 72px);left:50%;transform:translateX(-50%);
   background:var(--green);color:#fff;padding:12px 22px;border-radius:22px;
   font-size:13px;font-weight:800;z-index:9999;pointer-events:none;
   opacity:0;transition:opacity .3s;white-space:nowrap;
@@ -198,8 +197,10 @@ select{
 
 @media print{
   .bnav,.hdr,.no-print,.mic,.del,.btns,button{display:none!important;}
-  body{background:#fff;color:#000;}
+  body{background:#fff;color:#000;font-size:13px;}
+  label{font-size:10pt;color:#333;}
   .tblk,.card{border:1px solid #ccc;background:#fff;page-break-inside:avoid;}
+  .sec{page-break-before:auto;}
   .sec-t{color:#1e3a4a;}
   .tblk-body{display:block!important;}
   #print-header{display:block!important;}
@@ -232,6 +233,7 @@ select{
         <option value="Lewis Peck">Lewis Peck</option>
         <option value="Liam Smith">Liam Smith</option>
       </select>
+      <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please choose your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;">Start &rarr;</button>
     <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group</div>
@@ -250,11 +252,17 @@ select{
   <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
     <button class="btn btn-blue btn-sm no-print" onclick="window.print()" title="Print tomorrow's plan" style="min-width:44px;min-height:44px;font-size:18px;padding:0;">&#128424;</button>
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
-    <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
+    <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings">&#129302;</button>
     <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span>
   </div>
 </div>
 
+<!-- AI setup hint banner (shown once on first login without a key) -->
+<div id="ai-hint" style="display:none;align-items:center;gap:10px;background:rgba(245,158,11,.12);border-bottom:1px solid rgba(245,158,11,.3);padding:10px 16px;font-size:12px;font-weight:700;color:var(--acc);">
+  <span style="font-size:18px;">&#129302;</span>
+  <span style="flex:1;">Tap the <strong>&#129302;</strong> button in the header to set up Claude AI voice cleanup &mdash; it tidies up your dictation automatically.</span>
+  <button onclick="document.getElementById('ai-hint').style.display='none';" style="background:none;border:none;color:var(--acc);font-size:18px;cursor:pointer;padding:0;line-height:1;">&#10005;</button>
+</div>
 <div class="main">
 
 <!-- EOD PLANNER -->
@@ -279,12 +287,12 @@ select{
     </div>
     <div class="mb8">
       <label>Topics for tomorrow's briefing</label>
-      <button class="mic" id="mic-top" onclick="vm('top','ftp')"><span class="mic-icon">&#127908;</span><span>Dictate topics</span></button>
+      <button class="mic" id="mic-top" onclick="vm('top','ftp')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate topics</span></button>
       <textarea id="ftp" rows="2" placeholder="What you'll tell the gang at 7:30 tomorrow..."></textarea>
     </div>
     <div>
       <label>Key risks for tomorrow</label>
-      <button class="mic" id="mic-rsk" onclick="vm('rsk','frk')"><span class="mic-icon">&#127908;</span><span>Dictate risks</span></button>
+      <button class="mic" id="mic-rsk" onclick="vm('rsk','frk')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate risks</span></button>
       <textarea id="frk" rows="2" placeholder="e.g. HV permit needed Zone 9, deep excavation Plot 11..."></textarea>
     </div>
   </div>
@@ -331,7 +339,7 @@ select{
       <div style="border-left:3px solid var(--blue);padding-left:9px;"><div style="font-size:11px;font-weight:900;color:var(--blue);line-height:1.3;">10:30–13:00</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Mid-morning</div></div>
       <div style="border-left:3px solid var(--green);padding-left:9px;"><div style="font-size:11px;font-weight:900;color:var(--green);line-height:1.3;">13:30–17:30</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Afternoon</div></div>
     </div>
-    <button class="mic" id="mic-ses" onclick="vm('ses','fses')"><span class="mic-icon">&#127908;</span><span>Dictate session notes</span></button>
+    <button class="mic" id="mic-ses" onclick="vm('ses','fses')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate session notes</span></button>
     <textarea id="fses" rows="3" placeholder="How the day went across all three sessions..."></textarea>
   </div>
 
@@ -346,7 +354,7 @@ select{
 
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#9888;&#65039; Observations / Issues</span></div></div>
   <div class="card">
-    <button class="mic" id="mic-obs" onclick="vm('obs','fob')"><span class="mic-icon">&#127908;</span><span>Dictate observations</span></button>
+    <button class="mic" id="mic-obs" onclick="vm('obs','fob')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate observations</span></button>
     <textarea id="fob" rows="3" placeholder="Near misses, damage, unusual ground, anything worth recording..."></textarea>
   </div>
 
@@ -366,7 +374,7 @@ select{
 
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Site Notes</span></div></div>
   <div class="card">
-    <button class="mic" id="mic-nt" onclick="vm('nt','fnt')"><span class="mic-icon">&#127908;</span><span>Record site notes</span></button>
+    <button class="mic" id="mic-nt" onclick="vm('nt','fnt')"><span class="mic-icon">&#127908;</span><span class="mic-label">Record site notes</span></button>
     <textarea id="fnt" rows="4" placeholder="Manager notes for today..."></textarea>
   </div>
 
@@ -380,11 +388,11 @@ select{
 <!-- HOW DID WE DO -->
 <div class="tab" id="tab-achv">
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#9989; How Did We Do?</span><span class="sec-s" id="achv-sub">Loading...</span></div></div>
-  <div id="achv-none" style="display:none;" class="card">
-    <div style="text-align:center;padding:32px 16px;color:var(--muted);">
-      <div style="font-size:40px;margin-bottom:12px;opacity:.7;">&#128203;</div>
-      <div style="font-size:15px;font-weight:700;color:var(--txt);margin-bottom:6px;">No plan found for yesterday</div>
-      <div style="font-size:13px;line-height:1.6;">Fill in today's EOD plan &mdash;<br>tomorrow you can record how you got on.</div>
+  <div id="achv-none" class="card">
+    <div style="text-align:center;padding:32px 16px;color:var(--muted);" id="achv-none-inner">
+      <div style="font-size:32px;margin-bottom:12px;opacity:.6;">&#8987;</div>
+      <div style="font-size:15px;font-weight:700;color:var(--txt);margin-bottom:6px;">Checking yesterday's plan...</div>
+      <div style="font-size:13px;line-height:1.6;">Loading&hellip;</div>
     </div>
   </div>
   <div id="achv-score" style="display:none;" class="card">
@@ -398,7 +406,7 @@ select{
   <div id="achv-form" style="display:none;">
     <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Notes on Today's Output</span></div></div>
     <div class="card">
-      <button class="mic" id="mic-an" onclick="vm('an','fan')"><span class="mic-icon">&#127908;</span><span>Dictate notes</span></button>
+      <button class="mic" id="mic-an" onclick="vm('an','fan')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate notes</span></button>
       <textarea id="fan" rows="3" placeholder="Why things took longer or faster than planned..."></textarea>
     </div>
     <button class="btn btn-submit" onclick="submitAchv()">&#128190; Save Achievement Record</button>
@@ -415,7 +423,7 @@ select{
 </div><!-- /main -->
 <div class="bnav">
   <button class="nb active" id="nav-eod" onclick="sw('eod',this)"><span class="ni">&#128203;</span>EOD Plan</button>
-  <button class="nb" id="nav-achv" onclick="sw('achv',this)"><span class="ni">&#9989;</span>How'd We Do</button>
+  <button class="nb" id="nav-achv" onclick="sw('achv',this)"><span class="ni">&#9989;</span>Results</button>
   <button class="nb" id="nav-hist" onclick="sw('hist',this)"><span class="ni">&#128218;</span>History</button>
 </div>
 </div><!-- /app -->
@@ -452,7 +460,7 @@ var COMMS=[{k:'wa',l:'Site images sent to client WhatsApp group'},{k:'eod',l:'EO
 var TCOLS=['#f59e0b','#38bdf8','#a78bfa','#22c55e','#fb923c'];
 var TLTRS=['A','B','C','D','E'];
 var CHK={},COM={},PT_I=0,AL_I=0,NR_I=0,IR_I=0;
-var _mic=null,_ma=null;
+var _mic=null,_ma=null,_mid='';
 var _uname='';
 
 (function init(){
@@ -484,9 +492,10 @@ var _uname='';
 function doLogin(){
   var el=document.getElementById('ln');
   var n=(el?el.value:'').trim();
-  if(!n||n==='-- Select your name --'){
+  if(!n){
     // Shake the select to indicate they need to pick
     if(el){el.style.borderColor='var(--red)';setTimeout(function(){el.style.borderColor='';},1500);}
+    var msg=document.getElementById('ln-err');if(msg){msg.style.display='block';setTimeout(function(){msg.style.display='none';},2000);}
     return;
   }
   _uname=n;
@@ -496,6 +505,14 @@ function doLogin(){
   document.getElementById('ls').style.display='none';
   document.getElementById('app').style.display='block';
   loadAchv();loadHist();
+  // Show one-time AI setup hint if no key saved yet
+  if(!localStorage.getItem('dgc_claude_key')&&!localStorage.getItem('dgc_ai_hint_seen')){
+    localStorage.setItem('dgc_ai_hint_seen','1');
+    setTimeout(function(){
+      var hint=document.getElementById('ai-hint');if(hint)hint.style.display='flex';
+      setTimeout(function(){var h=document.getElementById('ai-hint');if(h)h.style.display='none';},8000);
+    },1200);
+  }
 }
 
 function sw(name,btn){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('active');});document.getElementById('tab-'+name).classList.add('active');btn.classList.add('active');if(name==='hist')loadHist();if(name==='achv')loadAchv();}
@@ -525,9 +542,8 @@ function addNoise(t,v){NR_I++;var id='nr'+NR_I;var r=document.createElement('div
 function addItem(q,it,s){IR_I++;var id='ir'+IR_I;var r=document.createElement('div');r.className='ir';r.id=id;r.innerHTML='<input placeholder="Qty" value="'+(q||'')+'"><input placeholder="Item" value="'+(it||'')+'"><input placeholder="Supplier" value="'+(s||'')+'"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('ir-c').appendChild(r);}
 
 var MIC_ICON='🎙';
-function vm(id,tid){if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){toast('Voice needs Chrome on Android or Safari on iOS','err');return;}if(_ma===id){stopV();return;}if(_ma)stopV();_ma=id;_mid=tid;var btn=document.getElementById('mic-'+id);btn.classList.add('on');btn.querySelector('span').textContent='⏹ Stop';var SR=window.SpeechRecognition||window.webkitSpeechRecognition;_mic=new SR();_mic.continuous=true;_mic.interimResults=true;_mic.lang='en-GB';var final='',existing=document.getElementById(tid).value;_mic.onresult=function(e){var interim='';for(var i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';else interim+=e.results[i][0].transcript;}document.getElementById(tid).value=(existing?existing+' ':'')+(final+interim).trim();};_mic.onerror=function(){stopV();};_mic.onend=function(){var captured=final.trim();stopV();if(captured&&CLAUDE_KEY)aiClean(tid,captured);}; _mic.start();}
-var _mid='';
-function stopV(){if(_mic){try{_mic.stop();}catch(e){}}_mic=null;if(_ma){var btn=document.getElementById('mic-'+_ma);if(btn){btn.classList.remove('on');var sp=btn.querySelector('span');if(sp)sp.textContent=MIC_ICON;}_ma=null;}}
+function vm(id,tid){if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){toast('Voice needs Chrome on Android or Safari on iOS','err');return;}if(_ma===id){stopV();return;}if(_ma)stopV();_ma=id;_mid=tid;var btn=document.getElementById('mic-'+id);btn.classList.add('on');var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent='⏹';var lb=btn.querySelector('.mic-label');if(lb)lb.textContent='Stop';var SR=window.SpeechRecognition||window.webkitSpeechRecognition;_mic=new SR();_mic.continuous=true;_mic.interimResults=true;_mic.lang='en-GB';var final='',existing=document.getElementById(tid).value;_mic.onresult=function(e){var interim='';for(var i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';else interim+=e.results[i][0].transcript;}document.getElementById(tid).value=(existing?existing+' ':'')+(final+interim).trim();};_mic.onerror=function(){stopV();};_mic.onend=function(){var captured=final.trim();stopV();if(captured&&CLAUDE_KEY)aiClean(tid,captured);}; _mic.start();}
+function stopV(){if(_mic){try{_mic.stop();}catch(e){}}_mic=null;if(_ma){var btn=document.getElementById('mic-'+_ma);if(btn){btn.classList.remove('on');var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent=MIC_ICON;var lb=btn.querySelector('.mic-label');if(lb)lb.textContent='';}_ma=null;}}
 function aiClean(tid,raw){
   var ta=document.getElementById(tid);if(!ta)return;
   toast('Cleaning up with AI...');
@@ -555,34 +571,41 @@ function submitEOD(){
     meeting:{time:document.getElementById('fbt').value,topics:document.getElementById('ftp').value,risks:document.getElementById('frk').value,visitors:document.getElementById('fv').value},
     eodResponsibility:{person:document.getElementById('feod-resp').value,team:document.getElementById('feod-team').value},
     plan:getPlan(),alloc:getAlloc(),sessions:document.getElementById('fses').value,
-    noise:noise,checks:Object.assign({},CHK),obs:document.getElementById('fob').value,items:items,comms:Object.assign({},COM),notes:document.getElementById('fnt').value};
-  var btn=document.querySelector('[onclick="submitEOD()"]');if(btn){btn.textContent='Saving...';btn.disabled=true;}
+    noise:noise,obs:document.getElementById('fob').value,items:items,comms:Object.assign({},COM),notes:document.getElementById('fnt').value};
+  var btn=document.querySelector('[onclick="submitEOD()"]');
+  function resetBtn(){if(btn){btn.textContent='📤 Submit & Save';btn.disabled=false;btn.style.background='';btn.style.boxShadow='';}}
+  function errBtn(){if(btn){btn.textContent='⚠ Save failed — tap to retry';btn.disabled=false;btn.style.background='var(--red)';btn.style.boxShadow='0 4px 18px rgba(239,68,68,.35)';}}
+  if(btn){btn.textContent='Saving...';btn.disabled=true;btn.style.background='';btn.style.boxShadow='';}
   sb.from('daily_records').upsert({project_ref:PROJECT_REF,gang:_uname||'Unknown',date:date,data:data,updated_at:new Date().toISOString()},{onConflict:'project_ref,gang,date'})
     .then(function(r){
-      if(btn){btn.textContent='✓ Saved';setTimeout(function(){btn.textContent='📤 Submit & Save';btn.disabled=false;},2000);}
-      if(r.error){toast('Save failed: '+r.error.message,'err');}
-      else{toast('Saved to cloud ✓');}
+      if(r.error){toast('Save failed: '+r.error.message,'err');errBtn();}
+      else{if(btn){btn.textContent='✓ Saved';setTimeout(resetBtn,2000);}toast('Saved to cloud ✓');}
     })
-    .catch(function(e){if(btn){btn.textContent='📤 Submit & Save';btn.disabled=false;}toast('Save failed — no internet?','err');});
+    .catch(function(e){toast('Save failed — no internet?','err');errBtn();});
 }
 
+function showAchvNone(msg,sub){
+  var el=document.getElementById('achv-none');var inner=document.getElementById('achv-none-inner');
+  if(inner)inner.innerHTML='<div style="font-size:40px;margin-bottom:12px;opacity:.7;">&#128203;</div><div style="font-size:15px;font-weight:700;color:var(--txt);margin-bottom:6px;">'+msg+'</div><div style="font-size:13px;line-height:1.6;">'+(sub||'')+'</div>';
+  el.style.display='';
+}
 function loadAchv(){
-  if(!sb){document.getElementById('achv-none').style.display='';return;}
+  if(!sb){showAchvNone('No plan found for yesterday','Fill in today’s EOD plan —<br>tomorrow you can record how you got on.');return;}
   var yest=new Date();yest.setDate(yest.getDate()-1);var ys=yest.toISOString().slice(0,10);
   document.getElementById('achv-sub').textContent='Based on plan from '+fmtD(ys);
   sb.from('daily_records').select('data').eq('project_ref',PROJECT_REF).eq('date',ys).not('gang','like','ACHV_%').limit(10)
     .then(function(r){
       var found=r.data&&r.data.find(function(x){return x.data&&x.data.plan&&x.data.plan.length>0;});
       if(found)buildAchv(found.data);
-      else document.getElementById('achv-none').style.display='';
+      else showAchvNone('No plan found for yesterday','Fill in today’s EOD plan —<br>tomorrow you can record how you got on.');
     })
-    .catch(function(){document.getElementById('achv-none').style.display='';});
+    .catch(function(){showAchvNone('Could not load plan','Check your internet connection and try again.');});
 }
 function buildAchv(data){
   var plan=data.plan||[];var tasks=[];
   plan.forEach(function(t){(t.tasks||[]).forEach(function(tk){tasks.push({team:t.team,desc:tk.desc,target:tk.target||100});});});
-  if(!tasks.length){document.getElementById('achv-none').style.display='';return;}
-  document.getElementById('achv-none').style.display='none';
+  if(!tasks.length){showAchvNone('No plan found for yesterday','Fill in today\'s EOD plan —<br>tomorrow you can record how you got on.');return;}
+  document.getElementById('achv-none').style.display='none';document.getElementById('achv-none-inner').innerHTML='';
   document.getElementById('achv-score').style.display='';
   document.getElementById('achv-form').style.display='';
   var cm={A:'#f59e0b',B:'#38bdf8',C:'#a78bfa',D:'#22c55e',E:'#fb923c'};
@@ -596,8 +619,9 @@ function buildAchv(data){
         '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Target (planned)</div><div style="font-size:26px;font-weight:900;color:var(--blue);">'+(task.target||'?')+'%</div></div>'+
         '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Actual achieved</div><input type="number" id="ap'+i+'" placeholder="%" min="0" max="100" oninput="calcEff()" style="font-size:20px;font-weight:900;text-align:center;border-color:'+col+'44;padding:8px;"></div>'+
       '</div>'+
-      '<button class="mic" id="mic-a'+i+'" onclick="vm(\'a'+i+'\',\'an'+i+'\')"><span>[mic]</span> Why didn\'t you hit it? (optional)</button>'+
-      '<textarea id="an'+i+'" rows="2" placeholder="Reason if under target..."></textarea>';
+      '<button onclick="(function(n){var nb=document.getElementById(\'anb\'+n),tb=document.getElementById(\'ant\'+n);var vis=nb.style.display===\'flex\';nb.style.display=vis?\'none\':\'flex\';tb.style.display=vis?\'none\':\'block\';})('+i+')" style="background:none;border:none;color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;padding:4px 0;display:block;text-align:left;letter-spacing:.01em;">+ Add note</button>'+
+      '<div id="anb'+i+'" style="display:none;"><button class="mic" id="mic-a'+i+'" onclick="vm(\'a'+i+'\',\'an'+i+'\')"><span class="mic-icon">'+MIC_ICON+'</span><span class="mic-label">Why didn\'t you hit it?</span></button></div>'+
+      '<textarea id="an'+i+'" rows="2" placeholder="Reason if under target..." style="display:none;"></textarea>';
     container.appendChild(d);
   });
   window._atasks=tasks;calcEff();
@@ -642,12 +666,26 @@ function loadHist(){
           // Group by date, pick the most complete record per date
           var byDate={};eods.forEach(function(r){if(!byDate[r.date]||(r.data&&r.data.plan&&r.data.plan.length>0))byDate[r.date]=r;});
           var dates=Object.keys(byDate).sort().reverse();
-          el.innerHTML=dates.slice(0,20).map(function(d){
+          el.innerHTML=dates.slice(0,20).map(function(d,di){
             var r=byDate[d].data||{};var a=amap[d];
-            var effHtml=a&&a.efficiency!=null?'<span style="color:'+(a.efficiency>=90?'#22c55e':a.efficiency>=70?'#f59e0b':'#ef4444')+';font-weight:900;margin-left:8px;">'+a.efficiency+'% efficiency</span>':'';
-            var plan=(r.plan||[]).map(function(t){return '<span style="color:'+(t.team==='A'?'#f59e0b':t.team==='B'?'#38bdf8':'#a78bfa')+';font-weight:800;">'+t.team+':</span> '+(t.tasks||[]).map(function(tk){return tk.desc+(tk.target?' ('+tk.target+'%)':'');}).join(', ');}).join('<br>');
+            var effCol=a&&a.efficiency!=null?(a.efficiency>=90?'#22c55e':a.efficiency>=70?'#f59e0b':'#ef4444'):'';
+            var effBadge=a&&a.efficiency!=null?'<span style="display:inline-block;background:'+effCol+';color:#0f1117;font-weight:900;font-size:11px;border-radius:6px;padding:2px 8px;margin-left:8px;">'+a.efficiency+'%</span>':'';
+            var plan=(r.plan||[]).map(function(t){var tcol=t.team==='A'?'#f59e0b':t.team==='B'?'#38bdf8':t.team==='C'?'#a78bfa':t.team==='D'?'#22c55e':'#fb923c';return '<span style="color:'+tcol+';font-weight:900;">Team '+t.team+':</span> '+(t.tasks||[]).map(function(tk){return esc(tk.desc)+(tk.target?' ('+tk.target+'%)':'');}).join(', ');}).join('<br>');
             var sm=r.header&&r.header.sm?r.header.sm:'';var wx=r.header&&r.header.weather?r.header.weather:'';
-            return '<div style="background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:12px;margin-bottom:8px;"><div style="font-size:10px;font-weight:800;color:var(--acc);margin-bottom:3px;">'+fmtD(d)+effHtml+'</div><div style="font-size:11px;color:var(--muted);line-height:1.7;">'+(sm?'<strong>SM:</strong> '+esc(sm)+(wx?' &middot; '+esc(wx):'')+'<br>':'')+(plan||'<em>No plan recorded</em>')+'</div></div>';
+            var notes=r.notes?'<div style="font-size:12px;color:var(--txt);margin-top:8px;border-top:1px solid var(--bdr);padding-top:8px;"><strong style="font-size:11px;color:var(--acc);">Notes:</strong><br>'+esc(r.notes)+'</div>':'';
+            var obs=r.obs?'<div style="font-size:12px;color:var(--txt);margin-top:6px;"><strong style="font-size:11px;color:var(--red);">Observations:</strong><br>'+esc(r.obs)+'</div>':'';
+            var sess=r.sessions?'<div style="font-size:12px;color:var(--txt);margin-top:6px;"><strong style="font-size:11px;color:var(--blue);">Session notes:</strong><br>'+esc(r.sessions)+'</div>':'';
+            var expandId='hexp'+di;
+            return '<div style="background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;" onclick="var x=document.getElementById(\''+expandId+'\');x.style.display=x.style.display===\'none\'?\'\':\'none\';">'+
+              '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'+
+                '<div style="font-size:11px;font-weight:800;color:var(--acc);">'+fmtD(d)+effBadge+'</div>'+
+                '<div style="font-size:12px;color:var(--muted);">&#9660; expand</div>'+
+              '</div>'+
+              '<div style="font-size:12px;color:var(--muted);line-height:1.7;">'+(sm?'<strong style="color:var(--txt);">SM:</strong> '+esc(sm)+(wx?' &middot; '+esc(wx):'')+'<br>':'')+(plan||'<em>No plan recorded</em>')+'</div>'+
+              '<div id="'+expandId+'" style="display:none;">'+
+                (notes||obs||sess||'<div style="font-size:12px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr);font-style:italic;">No additional detail recorded.</div>')+
+              '</div>'+
+            '</div>';
           }).join('');
         });
     })
@@ -722,11 +760,11 @@ function changeUser(){
 (function(){
   var t=localStorage.getItem('dgc_theme');
   if(t==='light'){document.body.classList.add('light');setTimeout(function(){var btn=document.getElementById('theme-btn');if(btn)btn.textContent='\u263D';var logo=document.getElementById('hdr-logo');if(logo)logo.src='dgc-logo-dark.png';},50);}
-  // Show green AI button if key already saved
+  // Style AI button green if key already saved (button is always visible)
   if(localStorage.getItem('dgc_claude_key')){
     setTimeout(function(){
       var ab=document.getElementById('ai-btn');
-      if(ab){ab.style.borderColor='var(--green)';ab.style.color='var(--green)';}
+      if(ab){ab.style.borderColor='var(--green)';ab.style.color='var(--green)';ab.style.display='flex';}
     },200);
   }
 })();
@@ -741,8 +779,10 @@ function saveClaudeKey(){
   if(!k){alert('Please paste your Claude API key first.');return;}
   localStorage.setItem('dgc_claude_key',k);
   CLAUDE_KEY=k;
-  document.getElementById('ai-btn').style.borderColor='var(--green)';
-  document.getElementById('ai-btn').style.color='var(--green)';
+  var _ab=document.getElementById('ai-btn');
+  _ab.style.borderColor='var(--green)';
+  _ab.style.color='var(--green)';
+  _ab.style.display='flex';
   document.getElementById('claude-modal').style.display='none';
   toast('Claude AI key saved ✓','');
 }
