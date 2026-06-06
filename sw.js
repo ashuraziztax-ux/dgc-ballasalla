@@ -1,7 +1,7 @@
 // DGC Control Panel — Service Worker v225
 // NUCLEAR CACHE CLEAR: on activate, wipe ALL caches and force reload all clients
 
-const CACHE = 'dgc-v202606061312';
+const CACHE = 'dgc-v1780748425';
 
 self.addEventListener('install', () => {
   self.skipWaiting(); // activate immediately

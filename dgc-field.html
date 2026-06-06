@@ -14,7 +14,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='1.1.0';
+var APP_VERSION='1.1.1';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -182,7 +182,7 @@ select{
 /* ── LOGIN SCREEN ── */
 .lock{
   position:fixed;inset:0;background:linear-gradient(160deg,#0a0d14 0%,#111827 60%,#0d1520 100%);
-  z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:28px 24px;text-align:center;
 }
 .lock-card{
@@ -271,7 +271,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please choose your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;">Start &rarr;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.1.0</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.1.1</div>
   </div>
 </div>
 
@@ -287,17 +287,11 @@ select{
   <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
     <button class="btn btn-blue btn-sm no-print" onclick="window.print()" title="Print tomorrow's plan" style="min-width:44px;min-height:44px;font-size:18px;padding:0;">&#128424;</button>
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
-    <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings">&#129302;</button>
-    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span>
+    <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
+    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.1.1</span>
   </div>
 </div>
 
-<!-- AI setup hint banner (shown once on first login without a key) -->
-<div id="ai-hint" style="display:none;align-items:center;gap:10px;background:rgba(245,158,11,.12);border-bottom:1px solid rgba(245,158,11,.3);padding:10px 16px;font-size:12px;font-weight:700;color:var(--acc);">
-  <span style="font-size:18px;">&#129302;</span>
-  <span style="flex:1;">Tap the <strong>&#129302;</strong> button in the header to set up Claude AI voice cleanup &mdash; it tidies up your dictation automatically.</span>
-  <button onclick="document.getElementById('ai-hint').style.display='none';" style="background:none;border:none;color:var(--acc);font-size:18px;cursor:pointer;padding:0;line-height:1;">&#10005;</button>
-</div>
 <div class="main">
 
 <!-- EOD PLANNER -->
@@ -545,7 +539,7 @@ function doLogin(){
   localStorage.setItem('dgc_uname',n);
   document.getElementById('ub').textContent=n;
   document.getElementById('fm').value=n;
-  document.getElementById('ls').style.display='none';
+  document.getElementById('ls').style.display='none';document.body.style.overflow='';
   document.getElementById('app').style.display='block';
   restoreDraft();
   startDraftTimer();
@@ -1065,7 +1059,7 @@ function changeUser(){
       if(sel.options[oi].value===_uname){sel.selectedIndex=oi;break;}
     }
   }
-  document.getElementById('ls').style.display='flex';
+  document.getElementById('ls').style.display='flex';document.body.style.overflow='hidden';
   document.getElementById('app').style.display='none';
 }
 // Restore theme + Claude key status on load
