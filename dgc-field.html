@@ -10,11 +10,11 @@
 <meta http-equiv="Expires" content="0">
 <title>DGC Daily Sheet</title>
 <script>
-// DGC Daily Sheet v1.7.1 — 4 nav tabs (Morning/Today/Tomorrow/History), History as full performance report
+// DGC Daily Sheet v2.0.10 — 10-pass revamp: login, nav, morning, today, tonight, teams, noise, results, history, polish
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='2.0.5';
+var APP_VERSION='2.0.10';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -66,21 +66,21 @@ html,body{min-height:100%;background:var(--bg);color:var(--txt);font-family:-app
 .hdr{background:var(--surf);border-bottom:2px solid var(--bdr);padding:max(12px,env(safe-area-inset-top)) 16px 12px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.25);}
 
 /* ── LAYOUT ── */
-.main{padding:16px 16px 8px;max-width:900px;margin:0 auto;}
+.main{padding:16px 16px 80px;max-width:900px;margin:0 auto;}
 
 /* ── SECTION HEADERS ── */
-.sec{margin:20px 0 12px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.sec{margin:22px 0 12px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap;}
 .sec-inner{display:flex;flex-direction:column;gap:2px;border-left:3px solid var(--acc);padding-left:10px;}
 .sec-t{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.09em;color:var(--acc);}
 .sec-s{font-size:11px;color:var(--muted);font-weight:500;}
 /* All .sec blocks use .sec-inner wrapper — legacy direct rule removed */
 
 /* ── CARDS ── */
-.card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--radius);padding:18px;margin-bottom:14px;box-shadow:0 1px 6px rgba(0,0,0,.15);}
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--radius);padding:18px 18px;margin-bottom:14px;box-shadow:0 1px 8px rgba(0,0,0,.18);}
 
 /* ── LABELS ── */
-label{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.09em;color:rgba(241,245,249,.55);display:block;margin-bottom:7px;}
-body.light label{color:rgba(30,41,59,.65);}
+label{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:rgba(241,245,249,.55);display:block;margin-bottom:8px;}
+body.light label{color:rgba(30,41,59,.6);}
 
 /* ── FORM CONTROLS ── */
 input,select,textarea{
@@ -127,7 +127,7 @@ select{
 .btn-submit:active{box-shadow:0 2px 8px rgba(245,158,11,.25);}
 
 /* ── TEAM BLOCKS ── */
-.tblk{background:var(--s2);border:1.5px solid var(--bdr);border-radius:var(--radius);padding:14px;margin-bottom:10px;}
+.tblk{background:var(--s2);border:1.5px solid var(--bdr);border-radius:var(--radius);padding:16px;margin-bottom:12px;}
 .tblk-hd{cursor:pointer;user-select:none;}
 .tblk-body{}
 .collapsed .tblk-body{display:none;}
@@ -298,7 +298,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.0.5</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.0.10</div>
   </div>
 </div>
 
@@ -373,7 +373,7 @@ select{
     <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
     <button id="reset-sod-btn" onclick="resetMorningCheck()" class="no-print" title="Reset morning check (test only)" style="background:none;border:none;color:rgba(100,116,139,.08);font-size:10px;cursor:pointer;padding:4px;font-family:inherit;opacity:0.15;">&#8635;</button>
     <button onclick="reopenSOD()" style="background:none;border:1.5px solid rgba(245,158,11,.4);border-radius:9px;color:var(--acc);font-size:11px;font-weight:800;padding:6px 10px;cursor:pointer;white-space:nowrap;font-family:inherit;min-height:36px;" class="no-print" title="Open morning check">&#128203; AM check</button>
-    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v2.0.0</span>
+    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span>
   </div>
 </div>
 
@@ -459,7 +459,7 @@ select{
 
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#9888;&#65039; Safety &amp; Site Observations</span><span class="sec-s">Near misses, damage, ground conditions, anything unusual</span></div></div>
   <div class="card">
-    <button class="mic" id="mic-obs" onclick="vm('obs','fob')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate safety observations</span></button>
+    <button class="mic" id="mic-obs" onclick="vm('obs','fob')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate &mdash; near misses, damage, ground surprises, H&amp;S notes</span></button>
     <textarea id="fob" rows="3" placeholder="Near misses, damage, unusual ground conditions, anything worth recording for H&amp;S or commercial purposes..."></textarea>
   </div>
 
@@ -522,8 +522,8 @@ select{
   <div id="achv-prog-banner" style="display:none;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:13px;font-weight:700;color:var(--acc);line-height:1.6;"></div>
   <div id="achv-none" class="card">
     <div style="text-align:center;padding:32px 16px;color:var(--muted);" id="achv-none-inner">
-      <div style="font-size:32px;margin-bottom:12px;opacity:.6;animation:bl 1.2s infinite;">&#8987;</div>
-      <div style="font-size:15px;font-weight:700;color:var(--txt);margin-bottom:6px;">Checking yesterday's plan...</div>
+      <div style="font-size:36px;margin-bottom:12px;animation:bl 1.2s infinite;">&#9203;</div>
+      <div style="font-size:15px;font-weight:700;color:var(--txt);margin-bottom:6px;">Loading yesterday's plan...</div>
       <div style="font-size:13px;line-height:1.6;">Loading&hellip;</div>
     </div>
   </div>
@@ -539,7 +539,7 @@ select{
     <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Notes for Management</span><span class="sec-s">Anything Ash or Harry need to know or act on</span></div></div>
     <div class="card">
       <button class="mic" id="mic-an" onclick="vm('an','fan')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate notes for Ash / Harry</span></button>
-      <textarea id="fan" rows="3" placeholder="Why things took longer or faster. Any issues Ash or Harry need to act on. Commercial flags, delays, ground surprises..."></textarea>
+      <textarea id="fan" rows="3" placeholder="Why were tasks under or over target? Any issues Ash or Harry need to act on today? Commercial flags, delays, ground surprises, anything unusual..."></textarea>
     </div>
     <button class="btn btn-submit" onclick="submitAchv()">&#128190; Save Results</button>
     <div style="height:20px;"></div>
@@ -643,9 +643,9 @@ var _lastResultIdx=-1;
   }
   COMMS.forEach(function(c){
     COM[c.k]=false;
-    var d=document.createElement('div');d.className='cr';
+    var d=document.createElement('div');d.className='chki';
     d.onclick=function(){COM[c.k]=!COM[c.k];var b=d.querySelector('.chkb');b.classList.toggle('on',COM[c.k]);b.textContent=COM[c.k]?'✓':'';};
-    d.innerHTML='<div class="chkb"></div><div style="font-size:12px;font-weight:600;color:var(--txt);">'+c.l+'</div>';
+    d.innerHTML='<div class="chkb"></div><div style="font-size:13px;font-weight:600;color:var(--txt);">'+c.l+'</div>';
     document.getElementById('comms-c').appendChild(d);
   });
   addPT();addPT();addPT();
@@ -741,13 +741,14 @@ function addPT(){
       +'</div>'
     +'</div>'
     +'<div class="g2" style="margin-bottom:10px;">'
-      +'<div><label style="font-size:11px;">Team Leader</label><input type="text" id="ptl'+i+'" list="nl" placeholder="Leader name" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
-      +'<div><label style="font-size:11px;">Member 1</label><input type="text" id="ptm'+i+'_0" list="nl" placeholder="Member name" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
-      +'<div><label style="font-size:11px;">Member 2</label><input type="text" id="ptm'+i+'_1" list="nl" placeholder="Member name" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
+      +'<div><label style="font-size:11px;">Team Leader</label><input type="text" id="ptl'+i+'" list="nl" placeholder="Tap to pick" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
+      +'<div><label style="font-size:11px;">Member 1</label><input type="text" id="ptm'+i+'_0" list="nl" placeholder="Tap to pick" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
+      +'<div><label style="font-size:11px;">Member 2</label><input type="text" id="ptm'+i+'_1" list="nl" placeholder="Tap to pick" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
+      +'<div><label style="font-size:11px;">Member 3</label><input type="text" id="ptm'+i+'_2" list="nl" placeholder="Tap to pick" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
     +'</div>'
     +'<div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:1fr 72px 40px;gap:6px;padding:0 2px 6px;text-transform:uppercase;letter-spacing:.05em;"><span>Task / Activity</span><span>Target %</span><span></span></div>'
     +'<div id="ptt'+i+'"></div>'
-    +'<div style="margin-top:10px;"><label style="font-size:11px;">Resources needed</label>'
+    +'<div style="margin-top:10px;"><label style="font-size:11px;">Resources &amp; materials needed for this team</label>'
       +'<button class="mic" id="'+micResId+'" onclick="vm(\'res'+i+'\',\''+resId+'\')" style="margin-bottom:6px;"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate resources</span></button>'
       +'<textarea id="'+resId+'" rows="2" placeholder="Plant, materials, deliveries needed for this team..." style="font-size:13px;min-height:56px;"></textarea>'
     +'</div>'
@@ -824,7 +825,7 @@ function addNoise(t,v){
   r.style.cssText='display:grid;grid-template-columns:90px 1fr auto 40px;gap:6px;align-items:center;margin-bottom:8px;';
   r.innerHTML='<input type="time" value="'+(t||'')+'" style="font-size:13px;min-height:44px;">'
     +'<input type="number" placeholder="dB" min="0" max="140" inputmode="numeric" value="'+(v||'')+'" style="font-size:13px;min-height:44px;">'
-    +'<button onclick="toggleDND(\''+id+'\')" style="background:none;border:1.5px solid var(--bdr);border-radius:8px;color:var(--muted);font-size:11px;font-weight:800;cursor:pointer;padding:6px 8px;min-height:44px;white-space:nowrap;font-family:inherit;">DND</button>'
+    +'<button onclick="toggleDND(\''+id+'\')" style="background:none;border:1.5px solid var(--bdr);border-radius:8px;color:var(--muted);font-size:11px;font-weight:800;cursor:pointer;padding:6px 8px;min-height:44px;white-space:nowrap;font-family:inherit;">N/A</button>'
     +'<button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';
   document.getElementById('nr-c').appendChild(r);
 }
@@ -1055,7 +1056,7 @@ function fetchWx(mode){
     });
 }
 
-function getPlan(){var teams=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var rows=div.querySelectorAll('.trow');var tasks=[];rows.forEach(function(r){var ins=r.querySelectorAll('input');var desc=ins[0].value.trim();if(desc){var tpct=ins[1]&&ins[1].value.trim()?parseFloat(ins[1].value):100;tasks.push({desc:desc,target:tpct});}});var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var leader=g('ptl'+i);var members=[g('ptm'+i+'_0'),g('ptm'+i+'_1')].filter(Boolean);var notes=g('pt-notes-'+i);var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');var plantType=g('pt-plant-type-'+i);var plantHrs=g('pt-plant-hrs-'+i);var plantCheckOk=document.getElementById('ptick-det-'+i)&&document.getElementById('ptick-det-'+i).classList.contains('on');var plantInit=g('pt-plant-init-'+i);var plantCheck={type:plantType,hours:plantHrs?parseFloat(plantHrs):null,confirmed:plantCheckOk,initials:plantInit};if(tasks.length||leader)teams.push({team:TLTRS[i]||('T'+(i+1)),leader:leader,members:members,tasks:tasks,notes:notes,plantOk:plantOk,plantCheck:plantCheck});});return teams;}
+function getPlan(){var teams=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var rows=div.querySelectorAll('.trow');var tasks=[];rows.forEach(function(r){var ins=r.querySelectorAll('input');var desc=ins[0].value.trim();if(desc){var tpct=ins[1]&&ins[1].value.trim()?parseFloat(ins[1].value):100;tasks.push({desc:desc,target:tpct});}});var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var leader=g('ptl'+i);var members=[g('ptm'+i+'_0'),g('ptm'+i+'_1'),g('ptm'+i+'_2')].filter(Boolean);var notes=g('pt-notes-'+i);var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');var plantType=g('pt-plant-type-'+i);var plantHrs=g('pt-plant-hrs-'+i);var plantCheckOk=document.getElementById('ptick-det-'+i)&&document.getElementById('ptick-det-'+i).classList.contains('on');var plantInit=g('pt-plant-init-'+i);var plantCheck={type:plantType,hours:plantHrs?parseFloat(plantHrs):null,confirmed:plantCheckOk,initials:plantInit};if(tasks.length||leader)teams.push({team:TLTRS[i]||('T'+(i+1)),leader:leader,members:members,tasks:tasks,notes:notes,plantOk:plantOk,plantCheck:plantCheck});});return teams;}
 function getAlloc(){var a=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var lead=g('ptl'+i);var members=[g('ptm'+i+'_0'),g('ptm'+i+'_1'),g('ptm'+i+'_2'),g('ptm'+i+'_3')].filter(Boolean);var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');var initials=g('pti'+i);if(lead||members.length)a.push({team:TLTRS[i]||('T'+(i+1)),lead:lead,ops:members,plantOk:plantOk,initials:initials});});return a;}
 
 function noNet(){toast('✗ No internet — check your connection','err');}
@@ -1224,16 +1225,31 @@ function loadAchv(){
 window._achvTicked={};
 function tickTask(i){
   var task=(window._atasks||[])[i];if(!task)return;
-  window._achvTicked[i]=true;
-  var apEl=document.getElementById('ap'+i);if(apEl)apEl.value=task.target;
-  var row=document.getElementById('achv-row-'+i);
-  if(row){row.style.background='rgba(34,197,94,.12)';row.style.borderColor='var(--green)';}
-  var tickBtn=document.getElementById('tick-btn-'+i);
-  if(tickBtn){tickBtn.style.background='var(--green)';tickBtn.style.color='#0f1117';tickBtn.textContent='Done';}
-  var inputArea=document.getElementById('achv-input-'+i);
-  if(inputArea)inputArea.style.display='none';
-  var doneLabel=document.getElementById('achv-done-'+i);
-  if(doneLabel){doneLabel.textContent='Target hit: '+task.target+'%';doneLabel.style.display='block';}
+  var ticked=window._achvTicked[i];
+  if(ticked){
+    // Undo tick
+    window._achvTicked[i]=false;
+    var apEl=document.getElementById('ap'+i);if(apEl)apEl.value='';
+    var row=document.getElementById('achv-row-'+i);
+    if(row){row.style.background='';row.style.borderColor='';}
+    var tickBtn=document.getElementById('tick-btn-'+i);
+    if(tickBtn){tickBtn.style.background='rgba(34,197,94,.1)';tickBtn.style.color='var(--green)';tickBtn.innerHTML='&#10003;';}
+    var inputArea=document.getElementById('achv-input-'+i);
+    if(inputArea)inputArea.style.display='';
+    var doneLabel=document.getElementById('achv-done-'+i);
+    if(doneLabel)doneLabel.style.display='none';
+  }else{
+    window._achvTicked[i]=true;
+    var apEl=document.getElementById('ap'+i);if(apEl)apEl.value=task.target;
+    var row=document.getElementById('achv-row-'+i);
+    if(row){row.style.background='rgba(34,197,94,.12)';row.style.borderColor='var(--green)';}
+    var tickBtn=document.getElementById('tick-btn-'+i);
+    if(tickBtn){tickBtn.style.background='var(--green)';tickBtn.style.color='#0f1117';tickBtn.textContent='Done';}
+    var inputArea=document.getElementById('achv-input-'+i);
+    if(inputArea)inputArea.style.display='none';
+    var doneLabel=document.getElementById('achv-done-'+i);
+    if(doneLabel){doneLabel.textContent='Target hit: '+task.target+'%';doneLabel.style.display='block';}
+  }
   calcEff();
 }
 
@@ -1275,7 +1291,7 @@ function buildAchv(data){
     var doneLabelHtml='<div id="achv-done-'+i+'" style="display:none;font-size:13px;font-weight:800;color:var(--green);margin-bottom:8px;padding:8px 12px;background:rgba(34,197,94,.1);border-radius:8px;border:1px solid rgba(34,197,94,.3);"></div>';
     // Input area (shown when NOT ticked)
     var inputHtml='<div id="achv-input-'+i+'">'
-      +'<div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Or enter actual % below</div>'
+      +'<div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Enter actual % done &mdash; or tick if you hit the target</div>'
       +'<div style="display:grid;grid-template-columns:1fr'+(est.matched?' 1fr':'')+';gap:8px;margin-bottom:8px;">'
       +'<div><div style="font-size:10px;color:var(--muted);font-weight:800;margin-bottom:3px;">ACTUAL % DONE</div>'
       +'<input type="number" id="ap'+i+'" placeholder="%" min="0" max="100" inputmode="numeric" oninput="calcEff();checkNoteThreshold('+i+','+task.target+');'+(est.matched?'calcKPI('+i+','+task.target+',true,'+JSON.stringify(est.dailyOutput||0)+',\''+esc(est.unit||'')+'\')':'')+';" style="font-size:20px;font-weight:900;text-align:center;width:100%;padding:10px 8px;background:var(--bg);border:1.5px solid var(--bdr);border-radius:8px;color:var(--txt);outline:none;min-height:52px;transition:border-color .15s;">'
@@ -1310,7 +1326,7 @@ function calcEff(){
   if(scoreCard)scoreCard.style.display='';
   var eff=Math.round(totA/totT*100);
   var col=eff>=90?'#22c55e':eff>=70?'#f59e0b':'#ef4444';
-  var lbl=eff>=90?'On or ahead of plan — great work':eff>=70?'Slightly under plan':('Significantly under plan — '+cnt+' task(s) scored');
+  var lbl=eff>=90?'On or ahead of plan':eff>=70?'Slightly under plan — review with Ash':'Significantly under plan — note the reasons below';
   document.getElementById('eff-n').textContent=eff+'%';document.getElementById('eff-n').style.color=col;
   var lbEl=document.getElementById('eff-l');if(lbEl){lbEl.textContent=lbl;lbEl.style.color=col;}
   document.getElementById('eff-p').textContent='Avg target: '+Math.round(totT/cnt)+'%';
@@ -1394,15 +1410,15 @@ function loadHist(){
             // Header row
             html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--bdr);">';
             html+='<div>';
-            html+='<div style="font-size:15px;font-weight:900;color:var(--acc);">'+fmtD(date)+'</div>';
+            html+='<div style="font-size:17px;font-weight:900;color:var(--acc);">'+fmtD(date)+'</div>';
             if(r.header){html+='<div style="font-size:12px;color:var(--muted);">'+(r.header.weather||'')+(r.header.temp?' &middot; '+r.header.temp+'&deg;C':'')+'</div>';}
             html+='</div>';
             if(eff!=null){html+='<div style="font-size:28px;font-weight:900;color:'+effColor+';">'+eff+'%</div>';}
             html+='</div>';
 
             // SM + meeting brief
-            if(r.header&&r.header.sm){html+='<div style="font-size:12px;color:var(--muted);margin-bottom:10px;"><strong>SM:</strong> '+esc(r.header.sm)+'</div>';}
-            if(r.meeting&&r.meeting.topics){html+='<div style="font-size:12px;color:var(--muted);margin-bottom:10px;font-style:italic;">Meeting: '+esc(r.meeting.topics.substring(0,120))+(r.meeting.topics.length>120?'...':'')+'</div>';}
+            if(r.header&&r.header.sm){html+='<div style="font-size:13px;color:var(--muted);margin-bottom:10px;">Site Manager: <strong style="color:var(--txt);">'+esc(r.header.sm)+'</strong></div>';}
+            if(r.meeting&&r.meeting.topics){html+='<div style="font-size:12px;color:var(--muted);margin-bottom:10px;"><strong>Briefing:</strong> '+esc(r.meeting.topics.substring(0,140))+(r.meeting.topics.length>140?'...':'')+'</div>';}
 
             // Teams — planned vs actual
             if(plan.length){
@@ -1419,7 +1435,7 @@ function loadHist(){
                   }
                   var rate=estimateHours(tk.desc||'');
                   html+='<div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;margin-bottom:3px;">';
-                  html+='<div style="flex:1;color:var(--txt);">'+esc(tk.desc||'')+'</div>';
+                  html+='<div style="flex:1;color:var(--txt);font-size:13px;font-weight:600;">'+esc(tk.desc||'')+'</div>';
                   html+='<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">';
                   html+='<span style="color:var(--muted);font-size:10px;">Plan: '+(tk.target||100)+'%</span>';
                   if(actual!=null){
@@ -1436,7 +1452,7 @@ function loadHist(){
 
             // Noise readings
             if(r.noise&&r.noise.filter(function(n){return n.db;}).length){
-              html+='<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Noise: '+r.noise.filter(function(n){return n.db;}).map(function(n){return n.time+' &rarr; '+n.db+'dB';}).join(' &middot; ')+'</div>';
+              html+='<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Noise: '+r.noise.filter(function(n){return n.db;}).map(function(n){return '<span style="white-space:nowrap;">'+n.time+' &#10132; '+n.db+'dB</span>';}).join('  ')+'</div>';
             }
 
             // Items ordered
@@ -1670,6 +1686,7 @@ function sendToTrello(){
     if(card.id){
       status.textContent='✓ Sent to Brad on Trello';
       status.style.color='var(--green)';
+      var tb=document.getElementById('trello-btn');if(tb){tb.style.background='rgba(34,197,94,.15)';tb.style.borderColor='var(--green)';tb.style.color='var(--green)';}
       toast('Card sent to Brad on Trello');
     } else {
       status.textContent='Error: '+(card.message||JSON.stringify(card));
@@ -2535,7 +2552,7 @@ function reopenSOD(){
   <img src="dgc-logo-white.png" alt="DGC" style="height:80px;object-fit:contain;filter:brightness(0) invert(1);margin-bottom:24px;opacity:0.9;">
   <div style="font-size:64px;margin-bottom:16px;">&#10003;</div>
   <div style="font-size:28px;font-weight:900;color:#fff;margin-bottom:8px;">Saved</div>
-  <div style="font-size:15px;color:rgba(255,255,255,.6);margin-bottom:24px;">Record submitted. Good work.</div>
+  <div style="font-size:15px;color:rgba(255,255,255,.6);margin-bottom:24px;">Record saved to cloud. Good work.</div>
   <div style="font-size:12px;color:rgba(255,255,255,.3);">Tap anywhere to continue</div>
 </div>
 
