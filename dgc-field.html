@@ -1816,7 +1816,7 @@ function emailTodayPlan(planData){
     body+='RISKS:\n'+planData.meeting.risks+'\n\n';
   }
   body+='Sent from DGC Daily Sheet app';
-  window.location.href='mailto:ash@dgc.im,harry@dgc.im?subject='+encodeURIComponent('DGC Daily Plan - '+fmtD(tod()))+'&body='+encodeURIComponent(body);
+  window.location.href='mailto:david@dgc.im?cc=info@dgc.im&subject='+encodeURIComponent('DGC Daily Plan - '+fmtD(tod()))+'&body='+encodeURIComponent(body);
 }
 
 function startDaySkip(){
