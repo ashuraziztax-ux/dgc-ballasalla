@@ -10,11 +10,11 @@
 <meta http-equiv="Expires" content="0">
 <title>DGC Daily Sheet</title>
 <script>
-// DGC Daily Sheet v1.1.0 — Updated after boardroom TWEAK session 2026-06-06
+// DGC Daily Sheet v1.2.0 — Updated after boardroom TWEAK session 2026-06-06
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='1.1.1';
+var APP_VERSION='1.2.0';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -146,7 +146,7 @@ select{
 
 /* ── NOISE / ITEMS ROWS ── */
 .nr{display:grid;grid-template-columns:90px 1fr 1fr 40px;gap:6px;align-items:center;margin-bottom:8px;}
-.ir{display:grid;grid-template-columns:62px 1fr 92px 100px 40px;gap:5px;align-items:center;margin-bottom:6px;}
+.ir{display:grid;grid-template-columns:58px 1fr 80px 80px 40px;gap:5px;align-items:center;margin-bottom:6px;}
 .nr input,.ir input{padding:10px 10px;font-size:13px;min-height:44px;}
 
 /* ── DELETE BUTTON ── */
@@ -234,7 +234,7 @@ select{
   .tblk-body{display:block!important;}
   #print-header{display:block!important;}
 }
-@media(max-width:420px){
+@media(max-width:480px){
   .ir{display:flex;flex-direction:column;gap:5px;padding:8px;background:var(--s2);border-radius:8px;margin-bottom:8px;}
   .ir input{width:100%;min-height:44px;}
   .ir .del{width:100%;border-radius:8px;}
@@ -271,7 +271,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please choose your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;">Start &rarr;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.1.1</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.2.0</div>
   </div>
 </div>
 
@@ -288,7 +288,7 @@ select{
     <button class="btn btn-blue btn-sm no-print" onclick="window.print()" title="Print tomorrow's plan" style="min-width:44px;min-height:44px;font-size:18px;padding:0;">&#128424;</button>
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
     <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
-    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.1.1</span>
+    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.2.0</span>
   </div>
 </div>
 
@@ -304,7 +304,8 @@ select{
       <select id="fw"><option value="">Select...</option><option>Fine &amp; dry</option><option>Overcast</option><option>Light rain</option><option>Heavy rain</option><option>Wind &amp; rain</option><option>Hot &amp; sunny</option><option>Cold &amp; dry</option><option>Frost</option></select>
     </div>
     <div><label>Temp (&#176;C)</label>
-      <div style="display:flex;gap:5px;"><input type="number" id="ft" placeholder="&#176;C" inputmode="numeric" style="flex:1;"><button class="btn btn-blue btn-sm" onclick="fetchWx()">&#127780;</button></div>
+      <div style="display:flex;gap:5px;"><input type="number" id="ft" placeholder="&#176;C" inputmode="numeric" style="flex:1;"><button class="btn btn-blue btn-sm" onclick="fetchWx()" title="Fetch tomorrow's weather">&#9728;</button><button class="btn btn-blue btn-sm" onclick="fetchWx('brief')" title="Fetch with brief summary">&#128203;</button></div>
+      <div id="wx-brief" style="display:none;font-size:12px;font-weight:600;color:var(--blue);margin-top:6px;padding:6px 10px;background:rgba(56,189,248,.08);border-radius:8px;border:1px solid rgba(56,189,248,.25);"></div>
     </div>
   </div>
 
@@ -340,32 +341,6 @@ select{
   </div>
   <div id="prog-check-panel" style="display:none;"></div>
 
-  <!-- EOD RESPONSIBILITY -->
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128274; Who Locks Up Tomorrow?</span><span class="sec-s">Name the person responsible for end-of-day site security</span></div></div>
-  <div class="card">
-    <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.55;">Pick who is responsible for the security checklist and site clean-up at the end of tomorrow. This gets recorded so it's clear before the day starts — no arguments.</div>
-    <div class="g2">
-      <div>
-        <label>EOD responsible person</label>
-        <input type="text" id="feod-resp" placeholder="Tap to pick" list="nl" onclick="nc(this)" onblur="nb2(this)">
-      </div>
-      <div>
-        <label>EOD team</label>
-        <select id="feod-team">
-          <option value="">Select team...</option>
-          <option value="A">Team A</option>
-          <option value="B">Team B</option>
-          <option value="C">Team C</option>
-          <option value="D">Team D</option>
-          <option value="E">Team E</option>
-        </select>
-      </div>
-    </div>
-  </div>
-
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128119; Team Allocation &amp; Plant Checks</span></div></div>
-  <div id="al-container"></div>
-
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#9203; Session Times</span></div></div>
   <div class="card">
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
@@ -394,7 +369,7 @@ select{
 
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#128230; Items Required for Tomorrow</span></div></div>
   <div class="card">
-    <div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:62px 1fr 92px 100px 40px;gap:5px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;"><span>Qty</span><span>Item</span><span>Source</span><span>Needed By</span><span></span></div>
+    <div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:58px 1fr 80px 80px 40px;gap:5px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;"><span>Qty</span><span>Item</span><span>Supplier</span><span>By Time</span><span></span></div>
     <div id="ir-c"></div>
     <div class="btns" style="margin-top:8px;">
       <button class="btn btn-ghost btn-sm" onclick="addItem()">+ Item</button>
@@ -410,6 +385,29 @@ select{
   <div class="card">
     <button class="mic" id="mic-nt" onclick="vm('nt','fnt')"><span class="mic-icon">&#127908;</span><span class="mic-label">Record site notes</span></button>
     <textarea id="fnt" rows="4" placeholder="Manager notes for today..."></textarea>
+  </div>
+
+  <!-- EOD RESPONSIBILITY — moved to bottom -->
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128274; Who Locks Up Tomorrow?</span><span class="sec-s">Name the person responsible for end-of-day site security</span></div></div>
+  <div class="card">
+    <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.55;">Pick who is responsible for the security checklist and site clean-up at the end of tomorrow. This gets recorded so it's clear before the day starts — no arguments.</div>
+    <div class="g2">
+      <div>
+        <label>EOD responsible person</label>
+        <input type="text" id="feod-resp" placeholder="Tap to pick" list="nl" onclick="nc(this)" onblur="nb2(this)">
+      </div>
+      <div>
+        <label>EOD team</label>
+        <select id="feod-team">
+          <option value="">Select team...</option>
+          <option value="A">Team A</option>
+          <option value="B">Team B</option>
+          <option value="C">Team C</option>
+          <option value="D">Team D</option>
+          <option value="E">Team E</option>
+        </select>
+      </div>
+    </div>
   </div>
 
   <div class="no-print" style="margin-top:16px;">
@@ -490,17 +488,18 @@ var EODS=[
   {k:'noise',l:'Daily noise readings completed (3 spot readings)'},
   {k:'time',l:'Timesheets / Discovery sheets filled in (if required)'}
 ];
-var COMMS=[{k:'wa',l:'Site images sent to client WhatsApp group'},{k:'eod',l:'EOD filed in site office'},{k:'plan',l:'Daily Plan ready for tomorrow'},{k:'brief',l:'Plan ready for 7:30 morning meeting'}];
+var COMMS=[{k:'wa',l:'Site images sent to client WhatsApp group'},{k:'eod',l:'EOD filed in site office'}];
 var TCOLS=['#f59e0b','#38bdf8','#a78bfa','#22c55e','#fb923c'];
 var TLTRS=['A','B','C','D','E'];
 var CHK={},COM={},PT_I=0,AL_I=0,NR_I=0,IR_I=0;
 var _mic=null,_ma=null,_mid='';
+var _micStopping=false;
 var _uname='';
 
 (function init(){
   rebuildNL();
-  document.getElementById('fd').value=tod();
-  document.getElementById('dl').textContent=fmtD(tod());
+  document.getElementById('fd').value=todayPlus1();
+  document.getElementById('dl').textContent='Plan for '+fmtD(todayPlus1());
   // EOD checklist removed from this form (delegated separately)
   // Keep CHK state object in case it's referenced elsewhere
   EODS.forEach(function(e){ CHK[e.k]=false; });
@@ -512,7 +511,6 @@ var _uname='';
     document.getElementById('comms-c').appendChild(d);
   });
   addPT();addPT();addPT();
-  addAL();addAL();addAL();
   addNoise();addNoise();addNoise();
   addItem();addItem();
   // Pre-select last used name in dropdown (still requires pressing Start)
@@ -554,14 +552,34 @@ function doLogin(){
   }
 }
 
-function sw(name,btn){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('active');});document.getElementById('tab-'+name).classList.add('active');btn.classList.add('active');if(name==='hist')loadHist();if(name==='achv')loadAchv();}
+function sw(name,btn){
+  try{
+    document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+    document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('active');});
+    var tab=document.getElementById('tab-'+name);
+    if(tab)tab.classList.add('active');
+    if(btn)btn.classList.add('active');
+    if(name==='hist')loadHist();
+    if(name==='achv')loadAchv();
+  }catch(e){toast('✗ Tab error — try again','err');}
+}
 
 function addPT(){
   var i=PT_I++,l=TLTRS[i]||('T'+(i+1)),c=TCOLS[i]||'#94a3b8';
   var d=document.createElement('div');d.className='tblk';d.id='pt'+i;
+  var micResId='mic-res'+i,resId='fres'+i;
   d.innerHTML='<div class="thd"><div class="tdot" style="background:'+c+'"></div><div style="font-size:13px;font-weight:800;">Team '+l+'</div><div style="margin-left:auto;display:flex;gap:5px;"><button class="btn btn-ghost btn-sm" onclick="addTask('+i+')">+ Task</button><button class="btn btn-red btn-sm" onclick="this.closest(\'.tblk\').remove()">x</button></div></div>'+
+    '<div class="g2" style="margin-bottom:10px;">'+
+      '<div><label style="font-size:11px;">Team Leader</label><input type="text" id="ptl'+i+'" list="nl" placeholder="Leader name" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'+
+      '<div><label style="font-size:11px;">Member 1</label><input type="text" id="ptm'+i+'a" list="nl" placeholder="Member name" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'+
+      '<div><label style="font-size:11px;">Member 2</label><input type="text" id="ptm'+i+'b" list="nl" placeholder="Member name" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'+
+    '</div>'+
     '<div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:1fr 72px 40px;gap:6px;padding:0 2px 6px;text-transform:uppercase;letter-spacing:.05em;"><span>Task / Activity</span><span>Target %</span><span></span></div>'+
-    '<div id="ptt'+i+'"></div>';
+    '<div id="ptt'+i+'"></div>'+
+    '<div style="margin-top:10px;"><label style="font-size:11px;">Resources needed</label>'+
+      '<button class="mic" id="'+micResId+'" onclick="vm(\'res'+i+'\',\''+resId+'\')" style="margin-bottom:6px;"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate resources</span></button>'+
+      '<textarea id="'+resId+'" rows="2" placeholder="Plant, materials, deliveries needed for this team..." style="font-size:13px;min-height:56px;"></textarea>'+
+    '</div>';
   document.getElementById('pt-container').appendChild(d);
   addTask(i);
 }
@@ -579,7 +597,7 @@ function addAL(){
 
 function nowTime(){var n=new Date();return ('0'+n.getHours()).slice(-2)+':'+('0'+n.getMinutes()).slice(-2);}
 function addNoise(t,v,loc){NR_I++;var id='nr'+NR_I;var r=document.createElement('div');r.className='nr';r.id=id;r.innerHTML='<input type="time" value="'+(t||nowTime())+'"><input type="number" placeholder="dB" min="0" max="140" inputmode="numeric" value="'+(v||'')+'"><input type="text" placeholder="Location (e.g. Zone 9)" value="'+(loc||'')+'"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('nr-c').appendChild(r);}
-function addItem(q,it,s,nb){IR_I++;var id='ir'+IR_I;var r=document.createElement('div');r.className='ir';r.id=id;r.innerHTML='<input placeholder="Qty" value="'+(q||'')+'"><input placeholder="Item" value="'+(it||'')+'"><input placeholder="Supplier" value="'+(s||'')+'"><input type="date" title="Needed by" value="'+(nb||'')+'" style="font-size:12px;"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('ir-c').appendChild(r);}
+function addItem(q,it,s,tm){IR_I++;var id='ir'+IR_I;var r=document.createElement('div');r.className='ir';r.id=id;r.innerHTML='<input placeholder="Qty" value="'+(q||'')+'"><input placeholder="Item" value="'+(it||'')+'"><input placeholder="Supplier" value="'+(s||'')+'"><input type="time" title="By time" value="'+(tm||'')+'" style="font-size:12px;"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('ir-c').appendChild(r);}
 
 var MIC_ICON='🎙';
 // Store original mic button labels so we can restore them after recording
@@ -591,9 +609,9 @@ function vm(id,tid){if(!('webkitSpeechRecognition'in window||'SpeechRecognition'
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;_mic=new SR();_mic.continuous=true;_mic.interimResults=true;_mic.lang='en-GB';var final='',existing=document.getElementById(tid).value;var valueAtStop='';
   _mic.onresult=function(e){var interim='';for(var i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';else interim+=e.results[i][0].transcript;}document.getElementById(tid).value=(existing?existing+' ':'')+(final+interim).trim();};
   _mic.onerror=function(){stopV();};
-  _mic.onend=function(){var captured=final.trim();valueAtStop=document.getElementById(tid).value;stopV();if(captured&&CLAUDE_KEY){var cleanBtn=document.getElementById('mic-'+id);if(cleanBtn){var cic=cleanBtn.querySelector('.mic-icon');if(cic)cic.textContent='⏳';var clb=cleanBtn.querySelector('.mic-label');if(clb)clb.textContent='Cleaning up...';}aiClean(tid,captured,valueAtStop,id);}};
+  _mic.onend=function(){if(_micStopping){_micStopping=false;return;}var captured=final.trim();valueAtStop=document.getElementById(tid).value;stopV();if(captured&&CLAUDE_KEY){var cleanBtn=document.getElementById('mic-'+id);if(cleanBtn){var cic=cleanBtn.querySelector('.mic-icon');if(cic)cic.textContent='⏳';var clb=cleanBtn.querySelector('.mic-label');if(clb)clb.textContent='Cleaning up...';}aiClean(tid,captured,valueAtStop,id);}};
   _mic.start();}
-function stopV(){if(_mic){try{_mic.stop();}catch(e){}}_mic=null;if(_ma){var btn=document.getElementById('mic-'+_ma);if(btn){btn.classList.remove('on');var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent=MIC_ICON;var lb=btn.querySelector('.mic-label');if(lb)lb.textContent=_micLabels[_ma]||'Dictate';}_ma=null;}}
+function stopV(){if(_mic){try{_micStopping=true;_mic.stop();}catch(e){_micStopping=false;}}_mic=null;if(_ma){var btn=document.getElementById('mic-'+_ma);if(btn){btn.classList.remove('on');var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent=MIC_ICON;var lb=btn.querySelector('.mic-label');if(lb)lb.textContent=_micLabels[_ma]||'Dictate';}_ma=null;}}
 function aiClean(tid,raw,valueAtStop,micId){
   var ta=document.getElementById(tid);if(!ta)return;
   toast('Cleaning with AI...');
@@ -613,15 +631,26 @@ function aiClean(tid,raw,valueAtStop,micId){
   });}
 
 
-function fetchWx(){fetch('https://api.open-meteo.com/v1/forecast?latitude=54.0833&longitude=-4.6333&current=temperature_2m,weathercode&timezone=Europe%2FLondon').then(function(r){return r.json();}).then(function(d){if(!d.current)return;var t=Math.round(d.current.temperature_2m);
-  // WMO weather code to description + dropdown option mapping
-  var wm={0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Icy fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Snow',73:'Heavy snow',75:'Blizzard',77:'Snow grains',80:'Showers',81:'Heavy showers',82:'Violent showers',85:'Snow showers',86:'Heavy snow showers',95:'Thunderstorm',96:'Thunderstorm with hail',99:'Severe thunderstorm'};
-  // Map WMO code to dropdown value
-  var dm={0:'Fine & dry',1:'Fine & dry',2:'Overcast',3:'Overcast',51:'Light rain',53:'Light rain',55:'Light rain',61:'Light rain',63:'Light rain',65:'Heavy rain',71:'Cold & dry',73:'Cold & dry',75:'Cold & dry',77:'Cold & dry',80:'Light rain',81:'Heavy rain',82:'Heavy rain',95:'Wind & rain',96:'Wind & rain',99:'Wind & rain'};
-  var code=d.current.weathercode;
-  document.getElementById('ft').value=t;
-  var wx=document.getElementById('fw');if(wx&&dm[code]){wx.value=dm[code];}
-  toast((wm[code]||'Code '+code)+', '+t+'°C');}).catch(function(){toast('✗ Cannot fetch weather','err');});}
+function fetchWx(mode){
+  fetch('https://api.open-meteo.com/v1/forecast?latitude=54.0833&longitude=-4.6333&daily=temperature_2m_max,weathercode&timezone=Europe%2FLondon&forecast_days=2')
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(!d.daily||!d.daily.temperature_2m_max)return;
+    // index [1] = tomorrow
+    var t=Math.round(d.daily.temperature_2m_max[1]);
+    var code=d.daily.weathercode[1];
+    var wm={0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Icy fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Snow',73:'Heavy snow',75:'Blizzard',77:'Snow grains',80:'Showers',81:'Heavy showers',82:'Violent showers',85:'Snow showers',86:'Heavy snow showers',95:'Thunderstorm',96:'Thunderstorm with hail',99:'Severe thunderstorm'};
+    var dm={0:'Fine & dry',1:'Fine & dry',2:'Overcast',3:'Overcast',51:'Light rain',53:'Light rain',55:'Light rain',61:'Light rain',63:'Light rain',65:'Heavy rain',71:'Cold & dry',73:'Cold & dry',75:'Cold & dry',77:'Cold & dry',80:'Light rain',81:'Heavy rain',82:'Heavy rain',95:'Wind & rain',96:'Wind & rain',99:'Wind & rain'};
+    document.getElementById('ft').value=t;
+    var wx=document.getElementById('fw');if(wx&&dm[code])wx.value=dm[code];
+    if(mode==='brief'){
+      var brief=document.getElementById('wx-brief');
+      if(brief){brief.textContent='Tomorrow: '+(wm[code]||'Code '+code)+', max '+t+'°C';brief.style.display='block';}
+    }
+    toast((wm[code]||'Code '+code)+', '+t+'°C (tomorrow)');
+  })
+  .catch(function(){toast('✗ Cannot fetch weather','err');});
+}
 
 function getPlan(){var teams=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var rows=div.querySelectorAll('.trow');var tasks=[];rows.forEach(function(r){var ins=r.querySelectorAll('input');var desc=ins[0].value.trim();if(desc)tasks.push({desc:desc,target:parseFloat(ins[1].value)||100});});if(tasks.length)teams.push({team:TLTRS[i]||('T'+(i+1)),tasks:tasks});});return teams;}
 function getAlloc(){var a=[];document.querySelectorAll('.tblk[id^="al"]').forEach(function(div,i){var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};a.push({team:TLTRS[i]||('T'+(i+1)),lead:g('ali'+i+'l'),ops:[g('ali'+i+'o0'),g('ali'+i+'o1'),g('ali'+i+'o2')].filter(Boolean),plantType:g('ali'+i+'pt'),plantOk:document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on'),initials:g('ali'+i+'in')});});return a;}
@@ -676,7 +705,8 @@ function submitEOD(){
   var noiseRows=[];document.querySelectorAll('.nr').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value)noiseRows.push(ins[1].value);});
   if(noiseRows.length<3){if(!confirm('Only '+noiseRows.length+' noise reading(s) recorded — 3 are required. Submit anyway?'))return;}
   var noise=[];document.querySelectorAll('.nr').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value)noise.push({time:ins[0].value,db:parseFloat(ins[1].value),location:ins[2]?ins[2].value:''});});
-  var items=[];document.querySelectorAll('.ir').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value.trim())items.push({qty:ins[0].value,item:ins[1].value,source:ins[2].value,neededBy:ins[3]?ins[3].value:''});});
+  var items=[];document.querySelectorAll('.ir').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value.trim())items.push({qty:ins[0].value,item:ins[1].value,source:ins[2].value,byTime:ins[3]?ins[3].value:''});});
+  items.sort(function(a,b){return (a.byTime||'99:99').localeCompare(b.byTime||'99:99');});
   var data={type:'dgc-eod',date:date,projectRef:PROJECT_REF,submittedBy:_uname||'Unknown',submittedAt:new Date().toISOString(),appVersion:APP_VERSION,
     header:{sm:document.getElementById('fm').value,weather:document.getElementById('fw').value,temp:document.getElementById('ft').value},
     meeting:{time:document.getElementById('fbt').value,topics:document.getElementById('ftp').value,risks:document.getElementById('frk').value,visitors:document.getElementById('fv').value},
@@ -703,6 +733,7 @@ function submitEOD(){
         toast('✓ Saved to cloud');
         // Clear the draft from localStorage after successful save
         try{localStorage.removeItem('dgc_draft_'+date);}catch(e){}
+        setTimeout(function(){sw('achv',document.getElementById('nav-achv'));},1200);
       }
     })
     .catch(function(e){toast('✗ Save failed — no internet?','err');errBtn();});
@@ -714,19 +745,21 @@ function showAchvNone(msg,sub){
   el.style.display='';
 }
 function loadAchv(){
-  if(!sb){showAchvNone('No plan found','Fill in today\'s EOD plan —<br>tomorrow you can record how you got on.');return;}
-  // Search up to 7 days back for the most recent plan (handles weekends and gaps)
-  var searchDates=[];for(var di=1;di<=7;di++){var d=new Date();d.setDate(d.getDate()-di);searchDates.push(d.toISOString().slice(0,10));}
-  document.getElementById('achv-sub').textContent='Loading most recent plan...';
-  sb.from('daily_records').select('date,data').eq('project_ref',PROJECT_REF).in('date',searchDates).not('gang','like','ACHV_%').order('date',{ascending:false}).limit(20)
-    .then(function(r){
-      var found=(r.data||[]).find(function(x){return x.data&&x.data.plan&&x.data.plan.length>0;});
-      if(found){
-        document.getElementById('achv-sub').textContent='Based on plan from '+fmtD(found.date);
-        buildAchv(found.data);
-      }else showAchvNone('No recent plan found','Fill in today\'s EOD plan —<br>tomorrow you can record how you got on.');
-    })
-    .catch(function(){showAchvNone('Could not load plan','Check your internet connection and try again.');});
+  if(!sb){showAchvNone('No connection','Fill in today\'s EOD plan — tomorrow you can record how you got on.');return;}
+  try{
+    // Search up to 7 days back for the most recent plan (handles weekends and gaps)
+    var searchDates=[];for(var di=1;di<=7;di++){var d=new Date();d.setDate(d.getDate()-di);searchDates.push(d.toISOString().slice(0,10));}
+    var subEl=document.getElementById('achv-sub');if(subEl)subEl.textContent='Loading most recent plan...';
+    sb.from('daily_records').select('date,data').eq('project_ref',PROJECT_REF).in('date',searchDates).not('gang','like','ACHV_%').order('date',{ascending:false}).limit(20)
+      .then(function(r){
+        var found=(r.data||[]).find(function(x){return x.data&&x.data.plan&&x.data.plan.length>0;});
+        if(found){
+          if(subEl)subEl.textContent='Based on plan from '+fmtD(found.date);
+          buildAchv(found.data);
+        }else showAchvNone('No recent plan found','Fill in today\'s EOD plan —<br>tomorrow you can record how you got on.');
+      })
+      .catch(function(){showAchvNone('Could not load plan','Check your internet connection and try again.');});
+  }catch(e){showAchvNone('Error loading results','Something went wrong — try refreshing.');}
 }
 function buildAchv(data){
   var plan=data.plan||[];var tasks=[];
@@ -781,7 +814,9 @@ function submitAchv(){
 
 function loadHist(){
   var el=document.getElementById('hist');
+  if(!el)return;
   if(!sb){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">No internet connection</div>';return;}
+  try{
   el.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Loading...</div>';
   // Load EOD records (not achievement records)
   sb.from('daily_records').select('date,gang,data').eq('project_ref',PROJECT_REF).not('gang','like','ACHV_%').order('date',{ascending:false}).limit(30)
@@ -820,6 +855,7 @@ function loadHist(){
         });
     })
     .catch(function(){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--red);font-size:13px;">Failed to load — check internet</div>';});
+  }catch(e){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--red);font-size:13px;">Error loading history — try refreshing</div>';}
 }
 
 
@@ -1008,14 +1044,15 @@ function sendToTrello(){
   var items=[];
   document.querySelectorAll('.ir').forEach(function(r){
     var ins=r.querySelectorAll('input');
-    if(ins[1]&&ins[1].value.trim())items.push({qty:ins[0].value||'?',item:ins[1].value.trim(),source:ins[2].value||''});
+    if(ins[1]&&ins[1].value.trim())items.push({qty:ins[0].value||'?',item:ins[1].value.trim(),source:ins[2].value||'',byTime:ins[3]?ins[3].value:''});
   });
   if(!items.length){toast('No items to send','err');return;}
+  items.sort(function(a,b){return (a.byTime||'99:99').localeCompare(b.byTime||'99:99');});
 
   var date=document.getElementById('fd').value||new Date().toISOString().slice(0,10);
   var title='Materials Required — '+fmtD(date)+' (Ballasalla Phase 4)';
   var desc='Materials needed for site:\n\n'
-    +items.map(function(it){return '- '+it.qty+' x '+it.item+(it.source?' ('+it.source+')':'');}).join('\n')
+    +items.map(function(it){return '- '+it.qty+' x '+it.item+(it.source?' ('+it.source+')':'')+(it.byTime?' by '+it.byTime:'');}).join('\n')
     +'\n\nAdded by '+(_uname||'Site Manager')+' via DGC Field App';
 
   var status=document.getElementById('trello-status');
@@ -1093,6 +1130,7 @@ function saveClaudeKey(){
   toast('Claude AI key saved ✓','');
 }
 function tod(){return new Date().toISOString().slice(0,10);}
+function todayPlus1(){var d=new Date();d.setDate(d.getDate()+1);return d.toISOString().slice(0,10);}
 function fmtD(s){if(!s)return'';return new Date(s+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function toast(m,t){var el=document.getElementById('toast');el.textContent=m;el.className='toast show'+(t==='err'?' err':'');setTimeout(function(){el.classList.remove('show');},2800);}
