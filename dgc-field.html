@@ -10,11 +10,23 @@
 <meta http-equiv="Expires" content="0">
 <title>DGC Daily Sheet</title>
 <script>
-// DGC Daily Sheet v1.5.3 — Match paper DGC-02 form: EOD team picker, tasks counter, declaration, ordered by field
+// DGC Daily Sheet <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f1117">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>DGC Daily Sheet</title>
+<script>
+// DGC Daily Sheet v1.5.4 — Match paper DGC-02 form: EOD team picker, tasks counter, declaration, ordered by field
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='1.5.3';
+var APP_VERSION='1.5.4';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -294,7 +306,19 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please choose your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;">Start &rarr;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.5.3</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f1117">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>DGC Daily Sheet</title>
+<script>
+// DGC Daily Sheet v1.5.4</div>
   </div>
 </div>
 
@@ -352,7 +376,7 @@ select{
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
     <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
     <button onclick="reopenSOD()" style="background:none;border:1.5px solid rgba(245,158,11,.4);border-radius:9px;color:var(--acc);font-size:11px;font-weight:800;padding:6px 10px;cursor:pointer;white-space:nowrap;font-family:inherit;min-height:36px;" class="no-print" title="Open morning check">&#128203; AM check</button>
-    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.5.3</span>
+    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.5.4</span>
   </div>
 </div>
 
@@ -2157,20 +2181,37 @@ function reopenSOD(){
 </div>
 
 <script>
+// ── VERSION CHECK + AUTO-UPDATE ──────────────────────────────────────────────
+// Checks GitHub for the latest version every 60 seconds.
+// If the live version differs from APP_VERSION, shows a banner — one tap updates.
+function checkForUpdate(){
+  fetch('/dgc-ballasalla/dgc-field.html?_cb='+Math.random(),{cache:'no-store'})
+    .then(function(r){return r.text();})
+    .then(function(html){
+      var m=html.match(/var APP_VERSION='([^']+)'/);
+      if(m&&m[1]&&m[1]!==APP_VERSION){
+        showUpdateBanner(m[1]);
+      }
+    }).catch(function(){});
+}
+function showUpdateBanner(newVer){
+  var existing=document.getElementById('update-banner');
+  if(existing)return; // already showing
+  var b=document.createElement('div');
+  b.id='update-banner';
+  b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:var(--acc);color:#0f1117;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:inherit;box-shadow:0 2px 12px rgba(0,0,0,.4);';
+  b.innerHTML='<span style="font-size:13px;font-weight:800;">&#128260; Update available (v'+newVer+')</span>'
+    +'<button onclick="window.location.reload(true)" style="background:#0f1117;color:var(--acc);border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;min-height:44px;">Tap to update</button>';
+  document.body.insertBefore(b,document.body.firstChild);
+}
+
+// Check on load, then every 60 seconds
+setTimeout(checkForUpdate,3000);
+setInterval(checkForUpdate,60000);
+
+// Service worker for offline fallback only
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/dgc-ballasalla/sw.js').then(function(reg){
-    reg.addEventListener('updatefound',function(){
-      var newSW=reg.installing;
-      newSW.addEventListener('statechange',function(){
-        if(newSW.state==='installed'&&navigator.serviceWorker.controller){
-          // New version available — reload automatically
-          window.location.reload();
-        }
-      });
-    });
-    // Force update check every time page loads
-    reg.update();
-  }).catch(function(){});
+  navigator.serviceWorker.register('/dgc-ballasalla/sw.js').catch(function(){});
 }
 </script>
 </body>
