@@ -14,7 +14,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='1.7.1';
+var APP_VERSION='2.0.0';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -55,7 +55,7 @@ body.light{
   --txt:#1e293b;--muted:#64748b;--navy:#1e3a4a;
   --logo-filter:none;
 }
-html,body{min-height:100%;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;transition:background .2s,color .2s;font-size:15px;line-height:1.45;}
+html,body{min-height:100%;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;transition:background .2s,color .2s;font-size:16px;line-height:1.5;}
 
 /* ── HEADER ── */
 .dgc-logo{height:34px;object-fit:contain;filter:var(--logo-filter);}
@@ -63,10 +63,10 @@ html,body{min-height:100%;background:var(--bg);color:var(--txt);font-family:-app
 .theme-btn:hover{border-color:var(--acc);color:var(--acc);}
 .user-chip{font-size:12px;font-weight:800;padding:8px 14px;border-radius:22px;background:rgba(245,158,11,.15);color:var(--acc);border:1px solid rgba(245,158,11,.35);cursor:pointer;white-space:nowrap;min-height:44px;display:flex;align-items:center;line-height:1;transition:background .15s;}
 .user-chip:hover{background:rgba(245,158,11,.28);}
-.hdr{background:var(--surf);border-bottom:2px solid var(--bdr);padding:max(14px,env(safe-area-inset-top)) 16px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.25);}
+.hdr{background:var(--surf);border-bottom:2px solid var(--bdr);padding:max(12px,env(safe-area-inset-top)) 16px 12px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.25);}
 
 /* ── LAYOUT ── */
-.main{padding:14px 14px 8px;max-width:860px;margin:0 auto;}
+.main{padding:16px 16px 8px;max-width:900px;margin:0 auto;}
 
 /* ── SECTION HEADERS ── */
 .sec{margin:20px 0 12px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap;}
@@ -76,18 +76,18 @@ html,body{min-height:100%;background:var(--bg);color:var(--txt);font-family:-app
 /* All .sec blocks use .sec-inner wrapper — legacy direct rule removed */
 
 /* ── CARDS ── */
-.card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.18);}
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--radius);padding:18px;margin-bottom:14px;box-shadow:0 1px 6px rgba(0,0,0,.15);}
 
 /* ── LABELS ── */
-label{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:rgba(241,245,249,.65);display:block;margin-bottom:6px;}
+label{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.09em;color:rgba(241,245,249,.55);display:block;margin-bottom:7px;}
 body.light label{color:rgba(30,41,59,.65);}
 
 /* ── FORM CONTROLS ── */
 input,select,textarea{
-  width:100%;padding:13px 14px;background:var(--s2);border:1.5px solid var(--bdr);
-  border-radius:var(--radius-sm);color:var(--txt);font-size:15px;font-weight:600;
+  width:100%;padding:14px 15px;background:var(--s2);border:1.5px solid var(--bdr);
+  border-radius:var(--radius-sm);color:var(--txt);font-size:16px;font-weight:600;
   outline:none;appearance:none;-webkit-appearance:none;font-family:inherit;
-  min-height:48px;line-height:1.4;transition:border-color .15s,box-shadow .15s;
+  min-height:52px;line-height:1.4;transition:border-color .15s,box-shadow .15s;
 }
 input:focus,select:focus,textarea:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(245,158,11,.18);}
 textarea{resize:vertical;line-height:1.5;min-height:80px;}
@@ -141,14 +141,14 @@ select{
 /* ── CHECKLIST ── */
 .chki{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--bdr);cursor:pointer;}
 .chki:last-child{border:none;}
-.chkb{width:30px;height:30px;min-width:30px;border-radius:8px;border:2px solid var(--bdr);background:none;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;margin-top:1px;transition:background .15s,border-color .15s;}
+.chkb{width:44px;height:44px;min-width:44px;border-radius:10px;border:2px solid var(--bdr);background:none;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;margin-top:0;transition:background .15s,border-color .15s;}
 .chkb.on{background:var(--green);border-color:var(--green);}
 
 /* ── SOD THREE-STATE CHECKLIST ── */
 .sod-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--bdr);}
 .sod-row:last-child{border:none;}
 .sod-btns{display:flex;gap:6px;flex-shrink:0;}
-.sod-btn{padding:7px 11px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;border:1.5px solid var(--bdr);background:var(--s2);color:var(--muted);font-family:inherit;min-height:36px;transition:background .15s,border-color .15s,color .15s;white-space:nowrap;}
+.sod-btn{padding:10px 13px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;border:1.5px solid var(--bdr);background:var(--s2);color:var(--muted);font-family:inherit;min-height:44px;transition:background .15s,border-color .15s,color .15s;white-space:nowrap;}
 .sod-btn.done{background:rgba(34,197,94,.15);border-color:var(--green);color:var(--green);}
 .sod-btn.missed{background:rgba(245,158,11,.15);border-color:var(--acc);color:var(--acc);}
 .sod-label{flex:1;font-size:13px;font-weight:600;color:var(--txt);}
@@ -159,12 +159,12 @@ select{
 .btn-submit:disabled{opacity:.4;cursor:not-allowed;filter:none;box-shadow:none;}
 
 /* ── NOISE / ITEMS ROWS ── */
-.nr{display:grid;grid-template-columns:90px 1fr auto 40px;gap:6px;align-items:center;margin-bottom:8px;}
-.ir{display:grid;grid-template-columns:58px 1fr 80px 80px 40px;gap:5px;align-items:center;margin-bottom:6px;}
+.nr{display:grid;grid-template-columns:90px 1fr auto 44px;gap:6px;align-items:center;margin-bottom:8px;}
+.ir{display:grid;grid-template-columns:58px 1fr 80px 80px 44px;gap:5px;align-items:center;margin-bottom:6px;}
 .nr input,.ir input{padding:10px 10px;font-size:13px;min-height:44px;}
 
 /* ── DELETE BUTTON ── */
-.del{width:40px;height:40px;min-width:40px;background:var(--s2);border:1.5px solid var(--bdr);border-radius:8px;color:var(--red);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,border-color .15s;}
+.del{width:44px;height:44px;min-width:44px;background:var(--s2);border:1.5px solid var(--bdr);border-radius:8px;color:var(--red);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,border-color .15s;}
 .del:hover{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.4);}
 .del:active{opacity:.75;}
 
@@ -186,7 +186,7 @@ select{
 /* ── COMMS CHECKLIST ── */
 .cr{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--bdr);cursor:pointer;}
 .cr:last-child{border:none;}
-.ptick{width:32px;height:32px;min-width:32px;border-radius:8px;border:2px solid var(--bdr);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;transition:background .15s,border-color .15s;}
+.ptick{width:44px;height:44px;min-width:44px;border-radius:10px;border:2px solid var(--bdr);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;transition:background .15s,border-color .15s;}
 .ptick.on{background:var(--green);border-color:var(--green);}
 
 /* ── EFFICIENCY BAR ── */
@@ -213,11 +213,11 @@ select{
 }
 .nb{
   flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:10px 4px;background:none;border:none;color:var(--muted);
-  font-size:11px;font-weight:800;cursor:pointer;gap:4px;text-transform:uppercase;
-  letter-spacing:.02em;min-height:56px;transition:color .15s;
+  padding:8px 2px;background:none;border:none;color:var(--muted);
+  font-size:10px;font-weight:800;cursor:pointer;gap:3px;text-transform:uppercase;
+  letter-spacing:.01em;min-height:56px;transition:color .15s;
 }
-.nb .ni{font-size:24px;line-height:1;}
+.nb .ni{font-size:22px;line-height:1;}
 .nb.active{color:var(--acc);}
 .nb.active .ni{filter:drop-shadow(0 0 6px rgba(245,158,11,.45));}
 .nb.active::before{content:'';position:absolute;top:6px;left:50%;transform:translateX(-50%);width:48px;height:30px;border-radius:10px;background:rgba(245,158,11,.12);z-index:-1;}
@@ -332,6 +332,7 @@ select{
       <!-- hidden legacy elements kept for sodSignOff() compatibility -->
       <div id="sod-checklist" style="display:none;"></div>
       <div id="sod-progress" style="display:none;"></div>
+      <div id="sod-signoff-hint" style="display:none;font-size:12px;color:var(--muted);margin-top:8px;text-align:center;">Tick all items above to unlock sign-off</div>
       <button class="btn btn-submit" id="sod-signoff-btn" onclick="sodSignOff()" style="margin-top:10px;">&#10003; Sign Off Morning Check</button>
       <div id="sod-signoff-done" style="display:none;font-size:13px;font-weight:800;color:var(--green);margin-top:8px;text-align:center;"></div>
     </div>
@@ -367,25 +368,25 @@ select{
     <button class="btn btn-blue btn-sm no-print" onclick="window.print()" title="Print tomorrow's plan" style="min-width:44px;min-height:44px;font-size:18px;padding:0;">&#128424;</button>
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
     <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
-    <button id="reset-sod-btn" onclick="resetMorningCheck()" class="no-print" title="Reset morning check (test only)" style="background:none;border:none;color:rgba(100,116,139,.3);font-size:10px;cursor:pointer;padding:4px;font-family:inherit;">&#8635;</button>
+    <button id="reset-sod-btn" onclick="resetMorningCheck()" class="no-print" title="Reset morning check (test only)" style="background:none;border:none;color:rgba(100,116,139,.08);font-size:10px;cursor:pointer;padding:4px;font-family:inherit;opacity:0.15;">&#8635;</button>
     <button onclick="reopenSOD()" style="background:none;border:1.5px solid rgba(245,158,11,.4);border-radius:9px;color:var(--acc);font-size:11px;font-weight:800;padding:6px 10px;cursor:pointer;white-space:nowrap;font-family:inherit;min-height:36px;" class="no-print" title="Open morning check">&#128203; AM check</button>
-    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.7.1</span>
+    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v2.0.0</span>
   </div>
 </div>
 
 <div class="main">
 
-<!-- EOD PLANNER -->
+<!-- TOMORROW'S PLAN / EOD RECORD -->
 <div class="tab" id="tab-eod">
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; End of Day</span><span class="sec-s" id="dl"></span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; Tonight's Record</span><span class="sec-s" id="dl"></span></div></div>
   <div class="card g2" style="gap:8px;margin-bottom:10px;">
-    <div><label>Date</label><input type="date" id="fd"></div>
+    <div><label>Plan Date</label><input type="date" id="fd"></div>
     <div><label>Site Manager</label><input type="text" id="fm" list="nl" onclick="nc(this)" onblur="nb2(this)" placeholder="Tap to pick"></div>
     <div><label>Weather</label>
       <select id="fw"><option value="">Select...</option><option>Fine &amp; dry</option><option>Overcast</option><option>Light rain</option><option>Heavy rain</option><option>Wind &amp; rain</option><option>Cold &amp; wet</option><option>Hot &amp; sunny</option><option>Cold &amp; dry</option><option>Frost</option></select>
     </div>
     <div><label>Temp (&#176;C)</label>
-      <div style="display:flex;gap:5px;"><input type="number" id="ft" placeholder="&#176;C" inputmode="numeric" style="flex:1;"><button class="btn btn-blue btn-sm" onclick="fetchWx()" title="Fetch tomorrow's weather">&#9728;</button><button class="btn btn-blue btn-sm" onclick="fetchWx('brief')" title="Fetch with brief summary">&#128203;</button></div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;"><input type="number" id="ft" placeholder="&#176;C" inputmode="numeric" style="flex:1;min-width:60px;"><button class="btn btn-blue btn-sm" onclick="fetchWx()" title="Fetch tomorrow's weather" style="white-space:nowrap;">&#9728; Fetch</button><button class="btn btn-blue btn-sm" onclick="fetchWx('brief')" title="Fetch with brief summary" style="white-space:nowrap;">&#128203; Brief</button></div>
       <div id="wx-brief" style="display:none;font-size:12px;font-weight:600;color:var(--blue);margin-top:6px;padding:6px 10px;background:rgba(56,189,248,.08);border-radius:8px;border:1px solid rgba(56,189,248,.25);"></div>
     </div>
   </div>
@@ -423,15 +424,15 @@ select{
 
   <div id="prog-check-panel" style="display:none;margin-bottom:12px;"></div>
 
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; End of Day Diary</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; Day Diary</span><span class="sec-s">How did it go today? Just talk it through.</span></div></div>
   <div class="card">
     <div style="display:flex;flex-direction:column;gap:10px;">
       <div style="font-size:11px;font-weight:800;color:var(--muted);padding:8px 10px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.18);border-radius:8px;line-height:1.6;">
         <span style="color:var(--blue);">07:30&ndash;10:00</span> Morning &nbsp;&middot;&nbsp; <span style="color:var(--blue);">10:30&ndash;13:00</span> Mid-morning &nbsp;&middot;&nbsp; <span style="color:var(--blue);">13:30&ndash;17:30</span> Afternoon
       </div>
       <div>
-        <button class="mic" id="mic-s1" onclick="vm('s1','fses1')"><span class="mic-icon">&#127908;</span><span class="mic-label">Record end of day diary entry</span></button>
-        <textarea id="fses1" rows="6" style="min-height:140px;" placeholder="How did the day go? What happened? Any issues, delays, or highlights — just talk through it."></textarea>
+        <button class="mic" id="mic-s1" onclick="vm('s1','fses1')"><span class="mic-icon">&#127908;</span><span class="mic-label">Tap to dictate — talk through your day</span></button>
+        <textarea id="fses1" rows="6" style="min-height:140px;" placeholder="How did the day go? What happened? Any issues, delays, or highlights — just talk through it naturally."></textarea>
       </div>
     </div>
     <!-- legacy hidden fields for backward compat -->
@@ -440,7 +441,7 @@ select{
     <textarea id="fses" style="display:none;"></textarea>
   </div>
 
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128202; Noise Readings <span style="color:var(--red);font-size:10px;font-weight:900;vertical-align:middle;letter-spacing:0;">&#9733; REQUIRED</span></span><span class="sec-s">3 spot readings — H&amp;S requirement. Use delete button to remove extras if needed.</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128202; Noise Readings <span style="color:var(--red);font-size:10px;font-weight:900;vertical-align:middle;letter-spacing:0;">REQUIRED</span></span><span class="sec-s">3 spot readings every day — H&amp;S requirement. Presets: 10:00, 13:00, 15:00.</span></div></div>
   <div class="card">
     <div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:90px 1fr auto 40px;gap:6px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;"><span>Time</span><span>Level (dB)</span><span></span><span></span></div>
     <div id="nr-c"></div>
@@ -448,48 +449,48 @@ select{
   </div>
 
   <!-- EOD SITE CHECKLIST — end-of-day sign-off -->
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#9989; End of Day Site Check <span style="color:var(--red);font-size:10px;font-weight:900;vertical-align:middle;">&#9733; REQUIRED</span></span><span class="sec-s">Tick off before you leave site</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#9989; End of Day Site Check <span style="color:var(--red);font-size:10px;font-weight:900;vertical-align:middle;">REQUIRED</span></span><span class="sec-s">Tick off before you leave site</span></div></div>
   <div class="card" style="padding:4px 12px;" id="eod-checklist-card">
     <div id="eod-chk-items"></div>
   </div>
 
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#9888;&#65039; Observations / Issues</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#9888;&#65039; Safety &amp; Site Observations</span><span class="sec-s">Near misses, damage, ground conditions, anything unusual</span></div></div>
   <div class="card">
-    <button class="mic" id="mic-obs" onclick="vm('obs','fob')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate observations</span></button>
-    <textarea id="fob" rows="3" placeholder="Near misses, damage, unusual ground, anything worth recording..."></textarea>
+    <button class="mic" id="mic-obs" onclick="vm('obs','fob')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate safety observations</span></button>
+    <textarea id="fob" rows="3" placeholder="Near misses, damage, unusual ground conditions, anything worth recording for H&amp;S or commercial purposes..."></textarea>
   </div>
 
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128230; Items Required for Tomorrow</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128230; Materials Needed Tomorrow</span><span class="sec-s">What's required on site — sends to Brad via Trello</span></div></div>
   <div class="card">
     <div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:58px 1fr 80px 80px 40px;gap:5px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;" class="no-print"><span>Qty</span><span>Item / Description</span><span>Supplier</span><span>By Time</span><span></span></div>
     <div id="ir-c"></div>
     <div class="btns" style="margin-top:8px;">
       <button class="btn btn-ghost btn-sm" onclick="addItem()">+ Item</button>
-      <button class="btn btn-blue btn-sm" onclick="sendToTrello()" id="trello-btn">&#9992; Send to Brad via Trello</button>
+      <button class="btn btn-blue btn-sm" onclick="sendToTrello()" id="trello-btn">&#9992; Send Materials List to Brad</button>
     </div>
     <div id="trello-status" style="font-size:12px;font-weight:600;margin-top:8px;"></div>
   </div>
 
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128241; Comms Done</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128241; Comms Checklist</span><span class="sec-s">Tick what you've done before you leave</span></div></div>
   <div class="card" id="comms-c"></div>
 
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Site Diary</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Formal Site Diary</span><span class="sec-s">Official manager record — kept for DGC files and any future disputes</span></div></div>
   <div class="card">
-    <button class="mic" id="mic-nt" onclick="vm('nt','fnt')"><span class="mic-icon">&#127908;</span><span class="mic-label">Record site diary entry</span></button>
-    <textarea id="fnt" rows="6" style="min-height:140px;" placeholder="Manager diary entry for today..."></textarea>
+    <button class="mic" id="mic-nt" onclick="vm('nt','fnt')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate formal site diary</span></button>
+    <textarea id="fnt" rows="6" style="min-height:140px;" placeholder="Official record: ground conditions, weather impact, what was done, what was delayed and why. Be specific. Dates, names, quantities."></textarea>
   </div>
 
   <!-- EOD RESPONSIBILITY — moved to bottom -->
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128274; Who Locks Up Tomorrow?</span><span class="sec-s">Name the person responsible for end-of-day site security</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128274; Site Security — Tomorrow</span><span class="sec-s">Who is responsible for locking up tomorrow?</span></div></div>
   <div class="card">
     <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.55;">Pick who is responsible for the security checklist and site clean-up at the end of tomorrow. This gets recorded so it's clear before the day starts — no arguments.</div>
     <div class="g2">
       <div>
-        <label>EOD responsible person</label>
+        <label>Person who locks up</label>
         <input type="text" id="feod-resp" placeholder="Tap to pick" list="nl" onclick="nc(this)" onblur="nb2(this)">
       </div>
       <div>
-        <label>EOD team</label>
+        <label>Their team</label>
         <select id="feod-team">
           <option value="">Select team...</option>
           <option value="A">Team A</option>
@@ -503,15 +504,15 @@ select{
   </div>
 
   <div class="no-print" style="margin-top:16px;">
-    <button class="btn btn-submit" id="eod-submit-btn" onclick="submitEOD()">&#128228; Submit &amp; Save</button>
+    <button class="btn btn-submit" id="eod-submit-btn" onclick="submitEOD()">&#128228; Save Record &rarr;</button>
     <button class="btn btn-ghost" onclick="window.print()" style="width:100%;margin-top:10px;min-height:48px;">&#128424; Print Tomorrow's Plan</button>
   </div>
   <div style="height:20px;"></div>
 </div>
 
-<!-- HOW DID WE DO -->
+<!-- RESULTS / HOW DID WE DO -->
 <div class="tab" id="tab-achv">
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#9989; Yesterday's Results</span><span class="sec-s" id="achv-sub">What % did each team actually hit?</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#9989; Today's Results</span><span class="sec-s" id="achv-sub">How far did each team actually get?</span></div></div>
   <div style="font-size:13px;color:var(--muted);margin-bottom:8px;padding:10px 14px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.18);border-radius:10px;line-height:1.6;">
     Enter the actual % complete for each task below. This data goes straight to Ash so he can track the programme without the QS.
   </div>
@@ -532,19 +533,22 @@ select{
   </div>
   <div id="achv-rows"></div>
   <div id="achv-form" style="display:none;">
-    <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Notes for Ash</span><span class="sec-s">Anything he needs to know about today</span></div></div>
+    <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Notes for Management</span><span class="sec-s">Anything Ash or Harry need to know or act on</span></div></div>
     <div class="card">
-      <button class="mic" id="mic-an" onclick="vm('an','fan')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate notes for Ash</span></button>
-      <textarea id="fan" rows="3" placeholder="Why things took longer or faster. Any issues Ash needs to act on..."></textarea>
+      <button class="mic" id="mic-an" onclick="vm('an','fan')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate notes for Ash / Harry</span></button>
+      <textarea id="fan" rows="3" placeholder="Why things took longer or faster. Any issues Ash or Harry need to act on. Commercial flags, delays, ground surprises..."></textarea>
     </div>
-    <button class="btn btn-submit" onclick="submitAchv()">&#128190; Save Results Record</button>
+    <button class="btn btn-submit" onclick="submitAchv()">&#128190; Save Results</button>
     <div style="height:20px;"></div>
   </div>
 </div>
 
 <!-- HISTORY -->
 <div class="tab" id="tab-hist">
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128218; History</span><span class="sec-s">Last 30 days — full performance report</span></div></div>
+  <div class="sec">
+    <div class="sec-inner"><span class="sec-t">&#128218; History</span><span class="sec-s">Last 30 days — full performance report</span></div>
+    <button class="btn btn-ghost btn-sm no-print" onclick="loadHist()" style="white-space:nowrap;">&#8635; Refresh</button>
+  </div>
   <div id="hist"></div>
 </div>
 
@@ -566,7 +570,8 @@ select{
 <div class="bnav">
   <button class="nb active" id="nav-sod-tab" onclick="sw('sod-tab',this)"><span class="ni">&#127749;</span>Morning</button>
   <button class="nb" id="nav-today-tab" onclick="sw('today-tab',this)"><span class="ni">&#128203;</span>Today</button>
-  <button class="nb" id="nav-eod" onclick="sw('eod',this)"><span class="ni">&#128221;</span>Tomorrow</button>
+  <button class="nb" id="nav-eod" onclick="sw('eod',this)"><span class="ni">&#128221;</span>Plan</button>
+  <button class="nb" id="nav-achv" onclick="sw('achv',this)"><span class="ni">&#9989;</span>Results</button>
   <button class="nb" id="nav-hist" onclick="sw('hist',this)"><span class="ni">&#128202;</span>History</button>
 </div>
 </div><!-- /app -->
@@ -617,7 +622,7 @@ var _lastResultIdx=-1;
 (function init(){
   rebuildNL();
   document.getElementById('fd').value=todayPlus1();
-  document.getElementById('dl').textContent='EOD '+fmtD(tod())+' — Plan for '+fmtD(todayPlus1());
+  document.getElementById('dl').textContent='Record for '+fmtD(tod())+' — Plan for '+fmtD(todayPlus1());
   // Build EOD site checklist
   EODS.forEach(function(e){ CHK[e.k]=false; });
   var eodCard=document.getElementById('eod-chk-items');
@@ -812,7 +817,7 @@ function addNoise(t,v){
   r.style.cssText='display:grid;grid-template-columns:90px 1fr auto 40px;gap:6px;align-items:center;margin-bottom:8px;';
   r.innerHTML='<input type="time" value="'+(t||'')+'" style="font-size:13px;min-height:44px;">'
     +'<input type="number" placeholder="dB" min="0" max="140" inputmode="numeric" value="'+(v||'')+'" style="font-size:13px;min-height:44px;">'
-    +'<button onclick="toggleDND(\''+id+'\')" style="background:none;border:1.5px solid var(--bdr);border-radius:8px;color:var(--muted);font-size:11px;font-weight:800;cursor:pointer;padding:6px 8px;min-height:40px;white-space:nowrap;font-family:inherit;">DND</button>'
+    +'<button onclick="toggleDND(\''+id+'\')" style="background:none;border:1.5px solid var(--bdr);border-radius:8px;color:var(--muted);font-size:11px;font-weight:800;cursor:pointer;padding:6px 8px;min-height:44px;white-space:nowrap;font-family:inherit;">DND</button>'
     +'<button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';
   document.getElementById('nr-c').appendChild(r);
 }
@@ -1159,7 +1164,7 @@ function submitEOD(){
     eodChecklist:eodCheckState,
     noise:noise,obs:document.getElementById('fob').value,items:items,comms:Object.assign({},COM),notes:document.getElementById('fnt').value};
   var btn=document.getElementById('eod-submit-btn');
-  function resetBtn(){if(btn){btn.textContent='📤 Submit & Save';btn.disabled=false;btn.style.background='';btn.style.boxShadow='';}}
+  function resetBtn(){if(btn){btn.innerHTML='&#128228; Save Record &rarr;';btn.disabled=false;btn.style.background='';btn.style.boxShadow='';}}
   function errBtn(){if(btn){btn.textContent='⚠ Save failed — tap to retry';btn.disabled=false;btn.style.background='var(--red)';btn.style.boxShadow='0 4px 18px rgba(239,68,68,.35)';}}
   if(btn){btn.textContent='Saving...';btn.disabled=true;btn.style.background='';btn.style.boxShadow='';}
   // Collect programme check state
@@ -1759,9 +1764,11 @@ function updateSODProgress(){
     progEl.innerHTML=parts.join(' &middot; ');
   }
   var btnEl=document.getElementById('sod-signoff-btn');
+  var hintEl=document.getElementById('sod-signoff-hint');
   if(btnEl){
     if(remaining===0){
       btnEl.disabled=false;
+      if(hintEl)hintEl.style.display='none';
       if(missed>0){
         btnEl.textContent='Sign Off — '+missed+' item'+(missed===1?'':'s')+' missed (I acknowledge this)';
       }else{
@@ -1770,6 +1777,7 @@ function updateSODProgress(){
     }else{
       btnEl.disabled=true;
       btnEl.textContent='✓ Sign Off Morning Check';
+      if(hintEl)hintEl.style.display='block';
     }
   }
 }
@@ -2512,11 +2520,12 @@ function reopenSOD(){
   </div>
 </div>
 
-<div id="save-confirm" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#0a0d14 0%,#0d1a2e 60%,#0a1520 100%);align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:40px;">
+<div id="save-confirm" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#0a0d14 0%,#0d1a2e 60%,#0a1520 100%);align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:40px;cursor:pointer;" onclick="document.getElementById('save-confirm').style.display='none';">
   <img src="dgc-logo-white.png" alt="DGC" style="height:80px;object-fit:contain;filter:brightness(0) invert(1);margin-bottom:24px;opacity:0.9;">
-  <div style="font-size:48px;margin-bottom:16px;">&#10003;</div>
-  <div style="font-size:24px;font-weight:900;color:#fff;margin-bottom:8px;">Saved</div>
-  <div style="font-size:14px;color:rgba(255,255,255,.5);">Tomorrow's plan submitted. Good work.</div>
+  <div style="font-size:64px;margin-bottom:16px;">&#10003;</div>
+  <div style="font-size:28px;font-weight:900;color:#fff;margin-bottom:8px;">Saved</div>
+  <div style="font-size:15px;color:rgba(255,255,255,.6);margin-bottom:24px;">Record submitted. Good work.</div>
+  <div style="font-size:12px;color:rgba(255,255,255,.3);">Tap anywhere to continue</div>
 </div>
 
 <script>
