@@ -10,11 +10,11 @@
 <meta http-equiv="Expires" content="0">
 <title>DGC Daily Sheet</title>
 <script>
-// DGC Daily Sheet v1.3.2 — Three-state SOD checklist: Done/Missed tracking, sign-off blocked until complete
+// DGC Daily Sheet v1.4.0 — Attendance check, Today Plan read-only, programme benchmark rates, KPI, email plan
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='1.3.2';
+var APP_VERSION='1.4.0';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -256,6 +256,10 @@ select{
   .sec-t{color:#1e3a4a;}
   .tblk-body{display:block!important;}
   #print-header{display:block!important;}
+  /* When printing from today-plan screen, only show that content */
+  body.printing-today-plan #app,body.printing-today-plan #sod,body.printing-today-plan #ls{display:none!important;}
+  #today-plan .hdr{display:none!important;}
+  #today-plan{display:block!important;}
 }
 @media(max-width:480px){
   .ir{display:flex;flex-direction:column;gap:5px;padding:8px;background:var(--s2);border-radius:8px;margin-bottom:8px;}
@@ -294,7 +298,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please choose your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;">Start &rarr;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.3.2</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.4.0</div>
   </div>
 </div>
 
@@ -326,6 +330,18 @@ select{
   </div>
 </div>
 
+<div id="today-plan" style="display:none;min-height:100vh;background:var(--bg);padding:0;">
+  <div class="hdr">
+    <img class="dgc-logo" src="dgc-logo-white.png" alt="DGC">
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <button class="btn btn-blue btn-sm" onclick="window.print()" title="Print today's plan" style="min-width:44px;min-height:44px;font-size:18px;padding:0;">&#128424;</button>
+      <button class="btn btn-ghost btn-sm" id="tp-email-btn" onclick="emailTodayPlan(window._sodPlanData)">&#9993; Email Plan</button>
+      <button class="btn btn-acc btn-sm" onclick="showApp()" style="white-space:nowrap;">Start Planning Tomorrow &rarr;</button>
+    </div>
+  </div>
+  <div style="padding:20px;max-width:860px;margin:0 auto;" id="today-plan-inner"></div>
+</div>
+
 <div id="app" style="display:none;">
 <!-- PRINT HEADER (only shows when printing) -->
 <div id="print-header" style="padding:16px 0 12px;border-bottom:2px solid #1e3a4a;margin-bottom:16px;display:flex;align-items:center;gap:12px;">
@@ -340,7 +356,7 @@ select{
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
     <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
     <button onclick="reopenSOD()" style="background:none;border:1.5px solid rgba(245,158,11,.4);border-radius:9px;color:var(--acc);font-size:11px;font-weight:800;padding:6px 10px;cursor:pointer;white-space:nowrap;font-family:inherit;min-height:36px;" class="no-print" title="Open morning check">&#128203; AM check</button>
-    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.3.2</span>
+    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.4.0</span>
   </div>
 </div>
 
@@ -602,9 +618,7 @@ function doLogin(){
   // Skip SOD if already checked in this session today
   if(sessionStorage.getItem('dgc_sod_done_'+tod())){
     document.getElementById('ls').style.display='none';
-    document.getElementById('app').style.display='block';
-    document.body.style.overflow='';
-    loadAchv();loadHist();
+    showApp();
     return;
   }
   // Try to find yesterday's/today's plan to show Start of Day
@@ -618,22 +632,16 @@ function doLogin(){
           showSOD(found.data,_uname);
         }else{
           document.getElementById('ls').style.display='none';
-          document.getElementById('app').style.display='block';
-          document.body.style.overflow='';
-          loadAchv();loadHist();
+          showApp();
         }
       })
       .catch(function(){
         document.getElementById('ls').style.display='none';
-        document.getElementById('app').style.display='block';
-        document.body.style.overflow='';
-        loadAchv();loadHist();
+        showApp();
       });
   }else{
     document.getElementById('ls').style.display='none';
-    document.getElementById('app').style.display='block';
-    document.body.style.overflow='';
-    loadAchv();loadHist();
+    showApp();
   }
 }
 
@@ -704,7 +712,30 @@ function addPT(){
   addTask(i);
 }
 function flipCard(i){var el=document.getElementById('flip-inner-'+i);if(el)el.classList.toggle('flipped');}
-function addTask(ti,desc,pct){var c=document.getElementById('ptt'+ti);if(!c)return;var r=document.createElement('div');r.className='trow';r.innerHTML='<input type="text" placeholder="e.g. Drain run S4.5 to MH7, kerbing Zone G" value="'+(desc||'')+'"><input type="number" placeholder="%(blank=100)" min="0" max="100" inputmode="numeric" value="'+(pct||'')+'" style="text-align:center;font-weight:900;" title="Leave blank = 100% target"><button class="del" onclick="this.closest(\'.trow\').remove()">x</button>';c.appendChild(r);}
+function addTask(ti,desc,pct){
+  var c=document.getElementById('ptt'+ti);if(!c)return;
+  var rateHintId='rh'+ti+'_'+Date.now();
+  var r=document.createElement('div');
+  r.className='trow';
+  r.innerHTML='<div style="display:flex;flex-direction:column;gap:3px;">'
+    +'<input type="text" placeholder="e.g. Drain run S4.5 to MH7, kerbing Zone G" value="'+(desc||'')+'">'
+    +'<div id="'+rateHintId+'" style="display:none;font-size:11px;font-weight:700;color:var(--blue);padding:3px 6px;background:rgba(56,189,248,.08);border-radius:6px;border:1px solid rgba(56,189,248,.2);"></div>'
+    +'</div>'
+    +'<input type="number" placeholder="%(blank=100)" min="0" max="100" inputmode="numeric" value="'+(pct||'')+'" style="text-align:center;font-weight:900;" title="Leave blank = 100% target">'
+    +'<button class="del" onclick="this.closest(\'.trow\').remove()">x</button>';
+  var inp=r.querySelector('input[type=text]');
+  if(inp){
+    inp.addEventListener('blur',function(){
+      var est=estimateHours(inp.value);
+      var hint=document.getElementById(rateHintId);
+      if(hint){
+        if(est.matched){hint.textContent='Rate: '+est.rateDescription;hint.style.display='block';}
+        else{hint.style.display='none';}
+      }
+    });
+  }
+  c.appendChild(r);
+}
 
 function addAL(){
   var i=AL_I++,l=TLTRS[i]||('T'+(i+1)),c=TCOLS[i]||'#94a3b8';
@@ -891,14 +922,29 @@ function buildAchv(data){
   document.getElementById('achv-form').style.display='';
   var cm={A:'#f59e0b',B:'#38bdf8',C:'#a78bfa',D:'#22c55e',E:'#fb923c'};
   var container=document.getElementById('achv-rows');container.innerHTML='';
+  var todayHours=getWorkingHours(tod());
   tasks.forEach(function(task,i){
     var col=cm[task.team]||'#94a3b8';
+    var est=estimateHours(task.desc);
+    var benchHtml='';
+    if(est.matched){
+      var expectedOutput=Math.round(est.dailyOutput*(todayHours/9)*10)/10;
+      benchHtml='<div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Programme Benchmark</div>'
+        +'<div style="font-size:13px;font-weight:900;color:var(--blue);">~'+expectedOutput+' '+est.unit+'/day</div>'
+        +'<div style="font-size:10px;color:var(--muted);margin-top:2px;">'+est.rateDescription.split(':')[0]+'</div>'
+        +'<div id="kpi-verdict-'+i+'" style="font-size:11px;font-weight:800;margin-top:4px;"></div>';
+    }else{
+      benchHtml='<div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Programme Benchmark</div>'
+        +'<div style="font-size:12px;color:var(--muted);">No rate match</div>';
+    }
+    var colCols=est.matched?'1fr 1fr 1fr':'1fr 1fr';
     var d=document.createElement('div');
     d.style.cssText='background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:11px 12px;margin-bottom:8px;';
     d.innerHTML='<div style="font-size:12px;font-weight:700;color:var(--txt);margin-bottom:8px;"><span style="color:'+col+';font-weight:900;">Team '+task.team+'</span> - '+esc(task.desc)+'</div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">'+
+      '<div style="display:grid;grid-template-columns:'+colCols+';gap:10px;margin-bottom:8px;" id="kpi-row-'+i+'">'+
         '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Target (planned)</div><div style="font-size:26px;font-weight:900;color:var(--blue);">'+(task.target||'?')+'%</div></div>'+
-        '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Actual achieved</div><input type="number" id="ap'+i+'" placeholder="%" min="0" max="100" inputmode="numeric" oninput="calcEff()" style="font-size:20px;font-weight:900;text-align:center;border-color:'+col+'44;padding:8px;"></div>'+
+        '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Actual achieved</div><input type="number" id="ap'+i+'" placeholder="%" min="0" max="100" inputmode="numeric" oninput="calcEff();calcKPI('+i+','+task.target+','+JSON.stringify(est.matched)+','+JSON.stringify(est.dailyOutput||0)+',\''+esc(est.unit||'')+'\')" style="font-size:20px;font-weight:900;text-align:center;border-color:'+col+'44;padding:8px;"></div>'+
+        (est.matched?'<div>'+benchHtml+'</div>':'')+
       '</div>'+
       '<button onclick="(function(n){var nb=document.getElementById(\'anb\'+n),tb=document.getElementById(\'ant\'+n);var vis=nb.style.display===\'flex\';nb.style.display=vis?\'none\':\'flex\';tb.style.display=vis?\'none\':\'block\';})('+i+')" style="background:none;border:none;color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;padding:4px 0;display:block;text-align:left;letter-spacing:.01em;">+ Add note</button>'+
       '<div id="anb'+i+'" style="display:none;"><button class="mic" id="mic-a'+i+'" onclick="vm(\'a'+i+'\',\'an'+i+'\')"><span class="mic-icon">'+MIC_ICON+'</span><span class="mic-label">Why didn\'t you hit it?</span></button></div>'+
@@ -922,6 +968,27 @@ function calcEff(){
   document.getElementById('eff-l').textContent=lbl;document.getElementById('eff-p').textContent='Avg target: '+Math.round(totT/cnt)+'%';
   document.getElementById('eff-b').style.width=Math.min(100,eff)+'%';document.getElementById('eff-b').style.background=col;
 }
+function calcKPI(i,target,hasRate,dailyOutput,unit){
+  var el=document.getElementById('ap'+i);
+  var verdict=document.getElementById('kpi-verdict-'+i);
+  if(!el||!verdict)return;
+  var actual=parseFloat(el.value);
+  if(isNaN(actual)||!hasRate){if(verdict)verdict.innerHTML='';return;}
+  var todayHours=getWorkingHours(tod());
+  var expectedOutput=Math.round(dailyOutput*(todayHours/9)*10)/10;
+  // actual is % completion; convert to output rate comparison
+  // For percentage comparison: if actual >= target AND actual >= (expectedOutput/dailyOutput*100 equivalent)
+  // We compare % actual vs % target vs programme-implied %
+  var progImpliedPct=Math.round(expectedOutput/dailyOutput*100);
+  if(actual>=target&&actual>=progImpliedPct){
+    verdict.innerHTML='<span style="color:var(--green);">&#129001; Ahead / On plan</span>';
+  }else if(actual>=target&&actual<progImpliedPct){
+    verdict.innerHTML='<span style="color:var(--acc);">&#128993; On your plan but behind programme</span>';
+  }else{
+    verdict.innerHTML='<span style="color:var(--red);">&#128308; Behind your own target</span>';
+  }
+}
+
 function submitAchv(){
   if(!sb){noNet();return;}
   var tasks=window._atasks;if(!tasks)return;
@@ -1351,6 +1418,16 @@ function showSOD(planData,name){
     }).join('');
   }
 
+  // Build attendance section BEFORE site checklist (remove previous if re-opening)
+  var oldAtt=document.getElementById('att-section');
+  if(oldAtt)oldAtt.parentNode.removeChild(oldAtt);
+  var attContainer=document.createElement('div');
+  attContainer.id='att-section';
+  attContainer.style.cssText='margin-bottom:20px;';
+  attContainer.innerHTML=buildAttendanceSection(planData);
+  var clParent=document.getElementById('sod-checklist').parentNode;
+  clParent.parentNode.insertBefore(attContainer,clParent);
+
   // Build SOD checklist — three-state: done / missed / blank
   _sodChecks={};
   var clEl=document.getElementById('sod-checklist');
@@ -1464,7 +1541,8 @@ function sodSignOff(){
 
   var signedAt=new Date().toISOString();
   var rec={type:'dgc-sod',signer:_uname,signedAt:signedAt,
-    checks:checks,missedItems:missedItems,missedCount:missedCount,allDone:allDone};
+    checks:checks,missedItems:missedItems,missedCount:missedCount,allDone:allDone,
+    attendance:Object.assign({},_sodAttendance)};
   var btn=document.getElementById('sod-signoff-btn');
   if(btn){btn.disabled=true;btn.textContent='Saving...';}
   if(sb){
@@ -1491,20 +1569,260 @@ function sodSignOff(){
   }
 }
 
+// ── SIMON'S OUTPUT RATES (gang of 2: 1 operator + 1 labourer, 9h day weekday) ──
+var SIMON_RATES=[
+  {keywords:['110mm','foul','surface water','sw','foul drain'],depth:'1.5m',output:17.8,unit:'m',hoursPerUnit:0.506,label:'110mm drain at 1.5m'},
+  {keywords:['150mm'],depth:'1.5m',output:19.0,unit:'m',hoursPerUnit:0.474,label:'150mm drain at 1.5m'},
+  {keywords:['225mm'],depth:'1.75m',output:19.0,unit:'m',hoursPerUnit:0.474,label:'225mm drain at 1.75m'},
+  {keywords:['manhole','mh','1200mm','inspection chamber','ic'],depth:'1.75m',output:0.5,unit:'no.',hoursPerUnit:18,label:'1200mm manhole'},
+  {keywords:['gully','road gully','gulley'],output:2,unit:'no.',hoursPerUnit:4.5,label:'Road gully 450x900'},
+  {keywords:['subbase','type 1','type1','6f2','terram'],output:61,unit:'m3',hoursPerUnit:0.148,label:'Subbase/Type1 compaction'},
+  {keywords:['kerb','kerbing','bullnose','kerbs'],output:27,unit:'m',hoursPerUnit:0.333,label:'Kerbs straight'},
+  {keywords:['earthwork','reduce level','rld','dig out','cut','reduce'],output:100,unit:'m3',hoursPerUnit:0.09,label:'Earthworks reduce level'}
+];
+
+function estimateHours(taskDesc){
+  if(!taskDesc||!taskDesc.trim())return{matched:false};
+  var lower=taskDesc.toLowerCase();
+  var match=null;
+  for(var i=0;i<SIMON_RATES.length;i++){
+    var rate=SIMON_RATES[i];
+    for(var j=0;j<rate.keywords.length;j++){
+      if(lower.indexOf(rate.keywords[j])>=0){match=rate;break;}
+    }
+    if(match)break;
+  }
+  if(!match)return{matched:false};
+  return{
+    matched:true,
+    task:taskDesc,
+    rateDescription:match.label+': ~'+match.output+' '+match.unit+'/day (9h day)',
+    hoursPerUnit:match.hoursPerUnit,
+    unit:match.unit,
+    dailyOutput:match.output,
+    rateObj:match
+  };
+}
+
+function getWorkingHours(dateStr){
+  var d=new Date((dateStr||tod())+'T12:00:00');
+  var day=d.getDay();// 0=Sun,6=Sat
+  if(day===0)return 0;
+  if(day===6)return 5;// Saturday: 07:30-13:00 minus 30min break
+  return 9;// Weekday: 07:30-17:30 minus 2x30min breaks
+}
+
+// ── ATTENDANCE CHECK STATE ──
+var _sodAttendance={};// {name: 'in'|'absent'}
+
+function buildAttendanceSection(planData){
+  var alloc=planData.alloc||[];
+  // Gather all people from alloc
+  var people=[];
+  alloc.forEach(function(a){
+    if(a.lead&&a.lead.trim())people.push({name:a.lead,team:a.team,role:'Lead'});
+    (a.ops||[]).forEach(function(op){if(op&&op.trim())people.push({name:op,team:a.team,role:'Member'});});
+  });
+  // Also check plan blocks for leader inputs filled in the EOD form
+  // (alloc is the canonical source — fall through if empty)
+  if(!people.length){
+    // Try pt* team blocks — they have ptl/ptm inputs in the plan
+    // planData.plan has team entries but no names — alloc has names
+    return '<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--muted);">No team record from yesterday — fill in teams on today\'s form</div>';
+  }
+  _sodAttendance={};
+  var html='<div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--acc);border-left:3px solid var(--acc);padding-left:10px;margin-bottom:12px;">Is Everyone In?</div>';
+  html+='<div style="background:var(--surf);border:1px solid var(--bdr);border-radius:var(--radius);padding:4px 12px;margin-bottom:12px;" id="att-list">';
+  people.forEach(function(p,i){
+    _sodAttendance[p.name]='';
+    html+='<div class="sod-row" id="att-row-'+i+'" style="justify-content:flex-start;gap:10px;">'
+      +'<div class="sod-btns">'
+      +'<button class="sod-btn" id="att-in-'+i+'" onclick="setAttendance(\''+esc(p.name)+'\','+i+',\'in\')">&#10003; In</button>'
+      +'<button class="sod-btn" id="att-ab-'+i+'" onclick="setAttendance(\''+esc(p.name)+'\','+i+',\'absent\')">&#10007; Absent</button>'
+      +'</div>'
+      +'<div class="sod-label"><strong>'+esc(p.name)+'</strong> <span style="font-size:11px;color:var(--muted);">(Team '+esc(p.team)+' '+esc(p.role)+')</span></div>'
+      +'</div>';
+  });
+  html+='</div>';
+  html+='<div id="att-capacity" style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:16px;"></div>';
+  // Store people list for capacity calc
+  window._attPeople=people;
+  return html;
+}
+
+function setAttendance(name,idx,status){
+  _sodAttendance[name]=status;
+  var inBtn=document.getElementById('att-in-'+idx);
+  var abBtn=document.getElementById('att-ab-'+idx);
+  var row=document.getElementById('att-row-'+idx);
+  if(inBtn){inBtn.classList.toggle('done',status==='in');inBtn.classList.remove('missed');}
+  if(abBtn){abBtn.classList.toggle('missed',status==='absent');abBtn.classList.remove('done');}
+  if(row){row.classList.toggle('is-done',status==='in');row.classList.toggle('is-missed',status==='absent');}
+  updateCapacityDisplay();
+}
+
+function updateCapacityDisplay(){
+  var capEl=document.getElementById('att-capacity');
+  if(!capEl)return;
+  var people=window._attPeople||[];
+  if(!people.length){capEl.innerHTML='';return;}
+  // Group by team
+  var teams={};
+  people.forEach(function(p){
+    if(!teams[p.team])teams[p.team]={total:0,absent:0};
+    teams[p.team].total++;
+    if(_sodAttendance[p.name]==='absent')teams[p.team].absent++;
+  });
+  var msgs=[];
+  Object.keys(teams).sort().forEach(function(t){
+    var info=teams[t];
+    var present=info.total-info.absent;
+    var pct=Math.round(present/info.total*100);
+    if(info.absent>0){
+      msgs.push('<span style="color:var(--red);">Team '+t+': '+present+' of '+info.total+' in &mdash; '+pct+'% capacity</span>');
+    }else if(present===info.total&&info.total>0){
+      msgs.push('<span style="color:var(--green);">Team '+t+': full strength ('+info.total+')</span>');
+    }
+  });
+  capEl.innerHTML=msgs.length?msgs.join(' &nbsp;&middot;&nbsp; '):'';
+}
+
 function startDay(){
-  sessionStorage.setItem('dgc_sod_done_'+tod(),'1');
   document.getElementById('sod').style.display='none';
+  sessionStorage.setItem('dgc_sod_done_'+tod(),'1');
+  if(window._sodPlanData&&window._sodPlanData.plan&&window._sodPlanData.plan.length){
+    showTodayPlan(window._sodPlanData);
+  }else{
+    showApp();
+  }
+}
+
+function showTodayPlan(planData){
+  var hours=getWorkingHours(tod());
+  var dayLabel=hours===0?'Sunday (no work)':hours===5?'Saturday (5h day)':'Weekday (9h day)';
+
+  // Compute team person-hours
+  var alloc=planData.alloc||[];
+  var teamHours={};
+  alloc.forEach(function(a){
+    var people=[];
+    if(a.lead&&a.lead.trim())people.push(a.lead);
+    (a.ops||[]).forEach(function(op){if(op&&op.trim())people.push(op);});
+    var present=people.filter(function(n){return _sodAttendance[n]!=='absent';}).length;
+    var total=people.length||1;
+    teamHours[a.team]={present:present,total:total,personHours:present*hours};
+  });
+
+  var html='<div style="font-size:22px;font-weight:900;margin-bottom:4px;">Today\'s Plan</div>';
+  html+='<div style="font-size:13px;color:var(--muted);margin-bottom:12px;">'+fmtD(tod())+'</div>';
+
+  // Working hours summary
+  html+='<div style="background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:10px;padding:12px 14px;margin-bottom:16px;">';
+  html+='<div style="font-size:12px;font-weight:900;color:var(--blue);margin-bottom:4px;">Available today: '+hours+' hours per person &mdash; '+dayLabel+'</div>';
+  if(alloc.length){
+    alloc.forEach(function(a){
+      var th=teamHours[a.team];
+      if(th&&th.total>0){
+        var col=th.present<th.total?'var(--acc)':'var(--green)';
+        html+='<div style="font-size:12px;font-weight:700;color:'+col+';">Team '+esc(a.team)+': '+th.present+' of '+th.total+' in today &rarr; '+th.personHours+' person-hours available</div>';
+      }
+    });
+  }
+  html+='</div>';
+
+  // Weather
+  var wx=planData.header?(planData.header.weather||''):'';
+  var temp=planData.header?(planData.header.temp||''):'';
+  if(wx||temp){
+    html+='<div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:12px;">Weather: '+(wx||'&mdash;')+(temp?' &middot; '+temp+'&deg;C':'')+'</div>';
+  }
+
+  // Morning meeting brief
+  var meeting=planData.meeting||{};
+  if(meeting.topics){
+    html+='<div style="background:var(--surf);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:14px;">';
+    html+='<div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--acc);margin-bottom:6px;">&#127749; Morning Meeting &mdash; '+(meeting.time||'07:30')+'</div>';
+    html+='<div style="font-size:13px;font-weight:600;">'+esc(meeting.topics)+'</div>';
+    if(meeting.risks)html+='<div style="font-size:12px;color:var(--red);margin-top:6px;font-weight:700;">Risks: '+esc(meeting.risks)+'</div>';
+    html+='</div>';
+  }
+
+  // Teams
+  var plan=planData.plan||[];
+  var tcols={A:'#f59e0b',B:'#38bdf8',C:'#a78bfa',D:'#22c55e',E:'#fb923c'};
+  plan.forEach(function(t){
+    var col=tcols[t.team]||'#94a3b8';
+    var allocEntry=alloc.find(function(a){return a.team===t.team;})||{};
+    var leaderName=allocEntry.lead||'';
+    html+='<div style="background:var(--surf);border:1.5px solid '+col+'44;border-radius:12px;padding:14px;margin-bottom:12px;">';
+    html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
+    html+='<div style="width:12px;height:12px;border-radius:50%;background:'+col+';flex-shrink:0;"></div>';
+    html+='<div style="font-size:14px;font-weight:900;color:'+col+';">Team '+esc(t.team)+'</div>';
+    if(leaderName)html+='<div style="font-size:12px;color:var(--muted);margin-left:4px;">&mdash; '+esc(leaderName)+'</div>';
+    var th=teamHours[t.team];
+    if(th&&th.total>0){
+      var pcap=Math.round(th.present/th.total*100);
+      html+='<div style="margin-left:auto;font-size:11px;font-weight:800;color:'+(th.present<th.total?'var(--acc)':'var(--green)')+';">'+th.personHours+'h available</div>';
+    }
+    html+='</div>';
+    (t.tasks||[]).forEach(function(tk){
+      var est=estimateHours(tk.desc);
+      html+='<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-top:1px solid var(--bdr);">';
+      html+='<div style="flex:1;">';
+      html+='<div style="font-size:13px;font-weight:700;">'+esc(tk.desc)+'</div>';
+      if(est.matched){
+        var expOutput=th?Math.round(est.dailyOutput*(th.personHours/hours/2)*10)/10:null;
+        html+='<div style="font-size:11px;color:var(--blue);margin-top:2px;">Rate: ~'+est.dailyOutput+' '+est.unit+'/day</div>';
+      }
+      html+='</div>';
+      html+='<div style="font-size:12px;font-weight:900;color:'+col+';white-space:nowrap;">'+(tk.target||100)+'%</div>';
+      html+='</div>';
+    });
+    if(allocEntry.ops&&allocEntry.ops.length){
+      html+='<div style="font-size:11px;color:var(--muted);margin-top:8px;">Team: '+[leaderName].concat(allocEntry.ops).filter(Boolean).map(function(n){var att=_sodAttendance[n];return '<span style="color:'+(att==='absent'?'var(--red)':att==='in'?'var(--green)':'var(--txt)')+'">'+esc(n)+(att==='absent'?' (absent)':'')+'</span>';}).join(', ')+'</div>';
+    }
+    html+='</div>';
+  });
+
+  var el=document.getElementById('today-plan-inner');
+  if(el)el.innerHTML=html;
+  document.getElementById('today-plan').style.display='block';
+  document.getElementById('app').style.display='none';
+  document.getElementById('sod').style.display='none';
+}
+
+function showApp(){
+  document.getElementById('today-plan').style.display='none';
   document.getElementById('app').style.display='block';
-  loadAchv();
-  loadHist();
+  document.body.style.overflow='';
+  loadAchv();loadHist();
+}
+
+function emailTodayPlan(planData){
+  if(!planData){toast('No plan loaded','err');return;}
+  var body='DGC Daily Plan - '+fmtD(tod())+'\n\n';
+  body+='Available: '+getWorkingHours(tod())+'h per person today\n\n';
+  (planData.plan||[]).forEach(function(t){
+    body+='TEAM '+t.team+'\n';
+    (t.tasks||[]).forEach(function(tk){
+      body+='  - '+tk.desc+' (target: '+(tk.target||100)+'%)\n';
+    });
+    body+='\n';
+  });
+  if(planData.meeting&&planData.meeting.topics){
+    body+='MORNING BRIEFING:\n'+planData.meeting.topics+'\n\n';
+  }
+  if(planData.meeting&&planData.meeting.risks){
+    body+='RISKS:\n'+planData.meeting.risks+'\n\n';
+  }
+  body+='Sent from DGC Daily Sheet app';
+  window.location.href='mailto:ash@dgc.im,harry@dgc.im?subject='+encodeURIComponent('DGC Daily Plan - '+fmtD(tod()))+'&body='+encodeURIComponent(body);
 }
 
 function startDaySkip(){
   sessionStorage.setItem('dgc_sod_done_'+tod(),'1');
   document.getElementById('sod').style.display='none';
-  document.getElementById('app').style.display='block';
-  loadAchv();
-  loadHist();
+  showApp();
 }
 
 function reopenSOD(){
