@@ -973,24 +973,75 @@ function dictateTeam(i){
 
 
 function fetchWx(mode){
-  fetch('https://api.open-meteo.com/v1/forecast?latitude=54.0833&longitude=-4.6333&daily=temperature_2m_max,weathercode&timezone=Europe%2FLondon&forecast_days=2')
-  .then(function(r){return r.json();})
-  .then(function(d){
-    if(!d.daily||!d.daily.temperature_2m_max)return;
-    // index [1] = tomorrow
-    var t=Math.round(d.daily.temperature_2m_max[1]);
-    var code=d.daily.weathercode[1];
-    var wm={0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Icy fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Snow',73:'Heavy snow',75:'Blizzard',77:'Snow grains',80:'Showers',81:'Heavy showers',82:'Violent showers',85:'Snow showers',86:'Heavy snow showers',95:'Thunderstorm',96:'Thunderstorm with hail',99:'Severe thunderstorm'};
-    var dm={0:'Fine & dry',1:'Fine & dry',2:'Overcast',3:'Overcast',51:'Light rain',53:'Light rain',55:'Light rain',61:'Light rain',63:'Light rain',65:'Heavy rain',71:'Cold & dry',73:'Cold & dry',75:'Cold & dry',77:'Cold & dry',80:'Light rain',81:'Heavy rain',82:'Heavy rain',95:'Wind & rain',96:'Wind & rain',99:'Wind & rain'};
-    document.getElementById('ft').value=t;
-    var wx=document.getElementById('fw');if(wx&&dm[code])wx.value=dm[code];
-    if(mode==='brief'){
-      var brief=document.getElementById('wx-brief');
-      if(brief){brief.textContent='Tomorrow: '+(wm[code]||'Code '+code)+', max '+t+'°C';brief.style.display='block';}
-    }
-    toast((wm[code]||'Code '+code)+', '+t+'°C (tomorrow)');
-  })
-  .catch(function(){toast('✗ Cannot fetch weather','err');});
+  // Primary: IoM Government Met Office (Ronaldsway) via CORS proxy
+  var govUrl='https://www.gov.im/weather/5-day-forecast/Rss5DayForecast';
+  var proxy='https://api.allorigins.win/get?url='+encodeURIComponent(govUrl);
+  fetch(proxy,{cache:'no-store'})
+    .then(function(r){return r.json();})
+    .then(function(json){
+      if(!json||!json.contents)throw new Error('no content');
+      var parser=new DOMParser();
+      var xml=parser.parseFromString(json.contents,'text/xml');
+      var items=xml.querySelectorAll('item');
+      // items[0]=today, items[1]=tomorrow
+      var item=items.length>1?items[1]:items[0];
+      if(!item)throw new Error('no item');
+      var descEl=item.querySelector('description');
+      if(!descEl)throw new Error('no desc');
+      var htmlDoc=parser.parseFromString(descEl.textContent,'text/html');
+      var maxTemp=null,conditions='';
+      htmlDoc.querySelectorAll('h3').forEach(function(h3){
+        var txt=h3.textContent.trim().toLowerCase();
+        var sib=h3.nextElementSibling;
+        if(!sib)return;
+        var val=sib.textContent.trim();
+        if(txt.indexOf('max')>-1||txt.indexOf('maximum')>-1){var m=val.match(/(\d+)/);if(m)maxTemp=parseInt(m[1]);}
+        else if(txt.indexOf('condition')>-1||txt.indexOf('weather')>-1||txt.indexOf('summary')>-1){conditions=val;}
+      });
+      // Also try first paragraph as conditions
+      if(!conditions){var p=htmlDoc.querySelector('p');if(p)conditions=p.textContent.trim();}
+      if(maxTemp)document.getElementById('ft').value=maxTemp;
+      // Map to dropdown
+      var c=conditions.toLowerCase();
+      var sel=document.getElementById('fw');
+      if(sel){
+        var matched='';
+        if(c.indexOf('sunny')>-1||c.indexOf('fine')>-1||(c.indexOf('dry')>-1&&c.indexOf('rain')<0))matched='Fine & dry';
+        else if(c.indexOf('hot')>-1)matched='Hot & sunny';
+        else if(c.indexOf('heavy rain')>-1||c.indexOf('heavy shower')>-1)matched='Heavy rain';
+        else if(c.indexOf('light rain')>-1||c.indexOf('drizzle')>-1)matched='Light rain';
+        else if(c.indexOf('rain')>-1||c.indexOf('shower')>-1)matched='Light rain';
+        else if(c.indexOf('wind')>-1&&c.indexOf('rain')>-1)matched='Wind & rain';
+        else if(c.indexOf('gale')>-1)matched='Wind & rain';
+        else if(c.indexOf('cloud')>-1||c.indexOf('overcast')>-1)matched='Overcast';
+        else if(c.indexOf('snow')>-1||c.indexOf('frost')>-1)matched='Cold & dry';
+        else if(c.indexOf('cold')>-1)matched='Cold & dry';
+        else if(c.indexOf('cold')>-1&&c.indexOf('wet')>-1)matched='Cold & wet';
+        if(matched){for(var i=0;i<sel.options.length;i++){if(sel.options[i].text===matched){sel.selectedIndex=i;break;}}}
+      }
+      if(mode==='brief'){
+        var brief=document.getElementById('wx-brief');
+        if(brief){brief.textContent='IoM Met: '+(conditions||'see forecast')+(maxTemp?', max '+maxTemp+'°C':'');brief.style.display='block';}
+      }
+      toast('IoM Met: '+(conditions?conditions.substring(0,40):'loaded')+(maxTemp?', '+maxTemp+'°C':''));
+    })
+    .catch(function(){
+      // Fallback: open-meteo global model
+      fetch('https://api.open-meteo.com/v1/forecast?latitude=54.0833&longitude=-4.6333&daily=temperature_2m_max,weathercode&timezone=Europe%2FLondon&forecast_days=2')
+        .then(function(r){return r.json();})
+        .then(function(d){
+          if(!d.daily||!d.daily.temperature_2m_max)return;
+          var t=Math.round(d.daily.temperature_2m_max[1]);
+          var code=d.daily.weathercode[1];
+          var wm={0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',51:'Light drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',80:'Showers',95:'Thunderstorm'};
+          var dm={0:'Fine & dry',1:'Fine & dry',2:'Overcast',3:'Overcast',51:'Light rain',61:'Light rain',63:'Light rain',65:'Heavy rain',80:'Light rain',81:'Heavy rain',95:'Wind & rain'};
+          document.getElementById('ft').value=t;
+          var wx=document.getElementById('fw');if(wx&&dm[code])wx.value=dm[code];
+          if(mode==='brief'){var brief=document.getElementById('wx-brief');if(brief){brief.textContent='Tomorrow: '+(wm[code]||'')+', max '+t+'°C (global model)';brief.style.display='block';}}
+          toast((wm[code]||'Code '+code)+', '+t+'°C (fallback)');
+        })
+        .catch(function(){toast('✗ Cannot fetch weather','err');});
+    });
 }
 
 function getPlan(){var teams=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var rows=div.querySelectorAll('.trow');var tasks=[];rows.forEach(function(r){var ins=r.querySelectorAll('input');var desc=ins[0].value.trim();if(desc){var tpct=ins[1]&&ins[1].value.trim()?parseFloat(ins[1].value):100;tasks.push({desc:desc,target:tpct});}});var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var leader=g('ptl'+i);var members=[g('ptm'+i+'_0'),g('ptm'+i+'_1')].filter(Boolean);var notes=g('pt-notes-'+i);var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');var plantType=g('pt-plant-type-'+i);var plantHrs=g('pt-plant-hrs-'+i);var plantCheckOk=document.getElementById('ptick-det-'+i)&&document.getElementById('ptick-det-'+i).classList.contains('on');var plantInit=g('pt-plant-init-'+i);var plantCheck={type:plantType,hours:plantHrs?parseFloat(plantHrs):null,confirmed:plantCheckOk,initials:plantInit};if(tasks.length||leader)teams.push({team:TLTRS[i]||('T'+(i+1)),leader:leader,members:members,tasks:tasks,notes:notes,plantOk:plantOk,plantCheck:plantCheck});});return teams;}
