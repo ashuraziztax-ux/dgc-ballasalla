@@ -10,11 +10,11 @@
 <meta http-equiv="Expires" content="0">
 <title>DGC Daily Sheet</title>
 <script>
-// DGC Daily Sheet v1.2.1 — Boardroom TWEAK session 2026-06-06: items row labels, task % placeholder, noise required indicator
+// DGC Daily Sheet v1.3.0 — Boardroom TWEAK session 2026-06-06: items row labels, task % placeholder, noise required indicator
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='1.2.1';
+var APP_VERSION='1.3.0';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -223,6 +223,15 @@ select{
 /* ── MISC ── */
 .sess-hd{font-size:11px;font-weight:900;padding:7px 12px;border-radius:8px;margin-bottom:8px;}
 
+/* ── FLIP CARD ── */
+.flip-container{perspective:1000px;}
+.flip-inner{position:relative;transition:transform .5s ease;transform-style:preserve-3d;}
+.flip-inner.flipped{transform:rotateY(180deg);}
+.flip-front,.flip-back{backface-visibility:hidden;-webkit-backface-visibility:hidden;}
+.flip-back{transform:rotateY(180deg);display:none;}
+.flip-inner.flipped .flip-front{display:none;}
+.flip-inner.flipped .flip-back{display:block;}
+
 @media print{
   @page{size:A4;margin:18mm;}
   .bnav,.hdr,.no-print,.mic,.del,.btns,button{display:none!important;}
@@ -271,7 +280,25 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please choose your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;">Start &rarr;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.2.1</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.3.0</div>
+  </div>
+</div>
+
+<div id="sod" style="display:none;min-height:100vh;background:var(--bg);padding:0;">
+  <div class="hdr">
+    <img id="sod-logo" class="dgc-logo" src="dgc-logo-white.png" alt="DGC">
+    <div style="margin-left:auto;">
+      <span class="user-chip" id="sod-name"></span>
+    </div>
+  </div>
+  <div style="padding:20px;max-width:860px;margin:0 auto;">
+    <div style="font-size:22px;font-weight:900;margin-bottom:4px;" id="sod-greeting">Good morning</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px;" id="sod-subtitle">Here's what was planned for today</div>
+    <div id="sod-tasks"></div>
+    <div style="margin-top:20px;">
+      <button class="btn btn-submit" onclick="startDay()">Start the Day &rarr;</button>
+      <button class="btn btn-ghost" style="width:100%;margin-top:10px;" onclick="startDay()">Skip &mdash; go to tomorrow's plan</button>
+    </div>
   </div>
 </div>
 
@@ -288,7 +315,7 @@ select{
     <button class="btn btn-blue btn-sm no-print" onclick="window.print()" title="Print tomorrow's plan" style="min-width:44px;min-height:44px;font-size:18px;padding:0;">&#128424;</button>
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
     <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
-    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.2.1</span>
+    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.3.0</span>
   </div>
 </div>
 
@@ -537,11 +564,8 @@ function doLogin(){
   localStorage.setItem('dgc_uname',n);
   document.getElementById('ub').textContent=n;
   document.getElementById('fm').value=n;
-  document.getElementById('ls').style.display='none';document.body.style.overflow='';
-  document.getElementById('app').style.display='block';
   restoreDraft();
   startDraftTimer();
-  loadAchv();loadHist();
   // Show one-time AI setup hint if no key saved yet
   if(!localStorage.getItem('dgc_claude_key')&&!localStorage.getItem('dgc_ai_hint_seen')){
     localStorage.setItem('dgc_ai_hint_seen','1');
@@ -549,6 +573,34 @@ function doLogin(){
       var hint=document.getElementById('ai-hint');if(hint)hint.style.display='flex';
       setTimeout(function(){var h=document.getElementById('ai-hint');if(h)h.style.display='none';},8000);
     },1200);
+  }
+  // Try to find yesterday's/today's plan to show Start of Day
+  if(sb){
+    var today=tod();
+    var yesterday=(function(){var d=new Date();d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);})();
+    sb.from('daily_records').select('data').eq('project_ref',PROJECT_REF).in('date',[today,yesterday]).not('gang','like','ACHV_%').order('date',{ascending:false}).limit(3)
+      .then(function(r){
+        var found=r.data&&r.data.find(function(x){return x.data&&x.data.plan&&x.data.plan.length>0;});
+        if(found){
+          showSOD(found.data,_uname);
+        }else{
+          document.getElementById('ls').style.display='none';
+          document.getElementById('app').style.display='block';
+          document.body.style.overflow='';
+          loadAchv();loadHist();
+        }
+      })
+      .catch(function(){
+        document.getElementById('ls').style.display='none';
+        document.getElementById('app').style.display='block';
+        document.body.style.overflow='';
+        loadAchv();loadHist();
+      });
+  }else{
+    document.getElementById('ls').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.body.style.overflow='';
+    loadAchv();loadHist();
   }
 }
 
@@ -568,21 +620,57 @@ function addPT(){
   var i=PT_I++,l=TLTRS[i]||('T'+(i+1)),c=TCOLS[i]||'#94a3b8';
   var d=document.createElement('div');d.className='tblk';d.id='pt'+i;
   var micResId='mic-res'+i,resId='fres'+i;
-  d.innerHTML='<div class="thd"><div class="tdot" style="background:'+c+'"></div><div style="font-size:13px;font-weight:800;">Team '+l+'</div><div style="margin-left:auto;display:flex;gap:5px;"><button class="btn btn-ghost btn-sm" onclick="addTask('+i+')">+ Task</button><button class="btn btn-red btn-sm" onclick="this.closest(\'.tblk\').remove()">x</button></div></div>'+
-    '<div class="g2" style="margin-bottom:10px;">'+
-      '<div><label style="font-size:11px;">Team Leader</label><input type="text" id="ptl'+i+'" list="nl" placeholder="Leader name" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'+
-      '<div><label style="font-size:11px;">Member 1</label><input type="text" id="ptm'+i+'a" list="nl" placeholder="Member name" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'+
-      '<div><label style="font-size:11px;">Member 2</label><input type="text" id="ptm'+i+'b" list="nl" placeholder="Member name" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'+
-    '</div>'+
-    '<div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:1fr 72px 40px;gap:6px;padding:0 2px 6px;text-transform:uppercase;letter-spacing:.05em;"><span>Task / Activity</span><span>Target %</span><span></span></div>'+
-    '<div id="ptt'+i+'"></div>'+
-    '<div style="margin-top:10px;"><label style="font-size:11px;">Resources needed</label>'+
-      '<button class="mic" id="'+micResId+'" onclick="vm(\'res'+i+'\',\''+resId+'\')" style="margin-bottom:6px;"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate resources</span></button>'+
-      '<textarea id="'+resId+'" rows="2" placeholder="Plant, materials, deliveries needed for this team..." style="font-size:13px;min-height:56px;"></textarea>'+
-    '</div>';
+  var front=
+    '<div class="thd">'
+      +'<div class="tdot" style="background:'+c+'"></div>'
+      +'<div style="font-size:13px;font-weight:800;">Team '+l+'</div>'
+      +'<div style="margin-left:auto;display:flex;gap:5px;">'
+        +'<button class="btn btn-ghost btn-sm" onclick="flipCard('+i+')" title="More detail">&#8861; Detail</button>'
+        +'<button class="btn btn-ghost btn-sm" onclick="addTask('+i+')">+ Task</button>'
+        +'<button class="btn btn-red btn-sm" onclick="this.closest(\'.tblk\').remove()">x</button>'
+      +'</div>'
+    +'</div>'
+    +'<div class="g2" style="margin-bottom:10px;">'
+      +'<div><label style="font-size:11px;">Team Leader</label><input type="text" id="ptl'+i+'" list="nl" placeholder="Leader name" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
+      +'<div><label style="font-size:11px;">Member 1</label><input type="text" id="ptm'+i+'a" list="nl" placeholder="Member name" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
+      +'<div><label style="font-size:11px;">Member 2</label><input type="text" id="ptm'+i+'b" list="nl" placeholder="Member name" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
+    +'</div>'
+    +'<div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:1fr 72px 40px;gap:6px;padding:0 2px 6px;text-transform:uppercase;letter-spacing:.05em;"><span>Task / Activity</span><span>Target %</span><span></span></div>'
+    +'<div id="ptt'+i+'"></div>'
+    +'<div style="margin-top:10px;"><label style="font-size:11px;">Resources needed</label>'
+      +'<button class="mic" id="'+micResId+'" onclick="vm(\'res'+i+'\',\''+resId+'\')" style="margin-bottom:6px;"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate resources</span></button>'
+      +'<textarea id="'+resId+'" rows="2" placeholder="Plant, materials, deliveries needed for this team..." style="font-size:13px;min-height:56px;"></textarea>'
+    +'</div>';
+  var back=
+    '<div style="background:var(--surf);border-radius:var(--radius);padding:14px;">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
+        +'<div style="font-size:13px;font-weight:800;">Team '+l+' &mdash; Detail</div>'
+        +'<button class="btn btn-ghost btn-sm" onclick="flipCard('+i+')">&larr; Back</button>'
+      +'</div>'
+      +'<div class="mb8"><label>Plant Check Confirmed</label>'
+        +'<div style="display:flex;gap:8px;align-items:center;">'
+          +'<div class="ptick" id="ptick'+i+'" onclick="var t=this;t.classList.toggle(\'on\');t.textContent=t.classList.contains(\'on\')?\'&#10003;\':\'\';"></div>'
+          +'<input type="text" id="ali'+i+'in" placeholder="Initials" style="width:80px;">'
+        +'</div>'
+      +'</div>'
+      +'<div class="mb8"><label>Programme Task Reference</label>'
+        +'<div id="prog-ref-'+i+'" style="font-size:12px;color:var(--muted);padding:8px;background:var(--s2);border-radius:8px;">Not yet checked against programme</div>'
+      +'</div>'
+      +'<div><label>Team Notes</label>'
+        +'<textarea id="pt-notes-'+i+'" rows="3" placeholder="Any additional notes for this team..."></textarea>'
+      +'</div>'
+    +'</div>';
+  d.innerHTML=
+    '<div class="flip-container">'
+      +'<div class="flip-inner" id="flip-inner-'+i+'">'
+        +'<div class="flip-front">'+front+'</div>'
+        +'<div class="flip-back">'+back+'</div>'
+      +'</div>'
+    +'</div>';
   document.getElementById('pt-container').appendChild(d);
   addTask(i);
 }
+function flipCard(i){var el=document.getElementById('flip-inner-'+i);if(el)el.classList.toggle('flipped');}
 function addTask(ti,desc,pct){var c=document.getElementById('ptt'+ti);if(!c)return;var r=document.createElement('div');r.className='trow';r.innerHTML='<input type="text" placeholder="e.g. Drain run S4.5 to MH7, kerbing Zone G" value="'+(desc||'')+'"><input type="number" placeholder="%(blank=100)" min="0" max="100" inputmode="numeric" value="'+(pct||'')+'" style="text-align:center;font-weight:900;" title="Leave blank = 100% target"><button class="del" onclick="this.closest(\'.trow\').remove()">x</button>';c.appendChild(r);}
 
 function addAL(){
@@ -1134,6 +1222,42 @@ function todayPlus1(){var d=new Date();d.setDate(d.getDate()+1);return d.toISOSt
 function fmtD(s){if(!s)return'';return new Date(s+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function toast(m,t){var el=document.getElementById('toast');el.textContent=m;el.className='toast show'+(t==='err'?' err':'');setTimeout(function(){el.classList.remove('show');},2800);}
+
+function showSOD(planData,name){
+  var hour=new Date().getHours();
+  var greet=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
+  document.getElementById('sod-greeting').textContent=greet+', '+name;
+  document.getElementById('sod-name').textContent=name;
+  var plan=planData.plan||[];
+  var tasks=[];
+  plan.forEach(function(t){(t.tasks||[]).forEach(function(tk){tasks.push({team:t.team,desc:tk.desc,target:tk.target||100});});});
+  var container=document.getElementById('sod-tasks');
+  if(!tasks.length){
+    container.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px 0;">No plan recorded for today. Carry on!</div>';
+  }else{
+    container.innerHTML=tasks.map(function(t,i){
+      var col={A:'#f59e0b',B:'#38bdf8',C:'#a78bfa',D:'#22c55e',E:'#fb923c'}[t.team]||'#94a3b8';
+      return '<div style="background:var(--surf);border:1.5px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;">'
+        +'<div class="ptick" id="sod-tick-'+i+'" onclick="var el=this;el.classList.toggle(\'on\');el.textContent=el.classList.contains(\'on\')?\'&#10003;\':\'\';"></div>'
+        +'<div style="flex:1;">'
+        +'<div style="font-size:11px;font-weight:800;color:'+col+';margin-bottom:2px;">TEAM '+t.team+' &mdash; Target: '+t.target+'%</div>'
+        +'<div style="font-size:14px;font-weight:600;">'+esc(t.desc)+'</div>'
+        +'</div>'
+        +'</div>';
+    }).join('');
+  }
+  document.getElementById('ls').style.display='none';
+  document.getElementById('app').style.display='none';
+  document.getElementById('sod').style.display='block';
+  document.body.style.overflow='';
+}
+
+function startDay(){
+  document.getElementById('sod').style.display='none';
+  document.getElementById('app').style.display='block';
+  loadAchv();
+  loadHist();
+}
 </script>
 
 <!-- CLAUDE AI SETUP MODAL -->
