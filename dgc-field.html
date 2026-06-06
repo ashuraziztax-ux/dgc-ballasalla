@@ -10,11 +10,11 @@
 <meta http-equiv="Expires" content="0">
 <title>DGC Daily Sheet</title>
 <script>
-// DGC Daily Sheet v1.5.4 — Match paper DGC-02 form: EOD team picker, tasks counter, declaration, ordered by field
+// DGC Daily Sheet v1.5.2 — Voice pause 3s silence timer, dictate team additive+multi-task, site diary 8s pause+append, remove plant check from detail panel
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='1.5.4';
+var APP_VERSION='1.5.5';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -160,7 +160,7 @@ select{
 
 /* ── NOISE / ITEMS ROWS ── */
 .nr{display:grid;grid-template-columns:90px 1fr 1fr 40px;gap:6px;align-items:center;margin-bottom:8px;}
-.ir{display:grid;grid-template-columns:50px 1fr 70px 70px 70px 40px;gap:5px;align-items:center;margin-bottom:6px;}
+.ir{display:grid;grid-template-columns:58px 1fr 80px 80px 40px;gap:5px;align-items:center;margin-bottom:6px;}
 .nr input,.ir input{padding:10px 10px;font-size:13px;min-height:44px;}
 
 /* ── DELETE BUTTON ── */
@@ -261,7 +261,6 @@ select{
   .ir input{width:100%;min-height:44px;}
   .ir .del{width:100%;border-radius:8px;}
   .nr{grid-template-columns:90px 1fr 40px;}
-  .ir-hdr{display:none;}
 }
 #print-header{display:none;}
 </style>
@@ -294,19 +293,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please choose your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;">Start &rarr;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0f1117">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
-<title>DGC Daily Sheet</title>
-<script>
-// DGC Daily Sheet v1.5.4</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.5.2</div>
   </div>
 </div>
 
@@ -364,7 +351,7 @@ select{
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
     <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
     <button onclick="reopenSOD()" style="background:none;border:1.5px solid rgba(245,158,11,.4);border-radius:9px;color:var(--acc);font-size:11px;font-weight:800;padding:6px 10px;cursor:pointer;white-space:nowrap;font-family:inherit;min-height:36px;" class="no-print" title="Open morning check">&#128203; AM check</button>
-    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.5.4</span>
+    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.5.5</span>
   </div>
 </div>
 
@@ -415,14 +402,6 @@ select{
     <div class="g2 mb8">
       <div><label>Meeting time</label><input type="time" id="fbt" value="07:30"></div>
       <div><label>Visitors tomorrow</label><input type="text" id="fv" placeholder="Expected"></div>
-    </div>
-    <div class="mb8">
-      <label>Team doing EOD task tonight</label>
-      <div style="display:flex;gap:8px;margin-top:4px;">
-        <button class="btn btn-ghost btn-sm" id="eod-team-a" onclick="toggleEODTeam('A')" style="flex:1;">Team A</button>
-        <button class="btn btn-ghost btn-sm" id="eod-team-b" onclick="toggleEODTeam('B')" style="flex:1;">Team B</button>
-        <button class="btn btn-ghost btn-sm" id="eod-team-c" onclick="toggleEODTeam('C')" style="flex:1;">Team C</button>
-      </div>
     </div>
     <div class="mb8">
       <label>Topics for tomorrow's briefing</label>
@@ -487,21 +466,6 @@ select{
     <div id="eod-chk-items"></div>
   </div>
 
-  <div id="eod-score" style="font-size:22px;font-weight:900;color:var(--acc);text-align:center;padding:12px;background:var(--s2);border-radius:10px;margin:10px 0;">0 / 15 complete</div>
-
-  <!-- ADD 3: Has everything been completed? -->
-  <div class="card" style="margin-top:12px;">
-    <label>Has everything been completed?</label>
-    <div style="display:flex;gap:10px;margin-bottom:10px;">
-      <button class="btn btn-ghost" id="eod-yes" onclick="setEODComplete(true)" style="flex:1;">&#10003; Yes &mdash; all done</button>
-      <button class="btn btn-ghost" id="eod-no" onclick="setEODComplete(false)" style="flex:1;">&#10007; No &mdash; items outstanding</button>
-    </div>
-    <div id="eod-outstanding-row" style="display:none;">
-      <label>Outstanding items / reason not complete</label>
-      <textarea id="feod-outstanding" rows="2" placeholder="What was not completed and why?"></textarea>
-    </div>
-  </div>
-
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#9888;&#65039; Observations / Issues</span></div></div>
   <div class="card">
     <button class="mic" id="mic-obs" onclick="vm('obs','fob')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate observations</span></button>
@@ -510,7 +474,7 @@ select{
 
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#128230; Items Required for Tomorrow</span></div></div>
   <div class="card">
-    <div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:50px 1fr 70px 70px 70px 40px;gap:5px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;" class="no-print"><span>Qty</span><span>Item / Description</span><span>Supplier</span><span>By Time</span><span>By Who</span><span></span></div>
+    <div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:58px 1fr 80px 80px 40px;gap:5px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;" class="no-print"><span>Qty</span><span>Item / Description</span><span>Supplier</span><span>By Time</span><span></span></div>
     <div id="ir-c"></div>
     <div class="btns" style="margin-top:8px;">
       <button class="btn btn-ghost btn-sm" onclick="addItem()">+ Item</button>
@@ -548,17 +512,6 @@ select{
           <option value="E">Team E</option>
         </select>
       </div>
-    </div>
-  </div>
-
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128221; End of Day Declaration</span></div></div>
-  <div class="card">
-    <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:14px;padding:10px;background:var(--s2);border-radius:8px;border-left:3px solid var(--acc);">
-      I confirm the site has been checked, all of the above tasks completed and verified. The site is secure, all plant immobilised and keys locked away, no exposed hazards, no services left unattended, and gates / cabins are locked. The day's records have been filed.
-    </div>
-    <div class="g2">
-      <div><label>Signed by</label><input type="text" id="feod-signedby" list="nl" onclick="nc(this)" onblur="nb2(this)" placeholder="Site manager name"></div>
-      <div><label>Time signed off</label><input type="time" id="feod-signtime"></div>
     </div>
   </div>
 
@@ -657,34 +610,6 @@ var _mic=null,_ma=null,_mid='';
 var _micStopping=false;
 var _silenceTimer=null;
 var _uname='';
-var _eodTeams=[];
-var _eodComplete=null;
-
-function toggleEODTeam(t){
-  var idx=_eodTeams.indexOf(t);
-  if(idx>-1){_eodTeams.splice(idx,1);}else{_eodTeams.push(t);}
-  document.querySelectorAll('#eod-team-a,#eod-team-b,#eod-team-c').forEach(function(btn){
-    var letter=btn.id.slice(-1).toUpperCase();
-    var active=_eodTeams.indexOf(letter)>-1;
-    btn.style.background=active?'var(--acc)':'';
-    btn.style.color=active?'#0f1117':'';
-  });
-}
-
-function setEODComplete(v){
-  _eodComplete=v;
-  document.getElementById('eod-yes').style.background=v?'var(--green)':'';
-  document.getElementById('eod-no').style.background=(!v&&v!==null)?'var(--red)':'';
-  document.getElementById('eod-outstanding-row').style.display=v?'none':'block';
-}
-
-function updateEODScore(){
-  var total=EODS.length;
-  var done=0;
-  EODS.forEach(function(e){if(CHK[e.k])done++;});
-  var el=document.getElementById('eod-score');
-  if(el)el.textContent=done+' / '+total+' complete';
-}
 
 (function init(){
   rebuildNL();
@@ -696,7 +621,7 @@ function updateEODScore(){
   if(eodCard){
     EODS.forEach(function(e){
       var d=document.createElement('div');d.className='chki';
-      d.onclick=function(){CHK[e.k]=!CHK[e.k];var b=d.querySelector('.chkb');b.classList.toggle('on',CHK[e.k]);b.textContent=CHK[e.k]?'✓':'';updateEODScore();};
+      d.onclick=function(){CHK[e.k]=!CHK[e.k];var b=d.querySelector('.chkb');b.classList.toggle('on',CHK[e.k]);b.textContent=CHK[e.k]?'✓':'';};
       d.innerHTML='<div class="chkb"></div><div style="font-size:13px;font-weight:600;color:var(--txt);">'+e.l+'</div>';
       eodCard.appendChild(d);
     });
@@ -744,7 +669,6 @@ function doLogin(){
   localStorage.setItem('dgc_uname',n);
   document.getElementById('ub').textContent=n;
   document.getElementById('fm').value=n;
-  var sbEl=document.getElementById('feod-signedby');if(sbEl&&!sbEl.value)sbEl.value=n;
   restoreDraft();
   startDraftTimer();
   // Show one-time AI setup hint if no key saved yet
@@ -880,7 +804,7 @@ function addAL(){
 
 function nowTime(){var n=new Date();return ('0'+n.getHours()).slice(-2)+':'+('0'+n.getMinutes()).slice(-2);}
 function addNoise(t,v,loc){NR_I++;var id='nr'+NR_I;var r=document.createElement('div');r.className='nr';r.id=id;r.innerHTML='<input type="time" value="'+(t||nowTime())+'"><input type="number" placeholder="dB" min="0" max="140" inputmode="numeric" value="'+(v||'')+'"><input type="text" placeholder="Location (e.g. Zone 9)" value="'+(loc||'')+'"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('nr-c').appendChild(r);}
-function addItem(q,it,s,tm,by){IR_I++;var id='ir'+IR_I;var r=document.createElement('div');r.className='ir';r.id=id;r.innerHTML='<input placeholder="Qty" value="'+(q||'')+'"><input placeholder="Item / description" value="'+(it||'')+'"><input placeholder="Supplier" value="'+(s||'')+'"><input type="time" title="By time (e.g. 07:30)" placeholder="By time" value="'+(tm||'')+'" style="font-size:12px;"><input placeholder="By" value="'+(by||'')+'" style="font-size:12px;"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('ir-c').appendChild(r);}
+function addItem(q,it,s,tm){IR_I++;var id='ir'+IR_I;var r=document.createElement('div');r.className='ir';r.id=id;r.innerHTML='<input placeholder="Qty" value="'+(q||'')+'"><input placeholder="Item / description" value="'+(it||'')+'"><input placeholder="Supplier" value="'+(s||'')+'"><input type="time" title="By time (e.g. 07:30)" placeholder="By time" value="'+(tm||'')+'" style="font-size:12px;"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('ir-c').appendChild(r);}
 
 var MIC_ICON='🎙';
 // Store original mic button labels so we can restore them after recording
@@ -1142,7 +1066,7 @@ function submitEOD(){
   var noiseRows=[];document.querySelectorAll('.nr').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value)noiseRows.push(ins[1].value);});
   if(noiseRows.length<3){if(!confirm('Only '+noiseRows.length+' noise reading(s) recorded — 3 are required. Submit anyway?'))return;}
   var noise=[];document.querySelectorAll('.nr').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value)noise.push({time:ins[0].value,db:parseFloat(ins[1].value),location:ins[2]?ins[2].value:''});});
-  var items=[];document.querySelectorAll('.ir').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value.trim())items.push({qty:ins[0].value,item:ins[1].value,source:ins[2].value,byTime:ins[3]?ins[3].value:'',orderedBy:ins[4]?ins[4].value:''});});
+  var items=[];document.querySelectorAll('.ir').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value.trim())items.push({qty:ins[0].value,item:ins[1].value,source:ins[2].value,byTime:ins[3]?ins[3].value:''});});
   items.sort(function(a,b){return (a.byTime||'99:99').localeCompare(b.byTime||'99:99');});
   // Merge split session notes into combined field + keep individual
   var ses1=document.getElementById('fses1')?document.getElementById('fses1').value:'';
@@ -1169,11 +1093,7 @@ function submitEOD(){
       return{rating:document.getElementById('ftodayrating')?document.getElementById('ftodayrating').value:'',notes:document.getElementById('ftodaynotes')?document.getElementById('ftodaynotes').value:'',tasks:taskResults};
     })(),
     eodChecklist:eodCheckState,
-    noise:noise,obs:document.getElementById('fob').value,items:items,comms:Object.assign({},COM),notes:document.getElementById('fnt').value,
-    eodTeams:_eodTeams,
-    eodComplete:_eodComplete,
-    eodOutstanding:document.getElementById('feod-outstanding')?document.getElementById('feod-outstanding').value:'',
-    eodDeclaration:{signedBy:document.getElementById('feod-signedby')?document.getElementById('feod-signedby').value:'',time:document.getElementById('feod-signtime')?document.getElementById('feod-signtime').value:''}};
+    noise:noise,obs:document.getElementById('fob').value,items:items,comms:Object.assign({},COM),notes:document.getElementById('fnt').value};
   var btn=document.getElementById('eod-submit-btn');
   function resetBtn(){if(btn){btn.textContent='📤 Submit & Save';btn.disabled=false;btn.style.background='';btn.style.boxShadow='';}}
   function errBtn(){if(btn){btn.textContent='⚠ Save failed — tap to retry';btn.disabled=false;btn.style.background='var(--red)';btn.style.boxShadow='0 4px 18px rgba(239,68,68,.35)';}}
@@ -1547,7 +1467,7 @@ function sendToTrello(){
   var items=[];
   document.querySelectorAll('.ir').forEach(function(r){
     var ins=r.querySelectorAll('input');
-    if(ins[1]&&ins[1].value.trim())items.push({qty:ins[0].value||'?',item:ins[1].value.trim(),source:ins[2].value||'',byTime:ins[3]?ins[3].value:'',orderedBy:ins[4]?ins[4].value:''});
+    if(ins[1]&&ins[1].value.trim())items.push({qty:ins[0].value||'?',item:ins[1].value.trim(),source:ins[2].value||'',byTime:ins[3]?ins[3].value:''});
   });
   if(!items.length){toast('No items to send','err');return;}
   items.sort(function(a,b){return (a.byTime||'99:99').localeCompare(b.byTime||'99:99');});
@@ -1555,7 +1475,7 @@ function sendToTrello(){
   var date=document.getElementById('fd').value||new Date().toISOString().slice(0,10);
   var title='Materials Required — '+fmtD(date)+' (Ballasalla Phase 4)';
   var desc='Materials needed for site:\n\n'
-    +items.map(function(it){return '- '+it.qty+' x '+it.item+(it.source?' ('+it.source+')':'')+(it.byTime?' by '+it.byTime:'')+(it.orderedBy?' — ordered by '+it.orderedBy:'');}).join('\n')
+    +items.map(function(it){return '- '+it.qty+' x '+it.item+(it.source?' ('+it.source+')':'')+(it.byTime?' by '+it.byTime:'');}).join('\n')
     +'\n\nAdded by '+(_uname||'Site Manager')+' via DGC Field App';
 
   var status=document.getElementById('trello-status');
@@ -2169,38 +2089,48 @@ function reopenSOD(){
 </div>
 
 <script>
-// ── VERSION CHECK + AUTO-UPDATE ──────────────────────────────────────────────
-// Checks GitHub for the latest version every 60 seconds.
-// If the live version differs from APP_VERSION, shows a banner — one tap updates.
-function checkForUpdate(){
-  fetch('/dgc-ballasalla/dgc-field.html?_cb='+Math.random(),{cache:'no-store'})
-    .then(function(r){return r.text();})
-    .then(function(html){
-      var m=html.match(/var APP_VERSION='([^']+)'/);
-      if(m&&m[1]&&m[1]!==APP_VERSION){
-        showUpdateBanner(m[1]);
-      }
-    }).catch(function(){});
-}
-function showUpdateBanner(newVer){
-  var existing=document.getElementById('update-banner');
-  if(existing)return; // already showing
-  var b=document.createElement('div');
-  b.id='update-banner';
-  b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:var(--acc);color:#0f1117;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:inherit;box-shadow:0 2px 12px rgba(0,0,0,.4);';
-  b.innerHTML='<span style="font-size:13px;font-weight:800;">&#128260; Update available (v'+newVer+')</span>'
-    +'<button onclick="window.location.reload(true)" style="background:#0f1117;color:var(--acc);border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;min-height:44px;">Tap to update</button>';
-  document.body.insertBefore(b,document.body.firstChild);
-}
-
-// Check on load, then every 60 seconds
-setTimeout(checkForUpdate,3000);
-setInterval(checkForUpdate,60000);
-
-// Service worker for offline fallback only
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/dgc-ballasalla/sw.js').catch(function(){});
+  navigator.serviceWorker.register('/dgc-ballasalla/sw.js').then(function(reg){
+    reg.addEventListener('updatefound',function(){
+      var newSW=reg.installing;
+      newSW.addEventListener('statechange',function(){
+        if(newSW.state==='installed'&&navigator.serviceWorker.controller){
+          // New version available — reload automatically
+          window.location.reload();
+        }
+      });
+    });
+    // Force update check every time page loads
+    reg.update();
+  }).catch(function(){});
 }
+</script>
+
+<script>
+(function(){
+  function checkForUpdate(){
+    fetch(window.location.href+'?_v='+Math.random(),{cache:'no-store'})
+      .then(function(r){return r.text();})
+      .then(function(h){
+        var m=h.match(/var APP_VERSION='([^']+)'/);
+        if(m&&m[1]&&m[1]!==APP_VERSION){
+          var b=document.getElementById('update-banner');
+          if(!b){
+            b=document.createElement('div');
+            b.id='update-banner';
+            b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:var(--acc);color:#0f1117;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;font-family:inherit;';
+            b.innerHTML='<span style="font-size:13px;font-weight:800;">Update ready (v'+m[1]+')</span><button onclick="window.location.reload()" style="background:#0f1117;color:var(--acc);border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:900;cursor:pointer;min-height:44px;">Tap to update</button>';
+            document.body.insertBefore(b,document.body.firstChild);
+          }
+        }
+      }).catch(function(){});
+  }
+  setTimeout(checkForUpdate,5000);
+  setInterval(checkForUpdate,60000);
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/dgc-ballasalla/sw.js').catch(function(){});
+  }
+})();
 </script>
 </body>
 </html>
