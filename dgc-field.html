@@ -7,6 +7,11 @@
 <meta name="theme-color" content="#0f1117">
 <title>DGC Daily Sheet</title>
 <script>
+// DGC Daily Sheet v1.1.0 — Updated after boardroom TWEAK session 2026-06-06
+// SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
+// accepted risk for this internal deployment. Rotate Trello token quarterly.
+// Claude API costs are borne by the baked-in key unless users supply their own.
+var APP_VERSION='1.1.0';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -117,8 +122,8 @@ select{
 .chkb.on{background:var(--green);border-color:var(--green);}
 
 /* ── NOISE / ITEMS ROWS ── */
-.nr{display:grid;grid-template-columns:100px 1fr 40px;gap:6px;align-items:center;margin-bottom:8px;}
-.ir{display:grid;grid-template-columns:62px 1fr 92px 40px;gap:5px;align-items:center;margin-bottom:6px;}
+.nr{display:grid;grid-template-columns:90px 1fr 1fr 40px;gap:6px;align-items:center;margin-bottom:8px;}
+.ir{display:grid;grid-template-columns:62px 1fr 92px 100px 40px;gap:5px;align-items:center;margin-bottom:6px;}
 .nr input,.ir input{padding:10px 10px;font-size:13px;min-height:44px;}
 
 /* ── DELETE BUTTON ── */
@@ -138,7 +143,7 @@ select{
 }
 .mic:hover{background:rgba(56,189,248,.15);border-color:rgba(56,189,248,.5);}
 .mic .mic-icon{font-size:22px;line-height:1;flex-shrink:0;}
-.mic.on{background:rgba(239,68,68,.13);border-color:rgba(239,68,68,.4);color:var(--red);animation:bl 1s infinite;}
+.mic.on{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.5);color:var(--acc);animation:bl 1s infinite;}
 @keyframes bl{0%,100%{opacity:1}50%{opacity:.6}}
 
 /* ── COMMS CHECKLIST ── */
@@ -196,6 +201,7 @@ select{
 .sess-hd{font-size:11px;font-weight:900;padding:7px 12px;border-radius:8px;margin-bottom:8px;}
 
 @media print{
+  @page{size:A4;margin:18mm;}
   .bnav,.hdr,.no-print,.mic,.del,.btns,button{display:none!important;}
   body{background:#fff;color:#000;font-size:13px;}
   label{font-size:10pt;color:#333;}
@@ -204,6 +210,12 @@ select{
   .sec-t{color:#1e3a4a;}
   .tblk-body{display:block!important;}
   #print-header{display:block!important;}
+}
+@media(max-width:420px){
+  .ir{display:flex;flex-direction:column;gap:5px;padding:8px;background:var(--s2);border-radius:8px;margin-bottom:8px;}
+  .ir input{width:100%;min-height:44px;}
+  .ir .del{width:100%;border-radius:8px;}
+  .nr{grid-template-columns:90px 1fr 40px;}
 }
 #print-header{display:none;}
 </style>
@@ -225,7 +237,7 @@ select{
         <option value="Harry Harrison">Harry Harrison</option>
         <option value="Bradley McKevitt">Bradley McKevitt</option>
         <option value="Dean Garrett">Dean Garrett</option>
-        <option value="Craig">Craig</option>
+        <option value="Craig Walsh">Craig Walsh</option>
         <option value="Daniel Seed">Daniel Seed</option>
         <option value="Jake Whetnall">Jake Whetnall</option>
         <option value="James Shannon">James Shannon</option>
@@ -236,7 +248,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please choose your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;">Start &rarr;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.1.0</div>
   </div>
 </div>
 
@@ -275,7 +287,7 @@ select{
       <select id="fw"><option value="">Select...</option><option>Fine &amp; dry</option><option>Overcast</option><option>Light rain</option><option>Heavy rain</option><option>Wind &amp; rain</option><option>Hot &amp; sunny</option><option>Cold &amp; dry</option><option>Frost</option></select>
     </div>
     <div><label>Temp (&#176;C)</label>
-      <div style="display:flex;gap:5px;"><input type="number" id="ft" placeholder="&#176;C" style="flex:1;"><button class="btn btn-blue btn-sm" onclick="fetchWx()">&#127780;</button></div>
+      <div style="display:flex;gap:5px;"><input type="number" id="ft" placeholder="&#176;C" inputmode="numeric" style="flex:1;"><button class="btn btn-blue btn-sm" onclick="fetchWx()">&#127780;</button></div>
     </div>
   </div>
 
@@ -307,9 +319,9 @@ select{
   <div id="pt-container"></div>
 
   <!-- EOD RESPONSIBILITY -->
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128274; EOD Responsibility for Tomorrow</span><span class="sec-s">Who's in charge of end-of-day checks?</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128274; Who Locks Up Tomorrow?</span><span class="sec-s">Name the person responsible for end-of-day site security</span></div></div>
   <div class="card">
-    <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.55;">Pick who is responsible for the security checklist and site clean-up at the end of tomorrow. This gets recorded so it's clear before the day starts.</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.55;">Pick who is responsible for the security checklist and site clean-up at the end of tomorrow. This gets recorded so it's clear before the day starts — no arguments.</div>
     <div class="g2">
       <div>
         <label>EOD responsible person</label>
@@ -345,7 +357,7 @@ select{
 
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#128202; Noise Readings</span><span class="sec-s">3 spot readings required</span></div></div>
   <div class="card">
-    <div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:100px 1fr 40px;gap:6px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;"><span>Time</span><span>Level (dB)</span><span></span></div>
+    <div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:90px 1fr 1fr 40px;gap:6px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;"><span>Time</span><span>Level (dB)</span><span>Location</span><span></span></div>
     <div id="nr-c"></div>
     <button class="btn btn-ghost btn-sm" onclick="addNoise()">+ Reading</button>
   </div>
@@ -360,7 +372,7 @@ select{
 
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#128230; Items Required for Tomorrow</span></div></div>
   <div class="card">
-    <div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:62px 1fr 92px 40px;gap:5px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;"><span>Qty</span><span>Item</span><span>Source</span><span></span></div>
+    <div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:62px 1fr 92px 100px 40px;gap:5px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;"><span>Qty</span><span>Item</span><span>Source</span><span>Needed By</span><span></span></div>
     <div id="ir-c"></div>
     <div class="btns" style="margin-top:8px;">
       <button class="btn btn-ghost btn-sm" onclick="addItem()">+ Item</button>
@@ -379,7 +391,7 @@ select{
   </div>
 
   <div class="no-print" style="margin-top:16px;">
-    <button class="btn btn-submit" onclick="submitEOD()">&#128228; Submit &amp; Save</button>
+    <button class="btn btn-submit" id="eod-submit-btn" onclick="submitEOD()">&#128228; Submit &amp; Save</button>
     <button class="btn btn-ghost" onclick="window.print()" style="width:100%;margin-top:10px;min-height:48px;">&#128424; Print Tomorrow's Plan</button>
   </div>
   <div style="height:20px;"></div>
@@ -395,7 +407,7 @@ select{
       <div style="font-size:13px;line-height:1.6;">Loading&hellip;</div>
     </div>
   </div>
-  <div id="achv-score" style="display:none;" class="card">
+  <div id="achv-score" style="display:none;transition:opacity .3s;" class="card">
     <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Overall Efficiency</div>
     <div id="eff-n" style="font-size:58px;font-weight:900;line-height:1;letter-spacing:-.02em;"></div>
     <div id="eff-l" style="font-size:13px;font-weight:600;color:var(--muted);margin-top:6px;"></div>
@@ -435,7 +447,7 @@ var sb=null;
 try{if(SUPA_URL.indexOf('supabase')>0)sb=supabase.createClient(SUPA_URL,SUPA_KEY);}catch(e){}
 
 function getNames(){
-  var base=['Ash Aziz','Harry Harrison','David Smith','Bradley McKevitt','Daniel Seed','Dean Garrett','Jake Whetnall','James Cosgrove','James Shannon','Lee Clinton','Lewis Peck','Liam Smith','Stephen Lamb','Stephen Smithies'];
+  var base=['Ash Aziz','Harry Harrison','David Smith','Bradley McKevitt','Craig Walsh','Daniel Seed','Dean Garrett','Jake Whetnall','James Cosgrove','James Shannon','Lee Clinton','Lewis Peck','Liam Smith','Stephen Lamb','Stephen Smithies'];
   var ex=JSON.parse(localStorage.getItem('dgc_xstaff')||'[]');
   return base.concat(ex.filter(function(n){return base.indexOf(n)<0;}));
 }
@@ -504,6 +516,8 @@ function doLogin(){
   document.getElementById('fm').value=n;
   document.getElementById('ls').style.display='none';
   document.getElementById('app').style.display='block';
+  restoreDraft();
+  startDraftTimer();
   loadAchv();loadHist();
   // Show one-time AI setup hint if no key saved yet
   if(!localStorage.getItem('dgc_claude_key')&&!localStorage.getItem('dgc_ai_hint_seen')){
@@ -526,7 +540,7 @@ function addPT(){
   document.getElementById('pt-container').appendChild(d);
   addTask(i);
 }
-function addTask(ti,desc,pct){var c=document.getElementById('ptt'+ti);if(!c)return;var r=document.createElement('div');r.className='trow';r.innerHTML='<input type="text" placeholder="e.g. Drain run S4.5 to MH7, kerbing Zone G" value="'+(desc||'')+'"><input type="number" placeholder="%" min="0" max="100" value="'+(pct||'')+'" style="text-align:center;font-weight:900;"><button class="del" onclick="this.closest(\'.trow\').remove()">x</button>';c.appendChild(r);}
+function addTask(ti,desc,pct){var c=document.getElementById('ptt'+ti);if(!c)return;var r=document.createElement('div');r.className='trow';r.innerHTML='<input type="text" placeholder="e.g. Drain run S4.5 to MH7, kerbing Zone G" value="'+(desc||'')+'"><input type="number" placeholder="%" min="0" max="100" inputmode="numeric" value="'+(pct||'')+'" style="text-align:center;font-weight:900;" title="Leave blank = 100% target"><button class="del" onclick="this.closest(\'.trow\').remove()">x</button>';c.appendChild(r);}
 
 function addAL(){
   var i=AL_I++,l=TLTRS[i]||('T'+(i+1)),c=TCOLS[i]||'#94a3b8';
@@ -534,54 +548,131 @@ function addAL(){
   var inp=function(id,ph){return '<input type="text" id="'+id+'" placeholder="'+ph+'" list="nl" onclick="nc(this)" onblur="nb2(this)">';};
   d.innerHTML='<div class="thd"><div class="tdot" style="background:'+c+'"></div><div style="font-size:13px;font-weight:800;">Team '+l+'</div><button class="btn btn-red btn-sm" style="margin-left:auto;" onclick="this.closest(\'.tblk\').remove()">x</button></div>'+
     '<div class="g2" style="margin-bottom:8px;"><div><label>Lead</label>'+inp('ali'+i+'l','Tap to pick')+'</div><div><label>Op 1</label>'+inp('ali'+i+'o0','Tap to pick')+'</div><div><label>Op 2</label>'+inp('ali'+i+'o1','Tap to pick')+'</div><div><label>Op 3</label>'+inp('ali'+i+'o2','Tap to pick')+'</div></div>'+
-    '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;"><div style="flex:1;font-size:12px;font-weight:700;">Team '+l+' plant checks confirmed</div><div style="display:flex;align-items:center;gap:6px;"><div class="ptick" id="ptick'+i+'" onclick="var t=this;t.classList.toggle(\'on\');t.textContent=t.classList.contains(\'on\')?\'✓\':\'\';"></div><input type="text" id="ali'+i+'in" placeholder="Initials" style="width:60px;padding:7px 8px;font-size:12px;"></div></div>';
+    '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;flex-wrap:wrap;"><div style="flex:1;min-width:120px;font-size:12px;font-weight:700;">Team '+l+' plant checks confirmed</div><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><input type="text" id="ali'+i+'pt" placeholder="Plant type (e.g. CAT 308)" style="width:160px;padding:7px 8px;font-size:12px;"><div class="ptick" id="ptick'+i+'" onclick="var t=this;t.classList.toggle(\'on\');t.textContent=t.classList.contains(\'on\')?\'✓\':\'\';"></div><input type="text" id="ali'+i+'in" placeholder="Initials" style="width:60px;padding:7px 8px;font-size:12px;"></div></div>';
   document.getElementById('al-container').appendChild(d);
 }
 
-function addNoise(t,v){NR_I++;var id='nr'+NR_I;var r=document.createElement('div');r.className='nr';r.id=id;r.innerHTML='<input type="time" value="'+(t||'')+'"><input type="number" placeholder="dB" min="0" max="140" value="'+(v||'')+'"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('nr-c').appendChild(r);}
-function addItem(q,it,s){IR_I++;var id='ir'+IR_I;var r=document.createElement('div');r.className='ir';r.id=id;r.innerHTML='<input placeholder="Qty" value="'+(q||'')+'"><input placeholder="Item" value="'+(it||'')+'"><input placeholder="Supplier" value="'+(s||'')+'"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('ir-c').appendChild(r);}
+function nowTime(){var n=new Date();return ('0'+n.getHours()).slice(-2)+':'+('0'+n.getMinutes()).slice(-2);}
+function addNoise(t,v,loc){NR_I++;var id='nr'+NR_I;var r=document.createElement('div');r.className='nr';r.id=id;r.innerHTML='<input type="time" value="'+(t||nowTime())+'"><input type="number" placeholder="dB" min="0" max="140" inputmode="numeric" value="'+(v||'')+'"><input type="text" placeholder="Location (e.g. Zone 9)" value="'+(loc||'')+'"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('nr-c').appendChild(r);}
+function addItem(q,it,s,nb){IR_I++;var id='ir'+IR_I;var r=document.createElement('div');r.className='ir';r.id=id;r.innerHTML='<input placeholder="Qty" value="'+(q||'')+'"><input placeholder="Item" value="'+(it||'')+'"><input placeholder="Supplier" value="'+(s||'')+'"><input type="date" title="Needed by" value="'+(nb||'')+'" style="font-size:12px;"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('ir-c').appendChild(r);}
 
 var MIC_ICON='🎙';
-function vm(id,tid){if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){toast('Voice needs Chrome on Android or Safari on iOS','err');return;}if(_ma===id){stopV();return;}if(_ma)stopV();_ma=id;_mid=tid;var btn=document.getElementById('mic-'+id);btn.classList.add('on');var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent='⏹';var lb=btn.querySelector('.mic-label');if(lb)lb.textContent='Stop';var SR=window.SpeechRecognition||window.webkitSpeechRecognition;_mic=new SR();_mic.continuous=true;_mic.interimResults=true;_mic.lang='en-GB';var final='',existing=document.getElementById(tid).value;_mic.onresult=function(e){var interim='';for(var i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';else interim+=e.results[i][0].transcript;}document.getElementById(tid).value=(existing?existing+' ':'')+(final+interim).trim();};_mic.onerror=function(){stopV();};_mic.onend=function(){var captured=final.trim();stopV();if(captured&&CLAUDE_KEY)aiClean(tid,captured);}; _mic.start();}
-function stopV(){if(_mic){try{_mic.stop();}catch(e){}}_mic=null;if(_ma){var btn=document.getElementById('mic-'+_ma);if(btn){btn.classList.remove('on');var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent=MIC_ICON;var lb=btn.querySelector('.mic-label');if(lb)lb.textContent='';}_ma=null;}}
-function aiClean(tid,raw){
+// Store original mic button labels so we can restore them after recording
+var _micLabels={};
+function vm(id,tid){if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){toast('✗ Voice needs Chrome on Android or Safari on iOS','err');return;}if(_ma===id){stopV();return;}if(_ma)stopV();_ma=id;_mid=tid;var btn=document.getElementById('mic-'+id);
+  // Store original label before changing it
+  var lb=btn.querySelector('.mic-label');if(lb){_micLabels[id]=lb.textContent;}
+  btn.classList.add('on');var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent='⏹';if(lb)lb.textContent='Stop — tap to finish';
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;_mic=new SR();_mic.continuous=true;_mic.interimResults=true;_mic.lang='en-GB';var final='',existing=document.getElementById(tid).value;var valueAtStop='';
+  _mic.onresult=function(e){var interim='';for(var i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';else interim+=e.results[i][0].transcript;}document.getElementById(tid).value=(existing?existing+' ':'')+(final+interim).trim();};
+  _mic.onerror=function(){stopV();};
+  _mic.onend=function(){var captured=final.trim();valueAtStop=document.getElementById(tid).value;stopV();if(captured&&CLAUDE_KEY){var cleanBtn=document.getElementById('mic-'+id);if(cleanBtn){var cic=cleanBtn.querySelector('.mic-icon');if(cic)cic.textContent='⏳';var clb=cleanBtn.querySelector('.mic-label');if(clb)clb.textContent='Cleaning up...';}aiClean(tid,captured,valueAtStop,id);}};
+  _mic.start();}
+function stopV(){if(_mic){try{_mic.stop();}catch(e){}}_mic=null;if(_ma){var btn=document.getElementById('mic-'+_ma);if(btn){btn.classList.remove('on');var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent=MIC_ICON;var lb=btn.querySelector('.mic-label');if(lb)lb.textContent=_micLabels[_ma]||'Dictate';}_ma=null;}}
+function aiClean(tid,raw,valueAtStop,micId){
   var ta=document.getElementById(tid);if(!ta)return;
-  toast('Cleaning up with AI...');
-  fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:'Fix the grammar and punctuation of this voice transcript from a UK construction site manager. Keep all the meaning and facts. Return ONLY the corrected text, no explanation:\n\n'+raw}]})})
+  toast('Cleaning with AI...');
+  fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:300,messages:[{role:'user',content:'Fix the grammar and punctuation of this voice transcript from a UK construction site manager. Keep all the meaning and facts. Preserve technical terms, place names (Ballasalla, Dandara, Isle of Man), construction jargon (MH, HDPE, RC wall, kerb, etc.) and measurements exactly as spoken. Return ONLY the corrected text, no explanation:\n\n'+raw}]})})
   .then(function(r){return r.json();})
-  .then(function(d){if(d.content&&d.content[0]){ta.value=d.content[0].text.trim();toast('AI cleaned up ✓');}})
-  .catch(function(){/* silently ignore — raw transcript already in field */});}
+  .then(function(d){
+    if(d.content&&d.content[0]){
+      // Only overwrite if user hasn't edited the field since voice stopped
+      if(ta.value===valueAtStop){ta.value=d.content[0].text.trim();}
+      toast('✓ AI cleaned up');
+    }else{toast('✓ Voice saved (AI unavailable)');}
+    if(micId){var btn=document.getElementById('mic-'+micId);if(btn){var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent=MIC_ICON;var lb=btn.querySelector('.mic-label');if(lb)lb.textContent=_micLabels[micId]||'Dictate';}}
+  })
+  .catch(function(e){
+    toast('✗ AI cleanup failed — raw text saved','err');
+    if(micId){var btn=document.getElementById('mic-'+micId);if(btn){var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent=MIC_ICON;var lb=btn.querySelector('.mic-label');if(lb)lb.textContent=_micLabels[micId]||'Dictate';}}
+  });}
 
 
-function fetchWx(){fetch('https://api.open-meteo.com/v1/forecast?latitude=54.0833&longitude=-4.6333&current=temperature_2m,weathercode&timezone=Europe%2FLondon').then(function(r){return r.json();}).then(function(d){if(!d.current)return;var t=Math.round(d.current.temperature_2m);var wm={0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',51:'Light drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',80:'Showers'};document.getElementById('ft').value=t;toast((wm[d.current.weathercode]||'Code '+d.current.weathercode)+', '+t+'C');}).catch(function(){toast('Cannot fetch weather','err');});}
+function fetchWx(){fetch('https://api.open-meteo.com/v1/forecast?latitude=54.0833&longitude=-4.6333&current=temperature_2m,weathercode&timezone=Europe%2FLondon').then(function(r){return r.json();}).then(function(d){if(!d.current)return;var t=Math.round(d.current.temperature_2m);
+  // WMO weather code to description + dropdown option mapping
+  var wm={0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Icy fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Snow',73:'Heavy snow',75:'Blizzard',77:'Snow grains',80:'Showers',81:'Heavy showers',82:'Violent showers',85:'Snow showers',86:'Heavy snow showers',95:'Thunderstorm',96:'Thunderstorm with hail',99:'Severe thunderstorm'};
+  // Map WMO code to dropdown value
+  var dm={0:'Fine & dry',1:'Fine & dry',2:'Overcast',3:'Overcast',51:'Light rain',53:'Light rain',55:'Light rain',61:'Light rain',63:'Light rain',65:'Heavy rain',71:'Cold & dry',73:'Cold & dry',75:'Cold & dry',77:'Cold & dry',80:'Light rain',81:'Heavy rain',82:'Heavy rain',95:'Wind & rain',96:'Wind & rain',99:'Wind & rain'};
+  var code=d.current.weathercode;
+  document.getElementById('ft').value=t;
+  var wx=document.getElementById('fw');if(wx&&dm[code]){wx.value=dm[code];}
+  toast((wm[code]||'Code '+code)+', '+t+'°C');}).catch(function(){toast('✗ Cannot fetch weather','err');});}
 
 function getPlan(){var teams=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var rows=div.querySelectorAll('.trow');var tasks=[];rows.forEach(function(r){var ins=r.querySelectorAll('input');var desc=ins[0].value.trim();if(desc)tasks.push({desc:desc,target:parseFloat(ins[1].value)||100});});if(tasks.length)teams.push({team:TLTRS[i]||('T'+(i+1)),tasks:tasks});});return teams;}
-function getAlloc(){var a=[];document.querySelectorAll('.tblk[id^="al"]').forEach(function(div,i){var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};a.push({team:TLTRS[i]||('T'+(i+1)),lead:g('ali'+i+'l'),ops:[g('ali'+i+'o0'),g('ali'+i+'o1'),g('ali'+i+'o2')].filter(Boolean),plantOk:document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on'),initials:g('ali'+i+'in')});});return a;}
+function getAlloc(){var a=[];document.querySelectorAll('.tblk[id^="al"]').forEach(function(div,i){var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};a.push({team:TLTRS[i]||('T'+(i+1)),lead:g('ali'+i+'l'),ops:[g('ali'+i+'o0'),g('ali'+i+'o1'),g('ali'+i+'o2')].filter(Boolean),plantType:g('ali'+i+'pt'),plantOk:document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on'),initials:g('ali'+i+'in')});});return a;}
 
-function noNet(){toast('No internet — check your connection','err');}
+function noNet(){toast('✗ No internet — check your connection','err');}
+
+// ── DRAFT AUTOSAVE ──
+// Saves a snapshot of text fields every 60 seconds to localStorage.
+// Restores on load if the saved draft date matches today.
+function getDraftKey(){return 'dgc_draft_'+tod();}
+function saveDraft(){
+  try{
+    var d={
+      sm:document.getElementById('fm').value,
+      weather:document.getElementById('fw').value,
+      temp:document.getElementById('ft').value,
+      bt:document.getElementById('fbt').value,
+      visitors:document.getElementById('fv').value,
+      topics:document.getElementById('ftp').value,
+      risks:document.getElementById('frk').value,
+      eodResp:document.getElementById('feod-resp').value,
+      eodTeam:document.getElementById('feod-team').value,
+      sessions:document.getElementById('fses').value,
+      obs:document.getElementById('fob').value,
+      notes:document.getElementById('fnt').value,
+      savedAt:new Date().toISOString()
+    };
+    localStorage.setItem(getDraftKey(),JSON.stringify(d));
+  }catch(e){}
+}
+function restoreDraft(){
+  try{
+    var raw=localStorage.getItem(getDraftKey());if(!raw)return;
+    var d=JSON.parse(raw);
+    var set=function(id,v){var el=document.getElementById(id);if(el&&v!=null)el.value=v;};
+    set('fm',d.sm);set('fw',d.weather);set('ft',d.temp);set('fbt',d.bt);
+    set('fv',d.visitors);set('ftp',d.topics);set('frk',d.risks);
+    set('feod-resp',d.eodResp);set('feod-team',d.eodTeam);
+    set('fses',d.sessions);set('fob',d.obs);set('fnt',d.notes);
+    if(d.savedAt)toast('✓ Draft restored from '+(new Date(d.savedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})));
+  }catch(e){}
+}
+var _draftTimer=null;
+function startDraftTimer(){if(_draftTimer)clearInterval(_draftTimer);_draftTimer=setInterval(saveDraft,60000);}
+
 
 function submitEOD(){
   if(!sb){noNet();return;}
   var date=document.getElementById('fd').value;
-  if(!date){toast('Set the date first','err');return;}
-  var noise=[];document.querySelectorAll('.nr').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value)noise.push({time:ins[0].value,db:parseFloat(ins[1].value)});});
-  var items=[];document.querySelectorAll('.ir').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value.trim())items.push({qty:ins[0].value,item:ins[1].value,source:ins[2].value});});
-  var data={type:'dgc-eod',date:date,projectRef:PROJECT_REF,submittedBy:_uname||'Unknown',submittedAt:new Date().toISOString(),
+  if(!date){toast('✗ Set the date first','err');return;}
+  // Noise reading count warning (H&S requirement)
+  var noiseRows=[];document.querySelectorAll('.nr').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value)noiseRows.push(ins[1].value);});
+  if(noiseRows.length<3){if(!confirm('Only '+noiseRows.length+' noise reading(s) recorded — 3 are required. Submit anyway?'))return;}
+  var noise=[];document.querySelectorAll('.nr').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value)noise.push({time:ins[0].value,db:parseFloat(ins[1].value),location:ins[2]?ins[2].value:''});});
+  var items=[];document.querySelectorAll('.ir').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value.trim())items.push({qty:ins[0].value,item:ins[1].value,source:ins[2].value,neededBy:ins[3]?ins[3].value:''});});
+  var data={type:'dgc-eod',date:date,projectRef:PROJECT_REF,submittedBy:_uname||'Unknown',submittedAt:new Date().toISOString(),appVersion:APP_VERSION,
     header:{sm:document.getElementById('fm').value,weather:document.getElementById('fw').value,temp:document.getElementById('ft').value},
     meeting:{time:document.getElementById('fbt').value,topics:document.getElementById('ftp').value,risks:document.getElementById('frk').value,visitors:document.getElementById('fv').value},
     eodResponsibility:{person:document.getElementById('feod-resp').value,team:document.getElementById('feod-team').value},
     plan:getPlan(),alloc:getAlloc(),sessions:document.getElementById('fses').value,
     noise:noise,obs:document.getElementById('fob').value,items:items,comms:Object.assign({},COM),notes:document.getElementById('fnt').value};
-  var btn=document.querySelector('[onclick="submitEOD()"]');
+  var btn=document.getElementById('eod-submit-btn');
   function resetBtn(){if(btn){btn.textContent='📤 Submit & Save';btn.disabled=false;btn.style.background='';btn.style.boxShadow='';}}
   function errBtn(){if(btn){btn.textContent='⚠ Save failed — tap to retry';btn.disabled=false;btn.style.background='var(--red)';btn.style.boxShadow='0 4px 18px rgba(239,68,68,.35)';}}
   if(btn){btn.textContent='Saving...';btn.disabled=true;btn.style.background='';btn.style.boxShadow='';}
   sb.from('daily_records').upsert({project_ref:PROJECT_REF,gang:_uname||'Unknown',date:date,data:data,updated_at:new Date().toISOString()},{onConflict:'project_ref,gang,date'})
     .then(function(r){
-      if(r.error){toast('Save failed: '+r.error.message,'err');errBtn();}
-      else{if(btn){btn.textContent='✓ Saved';setTimeout(resetBtn,2000);}toast('Saved to cloud ✓');}
+      if(r.error){toast('✗ Save failed: '+r.error.message,'err');errBtn();}
+      else{
+        if(btn){btn.textContent='✓ Saved';setTimeout(resetBtn,2000);}
+        toast('✓ Saved to cloud');
+        // Clear the draft from localStorage after successful save
+        try{localStorage.removeItem('dgc_draft_'+date);}catch(e){}
+      }
     })
-    .catch(function(e){toast('Save failed — no internet?','err');errBtn();});
+    .catch(function(e){toast('✗ Save failed — no internet?','err');errBtn();});
 }
 
 function showAchvNone(msg,sub){
@@ -590,16 +681,19 @@ function showAchvNone(msg,sub){
   el.style.display='';
 }
 function loadAchv(){
-  if(!sb){showAchvNone('No plan found for yesterday','Fill in today’s EOD plan —<br>tomorrow you can record how you got on.');return;}
-  var yest=new Date();yest.setDate(yest.getDate()-1);var ys=yest.toISOString().slice(0,10);
-  document.getElementById('achv-sub').textContent='Based on plan from '+fmtD(ys);
-  sb.from('daily_records').select('data').eq('project_ref',PROJECT_REF).eq('date',ys).not('gang','like','ACHV_%').limit(10)
+  if(!sb){showAchvNone(‘No plan found’,’Fill in today\’s EOD plan —<br>tomorrow you can record how you got on.’);return;}
+  // Search up to 7 days back for the most recent plan (handles weekends and gaps)
+  var searchDates=[];for(var di=1;di<=7;di++){var d=new Date();d.setDate(d.getDate()-di);searchDates.push(d.toISOString().slice(0,10));}
+  document.getElementById(‘achv-sub’).textContent=’Loading most recent plan...’;
+  sb.from(‘daily_records’).select(‘date,data’).eq(‘project_ref’,PROJECT_REF).in(‘date’,searchDates).not(‘gang’,’like’,’ACHV_%’).order(‘date’,{ascending:false}).limit(20)
     .then(function(r){
-      var found=r.data&&r.data.find(function(x){return x.data&&x.data.plan&&x.data.plan.length>0;});
-      if(found)buildAchv(found.data);
-      else showAchvNone('No plan found for yesterday','Fill in today’s EOD plan —<br>tomorrow you can record how you got on.');
+      var found=(r.data||[]).find(function(x){return x.data&&x.data.plan&&x.data.plan.length>0;});
+      if(found){
+        document.getElementById(‘achv-sub’).textContent=’Based on plan from ‘+fmtD(found.date);
+        buildAchv(found.data);
+      }else showAchvNone(‘No recent plan found’,’Fill in today\’s EOD plan —<br>tomorrow you can record how you got on.’);
     })
-    .catch(function(){showAchvNone('Could not load plan','Check your internet connection and try again.');});
+    .catch(function(){showAchvNone(‘Could not load plan’,’Check your internet connection and try again.’);});
 }
 function buildAchv(data){
   var plan=data.plan||[];var tasks=[];
@@ -617,7 +711,7 @@ function buildAchv(data){
     d.innerHTML='<div style="font-size:12px;font-weight:700;color:var(--txt);margin-bottom:8px;"><span style="color:'+col+';font-weight:900;">Team '+task.team+'</span> - '+esc(task.desc)+'</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">'+
         '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Target (planned)</div><div style="font-size:26px;font-weight:900;color:var(--blue);">'+(task.target||'?')+'%</div></div>'+
-        '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Actual achieved</div><input type="number" id="ap'+i+'" placeholder="%" min="0" max="100" oninput="calcEff()" style="font-size:20px;font-weight:900;text-align:center;border-color:'+col+'44;padding:8px;"></div>'+
+        '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Actual achieved</div><input type="number" id="ap'+i+'" placeholder="%" min="0" max="100" inputmode="numeric" oninput="calcEff()" style="font-size:20px;font-weight:900;text-align:center;border-color:'+col+'44;padding:8px;"></div>'+
       '</div>'+
       '<button onclick="(function(n){var nb=document.getElementById(\'anb\'+n),tb=document.getElementById(\'ant\'+n);var vis=nb.style.display===\'flex\';nb.style.display=vis?\'none\':\'flex\';tb.style.display=vis?\'none\':\'block\';})('+i+')" style="background:none;border:none;color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;padding:4px 0;display:block;text-align:left;letter-spacing:.01em;">+ Add note</button>'+
       '<div id="anb'+i+'" style="display:none;"><button class="mic" id="mic-a'+i+'" onclick="vm(\'a'+i+'\',\'an'+i+'\')"><span class="mic-icon">'+MIC_ICON+'</span><span class="mic-label">Why didn\'t you hit it?</span></button></div>'+
@@ -629,11 +723,14 @@ function buildAchv(data){
 function calcEff(){
   var tasks=window._atasks;if(!tasks||!tasks.length)return;
   var totT=0,totA=0,cnt=0;
-  tasks.forEach(function(t,i){var a=parseFloat((document.getElementById('ap'+i)||{}).value);if(!isNaN(a)){totT+=t.target||100;totA+=a;cnt++;}});
-  if(cnt===0)return;
+  tasks.forEach(function(t,i){var el=document.getElementById('ap'+i);var a=el?parseFloat(el.value):NaN;if(!isNaN(a)){totT+=t.target||100;totA+=a;cnt++;}});
+  var scoreCard=document.getElementById('achv-score');
+  // Require at least one actual entered before showing score
+  if(cnt===0){if(scoreCard)scoreCard.style.display='none';return;}
+  if(scoreCard)scoreCard.style.display='';
   var eff=Math.round(totA/totT*100);
   var col=eff>=90?'#22c55e':eff>=70?'#f59e0b':'#ef4444';
-  var lbl=eff>=90?'On or ahead of plan':eff>=70?'Slightly under plan':'Significantly under plan';
+  var lbl=eff>=90?'On or ahead of plan — great work':eff>=70?'Slightly under plan':('Significantly under plan — '+cnt+' task(s) scored');
   document.getElementById('eff-n').textContent=eff+'%';document.getElementById('eff-n').style.color=col;
   document.getElementById('eff-l').textContent=lbl;document.getElementById('eff-p').textContent='Avg target: '+Math.round(totT/cnt)+'%';
   document.getElementById('eff-b').style.width=Math.min(100,eff)+'%';document.getElementById('eff-b').style.background=col;
@@ -789,7 +886,7 @@ function saveClaudeKey(){
 function tod(){return new Date().toISOString().slice(0,10);}
 function fmtD(s){if(!s)return'';return new Date(s+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function toast(m,t){var el=document.getElementById('toast');el.textContent=m;el.className='toast show'+(t==='err'?' err':'');setTimeout(function(){el.classList.remove('show');},2500);}
+function toast(m,t){var el=document.getElementById('toast');el.textContent=m;el.className='toast show'+(t==='err'?' err':'');setTimeout(function(){el.classList.remove('show');},2800);}
 </script>
 
 <!-- CLAUDE AI SETUP MODAL -->
