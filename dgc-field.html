@@ -16,6 +16,26 @@ var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
 var PROJECT_REF='BA4';
+var BA4_PROGRAMME = [
+  {wbs:'1.6',task:'Reduce Level Dig & Disposal',gang:'Gang A',start:'2026-04-09',end:'2026-04-16',pct:90,section:'Section 1 — Site Setup',keywords:['reduce','dig','disposal','level dig','rld']},
+  {wbs:'1.7',task:'Setting Out (Drainage)',gang:'Paul Carey',start:'2026-04-15',end:'2026-04-15',pct:90,section:'Section 1 — Site Setup',keywords:['setting out','drainage','paul carey','survey']},
+  {wbs:'1.15',task:'V15 Drainage remeasure +32m pipe run',gang:'Gang A/B/C',start:'2026-06-15',end:'2026-06-19',pct:0,section:'Section 1 — Site Setup',keywords:['remeasure','pipe run','v15','32m']},
+  {wbs:'2.7',task:'Subbase (Terram + Type 1) & Compaction — Top Road',gang:'Gang B',start:'2026-05-05',end:'2026-05-06',pct:10,section:'Section 2 — Top Road (B81 & B82)',keywords:['subbase','type 1','terram','compaction','top road','b81','b82']},
+  {wbs:'2.8',task:'Kerbs — Top Road',gang:'Gang B',start:'2026-05-07',end:'2026-05-11',pct:53,section:'Section 2 — Top Road (B81 & B82)',keywords:['kerbs','kerbing','top road','b81','b82']},
+  {wbs:'2.9',task:'Tarmac — Top Road (subcontractor)',gang:'HPM/TCQ',start:'2026-05-12',end:'2026-05-13',pct:0,section:'Section 2 — Top Road (B81 & B82)',keywords:['tarmac','tarmacking','road surface','asphalt','top road']},
+  {wbs:'3.8',task:'Subbase (Terram + Type 1) & Compaction — Mid Road',gang:'Gang A/C',start:'2026-05-19',end:'2026-05-26',pct:5,section:'Section 3 — Mid Road 1 & Road 3',keywords:['subbase','type 1','terram','compaction','mid road','road 3']},
+  {wbs:'3.9',task:'Kerbs — Mid Road (Gang 2)',gang:'Gang A',start:'2026-05-27',end:'2026-06-11',pct:53,section:'Section 3 — Mid Road 1 & Road 3',keywords:['kerbs','kerbing','mid road','road 3','gang 2']},
+  {wbs:'3.10',task:'Tarmac — Mid Road (subcontractor)',gang:'HPM/TCQ',start:'2026-06-12',end:'2026-06-16',pct:0,section:'Section 3 — Mid Road 1 & Road 3',keywords:['tarmac','tarmacking','road surface','asphalt','mid road']},
+  {wbs:'4.8',task:'Subbase (Terram + Type 1) & Compaction — Lower Road',gang:'Gang B',start:'2026-06-15',end:'2026-06-17',pct:0,section:'Section 4 — Lower Road 1',keywords:['subbase','type 1','terram','compaction','lower road','road 1']},
+  {wbs:'4.9',task:'Kerbs — Lower Road',gang:'Gang B',start:'2026-06-18',end:'2026-06-22',pct:25,section:'Section 4 — Lower Road 1',keywords:['kerbs','kerbing','lower road','road 1']},
+  {wbs:'4.10',task:'Tarmac — Lower Road (subcontractor)',gang:'HPM/TCQ',start:'2026-06-23',end:'2026-06-24',pct:0,section:'Section 4 — Lower Road 1',keywords:['tarmac','tarmacking','road surface','asphalt','lower road']},
+  {wbs:'5.1',task:'Drainage Trench Excavation, pipe, bed & surround — S4.5 to S4.6',gang:'Gang C',start:'2026-06-10',end:'2026-06-25',pct:0,section:'Section 5 — Drain Run S4.5–S4.6',keywords:['drainage','trench','pipe','bed','surround','s4.5','s4.6','drain run','section 5']},
+  {wbs:'5.2',task:'Backfill Trench & Compacting — S4.5 to S4.6',gang:'Gang C',start:'2026-06-26',end:'2026-06-29',pct:0,section:'Section 5 — Drain Run S4.5–S4.6',keywords:['backfill','compacting','trench','s4.5','s4.6']},
+  {wbs:'5.3',task:'Terram & Backfill with 6F2 & Compaction — S4.5 to S4.6',gang:'Gang C',start:'2026-06-30',end:'2026-07-02',pct:0,section:'Section 5 — Drain Run S4.5–S4.6',keywords:['terram','6f2','backfill','compaction','s4.5','s4.6']},
+  {wbs:'6.1',task:'Jet Washing & CCTV Survey',gang:'Gang A/C',start:'2026-06-29',end:'2026-06-30',pct:0,section:'Section 6 — Demob',keywords:['jet wash','jetting','cctv','survey','camera']},
+  {wbs:'6.2',task:'Tidy Site',gang:'Gang A',start:'2026-07-02',end:'2026-07-02',pct:0,section:'Section 6 — Demob',keywords:['tidy','clean','site tidy']},
+  {wbs:'6.3',task:'Demobilisation & Handover',gang:'Harry/Gang B',start:'2026-07-03',end:'2026-07-03',pct:0,section:'Section 6 — Demob',keywords:['demob','demobilise','handover','completion']}
+];
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
@@ -230,8 +250,8 @@ select{
       <label style="color:rgba(255,255,255,.55);text-align:left;display:block;">Who are you?</label>
       <select id="ln" style="font-size:16px;padding:14px 16px;font-weight:700;border-radius:12px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);color:#fff;width:100%;-webkit-appearance:none;appearance:none;cursor:pointer;min-height:54px;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23f59e0b' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 14px center;">
         <option value="">— Select your name —</option>
-        <option value="David Smith">David Smith</option>
         <option value="James Cosgrove">James Cosgrove</option>
+        <option value="David Smith">David Smith</option>
         <option value="Stephen Lamb">Stephen Lamb</option>
         <option value="Ash Aziz">Ash Aziz</option>
         <option value="Harry Harrison">Harry Harrison</option>
@@ -317,6 +337,11 @@ select{
     </div>
   </div>
   <div id="pt-container"></div>
+
+  <div class="btns no-print" style="margin-top:4px;margin-bottom:8px;">
+    <button class="btn btn-ghost" onclick="checkPlanVsProgramme()" id="prog-check-btn" style="flex:1;border-color:var(--blue);color:var(--blue);">&#128197; Check Against Programme</button>
+  </div>
+  <div id="prog-check-panel" style="display:none;"></div>
 
   <!-- EOD RESPONSIBILITY -->
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#128274; Who Locks Up Tomorrow?</span><span class="sec-s">Name the person responsible for end-of-day site security</span></div></div>
@@ -495,9 +520,12 @@ var _uname='';
   addItem();addItem();
   // Pre-select last used name in dropdown (still requires pressing Start)
   var s=localStorage.getItem('dgc_uname');
+  var sel=document.getElementById('ln');
   if(s){
-    var sel=document.getElementById('ln');
     if(sel){for(var oi=0;oi<sel.options.length;oi++){if(sel.options[oi].value===s){sel.selectedIndex=oi;break;}}}
+  }else{
+    // Default to James Cosgrove when no saved preference
+    if(sel){for(var oi=0;oi<sel.options.length;oi++){if(sel.options[oi].value==='James Cosgrove'){sel.selectedIndex=oi;break;}}}
   }
 })();
 
@@ -662,6 +690,14 @@ function submitEOD(){
   function resetBtn(){if(btn){btn.textContent='📤 Submit & Save';btn.disabled=false;btn.style.background='';btn.style.boxShadow='';}}
   function errBtn(){if(btn){btn.textContent='⚠ Save failed — tap to retry';btn.disabled=false;btn.style.background='var(--red)';btn.style.boxShadow='0 4px 18px rgba(239,68,68,.35)';}}
   if(btn){btn.textContent='Saving...';btn.disabled=true;btn.style.background='';btn.style.boxShadow='';}
+  // Collect programme check state
+  var progCheck = {};
+  Object.keys(_progCheckState).forEach(function(k) {
+    var s = _progCheckState[k];
+    progCheck[k] = { confirmed: s.confirmed, rogue: s.rogue, wbs: s.confirmedWbs || (s.result ? s.result.match_wbs : null) };
+  });
+  data.programmeCheck = progCheck;
+  data.hasRogueTasks = Object.values(progCheck).some(function(v) { return v.rogue; });
   sb.from('daily_records').upsert({project_ref:PROJECT_REF,gang:_uname||'Unknown',date:date,data:data,updated_at:new Date().toISOString()},{onConflict:'project_ref,gang,date'})
     .then(function(r){
       if(r.error){toast('✗ Save failed: '+r.error.message,'err');errBtn();}
@@ -789,6 +825,182 @@ function loadHist(){
     .catch(function(){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--red);font-size:13px;">Failed to load — check internet</div>';});
 }
 
+
+// ── PROGRAMME CHECK ──
+var _progCheckState = {}; // stores current check state per task
+
+function checkPlanVsProgramme() {
+  if (!CLAUDE_KEY) { toast('Claude AI key not set', 'err'); return; }
+
+  // Collect all tasks from the plan blocks
+  var tasks = [];
+  document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div, i) {
+    div.querySelectorAll('.trow').forEach(function(r) {
+      var ins = r.querySelectorAll('input');
+      var desc = ins[0] && ins[0].value.trim();
+      if (desc) tasks.push({ desc: desc, team: TLTRS[i] || ('T' + (i + 1)), pct: ins[1] ? ins[1].value : '' });
+    });
+  });
+
+  if (!tasks.length) { toast('Add some tasks to the plan first', 'err'); return; }
+
+  var btn = document.getElementById('prog-check-btn');
+  var panel = document.getElementById('prog-check-panel');
+  btn.disabled = true;
+  btn.textContent = 'Checking...';
+  panel.style.display = 'block';
+  panel.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Checking plan against Ballasalla Phase 4 programme...</div>';
+
+  var progSummary = BA4_PROGRAMME.map(function(t) {
+    return t.wbs + ': ' + t.task + ' (' + t.section + ', ' + t.gang + ', ' + t.pct + '% done, ' + t.start + ' to ' + t.end + ')';
+  }).join('\n');
+
+  var taskList = tasks.map(function(t, i) { return (i+1) + '. [Team ' + t.team + '] ' + t.desc; }).join('\n');
+
+  var prompt = 'You are checking a construction site daily plan against the Ballasalla Phase 4 programme for DGC Ltd on the Isle of Man.\n\nACTIVE PROGRAMME TASKS:\n' + progSummary + '\n\nTOMORROW\'S PLAN (entered by site manager):\n' + taskList + '\n\nFor each plan entry, identify the best matching programme task. Return ONLY valid JSON — an array of objects, one per plan entry:\n[{"plan_idx":0,"plan_text":"...","match_wbs":"4.9","match_task":"Kerbs — Lower Road","section":"Section 4","gang":"Gang B","pct_done":25,"confidence":"HIGH","alternatives":[{"wbs":"3.9","task":"Kerbs — Mid Road"}]},{"plan_idx":1,"plan_text":"...","match_wbs":null,"confidence":"NONE","alternatives":[]}]\n\nConfidence: HIGH=clear match, MEDIUM=likely, LOW=possible but vague, NONE=nothing matches.\nAlternatives: up to 2 other possible matches (can be empty).\nReturn ONLY the JSON array, no other text.';
+
+  fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': CLAUDE_KEY,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5',
+      max_tokens: 800,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    btn.disabled = false;
+    btn.textContent = '📅 Check Against Programme';
+    if (!d.content || !d.content[0]) { panel.innerHTML = '<div style="color:var(--red);padding:12px;">AI error — try again</div>'; return; }
+    try {
+      var text = d.content[0].text.trim();
+      // Strip markdown code fences if present
+      text = text.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '');
+      var results = JSON.parse(text);
+      renderProgCheckResults(results, tasks, panel);
+    } catch(e) {
+      panel.innerHTML = '<div style="color:var(--red);padding:12px;">Could not parse response — try again</div>';
+    }
+  })
+  .catch(function(e) {
+    btn.disabled = false;
+    btn.textContent = '📅 Check Against Programme';
+    panel.innerHTML = '<div style="color:var(--red);padding:12px;">Connection error — check internet</div>';
+  });
+}
+
+function renderProgCheckResults(results, tasks, panel) {
+  _progCheckState = {};
+  var html = '<div style="margin-bottom:4px;font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">Programme Check Results</div>';
+
+  results.forEach(function(r) {
+    var task = tasks[r.plan_idx] || { desc: r.plan_text, team: '?' };
+    var stateKey = 'task_' + r.plan_idx;
+    _progCheckState[stateKey] = { result: r, confirmed: false, rogue: false };
+
+    var confColor = r.confidence === 'HIGH' ? 'var(--green)' : r.confidence === 'MEDIUM' ? 'var(--acc)' : r.confidence === 'LOW' ? 'var(--muted)' : 'var(--red)';
+    var confLabel = r.confidence === 'NONE' ? 'No match found' : r.confidence + ' confidence match';
+
+    html += '<div id="pc-' + r.plan_idx + '" style="background:var(--s2);border:1.5px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:10px;">';
+    html += '<div style="font-size:12px;font-weight:900;color:var(--txt);margin-bottom:6px;">[Team ' + esc(task.team) + '] ' + esc(task.desc) + '</div>';
+
+    if (r.match_wbs) {
+      html += '<div style="background:rgba(0,0,0,.2);border-radius:8px;padding:10px;margin-bottom:10px;">';
+      html += '<div style="font-size:10px;color:' + confColor + ';font-weight:800;margin-bottom:3px;">' + confLabel + '</div>';
+      html += '<div style="font-size:13px;font-weight:700;color:var(--txt);">' + esc(r.wbs || r.match_wbs) + ' — ' + esc(r.match_task) + '</div>';
+      html += '<div style="font-size:11px;color:var(--muted);margin-top:3px;">' + esc(r.section || '') + (r.gang ? ' · ' + esc(r.gang) : '') + (r.pct_done !== undefined ? ' · ' + r.pct_done + '% done' : '') + '</div>';
+      html += '</div>';
+      html += '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
+      html += '<button class="btn btn-ghost btn-sm" style="border-color:var(--green);color:var(--green);flex:2;" data-idx="' + r.plan_idx + '" onclick="confirmPlanTask(' + r.plan_idx + ')">✓ Yes, that\'s it</button>';
+      if (r.alternatives && r.alternatives.length) {
+        html += '<button class="btn btn-ghost btn-sm" style="flex:2;" data-idx="' + r.plan_idx + '" onclick="showAlternatives(' + r.plan_idx + ')">Different task</button>';
+      }
+      html += '<button class="btn btn-ghost btn-sm" style="border-color:var(--red);color:var(--red);flex:1;" onclick="goRogue(' + r.plan_idx + ')">🔴 Rogue</button>';
+      html += '</div>';
+    } else {
+      // No match
+      html += '<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Not found on the programme.</div>';
+      html += '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
+      if (r.alternatives && r.alternatives.length) {
+        html += '<button class="btn btn-ghost btn-sm" style="flex:2;" onclick="showAlternatives(' + r.plan_idx + ')">Show possible matches</button>';
+      }
+      html += '<button class="btn btn-ghost btn-sm" style="border-color:var(--red);color:var(--red);flex:1;" onclick="goRogue(' + r.plan_idx + ')">🔴 Not on programme</button>';
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+
+  panel.innerHTML = html;
+}
+
+function confirmPlanTask(idx) {
+  var el = document.getElementById('pc-' + idx);
+  if (!el) return;
+  var state = _progCheckState['task_' + idx];
+  if (state) { state.confirmed = true; }
+  el.style.borderColor = 'var(--green)';
+  var buttons = el.querySelectorAll('button');
+  buttons.forEach(function(b) { b.style.display = 'none'; });
+  var tick = document.createElement('div');
+  tick.style.cssText = 'font-size:12px;font-weight:800;color:var(--green);margin-top:6px;';
+  tick.textContent = '✓ Confirmed — on programme';
+  el.appendChild(tick);
+  toast('Task confirmed on programme');
+}
+
+function showAlternatives(idx) {
+  var state = _progCheckState['task_' + idx];
+  if (!state || !state.result.alternatives || !state.result.alternatives.length) return;
+  var el = document.getElementById('pc-' + idx);
+  var buttons = el.querySelectorAll('button');
+  buttons.forEach(function(b) { b.style.display = 'none'; });
+  var altHtml = '<div style="font-size:11px;color:var(--muted);margin:8px 0 6px;">Select the right task:</div>';
+  state.result.alternatives.forEach(function(alt) {
+    var prog = BA4_PROGRAMME.find(function(p) { return p.wbs === alt.wbs; });
+    altHtml += '<button class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:6px;text-align:left;justify-content:flex-start;" onclick="confirmAlt(' + idx + ',\'' + alt.wbs + '\')">';
+    altHtml += esc(alt.wbs) + ' — ' + esc(alt.task || (prog ? prog.task : ''));
+    if (prog) altHtml += ' <span style="color:var(--muted);font-size:10px;margin-left:4px;">(' + prog.pct + '% done)</span>';
+    altHtml += '</button>';
+  });
+  altHtml += '<button class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:6px;color:var(--red);border-color:var(--red);" onclick="goRogue(' + idx + ')">🔴 None of these — not on programme</button>';
+  var altDiv = document.createElement('div');
+  altDiv.innerHTML = altHtml;
+  el.appendChild(altDiv);
+}
+
+function confirmAlt(idx, wbs) {
+  var prog = BA4_PROGRAMME.find(function(p) { return p.wbs === wbs; });
+  if (!prog) return;
+  var state = _progCheckState['task_' + idx];
+  if (state) { state.confirmed = true; state.confirmedWbs = wbs; }
+  var el = document.getElementById('pc-' + idx);
+  el.style.borderColor = 'var(--green)';
+  el.querySelectorAll('button').forEach(function(b) { b.style.display = 'none'; });
+  var tick = document.createElement('div');
+  tick.style.cssText = 'font-size:12px;font-weight:800;color:var(--green);margin-top:6px;';
+  tick.textContent = '✓ Confirmed: ' + wbs + ' — ' + prog.task;
+  el.appendChild(tick);
+  toast('Task confirmed on programme');
+}
+
+function goRogue(idx) {
+  var state = _progCheckState['task_' + idx];
+  if (state) { state.rogue = true; }
+  var el = document.getElementById('pc-' + idx);
+  el.style.borderColor = 'var(--red)';
+  el.querySelectorAll('button').forEach(function(b) { b.style.display = 'none'; });
+  var flag = document.createElement('div');
+  flag.style.cssText = 'font-size:12px;font-weight:800;color:var(--red);margin-top:6px;';
+  flag.textContent = '⚠ Flagged as unplanned — will be noted in record';
+  el.appendChild(flag);
+  toast('Flagged as unplanned task');
+}
 
 // ── TRELLO INTEGRATION (hardcoded — Dandara B4 board, Driver Auto list) ───
 var TR_KEY='13855c334f867850234cc3ae25a7f857';
