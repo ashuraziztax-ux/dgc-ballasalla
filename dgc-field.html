@@ -10,11 +10,11 @@
 <meta http-equiv="Expires" content="0">
 <title>DGC Daily Sheet</title>
 <script>
-// DGC Daily Sheet v1.4.1 — Fix voice cleanup, team dictation, remove flip card, target required, clean up
+// DGC Daily Sheet v1.5.0 — TWEAK boardroom pass: today's output, programme check btn, split sessions, qty fields, nav rename, EOD checklist restored, UX fixes
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='1.4.1';
+var APP_VERSION='1.5.0';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -293,7 +293,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please choose your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;">Start &rarr;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.4.1</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.5.0</div>
   </div>
 </div>
 
@@ -351,7 +351,7 @@ select{
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
     <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
     <button onclick="reopenSOD()" style="background:none;border:1.5px solid rgba(245,158,11,.4);border-radius:9px;color:var(--acc);font-size:11px;font-weight:800;padding:6px 10px;cursor:pointer;white-space:nowrap;font-family:inherit;min-height:36px;" class="no-print" title="Open morning check">&#128203; AM check</button>
-    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.4.1</span>
+    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.5.0</span>
   </div>
 </div>
 
@@ -359,7 +359,7 @@ select{
 
 <!-- EOD PLANNER -->
 <div class="tab active" id="tab-eod">
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; End of Day &mdash; Plan for Tomorrow</span><span class="sec-s" id="dl"></span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; End of Day</span><span class="sec-s" id="dl"></span></div></div>
   <div class="card g2" style="gap:8px;margin-bottom:10px;">
     <div><label>Date</label><input type="date" id="fd"></div>
     <div><label>Site Manager</label><input type="text" id="fm" list="nl" onclick="nc(this)" onblur="nb2(this)" placeholder="Tap to pick"></div>
@@ -369,6 +369,31 @@ select{
     <div><label>Temp (&#176;C)</label>
       <div style="display:flex;gap:5px;"><input type="number" id="ft" placeholder="&#176;C" inputmode="numeric" style="flex:1;"><button class="btn btn-blue btn-sm" onclick="fetchWx()" title="Fetch tomorrow's weather">&#9728;</button><button class="btn btn-blue btn-sm" onclick="fetchWx('brief')" title="Fetch with brief summary">&#128203;</button></div>
       <div id="wx-brief" style="display:none;font-size:12px;font-weight:600;color:var(--blue);margin-top:6px;padding:6px 10px;background:rgba(56,189,248,.08);border-radius:8px;border:1px solid rgba(56,189,248,.25);"></div>
+    </div>
+  </div>
+
+  <!-- TODAY'S OUTPUT — critical for programme tracking -->
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#9989; How Did Today Go? <span style="color:var(--red);font-size:10px;font-weight:900;vertical-align:middle;">&#9733; KEY DATA FOR ASH</span></span><span class="sec-s">Record what actually happened today — this is the programme tracking data</span></div></div>
+  <div class="card" id="today-output-card">
+    <div id="today-output-tasks" style="margin-bottom:12px;">
+      <!-- populated by buildTodayOutputFromPlan() on load -->
+      <div style="font-size:13px;color:var(--muted);padding:8px 0;">Loading yesterday's plan...</div>
+    </div>
+    <div class="mb8">
+      <label>Overall: how did the day go?</label>
+      <select id="ftodayrating">
+        <option value="">Select...</option>
+        <option value="good">Good day — on or ahead of plan</option>
+        <option value="ok">OK — slightly behind but manageable</option>
+        <option value="poor">Poor day — significantly behind plan</option>
+        <option value="disrupted">Disrupted — weather / plant / access issue</option>
+        <option value="nowork">No work — site closed / holiday</option>
+      </select>
+    </div>
+    <div>
+      <label>Why? (delays, issues, what helped)</label>
+      <button class="mic" id="mic-tdy" onclick="vm('tdy','ftodaynotes')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate what happened today</span></button>
+      <textarea id="ftodaynotes" rows="3" placeholder="e.g. Gang A hit hard ground at Plot 7, lost 2 hours. Gang B ahead of schedule on kerbing. Rain stopped play 14:00-15:30..."></textarea>
     </div>
   </div>
 
@@ -391,25 +416,41 @@ select{
   </div>
 
   <div class="sec">
-    <div class="sec-inner"><span class="sec-t">&#128208; Tomorrow's Plan</span><span class="sec-s">What each team will do &middot; set target % by end of day</span></div>
-    <div style="display:flex;gap:6px;" class="no-print">
+    <div class="sec-inner"><span class="sec-t">&#128208; Tomorrow's Plan</span><span class="sec-s">What each team will do &middot; set target % complete by end of day</span></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;" class="no-print">
       <button class="btn btn-ghost btn-sm" onclick="addPerson()">+ Person</button>
       <button class="btn btn-ghost btn-sm" onclick="addPT()">+ Team</button>
+      <button class="btn btn-blue btn-sm" id="prog-check-btn" onclick="checkPlanVsProgramme()" title="Check tasks against BA4 master programme">&#128197; Check Programme</button>
     </div>
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:8px;padding:8px 12px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-radius:8px;">
+    <strong style="color:var(--acc);">Target %</strong> = how far through that task you expect to be by end of tomorrow. Leave blank for 100% (task finishes tomorrow).
   </div>
   <div id="pt-container"></div>
 
-  <div id="prog-check-panel" style="display:none;"></div>
+  <div id="prog-check-panel" style="display:none;margin-bottom:12px;"></div>
 
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#9203; Session Times</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#9203; Session Notes <span style="color:var(--muted);font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;">(optional — fill what's useful)</span></span></div></div>
   <div class="card">
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
-      <div style="border-left:3px solid var(--acc);padding-left:9px;"><div style="font-size:11px;font-weight:900;color:var(--acc);line-height:1.3;">07:30–10:00</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Morning</div></div>
-      <div style="border-left:3px solid var(--blue);padding-left:9px;"><div style="font-size:11px;font-weight:900;color:var(--blue);line-height:1.3;">10:30–13:00</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Mid-morning</div></div>
-      <div style="border-left:3px solid var(--green);padding-left:9px;"><div style="font-size:11px;font-weight:900;color:var(--green);line-height:1.3;">13:30–17:30</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Afternoon</div></div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div>
+        <div style="border-left:3px solid var(--acc);padding-left:9px;margin-bottom:6px;"><div style="font-size:11px;font-weight:900;color:var(--acc);">07:30 – 10:00 Morning</div></div>
+        <button class="mic" id="mic-s1" onclick="vm('s1','fses1')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate morning session</span></button>
+        <textarea id="fses1" rows="2" placeholder="How the morning session went..."></textarea>
+      </div>
+      <div>
+        <div style="border-left:3px solid var(--blue);padding-left:9px;margin-bottom:6px;"><div style="font-size:11px;font-weight:900;color:var(--blue);">10:30 – 13:00 Mid-morning</div></div>
+        <button class="mic" id="mic-s2" onclick="vm('s2','fses2')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate mid-morning session</span></button>
+        <textarea id="fses2" rows="2" placeholder="How the mid-morning went..."></textarea>
+      </div>
+      <div>
+        <div style="border-left:3px solid var(--green);padding-left:9px;margin-bottom:6px;"><div style="font-size:11px;font-weight:900;color:var(--green);">13:30 – 17:30 Afternoon</div></div>
+        <button class="mic" id="mic-s3" onclick="vm('s3','fses3')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate afternoon session</span></button>
+        <textarea id="fses3" rows="2" placeholder="How the afternoon went..."></textarea>
+      </div>
     </div>
-    <button class="mic" id="mic-ses" onclick="vm('ses','fses')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate session notes</span></button>
-    <textarea id="fses" rows="3" placeholder="How the day went across all three sessions..."></textarea>
+    <!-- legacy hidden field keeps backward compat with submitEOD which reads fses -->
+    <textarea id="fses" style="display:none;"></textarea>
   </div>
 
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#128202; Noise Readings <span style="color:var(--red);font-size:10px;font-weight:900;vertical-align:middle;letter-spacing:0;">&#9733; REQUIRED</span></span><span class="sec-s">3 spot readings — H&amp;S requirement. Delete button only if you have a 4th.</span></div></div>
@@ -419,7 +460,11 @@ select{
     <button class="btn btn-ghost btn-sm" onclick="addNoise()">+ Reading</button>
   </div>
 
-<!-- EOD checklist removed - delegated separately -->
+  <!-- EOD SITE CHECKLIST — end-of-day sign-off -->
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#9989; End of Day Site Check <span style="color:var(--red);font-size:10px;font-weight:900;vertical-align:middle;">&#9733; REQUIRED</span></span><span class="sec-s">Tick off before you leave site</span></div></div>
+  <div class="card" style="padding:4px 12px;" id="eod-checklist-card">
+    <div id="eod-chk-items"></div>
+  </div>
 
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#9888;&#65039; Observations / Issues</span></div></div>
   <div class="card">
@@ -479,7 +524,11 @@ select{
 
 <!-- HOW DID WE DO -->
 <div class="tab" id="tab-achv">
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#9989; How Did We Do?</span><span class="sec-s" id="achv-sub">Loading...</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#9989; Yesterday's Results</span><span class="sec-s" id="achv-sub">What % did each team actually hit?</span></div></div>
+  <div style="font-size:13px;color:var(--muted);margin-bottom:8px;padding:10px 14px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.18);border-radius:10px;line-height:1.6;">
+    Enter the actual % complete for each task below. This data goes straight to Ash so he can track the programme without the QS.
+  </div>
+  <div id="achv-prog-banner" style="display:none;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:13px;font-weight:700;color:var(--acc);line-height:1.6;"></div>
   <div id="achv-none" class="card">
     <div style="text-align:center;padding:32px 16px;color:var(--muted);" id="achv-none-inner">
       <div style="font-size:32px;margin-bottom:12px;opacity:.6;">&#8987;</div>
@@ -496,25 +545,25 @@ select{
   </div>
   <div id="achv-rows"></div>
   <div id="achv-form" style="display:none;">
-    <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Notes on Today's Output</span></div></div>
+    <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Notes for Ash</span><span class="sec-s">Anything he needs to know about today</span></div></div>
     <div class="card">
-      <button class="mic" id="mic-an" onclick="vm('an','fan')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate notes</span></button>
-      <textarea id="fan" rows="3" placeholder="Why things took longer or faster than planned..."></textarea>
+      <button class="mic" id="mic-an" onclick="vm('an','fan')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate notes for Ash</span></button>
+      <textarea id="fan" rows="3" placeholder="Why things took longer or faster. Any issues Ash needs to act on..."></textarea>
     </div>
-    <button class="btn btn-submit" onclick="submitAchv()">&#128190; Save Achievement Record</button>
+    <button class="btn btn-submit" onclick="submitAchv()">&#128190; Save Results Record</button>
     <div style="height:20px;"></div>
   </div>
 </div>
 
 <!-- HISTORY -->
 <div class="tab" id="tab-hist">
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128218; History</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128218; History</span><span class="sec-s">Last 20 days — tap any entry to expand</span></div></div>
   <div id="hist"></div>
 </div>
 
 </div><!-- /main -->
 <div class="bnav">
-  <button class="nb active" id="nav-eod" onclick="sw('eod',this)"><span class="ni">&#128203;</span>EOD Plan</button>
+  <button class="nb active" id="nav-eod" onclick="sw('eod',this)"><span class="ni">&#128203;</span>Plan</button>
   <button class="nb" id="nav-achv" onclick="sw('achv',this)"><span class="ni">&#9989;</span>Results</button>
   <button class="nb" id="nav-hist" onclick="sw('hist',this)"><span class="ni">&#128218;</span>History</button>
 </div>
@@ -548,7 +597,12 @@ var EODS=[
   {k:'noise',l:'Daily noise readings completed (3 spot readings)'},
   {k:'time',l:'Timesheets / Discovery sheets filled in (if required)'}
 ];
-var COMMS=[{k:'wa',l:'Site images sent to client WhatsApp group'},{k:'eod',l:'EOD filed in site office'}];
+var COMMS=[
+  {k:'wa',l:'Site images sent to client WhatsApp group'},
+  {k:'ash',l:'Update sent to Ash / Harry'},
+  {k:'eod',l:'EOD plan submitted via app'},
+  {k:'dandara',l:'Dandara notified of any changes / delays'}
+];
 var TCOLS=['#f59e0b','#38bdf8','#a78bfa','#22c55e','#fb923c'];
 var TLTRS=['A','B','C','D','E'];
 var CHK={},COM={},PT_I=0,AL_I=0,NR_I=0,IR_I=0;
@@ -559,10 +613,27 @@ var _uname='';
 (function init(){
   rebuildNL();
   document.getElementById('fd').value=todayPlus1();
-  document.getElementById('dl').textContent='Plan for '+fmtD(todayPlus1());
-  // EOD checklist removed from this form (delegated separately)
-  // Keep CHK state object in case it's referenced elsewhere
+  document.getElementById('dl').textContent='EOD '+fmtD(tod())+' — Plan for '+fmtD(todayPlus1());
+  // Build EOD site checklist
   EODS.forEach(function(e){ CHK[e.k]=false; });
+  var eodCard=document.getElementById('eod-chk-items');
+  if(eodCard){
+    EODS.forEach(function(e){
+      var d=document.createElement('div');d.className='chki';
+      d.onclick=function(){CHK[e.k]=!CHK[e.k];var b=d.querySelector('.chkb');b.classList.toggle('on',CHK[e.k]);b.textContent=CHK[e.k]?'✓':'';};
+      d.innerHTML='<div class="chkb"></div><div style="font-size:13px;font-weight:600;color:var(--txt);">'+e.l+'</div>';
+      eodCard.appendChild(d);
+    });
+  }
+  // Populate today output section from yesterday's plan (if available)
+  if(sb){
+    var yesterday=(function(){var d=new Date();d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);})();
+    sb.from('daily_records').select('data').eq('project_ref',PROJECT_REF).eq('date',yesterday).not('gang','like','ACHV_%').not('gang','like','SOD_%').order('updated_at',{ascending:false}).limit(1)
+      .then(function(r){
+        var found=r.data&&r.data[0]&&r.data[0].data;
+        buildTodayOutputFromPlan(found);
+      }).catch(function(){buildTodayOutputFromPlan(null);});
+  }else{buildTodayOutputFromPlan(null);}
   COMMS.forEach(function(c){
     COM[c.k]=false;
     var d=document.createElement('div');d.className='cr';
@@ -710,7 +781,7 @@ function addTask(ti,desc,pct){
     +'<input type="text" placeholder="e.g. Drain run S4.5 to MH7, kerbing Zone G" value="'+(desc||'')+'">'
     +'<div id="'+rateHintId+'" style="display:none;font-size:11px;font-weight:700;color:var(--blue);padding:3px 6px;background:rgba(56,189,248,.08);border-radius:6px;border:1px solid rgba(56,189,248,.2);"></div>'
     +'</div>'
-    +'<input type="number" placeholder="%(blank=100)" min="0" max="100" inputmode="numeric" value="'+(pct||'')+'" style="text-align:center;font-weight:900;" title="Leave blank = 100% target">'
+    +'<input type="number" placeholder="100%" min="0" max="100" inputmode="numeric" value="'+(pct||'')+'" style="text-align:center;font-weight:900;" title="% complete target by end of day. Leave blank = 100% (task finishes tomorrow)">'
     +'<button class="del" onclick="this.closest(\'.trow\').remove()">x</button>';
   var inp=r.querySelector('input[type=text]');
   if(inp){
@@ -887,7 +958,7 @@ function fetchWx(mode){
   .catch(function(){toast('✗ Cannot fetch weather','err');});
 }
 
-function getPlan(){var teams=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var rows=div.querySelectorAll('.trow');var tasks=[];rows.forEach(function(r){var ins=r.querySelectorAll('input');var desc=ins[0].value.trim();if(desc)tasks.push({desc:desc,target:parseFloat(ins[1].value)||100});});var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var leader=g('ptl'+i);var members=[g('ptm'+i+'_0'),g('ptm'+i+'_1')].filter(Boolean);var notes=g('pt-notes-'+i);var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');if(tasks.length||leader)teams.push({team:TLTRS[i]||('T'+(i+1)),leader:leader,members:members,tasks:tasks,notes:notes,plantOk:plantOk});});return teams;}
+function getPlan(){var teams=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var rows=div.querySelectorAll('.trow');var tasks=[];rows.forEach(function(r){var ins=r.querySelectorAll('input');var desc=ins[0].value.trim();if(desc){var tpct=ins[1]&&ins[1].value.trim()?parseFloat(ins[1].value):100;tasks.push({desc:desc,target:tpct});}});var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var leader=g('ptl'+i);var members=[g('ptm'+i+'_0'),g('ptm'+i+'_1')].filter(Boolean);var notes=g('pt-notes-'+i);var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');if(tasks.length||leader)teams.push({team:TLTRS[i]||('T'+(i+1)),leader:leader,members:members,tasks:tasks,notes:notes,plantOk:plantOk});});return teams;}
 function getAlloc(){var a=[];document.querySelectorAll('.tblk[id^="al"]').forEach(function(div,i){var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};a.push({team:TLTRS[i]||('T'+(i+1)),lead:g('ali'+i+'l'),ops:[g('ali'+i+'o0'),g('ali'+i+'o1'),g('ali'+i+'o2')].filter(Boolean),plantType:g('ali'+i+'pt'),plantOk:document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on'),initials:g('ali'+i+'in')});});return a;}
 
 function noNet(){toast('✗ No internet — check your connection','err');}
@@ -908,7 +979,11 @@ function saveDraft(){
       risks:document.getElementById('frk').value,
       eodResp:document.getElementById('feod-resp').value,
       eodTeam:document.getElementById('feod-team').value,
-      sessions:document.getElementById('fses').value,
+      ses1:document.getElementById('fses1')?document.getElementById('fses1').value:'',
+      ses2:document.getElementById('fses2')?document.getElementById('fses2').value:'',
+      ses3:document.getElementById('fses3')?document.getElementById('fses3').value:'',
+      todayRating:document.getElementById('ftodayrating')?document.getElementById('ftodayrating').value:'',
+      todayNotes:document.getElementById('ftodaynotes')?document.getElementById('ftodaynotes').value:'',
       obs:document.getElementById('fob').value,
       notes:document.getElementById('fnt').value,
       savedAt:new Date().toISOString()
@@ -924,40 +999,91 @@ function restoreDraft(){
     set('fm',d.sm);set('fw',d.weather);set('ft',d.temp);set('fbt',d.bt);
     set('fv',d.visitors);set('ftp',d.topics);set('frk',d.risks);
     set('feod-resp',d.eodResp);set('feod-team',d.eodTeam);
-    set('fses',d.sessions);set('fob',d.obs);set('fnt',d.notes);
-    if(d.savedAt)toast('✓ Draft restored from '+(new Date(d.savedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})));
+    set('fses1',d.ses1);set('fses2',d.ses2);set('fses3',d.ses3);
+    set('ftodayrating',d.todayRating);set('ftodaynotes',d.todayNotes);
+    set('fob',d.obs);set('fnt',d.notes);
+    if(d.savedAt)toast('Draft restored from '+(new Date(d.savedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})));
   }catch(e){}
 }
 var _draftTimer=null;
 function startDraftTimer(){if(_draftTimer)clearInterval(_draftTimer);_draftTimer=setInterval(saveDraft,60000);}
 
 
+// ── TODAY'S OUTPUT — builds task list from yesterday's plan ──
+function buildTodayOutputFromPlan(planData){
+  var container=document.getElementById('today-output-tasks');
+  if(!container)return;
+  if(!planData||!planData.plan||!planData.plan.length){
+    container.innerHTML='<div style="font-size:13px;color:var(--muted);padding:4px 0;">No plan found from yesterday — just fill in the overall rating above.</div>';
+    return;
+  }
+  var tasks=[];
+  (planData.plan||[]).forEach(function(t){
+    (t.tasks||[]).forEach(function(tk){
+      if(tk.desc)tasks.push({team:t.team,desc:tk.desc,target:tk.target||100});
+    });
+  });
+  if(!tasks.length){container.innerHTML='<div style="font-size:13px;color:var(--muted);padding:4px 0;">No tasks in yesterday\'s plan.</div>';return;}
+  var tcols={A:'#f59e0b',B:'#38bdf8',C:'#a78bfa',D:'#22c55e',E:'#fb923c'};
+  var html='<div style="font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px;">Yesterday\'s targets — how far did each team get?</div>';
+  tasks.forEach(function(t,i){
+    var col=tcols[t.team]||'#94a3b8';
+    var est=estimateHours(t.desc);
+    html+='<div style="background:var(--s2);border:1.5px solid var(--bdr);border-radius:10px;padding:11px 13px;margin-bottom:8px;">';
+    html+='<div style="font-size:11px;font-weight:800;color:'+col+';margin-bottom:3px;">TEAM '+esc(t.team)+' — Target: '+t.target+'%</div>';
+    html+='<div style="font-size:13px;font-weight:700;margin-bottom:8px;">'+esc(t.desc)+'</div>';
+    html+='<div style="display:grid;grid-template-columns:1fr'+(est.matched?' 1fr':'');html+=';gap:8px;">';
+    html+='<div><div style="font-size:10px;color:var(--muted);font-weight:800;margin-bottom:3px;">ACTUAL % DONE</div>';
+    html+='<input type="number" id="tod-pct-'+i+'" placeholder="%" min="0" max="100" inputmode="numeric" style="font-size:18px;font-weight:900;text-align:center;border-color:'+col+'44;padding:8px;width:100%;background:var(--bg);border:1.5px solid var(--bdr);border-radius:8px;color:var(--txt);outline:none;min-height:48px;"></div>';
+    if(est.matched){
+      html+='<div><div style="font-size:10px;color:var(--muted);font-weight:800;margin-bottom:3px;">ACTUAL '+esc(est.unit||'UNITS')+'</div>';
+      html+='<input type="number" id="tod-qty-'+i+'" placeholder="e.g. 18" inputmode="decimal" style="font-size:18px;font-weight:900;text-align:center;border-color:'+col+'44;padding:8px;width:100%;background:var(--bg);border:1.5px solid var(--bdr);border-radius:8px;color:var(--txt);outline:none;min-height:48px;"></div>';
+    }
+    html+='</div>';
+    html+='</div>';
+  });
+  container.innerHTML=html;
+  // Store tasks for use in submitEOD
+  window._todayOutputTasks=tasks;
+}
+
 function submitEOD(){
   if(!sb){noNet();return;}
   var date=document.getElementById('fd').value;
   if(!date){toast('✗ Set the date first','err');return;}
-  // Check all task targets are filled
-  var missingTarget=false;
-  document.querySelectorAll('.trow').forEach(function(r){
-    var ins=r.querySelectorAll('input');
-    if(ins[0]&&ins[0].value.trim()&&(!ins[1]||!ins[1].value.trim())){
-      ins[1].style.borderColor='var(--red)';
-      missingTarget=true;
-      setTimeout(function(){ins[1].style.borderColor='';},3000);
-    }
-  });
-  if(missingTarget){toast('Fill in target % for all tasks','err');return;}
+  // Target % is optional — blank = 100% (task expected to complete)
+  // No validation block needed
   // Noise reading count warning (H&S requirement)
   var noiseRows=[];document.querySelectorAll('.nr').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value)noiseRows.push(ins[1].value);});
   if(noiseRows.length<3){if(!confirm('Only '+noiseRows.length+' noise reading(s) recorded — 3 are required. Submit anyway?'))return;}
   var noise=[];document.querySelectorAll('.nr').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value)noise.push({time:ins[0].value,db:parseFloat(ins[1].value),location:ins[2]?ins[2].value:''});});
   var items=[];document.querySelectorAll('.ir').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value.trim())items.push({qty:ins[0].value,item:ins[1].value,source:ins[2].value,byTime:ins[3]?ins[3].value:''});});
   items.sort(function(a,b){return (a.byTime||'99:99').localeCompare(b.byTime||'99:99');});
+  // Merge split session notes into combined field + keep individual
+  var ses1=document.getElementById('fses1')?document.getElementById('fses1').value:'';
+  var ses2=document.getElementById('fses2')?document.getElementById('fses2').value:'';
+  var ses3=document.getElementById('fses3')?document.getElementById('fses3').value:'';
+  var sesCombined=[ses1&&('AM: '+ses1),ses2&&('Mid: '+ses2),ses3&&('PM: '+ses3)].filter(Boolean).join('\n');
+  // Sync hidden fses for backward compat
+  var fsesel=document.getElementById('fses');if(fsesel)fsesel.value=sesCombined;
+  // EOD checklist state
+  var eodCheckState={};EODS.forEach(function(e){eodCheckState[e.k]=CHK[e.k]?'done':false;});
   var data={type:'dgc-eod',date:date,projectRef:PROJECT_REF,submittedBy:_uname||'Unknown',submittedAt:new Date().toISOString(),appVersion:APP_VERSION,
     header:{sm:document.getElementById('fm').value,weather:document.getElementById('fw').value,temp:document.getElementById('ft').value},
     meeting:{time:document.getElementById('fbt').value,topics:document.getElementById('ftp').value,risks:document.getElementById('frk').value,visitors:document.getElementById('fv').value},
     eodResponsibility:{person:document.getElementById('feod-resp').value,team:document.getElementById('feod-team').value},
-    plan:getPlan(),alloc:getAlloc(),sessions:document.getElementById('fses').value,
+    plan:getPlan(),alloc:getAlloc(),
+    sessions:{combined:sesCombined,am:ses1,mid:ses2,pm:ses3},
+    todayOutput:(function(){
+      var todayTasks=window._todayOutputTasks||[];
+      var taskResults=todayTasks.map(function(t,i){
+        return{team:t.team,desc:t.desc,target:t.target,
+          actual:parseFloat((document.getElementById('tod-pct-'+i)||{}).value)||null,
+          actualQty:parseFloat((document.getElementById('tod-qty-'+i)||{}).value)||null};
+      });
+      return{rating:document.getElementById('ftodayrating')?document.getElementById('ftodayrating').value:'',notes:document.getElementById('ftodaynotes')?document.getElementById('ftodaynotes').value:'',tasks:taskResults};
+    })(),
+    eodChecklist:eodCheckState,
     noise:noise,obs:document.getElementById('fob').value,items:items,comms:Object.assign({},COM),notes:document.getElementById('fnt').value};
   var btn=document.getElementById('eod-submit-btn');
   function resetBtn(){if(btn){btn.textContent='📤 Submit & Save';btn.disabled=false;btn.style.background='';btn.style.boxShadow='';}}
@@ -1014,6 +1140,13 @@ function buildAchv(data){
   document.getElementById('achv-none').style.display='none';document.getElementById('achv-none-inner').innerHTML='';
   document.getElementById('achv-score').style.display='';
   document.getElementById('achv-form').style.display='';
+  // Programme banner — which BA4 tasks are in play today
+  var banner=document.getElementById('achv-prog-banner');
+  if(banner){
+    var today=tod();var todayWbs=[];
+    BA4_PROGRAMME.forEach(function(p){if(p.start<=today&&p.end>=today&&p.pct<100)todayWbs.push(p.wbs+' '+p.task+' ('+p.pct+'% done)');});
+    if(todayWbs.length){banner.innerHTML='<strong>Programme tasks active today:</strong><br>'+todayWbs.join('<br>');banner.style.display='block';}
+  }
   var cm={A:'#f59e0b',B:'#38bdf8',C:'#a78bfa',D:'#22c55e',E:'#fb923c'};
   var container=document.getElementById('achv-rows');container.innerHTML='';
   var todayHours=getWorkingHours(tod());
@@ -1037,12 +1170,13 @@ function buildAchv(data){
     d.innerHTML='<div style="font-size:12px;font-weight:700;color:var(--txt);margin-bottom:8px;"><span style="color:'+col+';font-weight:900;">Team '+task.team+'</span> - '+esc(task.desc)+'</div>'+
       '<div style="display:grid;grid-template-columns:'+colCols+';gap:10px;margin-bottom:8px;" id="kpi-row-'+i+'">'+
         '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Target (planned)</div><div style="font-size:26px;font-weight:900;color:var(--blue);">'+(task.target||'?')+'%</div></div>'+
-        '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Actual achieved</div><input type="number" id="ap'+i+'" placeholder="%" min="0" max="100" inputmode="numeric" oninput="calcEff();calcKPI('+i+','+task.target+','+JSON.stringify(est.matched)+','+JSON.stringify(est.dailyOutput||0)+',\''+esc(est.unit||'')+'\')" style="font-size:20px;font-weight:900;text-align:center;border-color:'+col+'44;padding:8px;"></div>'+
+        '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Actual % achieved</div><input type="number" id="ap'+i+'" placeholder="%" min="0" max="100" inputmode="numeric" oninput="calcEff();calcKPI('+i+','+task.target+','+JSON.stringify(est.matched)+','+JSON.stringify(est.dailyOutput||0)+',\''+esc(est.unit||'')+'\')" style="font-size:20px;font-weight:900;text-align:center;border-color:'+col+'44;padding:8px;"><div style="font-size:10px;color:var(--muted);margin-top:4px;">'+(est.matched?'Also enter metres/units below':'')+'</div></div>'+
         (est.matched?'<div>'+benchHtml+'</div>':'')+
       '</div>'+
-      '<button onclick="(function(n){var nb=document.getElementById(\'anb\'+n),tb=document.getElementById(\'ant\'+n);var vis=nb.style.display===\'flex\';nb.style.display=vis?\'none\':\'flex\';tb.style.display=vis?\'none\':\'block\';})('+i+')" style="background:none;border:none;color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;padding:4px 0;display:block;text-align:left;letter-spacing:.01em;">+ Add note</button>'+
+      (est.matched?'<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--muted);">Actual output ('+esc(est.unit||'units')+')</label><input type="number" id="aq'+i+'" placeholder="e.g. 18" inputmode="decimal" style="font-size:16px;font-weight:900;text-align:center;border-color:'+col+'44;padding:8px;" title="How many '+esc(est.unit||'units')+' did you actually complete?"></div>':'')+
+      '<button onclick="(function(n){var nb=document.getElementById(\'anb\'+n),tb=document.getElementById(\'ant\'+n);var vis=nb.style.display===\'flex\';nb.style.display=vis?\'none\':\'flex\';tb.style.display=vis?\'none\':\'block\';})('+i+')" style="background:none;border:none;color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;padding:4px 0;display:block;text-align:left;letter-spacing:.01em;">+ Add note on this task</button>'+
       '<div id="anb'+i+'" style="display:none;"><button class="mic" id="mic-a'+i+'" onclick="vm(\'a'+i+'\',\'an'+i+'\')"><span class="mic-icon">'+MIC_ICON+'</span><span class="mic-label">Why didn\'t you hit it?</span></button></div>'+
-      '<textarea id="an'+i+'" rows="2" placeholder="Reason if under target..." style="display:none;"></textarea>';
+      '<textarea id="an'+i+'" rows="2" placeholder="Reason if under target, or what helped if ahead..." style="display:none;"></textarea>';
     container.appendChild(d);
   });
   window._atasks=tasks;calcEff();
@@ -1086,7 +1220,7 @@ function calcKPI(i,target,hasRate,dailyOutput,unit){
 function submitAchv(){
   if(!sb){noNet();return;}
   var tasks=window._atasks;if(!tasks)return;
-  var actuals=tasks.map(function(t,i){return{team:t.team,desc:t.desc,target:t.target,actual:parseFloat((document.getElementById('ap'+i)||{}).value)||null,note:(document.getElementById('an'+i)||{}).value||''};});
+  var actuals=tasks.map(function(t,i){return{team:t.team,desc:t.desc,target:t.target,actual:parseFloat((document.getElementById('ap'+i)||{}).value)||null,actualQty:parseFloat((document.getElementById('aq'+i)||{}).value)||null,note:(document.getElementById('an'+i)||{}).value||''};});
   var totT=0,totA=0,cnt=0;actuals.forEach(function(a){if(a.actual!==null){totT+=a.target||100;totA+=a.actual;cnt++;}});
   var eff=cnt>0?Math.round(totA/totT*100):null;
   var rec={type:'dgc-achv',date:tod(),submittedBy:_uname,submittedAt:new Date().toISOString(),tasks:actuals,efficiency:eff,notes:(document.getElementById('fan')||{}).value||''};
@@ -1121,7 +1255,9 @@ function loadHist(){
             var sm=r.header&&r.header.sm?r.header.sm:'';var wx=r.header&&r.header.weather?r.header.weather:'';
             var notes=r.notes?'<div style="font-size:12px;color:var(--txt);margin-top:8px;border-top:1px solid var(--bdr);padding-top:8px;"><strong style="font-size:11px;color:var(--acc);">Notes:</strong><br>'+esc(r.notes)+'</div>':'';
             var obs=r.obs?'<div style="font-size:12px;color:var(--txt);margin-top:6px;"><strong style="font-size:11px;color:var(--red);">Observations:</strong><br>'+esc(r.obs)+'</div>':'';
-            var sess=r.sessions?'<div style="font-size:12px;color:var(--txt);margin-top:6px;"><strong style="font-size:11px;color:var(--blue);">Session notes:</strong><br>'+esc(r.sessions)+'</div>':'';
+            var sesObj=r.sessions||{};var sesTxt=typeof sesObj==='string'?sesObj:(sesObj.combined||'');
+            var sess=sesTxt?'<div style="font-size:12px;color:var(--txt);margin-top:6px;"><strong style="font-size:11px;color:var(--blue);">Session notes:</strong><br>'+esc(sesTxt)+'</div>':'';
+            var todayOut=r.todayOutput&&r.todayOutput.rating?'<div style="font-size:12px;color:var(--txt);margin-top:6px;"><strong style="font-size:11px;color:var(--green);">Day rating:</strong> '+esc(r.todayOutput.rating)+(r.todayOutput.notes?'<br>'+esc(r.todayOutput.notes):'')+'</div>':'';
             var expandId='hexp'+di;
             return '<div style="background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;" onclick="var x=document.getElementById(\''+expandId+'\');x.style.display=x.style.display===\'none\'?\'\':\'none\';">'+
               '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'+
@@ -1130,7 +1266,7 @@ function loadHist(){
               '</div>'+
               '<div style="font-size:12px;color:var(--muted);line-height:1.7;">'+(sm?'<strong style="color:var(--txt);">SM:</strong> '+esc(sm)+(wx?' &middot; '+esc(wx):'')+'<br>':'')+(plan||'<em>No plan recorded</em>')+'</div>'+
               '<div id="'+expandId+'" style="display:none;">'+
-                (notes||obs||sess||'<div style="font-size:12px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr);font-style:italic;">No additional detail recorded.</div>')+
+                (todayOut||notes||obs||sess||'<div style="font-size:12px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr);font-style:italic;">No additional detail recorded.</div>')+
               '</div>'+
             '</div>';
           }).join('');
