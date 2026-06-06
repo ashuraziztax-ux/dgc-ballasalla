@@ -10,11 +10,11 @@
 <meta http-equiv="Expires" content="0">
 <title>DGC Daily Sheet</title>
 <script>
-// DGC Daily Sheet v1.7.0 — SOD logo+always-show, attendance dropdown, today's plan weather, remove yesterday from EOD, comms simplified, save screen
+// DGC Daily Sheet v1.7.1 — 4 nav tabs (Morning/Today/Tomorrow/History), History as full performance report
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='1.7.0';
+var APP_VERSION='1.7.1';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -369,14 +369,14 @@ select{
     <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
     <button id="reset-sod-btn" onclick="resetMorningCheck()" class="no-print" title="Reset morning check (test only)" style="background:none;border:none;color:rgba(100,116,139,.3);font-size:10px;cursor:pointer;padding:4px;font-family:inherit;">&#8635;</button>
     <button onclick="reopenSOD()" style="background:none;border:1.5px solid rgba(245,158,11,.4);border-radius:9px;color:var(--acc);font-size:11px;font-weight:800;padding:6px 10px;cursor:pointer;white-space:nowrap;font-family:inherit;min-height:36px;" class="no-print" title="Open morning check">&#128203; AM check</button>
-    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.7.0</span>
+    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.7.1</span>
   </div>
 </div>
 
 <div class="main">
 
 <!-- EOD PLANNER -->
-<div class="tab active" id="tab-eod">
+<div class="tab" id="tab-eod">
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; End of Day</span><span class="sec-s" id="dl"></span></div></div>
   <div class="card g2" style="gap:8px;margin-bottom:10px;">
     <div><label>Date</label><input type="date" id="fd"></div>
@@ -544,15 +544,30 @@ select{
 
 <!-- HISTORY -->
 <div class="tab" id="tab-hist">
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128218; History</span><span class="sec-s">Last 20 days — tap any entry to expand</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128218; History</span><span class="sec-s">Last 30 days — full performance report</span></div></div>
   <div id="hist"></div>
+</div>
+
+<!-- MORNING TAB — shows SOD content inline -->
+<div class="tab active" id="tab-sod-tab">
+  <div id="sod-inline-content" style="padding:8px 0;">
+    <div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Loading morning check...</div>
+  </div>
+</div>
+
+<!-- TODAY'S PLAN TAB -->
+<div class="tab" id="tab-today-tab">
+  <div id="today-tab-content" style="padding:8px 0;">
+    <div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Loading today's plan...</div>
+  </div>
 </div>
 
 </div><!-- /main -->
 <div class="bnav">
-  <button class="nb active" id="nav-eod" onclick="sw('eod',this)"><span class="ni">&#128203;</span>Plan</button>
-  <button class="nb" id="nav-achv" onclick="sw('achv',this)"><span class="ni">&#9989;</span>Results</button>
-  <button class="nb" id="nav-hist" onclick="sw('hist',this)"><span class="ni">&#128218;</span>History</button>
+  <button class="nb active" id="nav-sod-tab" onclick="sw('sod-tab',this)"><span class="ni">&#127749;</span>Morning</button>
+  <button class="nb" id="nav-today-tab" onclick="sw('today-tab',this)"><span class="ni">&#128203;</span>Today</button>
+  <button class="nb" id="nav-eod" onclick="sw('eod',this)"><span class="ni">&#128221;</span>Tomorrow</button>
+  <button class="nb" id="nav-hist" onclick="sw('hist',this)"><span class="ni">&#128202;</span>History</button>
 </div>
 </div><!-- /app -->
 <datalist id="nl"></datalist>
@@ -692,7 +707,9 @@ function sw(name,btn){
     if(btn)btn.classList.add('active');
     if(name==='hist')loadHist();
     if(name==='achv')loadAchv();
-  }catch(e){toast('✗ Tab error — try again','err');}
+    if(name==='sod-tab')loadSODTab();
+    if(name==='today-tab')showTodayPlanInline();
+  }catch(e){toast('Tab error — try again','err');}
 }
 
 function addPT(){
@@ -1327,49 +1344,106 @@ function submitAchv(){
 function loadHist(){
   var el=document.getElementById('hist');
   if(!el)return;
-  if(!sb){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">No internet connection</div>';return;}
-  try{
-  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Loading...</div>';
-  // Load EOD records (not achievement records)
-  sb.from('daily_records').select('date,gang,data').eq('project_ref',PROJECT_REF).not('gang','like','ACHV_%').order('date',{ascending:false}).limit(30)
+  if(!sb){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);">No internet</div>';return;}
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Loading history...</div>';
+
+  sb.from('daily_records').select('date,gang,data').eq('project_ref',PROJECT_REF)
+    .not('gang','like','ACHV_%').not('gang','like','SOD_%')
+    .order('date',{ascending:false}).limit(30)
     .then(function(eodRes){
-      var eods=eodRes.data||[];
-      // Also load achievement records for efficiency scores
-      return sb.from('daily_records').select('date,gang,data').eq('project_ref',PROJECT_REF).like('gang','ACHV_%').order('date',{ascending:false}).limit(30)
+      return sb.from('daily_records').select('date,gang,data').eq('project_ref',PROJECT_REF)
+        .like('gang','ACHV_%').order('date',{ascending:false}).limit(30)
         .then(function(achvRes){
+          var eods=eodRes.data||[];
           var achvs=achvRes.data||[];
-          var amap={};achvs.forEach(function(a){if(a.data&&a.data.efficiency!=null)amap[a.date]=a.data;});
-          if(!eods.length){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">No records yet — submit your first EOD plan to see history</div>';return;}
-          // Group by date, pick the most complete record per date
-          var byDate={};eods.forEach(function(r){if(!byDate[r.date]||(r.data&&r.data.plan&&r.data.plan.length>0))byDate[r.date]=r;});
-          var dates=Object.keys(byDate).sort().reverse();
-          el.innerHTML=dates.slice(0,20).map(function(d,di){
-            var r=byDate[d].data||{};var a=amap[d];
-            var effCol=a&&a.efficiency!=null?(a.efficiency>=90?'#22c55e':a.efficiency>=70?'#f59e0b':'#ef4444'):'';
-            var effBadge=a&&a.efficiency!=null?'<span style="display:inline-block;background:'+effCol+';color:#0f1117;font-weight:900;font-size:11px;border-radius:6px;padding:2px 8px;margin-left:8px;">'+a.efficiency+'%</span>':'';
-            var plan=(r.plan||[]).map(function(t){var tcol=t.team==='A'?'#f59e0b':t.team==='B'?'#38bdf8':t.team==='C'?'#a78bfa':t.team==='D'?'#22c55e':'#fb923c';return '<span style="color:'+tcol+';font-weight:900;">Team '+t.team+':</span> '+(t.tasks||[]).map(function(tk){return esc(tk.desc)+(tk.target?' ('+tk.target+'%)':'');}).join(', ');}).join('<br>');
-            var sm=r.header&&r.header.sm?r.header.sm:'';var wx=r.header&&r.header.weather?r.header.weather:'';
-            var notes=r.notes?'<div style="font-size:12px;color:var(--txt);margin-top:8px;border-top:1px solid var(--bdr);padding-top:8px;"><strong style="font-size:11px;color:var(--acc);">Notes:</strong><br>'+esc(r.notes)+'</div>':'';
-            var obs=r.obs?'<div style="font-size:12px;color:var(--txt);margin-top:6px;"><strong style="font-size:11px;color:var(--red);">Observations:</strong><br>'+esc(r.obs)+'</div>':'';
-            var sesObj=r.sessions||{};var sesTxt=typeof sesObj==='string'?sesObj:(sesObj.combined||'');
-            var sess=sesTxt?'<div style="font-size:12px;color:var(--txt);margin-top:6px;"><strong style="font-size:11px;color:var(--blue);">Session notes:</strong><br>'+esc(sesTxt)+'</div>':'';
-            var todayOut=r.todayOutput&&r.todayOutput.rating?'<div style="font-size:12px;color:var(--txt);margin-top:6px;"><strong style="font-size:11px;color:var(--green);">Day rating:</strong> '+esc(r.todayOutput.rating)+(r.todayOutput.notes?'<br>'+esc(r.todayOutput.notes):'')+'</div>':'';
-            var expandId='hexp'+di;
-            return '<div style="background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;" onclick="var x=document.getElementById(\''+expandId+'\');x.style.display=x.style.display===\'none\'?\'\':\'none\';">'+
-              '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'+
-                '<div style="font-size:11px;font-weight:800;color:var(--acc);">'+fmtD(d)+effBadge+'</div>'+
-                '<div style="font-size:12px;color:var(--muted);">&#9660; expand</div>'+
-              '</div>'+
-              '<div style="font-size:12px;color:var(--muted);line-height:1.7;">'+(sm?'<strong style="color:var(--txt);">SM:</strong> '+esc(sm)+(wx?' &middot; '+esc(wx):'')+'<br>':'')+(plan||'<em>No plan recorded</em>')+'</div>'+
-              '<div id="'+expandId+'" style="display:none;">'+
-                (todayOut||notes||obs||sess||'<div style="font-size:12px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr);font-style:italic;">No additional detail recorded.</div>')+
-              '</div>'+
-            '</div>';
-          }).join('');
+          var amap={};achvs.forEach(function(a){if(a.data)amap[a.date]=a.data;});
+
+          if(!eods.length){
+            el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);">No records yet</div>';
+            return;
+          }
+
+          // Group by date, pick best record per date
+          var byDate={};
+          eods.forEach(function(r){if(!byDate[r.date]||(r.data&&r.data.plan&&r.data.plan.length>0))byDate[r.date]=r.data;});
+
+          var html='';
+          Object.keys(byDate).sort().reverse().forEach(function(date){
+            var r=byDate[date]||{};
+            var achv=amap[date];
+            var plan=r.plan||[];
+
+            // Day header
+            var eff=achv&&achv.efficiency!=null?achv.efficiency:null;
+            var effColor=eff!=null?(eff>=90?'var(--green)':eff>=70?'var(--acc)':'var(--red)'):'var(--muted)';
+
+            html+='<div style="background:var(--surf);border:1.5px solid var(--bdr);border-radius:14px;padding:16px;margin-bottom:14px;">';
+
+            // Header row
+            html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--bdr);">';
+            html+='<div>';
+            html+='<div style="font-size:15px;font-weight:900;color:var(--acc);">'+fmtD(date)+'</div>';
+            if(r.header){html+='<div style="font-size:12px;color:var(--muted);">'+(r.header.weather||'')+(r.header.temp?' &middot; '+r.header.temp+'&deg;C':'')+'</div>';}
+            html+='</div>';
+            if(eff!=null){html+='<div style="font-size:28px;font-weight:900;color:'+effColor+';">'+eff+'%</div>';}
+            html+='</div>';
+
+            // SM + meeting brief
+            if(r.header&&r.header.sm){html+='<div style="font-size:12px;color:var(--muted);margin-bottom:10px;"><strong>SM:</strong> '+esc(r.header.sm)+'</div>';}
+            if(r.meeting&&r.meeting.topics){html+='<div style="font-size:12px;color:var(--muted);margin-bottom:10px;font-style:italic;">Meeting: '+esc(r.meeting.topics.substring(0,120))+(r.meeting.topics.length>120?'...':'')+'</div>';}
+
+            // Teams — planned vs actual
+            if(plan.length){
+              html+='<div style="margin-bottom:10px;">';
+              plan.forEach(function(t){
+                var col={A:'#f59e0b',B:'#38bdf8',C:'#a78bfa',D:'#22c55e',E:'#fb923c'}[t.team]||'#94a3b8';
+                html+='<div style="margin-bottom:8px;padding:10px;background:var(--s2);border-radius:10px;border-left:3px solid '+col+';">';
+                html+='<div style="font-size:11px;font-weight:900;color:'+col+';margin-bottom:4px;">TEAM '+esc(t.team)+(t.leader?' &mdash; '+esc(t.leader):'')+'</div>';
+                (t.tasks||[]).forEach(function(tk){
+                  var actual=null;
+                  if(achv&&achv.tasks){
+                    var match=achv.tasks.find(function(at){return at.desc===tk.desc;});
+                    if(match)actual=match.actual;
+                  }
+                  var rate=estimateHours(tk.desc||'');
+                  html+='<div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;margin-bottom:3px;">';
+                  html+='<div style="flex:1;color:var(--txt);">'+esc(tk.desc||'')+'</div>';
+                  html+='<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">';
+                  html+='<span style="color:var(--muted);font-size:10px;">Plan: '+(tk.target||100)+'%</span>';
+                  if(actual!=null){
+                    var actColor=actual>=(tk.target||100)?'var(--green)':actual>=(tk.target||100)*0.8?'var(--acc)':'var(--red)';
+                    html+='<span style="color:'+actColor+';font-weight:800;font-size:11px;">Got: '+actual+'%</span>';
+                  }
+                  if(rate&&rate.matched){html+='<span style="font-size:9px;color:var(--blue);background:rgba(56,189,248,.1);padding:2px 5px;border-radius:4px;">~'+rate.rateDescription+'</span>';}
+                  html+='</div></div>';
+                });
+                html+='</div>';
+              });
+              html+='</div>';
+            }
+
+            // Noise readings
+            if(r.noise&&r.noise.filter(function(n){return n.db;}).length){
+              html+='<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Noise: '+r.noise.filter(function(n){return n.db;}).map(function(n){return n.time+' &rarr; '+n.db+'dB';}).join(' &middot; ')+'</div>';
+            }
+
+            // Items ordered
+            if(r.items&&r.items.filter(function(i){return i.item;}).length){
+              html+='<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Materials ordered: '+r.items.filter(function(i){return i.item;}).map(function(i){return i.qty+' '+i.item;}).join(', ')+'</div>';
+            }
+
+            // Site diary snippet
+            if(r.notes&&r.notes.trim()){
+              html+='<div style="font-size:11px;color:var(--muted);font-style:italic;border-top:1px solid var(--bdr);padding-top:8px;margin-top:8px;">'+esc(r.notes.substring(0,150))+(r.notes.length>150?'...':'')+'</div>';
+            }
+
+            html+='</div>';
+          });
+
+          el.innerHTML=html||'<div style="text-align:center;padding:40px;color:var(--muted);">No records</div>';
         });
     })
-    .catch(function(){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--red);font-size:13px;">Failed to load — check internet</div>';});
-  }catch(e){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--red);font-size:13px;">Error loading history — try refreshing</div>';}
+    .catch(function(){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--red);">Failed to load history</div>';});
 }
 
 
@@ -2253,6 +2327,134 @@ function showApp(){
   document.getElementById('app').style.display='block';
   document.body.style.overflow='';
   loadAchv();loadHist();
+  // Refresh tab content if already on a tab
+  loadSODTab();
+  showTodayPlanInline();
+}
+
+function loadSODTab(){
+  var el=document.getElementById('sod-inline-content');
+  if(!el)return;
+  var d=window._sodPlanData;
+  if(!d){
+    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px;">No morning check recorded yet today.<br><span style="font-size:12px;">Complete the morning SOD check to see it here.</span></div>';
+    return;
+  }
+  var html='';
+  // Header
+  html+='<div style="background:var(--surf);border:1.5px solid var(--bdr);border-radius:14px;padding:16px;margin-bottom:12px;">';
+  html+='<div style="font-size:15px;font-weight:900;color:var(--acc);margin-bottom:4px;">Morning Check &mdash; '+fmtD(tod())+'</div>';
+  // Site check
+  if(typeof _siteCheckOk!=='undefined'&&_siteCheckOk!==null){
+    var siteColor=_siteCheckOk?'var(--green)':'var(--red)';
+    var siteText=_siteCheckOk?'Site secure and as expected':'Issues found on arrival';
+    html+='<div style="font-size:13px;font-weight:800;color:'+siteColor+';margin-bottom:8px;">'+((_siteCheckOk?'&#10003;':'&#10007;')+' '+siteText)+'</div>';
+    if(!_siteCheckOk){
+      var issues=document.getElementById('sod-site-issues');
+      if(issues&&issues.value)html+='<div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-style:italic;">'+esc(issues.value)+'</div>';
+    }
+  }
+  html+='</div>';
+  // Attendance
+  var att=d.alloc||[];
+  if(att.length){
+    html+='<div style="background:var(--surf);border:1.5px solid var(--bdr);border-radius:14px;padding:16px;margin-bottom:12px;">';
+    html+='<div style="font-size:13px;font-weight:900;color:var(--acc);margin-bottom:10px;">Attendance</div>';
+    att.forEach(function(a){
+      var people=[];
+      if(a.lead&&a.lead.trim())people.push({name:a.lead,role:'Lead'});
+      (a.ops||[]).forEach(function(op){if(op&&op.trim())people.push({name:op,role:'Member'});});
+      var col={A:'#f59e0b',B:'#38bdf8',C:'#a78bfa',D:'#22c55e',E:'#fb923c'}[a.team]||'#94a3b8';
+      html+='<div style="margin-bottom:8px;">';
+      html+='<div style="font-size:11px;font-weight:900;color:'+col+';margin-bottom:4px;">TEAM '+esc(a.team)+'</div>';
+      people.forEach(function(p){
+        var status=_sodAttendance&&_sodAttendance[p.name];
+        var statusColor=status==='in'?'var(--green)':status==='absent'?'var(--red)':'var(--muted)';
+        var statusLabel=status==='in'?'In':status==='absent'?'Absent':'Unknown';
+        html+='<div style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:3px;">';
+        html+='<span style="color:var(--txt);font-weight:700;">'+esc(p.name)+'</span>';
+        html+='<span style="color:'+statusColor+';font-weight:800;font-size:11px;">'+statusLabel+'</span>';
+        html+='</div>';
+      });
+      html+='</div>';
+    });
+    html+='</div>';
+  }
+  // Yesterday's tasks (from the SOD plan)
+  var plan=d.plan||[];
+  var tasks=[];
+  plan.forEach(function(t){(t.tasks||[]).forEach(function(tk){tasks.push({team:t.team,desc:tk.desc,target:tk.target||100});});});
+  if(tasks.length){
+    html+='<div style="background:var(--surf);border:1.5px solid var(--bdr);border-radius:14px;padding:16px;margin-bottom:12px;">';
+    html+='<div style="font-size:13px;font-weight:900;color:var(--acc);margin-bottom:10px;">Yesterday\'s Plan (shown this morning)</div>';
+    tasks.forEach(function(t){
+      var col={A:'#f59e0b',B:'#38bdf8',C:'#a78bfa',D:'#22c55e',E:'#fb923c'}[t.team]||'#94a3b8';
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bdr);font-size:13px;">';
+      html+='<span style="font-size:10px;font-weight:900;color:'+col+';min-width:32px;">TM '+esc(t.team)+'</span>';
+      html+='<span style="flex:1;color:var(--txt);">'+esc(t.desc)+'</span>';
+      html+='<span style="color:var(--muted);font-size:11px;">'+t.target+'%</span>';
+      html+='</div>';
+    });
+    html+='</div>';
+  }
+  if(!att.length&&!tasks.length){
+    html='<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px;">No morning check data available.</div>';
+  }
+  el.innerHTML=html;
+}
+
+function showTodayPlanInline(){
+  var el=document.getElementById('today-tab-content');
+  if(!el)return;
+  var d=window._sodPlanData;
+  if(!d||!d.plan||!d.plan.length){
+    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px;">No plan loaded yet.<br><span style="font-size:12px;">Today\'s plan appears here after the morning check.</span></div>';
+    return;
+  }
+  var hours=getWorkingHours(tod());
+  var alloc=d.alloc||[];
+  var teamHours={};
+  alloc.forEach(function(a){
+    var people=[];
+    if(a.lead&&a.lead.trim())people.push(a.lead);
+    (a.ops||[]).forEach(function(op){if(op&&op.trim())people.push(op);});
+    var present=people.filter(function(n){return _sodAttendance[n]!=='absent';}).length;
+    var total=people.length||1;
+    teamHours[a.team]={present:present,total:total,personHours:present*hours};
+  });
+  var html='';
+  html+='<div style="background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:12px;padding:12px 14px;margin-bottom:14px;">';
+  html+='<div style="font-size:13px;font-weight:900;color:var(--blue);">'+fmtD(tod())+' &mdash; '+hours+'h working day</div>';
+  html+='</div>';
+  var meeting=d.meeting||{};
+  if(meeting.topics){
+    html+='<div style="background:var(--surf);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:12px;">';
+    html+='<div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--acc);margin-bottom:6px;">&#127749; Morning Meeting &mdash; '+(meeting.time||'07:30')+'</div>';
+    html+='<div style="font-size:13px;font-weight:600;">'+esc(meeting.topics)+'</div>';
+    if(meeting.risks)html+='<div style="font-size:12px;color:var(--red);margin-top:6px;font-weight:700;">Risks: '+esc(meeting.risks)+'</div>';
+    html+='</div>';
+  }
+  var tcols={A:'#f59e0b',B:'#38bdf8',C:'#a78bfa',D:'#22c55e',E:'#fb923c'};
+  (d.plan||[]).forEach(function(t){
+    var col=tcols[t.team]||'#94a3b8';
+    var allocEntry=alloc.find(function(a){return a.team===t.team;})||{};
+    var th=teamHours[t.team];
+    html+='<div style="background:var(--surf);border:1.5px solid '+col+'44;border-radius:12px;padding:14px;margin-bottom:10px;">';
+    html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
+    html+='<div style="width:12px;height:12px;border-radius:50%;background:'+col+';flex-shrink:0;"></div>';
+    html+='<div style="font-size:14px;font-weight:900;color:'+col+';">Team '+esc(t.team)+'</div>';
+    if(allocEntry.lead)html+='<div style="font-size:12px;color:var(--muted);">&mdash; '+esc(allocEntry.lead)+'</div>';
+    if(th&&th.total>0)html+='<div style="margin-left:auto;font-size:11px;font-weight:800;color:'+(th.present<th.total?'var(--acc)':'var(--green)')+';">'+th.personHours+'h avail</div>';
+    html+='</div>';
+    (t.tasks||[]).forEach(function(tk){
+      html+='<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-top:1px solid var(--bdr);">';
+      html+='<div style="flex:1;font-size:13px;font-weight:700;">'+esc(tk.desc)+'</div>';
+      html+='<div style="font-size:12px;font-weight:900;color:'+col+';white-space:nowrap;">'+(tk.target||100)+'%</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+  });
+  el.innerHTML=html;
 }
 
 function emailTodayPlan(planData){
