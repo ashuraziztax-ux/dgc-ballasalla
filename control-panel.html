@@ -12475,32 +12475,7 @@ function buildFortnightlyReport() {
   h.push('</div>');
 
   h.push('</div>'); // .wrap
-  h.push('
-<script>
-var CP_VERSION = '2026.06.a';
-(function(){
-  function checkCPUpdate(){
-    fetch('/dgc-ballasalla/control-panel.html?_v='+Math.random(),{cache:'no-store'})
-      .then(function(r){return r.text();})
-      .then(function(h){
-        var m=h.match(/var CP_VERSION = '([^']+)'/);
-        if(m&&m[1]&&m[1]!==CP_VERSION){
-          var b=document.getElementById('cp-update-banner');
-          if(!b){
-            b=document.createElement('div');
-            b.id='cp-update-banner';
-            b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#f59e0b;color:#0f1117;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,.4);';
-            b.innerHTML='<span style="font-size:13px;font-weight:800;">&#128260; Control Panel update ready ('+m[1]+')</span><button onclick="window.location.reload()" style="background:#0f1117;color:#f59e0b;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:900;cursor:pointer;min-height:40px;">Tap to update</button>';
-            document.body.insertBefore(b,document.body.firstChild);
-          }
-        }
-      }).catch(function(){});
-  }
-  setTimeout(checkCPUpdate,5000);
-  setInterval(checkCPUpdate,60000);
-})();
-</script>
-</body></html>');
+  h.push('</html>');
 
   var w = window.open('', '_blank');
   if (!w) { alert('Please allow pop-ups to open the report.'); return; }
@@ -19380,6 +19355,31 @@ if ('serviceWorker' in navigator) {
 
 <script>
 var CP_VERSION = '2026.06.a';
+(function(){
+  function checkCPUpdate(){
+    fetch('/dgc-ballasalla/control-panel.html?_v='+Math.random(),{cache:'no-store'})
+      .then(function(r){return r.text();})
+      .then(function(h){
+        var m=h.match(/var CP_VERSION = '([^']+)'/);
+        if(m&&m[1]&&m[1]!==CP_VERSION){
+          var b=document.getElementById('cp-update-banner');
+          if(!b){
+            b=document.createElement('div');
+            b.id='cp-update-banner';
+            b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#f59e0b;color:#0f1117;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,.4);';
+            b.innerHTML='<span style="font-size:13px;font-weight:800;">&#128260; Control Panel update ready ('+m[1]+')</span><button onclick="window.location.reload()" style="background:#0f1117;color:#f59e0b;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:900;cursor:pointer;min-height:40px;">Tap to update</button>';
+            document.body.insertBefore(b,document.body.firstChild);
+          }
+        }
+      }).catch(function(){});
+  }
+  setTimeout(checkCPUpdate,5000);
+  setInterval(checkCPUpdate,60000);
+})();
+</script>
+
+<script>
+var CP_VERSION = '2026.06.b';
 (function(){
   function checkCPUpdate(){
     fetch('/dgc-ballasalla/control-panel.html?_v='+Math.random(),{cache:'no-store'})
