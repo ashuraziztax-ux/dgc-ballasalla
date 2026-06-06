@@ -10,11 +10,11 @@
 <meta http-equiv="Expires" content="0">
 <title>DGC Daily Sheet</title>
 <script>
-// DGC Daily Sheet v1.6.2 — Reset button, noise presets+DND, end of day diary, morning site check
+// DGC Daily Sheet v1.7.0 — SOD logo+always-show, attendance dropdown, today's plan weather, remove yesterday from EOD, comms simplified, save screen
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='1.6.2';
+var APP_VERSION='1.7.0';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -301,6 +301,9 @@ select{
 </div>
 
 <div id="sod" style="display:none;min-height:100vh;background:var(--bg);padding:0;">
+  <div style="text-align:center;padding:16px 0 8px;">
+    <img id="sod-logo-img" src="dgc-logo-white.png" alt="DGC" style="height:48px;object-fit:contain;filter:brightness(0) invert(1);">
+  </div>
   <div class="hdr">
     <img id="sod-logo" class="dgc-logo" src="dgc-logo-white.png" alt="DGC">
     <div style="margin-left:auto;">
@@ -366,7 +369,7 @@ select{
     <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
     <button id="reset-sod-btn" onclick="resetMorningCheck()" class="no-print" title="Reset morning check (test only)" style="background:none;border:none;color:rgba(100,116,139,.3);font-size:10px;cursor:pointer;padding:4px;font-family:inherit;">&#8635;</button>
     <button onclick="reopenSOD()" style="background:none;border:1.5px solid rgba(245,158,11,.4);border-radius:9px;color:var(--acc);font-size:11px;font-weight:800;padding:6px 10px;cursor:pointer;white-space:nowrap;font-family:inherit;min-height:36px;" class="no-print" title="Open morning check">&#128203; AM check</button>
-    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.6.2</span>
+    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.7.0</span>
   </div>
 </div>
 
@@ -384,43 +387,6 @@ select{
     <div><label>Temp (&#176;C)</label>
       <div style="display:flex;gap:5px;"><input type="number" id="ft" placeholder="&#176;C" inputmode="numeric" style="flex:1;"><button class="btn btn-blue btn-sm" onclick="fetchWx()" title="Fetch tomorrow's weather">&#9728;</button><button class="btn btn-blue btn-sm" onclick="fetchWx('brief')" title="Fetch with brief summary">&#128203;</button></div>
       <div id="wx-brief" style="display:none;font-size:12px;font-weight:600;color:var(--blue);margin-top:6px;padding:6px 10px;background:rgba(56,189,248,.08);border-radius:8px;border:1px solid rgba(56,189,248,.25);"></div>
-    </div>
-  </div>
-
-  <!-- TODAY'S OUTPUT — critical for programme tracking -->
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#9989; How Did Today Go? <span style="color:var(--red);font-size:10px;font-weight:900;vertical-align:middle;">&#9733; KEY DATA FOR ASH</span></span><span class="sec-s">Record what actually happened today — this is the programme tracking data</span></div></div>
-  <div class="card" id="today-output-card">
-    <div id="today-output-tasks" style="margin-bottom:12px;">
-      <!-- populated by buildTodayOutputFromPlan() on load -->
-      <div style="font-size:13px;color:var(--muted);padding:8px 0;">Loading yesterday's plan...</div>
-    </div>
-    <div class="mb8">
-      <label>Overall: how did the day go?</label>
-      <select id="ftodayrating">
-        <option value="">Select...</option>
-        <option value="good">Good day — on or ahead of plan</option>
-        <option value="ok">OK — slightly behind but manageable</option>
-        <option value="poor">Poor day — significantly behind plan</option>
-        <option value="disrupted">Disrupted — weather / plant / access issue</option>
-        <option value="nowork">No work — site closed / holiday</option>
-      </select>
-    </div>
-    <div class="mb8" style="border-left:3px solid var(--acc);padding-left:10px;background:rgba(245,158,11,.04);border-radius:0 8px 8px 0;padding:10px 10px 10px 13px;margin-left:-1px;">
-      <label>Delay caused by <span style="font-weight:600;text-transform:none;font-size:11px;color:var(--acc);">— EOT / claim evidence</span></label>
-      <select id="fdelaycause">
-        <option value="">None / on plan</option>
-        <option value="weather">Weather</option>
-        <option value="dandara">Dandara (client instruction / access)</option>
-        <option value="plant">Plant failure / breakdown</option>
-        <option value="thirdparty">Third party (utility / subcontractor)</option>
-        <option value="ground">Unforeseen ground conditions</option>
-        <option value="dgc">DGC (own resource / planning)</option>
-      </select>
-    </div>
-    <div>
-      <label>Why? (delays, issues, what helped)</label>
-      <button class="mic" id="mic-tdy" onclick="vm('tdy','ftodaynotes')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate what happened today</span></button>
-      <textarea id="ftodaynotes" rows="3" placeholder="e.g. Gang A hit hard ground at Plot 7, lost 2 hours. Gang B ahead of schedule on kerbing. Rain stopped play 14:00-15:30..."></textarea>
     </div>
   </div>
 
@@ -465,7 +431,7 @@ select{
       </div>
       <div>
         <button class="mic" id="mic-s1" onclick="vm('s1','fses1')"><span class="mic-icon">&#127908;</span><span class="mic-label">Record end of day diary entry</span></button>
-        <textarea id="fses1" rows="4" placeholder="How did the day go? What happened? Any issues, delays, or highlights — just talk through it."></textarea>
+        <textarea id="fses1" rows="6" style="min-height:140px;" placeholder="How did the day go? What happened? Any issues, delays, or highlights — just talk through it."></textarea>
       </div>
     </div>
     <!-- legacy hidden fields for backward compat -->
@@ -510,7 +476,7 @@ select{
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Site Diary</span></div></div>
   <div class="card">
     <button class="mic" id="mic-nt" onclick="vm('nt','fnt')"><span class="mic-icon">&#127908;</span><span class="mic-label">Record site diary entry</span></button>
-    <textarea id="fnt" rows="4" placeholder="Manager diary entry for today..."></textarea>
+    <textarea id="fnt" rows="6" style="min-height:140px;" placeholder="Manager diary entry for today..."></textarea>
   </div>
 
   <!-- EOD RESPONSIBILITY — moved to bottom -->
@@ -619,9 +585,10 @@ var EODS=[
   {k:'time',l:'Timesheets / Discovery sheets filled in (if required)'}
 ];
 var COMMS=[
-  {k:'wa',l:'Site images sent to client WhatsApp group'},
-  {k:'ash',l:'Update sent to Ash / Harry'},
-  {k:'dandara',l:'Dandara notified of any changes / delays'}
+  {k:'ash_harry',l:'Update sent to Ash and Harry'},
+  {k:'whatsapp',l:'Update sent to BA4 WhatsApp group'},
+  {k:'changes',l:'Notified of any changes or delays'},
+  {k:'risk',l:'Risk ticket updated'}
 ];
 var TCOLS=['#f59e0b','#38bdf8','#a78bfa','#22c55e','#fb923c'];
 var TLTRS=['A','B','C','D','E'];
@@ -647,15 +614,6 @@ var _lastResultIdx=-1;
       eodCard.appendChild(d);
     });
   }
-  // Populate today output section from yesterday's plan (if available)
-  if(sb){
-    var yesterday=(function(){var d=new Date();d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);})();
-    sb.from('daily_records').select('data').eq('project_ref',PROJECT_REF).eq('date',yesterday).not('gang','like','ACHV_%').not('gang','like','SOD_%').order('updated_at',{ascending:false}).limit(1)
-      .then(function(r){
-        var found=r.data&&r.data[0]&&r.data[0].data;
-        buildTodayOutputFromPlan(found);
-      }).catch(function(){buildTodayOutputFromPlan(null);});
-  }else{buildTodayOutputFromPlan(null);}
   COMMS.forEach(function(c){
     COM[c.k]=false;
     var d=document.createElement('div');d.className='cr';
@@ -665,7 +623,7 @@ var _lastResultIdx=-1;
   });
   addPT();addPT();addPT();
   addNoise('10:00');addNoise('13:00');addNoise('15:00');
-  addItem();addItem();
+  addItem();addItem();addItem();addItem();
   // Pre-select last used name in dropdown (still requires pressing Start)
   var s=localStorage.getItem('dgc_uname');
   var sel=document.getElementById('ln');
@@ -700,12 +658,7 @@ function doLogin(){
       setTimeout(function(){var h=document.getElementById('ai-hint');if(h)h.style.display='none';},8000);
     },1200);
   }
-  // Skip SOD if already checked in this session today
-  if(sessionStorage.getItem('dgc_sod_done_'+tod())){
-    document.getElementById('ls').style.display='none';
-    showApp();
-    return;
-  }
+  // SOD always shows — no bypass
   // Try to find yesterday's/today's plan to show Start of Day
   if(sb){
     var today=tod();
@@ -1097,9 +1050,6 @@ function saveDraft(){
       ses1:document.getElementById('fses1')?document.getElementById('fses1').value:'',
       ses2:document.getElementById('fses2')?document.getElementById('fses2').value:'',
       ses3:document.getElementById('fses3')?document.getElementById('fses3').value:'',
-      todayRating:document.getElementById('ftodayrating')?document.getElementById('ftodayrating').value:'',
-      delayCause:document.getElementById('fdelaycause')?document.getElementById('fdelaycause').value:'',
-      todayNotes:document.getElementById('ftodaynotes')?document.getElementById('ftodaynotes').value:'',
       obs:document.getElementById('fob').value,
       notes:document.getElementById('fnt').value,
       savedAt:new Date().toISOString()
@@ -1116,7 +1066,6 @@ function restoreDraft(){
     set('fv',d.visitors);set('ftp',d.topics);set('frk',d.risks);
     set('feod-resp',d.eodResp);set('feod-team',d.eodTeam);
     set('fses1',d.ses1);set('fses2',d.ses2);set('fses3',d.ses3);
-    set('ftodayrating',d.todayRating);set('fdelaycause',d.delayCause);set('ftodaynotes',d.todayNotes);
     set('fob',d.obs);set('fnt',d.notes);
     if(d.savedAt)toast('Draft restored from '+(new Date(d.savedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})));
   }catch(e){}
@@ -1190,15 +1139,6 @@ function submitEOD(){
     eodResponsibility:{person:document.getElementById('feod-resp').value,team:document.getElementById('feod-team').value},
     plan:getPlan(),alloc:getAlloc(),
     sessions:{combined:sesCombined,am:ses1,mid:ses2,pm:ses3},
-    todayOutput:(function(){
-      var todayTasks=window._todayOutputTasks||[];
-      var taskResults=todayTasks.map(function(t,i){
-        return{team:t.team,desc:t.desc,target:t.target,
-          actual:parseFloat((document.getElementById('tod-pct-'+i)||{}).value)||null,
-          actualQty:parseFloat((document.getElementById('tod-qty-'+i)||{}).value)||null};
-      });
-      return{rating:document.getElementById('ftodayrating')?document.getElementById('ftodayrating').value:'',delayCause:document.getElementById('fdelaycause')?document.getElementById('fdelaycause').value:'',notes:document.getElementById('ftodaynotes')?document.getElementById('ftodaynotes').value:'',tasks:taskResults};
-    })(),
     eodChecklist:eodCheckState,
     noise:noise,obs:document.getElementById('fob').value,items:items,comms:Object.assign({},COM),notes:document.getElementById('fnt').value};
   var btn=document.getElementById('eod-submit-btn');
@@ -1219,6 +1159,9 @@ function submitEOD(){
       else{
         if(btn){btn.textContent='✓ Saved';setTimeout(resetBtn,2000);}
         toast('✓ Saved to cloud');
+        // Show full-screen save confirmation
+        var sc=document.getElementById('save-confirm');
+        if(sc){sc.style.display='flex';setTimeout(function(){sc.style.display='none';},3500);}
         // Clear the draft from localStorage after successful save
         try{localStorage.removeItem('dgc_draft_'+date);}catch(e){}
         setTimeout(function(){sw('achv',document.getElementById('nav-achv'));},1200);
@@ -1764,6 +1707,20 @@ function showSOD(planData,name){
   document.getElementById('sod-greeting').textContent=greet+', '+name;
   document.getElementById('sod-name').textContent=name;
 
+  // If SOD already completed today, show banner + quick continue button
+  var alreadyDone=sessionStorage.getItem('dgc_sod_done_'+tod());
+  var existingBanner=document.getElementById('sod-already-done-banner');
+  if(existingBanner)existingBanner.parentNode.removeChild(existingBanner);
+  if(alreadyDone){
+    var banner=document.createElement('div');
+    banner.id='sod-already-done-banner';
+    banner.style.cssText='background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;';
+    banner.innerHTML='<div style="font-size:13px;font-weight:700;color:var(--green);">&#10003; Morning check already submitted today &mdash; you can review or continue</div>'
+      +'<button onclick="startDay()" style="background:var(--green);color:#0f1117;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:900;cursor:pointer;white-space:nowrap;min-height:40px;font-family:inherit;">Continue to Daily Planner &rarr;</button>';
+    var greetEl=document.getElementById('sod-greeting');
+    if(greetEl&&greetEl.parentNode)greetEl.parentNode.insertBefore(banner,greetEl);
+  }
+
   // Show two dates: plan saved date + today
   var datesEl=document.getElementById('sod-dates');
   if(datesEl){
@@ -2042,12 +1999,21 @@ function buildAttendanceSection(planData){
   html+='<div style="background:var(--surf);border:1px solid var(--bdr);border-radius:var(--radius);padding:4px 12px;margin-bottom:12px;" id="att-list">';
   people.forEach(function(p,i){
     _sodAttendance[p.name]='';
-    html+='<div class="sod-row" id="att-row-'+i+'" style="justify-content:flex-start;gap:10px;">'
+    var nameOpts=NAMES.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join('');
+    html+='<div class="sod-row" id="att-row-'+i+'" style="justify-content:flex-start;gap:10px;flex-wrap:wrap;">'
       +'<div class="sod-btns">'
       +'<button class="sod-btn" id="att-in-'+i+'" onclick="setAttendance(\''+esc(p.name)+'\','+i+',\'in\')">&#10003; In</button>'
-      +'<button class="sod-btn" id="att-ab-'+i+'" onclick="setAttendance(\''+esc(p.name)+'\','+i+',\'absent\')">&#10007; Absent</button>'
+      +'<button class="sod-btn" id="att-ab-'+i+'" onclick="showAbsentDropdown(\''+esc(p.name)+'\','+i+')">&#10007; Absent</button>'
       +'</div>'
       +'<div class="sod-label"><strong>'+esc(p.name)+'</strong> <span style="font-size:11px;color:var(--muted);">(Team '+esc(p.team)+' '+esc(p.role)+')</span></div>'
+      +'<div id="att-absent-confirm-'+i+'" style="display:none;width:100%;margin-top:6px;padding:8px 10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;">'
+      +'<div style="font-size:11px;font-weight:800;color:var(--red);margin-bottom:6px;">Confirm who is absent:</div>'
+      +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+      +'<select id="att-absent-sel-'+i+'" style="flex:1;min-width:160px;font-size:13px;padding:8px 10px;min-height:40px;"><option value="">-- Select name --</option>'+nameOpts+'</select>'
+      +'<button onclick="confirmAbsent(\''+esc(p.name)+'\','+i+')" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:900;cursor:pointer;min-height:40px;font-family:inherit;">Confirm Absent</button>'
+      +'<button onclick="cancelAbsent(\''+esc(p.name)+'\','+i+')" style="background:none;border:1.5px solid var(--bdr);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;min-height:40px;color:var(--muted);font-family:inherit;">Cancel</button>'
+      +'</div>'
+      +'</div>'
       +'</div>';
   });
   html+='</div>';
@@ -2066,6 +2032,43 @@ function setAttendance(name,idx,status){
   if(abBtn){abBtn.classList.toggle('missed',status==='absent');abBtn.classList.remove('done');}
   if(row){row.classList.toggle('is-done',status==='in');row.classList.toggle('is-missed',status==='absent');}
   updateCapacityDisplay();
+}
+
+function showAbsentDropdown(name,idx){
+  var confirm=document.getElementById('att-absent-confirm-'+idx);
+  if(confirm){
+    confirm.style.display='block';
+    // Pre-select the person's own name in the dropdown
+    var sel=document.getElementById('att-absent-sel-'+idx);
+    if(sel){for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===name){sel.selectedIndex=i;break;}}}
+  }
+}
+
+function confirmAbsent(name,idx){
+  var sel=document.getElementById('att-absent-sel-'+idx);
+  var absentName=sel?sel.value:name;
+  if(!absentName){toast('Select a name to confirm absent','err');return;}
+  // Mark original person as absent (tracking by confirmed name)
+  _sodAttendance[name]='absent';
+  _sodAttendance[absentName]='absent';
+  var inBtn=document.getElementById('att-in-'+idx);
+  var abBtn=document.getElementById('att-ab-'+idx);
+  var row=document.getElementById('att-row-'+idx);
+  if(inBtn){inBtn.classList.remove('done');}
+  if(abBtn){abBtn.classList.add('missed');}
+  if(row){row.classList.remove('is-done');row.classList.add('is-missed');}
+  // Replace the row label to show ABSENT in red
+  var lbl=row?row.querySelector('.sod-label'):null;
+  if(lbl)lbl.innerHTML='<strong>'+esc(absentName)+'</strong> <span style="color:var(--red);font-weight:900;font-size:12px;">ABSENT</span>';
+  // Hide the dropdown confirm panel
+  var confirm=document.getElementById('att-absent-confirm-'+idx);
+  if(confirm)confirm.style.display='none';
+  updateCapacityDisplay();
+}
+
+function cancelAbsent(name,idx){
+  var confirm=document.getElementById('att-absent-confirm-'+idx);
+  if(confirm)confirm.style.display='none';
 }
 
 function updateCapacityDisplay(){
@@ -2104,6 +2107,41 @@ function startDay(){
   }
 }
 
+function fetchTodayWeatherBrief(callback){
+  var govUrl='https://www.gov.im/weather/5-day-forecast/Rss5DayForecast';
+  var proxy='https://api.allorigins.win/get?url='+encodeURIComponent(govUrl);
+  fetch(proxy,{cache:'no-store'})
+    .then(function(r){return r.json();})
+    .then(function(json){
+      if(!json||!json.contents){callback(null);return;}
+      var parser=new DOMParser();
+      var xml=parser.parseFromString(json.contents,'text/xml');
+      var items=xml.querySelectorAll('item');
+      var item=items[0];// items[0] = today
+      if(!item){callback(null);return;}
+      var descEl=item.querySelector('description');
+      if(!descEl){callback(null);return;}
+      var htmlDoc=parser.parseFromString(descEl.textContent,'text/html');
+      var maxTemp=null,conditions='',wind='';
+      htmlDoc.querySelectorAll('h3').forEach(function(h3){
+        var txt=h3.textContent.trim().toLowerCase();
+        var sib=h3.nextElementSibling;
+        if(!sib)return;
+        var val=sib.textContent.trim();
+        if(txt.indexOf('max')>-1||txt.indexOf('maximum')>-1){var m=val.match(/(\d+)/);if(m)maxTemp=parseInt(m[1]);}
+        else if(txt.indexOf('condition')>-1||txt.indexOf('weather')>-1||txt.indexOf('summary')>-1){conditions=val;}
+        else if(txt.indexOf('wind')>-1){wind=val;}
+      });
+      if(!conditions){var p=htmlDoc.querySelector('p');if(p)conditions=p.textContent.trim();}
+      var parts=[];
+      if(conditions)parts.push('Conditions: '+conditions);
+      if(maxTemp)parts.push('Max temp: '+maxTemp+'&deg;C');
+      if(wind)parts.push('Wind: '+wind);
+      callback(parts.length?parts:null);
+    })
+    .catch(function(){callback(null);});
+}
+
 function showTodayPlan(planData){
   var hours=getWorkingHours(tod());
   var dayLabel=hours===0?'Sunday (no work)':hours===5?'Saturday (5h day)':'Weekday (9h day)';
@@ -2123,9 +2161,10 @@ function showTodayPlan(planData){
   var html='<div style="font-size:22px;font-weight:900;margin-bottom:4px;">Today\'s Plan</div>';
   html+='<div style="font-size:13px;color:var(--muted);margin-bottom:12px;">'+fmtD(tod())+'</div>';
 
-  // Working hours summary
+  // Working hours bar
+  var dayType=(new Date().getDay()===6)?'Saturday':'Weekday';
   html+='<div style="background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:10px;padding:12px 14px;margin-bottom:16px;">';
-  html+='<div style="font-size:12px;font-weight:900;color:var(--blue);margin-bottom:4px;">Available today: '+hours+' hours per person &mdash; '+dayLabel+'</div>';
+  html+='<div style="font-size:13px;font-weight:900;color:var(--blue);margin-bottom:4px;">Today: '+hours+' working hours ('+dayType+')</div>';
   if(alloc.length){
     alloc.forEach(function(a){
       var th=teamHours[a.team];
@@ -2137,12 +2176,13 @@ function showTodayPlan(planData){
   }
   html+='</div>';
 
-  // Weather
+  // Weather section (from yesterday's EOD data + live fetch today)
   var wx=planData.header?(planData.header.weather||''):'';
   var temp=planData.header?(planData.header.temp||''):'';
-  if(wx||temp){
-    html+='<div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:12px;">Weather: '+(wx||'&mdash;')+(temp?' &middot; '+temp+'&deg;C':'')+'</div>';
-  }
+  html+='<div id="tp-weather-section" style="margin-bottom:12px;font-size:13px;font-weight:700;color:var(--muted);">';
+  if(wx||temp){html+='Weather: '+(wx||'&mdash;')+(temp?' &middot; '+temp+'&deg;C':'');}
+  html+='<div id="tp-weather-live" style="margin-top:6px;"></div>';
+  html+='</div>';
 
   // Morning meeting brief
   var meeting=planData.meeting||{};
@@ -2196,6 +2236,16 @@ function showTodayPlan(planData){
   document.getElementById('today-plan').style.display='block';
   document.getElementById('app').style.display='none';
   document.getElementById('sod').style.display='none';
+
+  // Fetch today's live weather from gov.im
+  fetchTodayWeatherBrief(function(parts){
+    var liveEl=document.getElementById('tp-weather-live');
+    if(!liveEl||!parts||!parts.length)return;
+    liveEl.innerHTML='<div style="background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.22);border-radius:8px;padding:8px 12px;margin-top:6px;">'
+      +'<div style="font-size:11px;font-weight:900;color:var(--blue);margin-bottom:4px;">IoM Today (gov.im)</div>'
+      +parts.map(function(p){return '<div>&bull; '+p+'</div>';}).join('')
+      +'</div>';
+  });
 }
 
 function showApp(){
@@ -2258,6 +2308,13 @@ function reopenSOD(){
       <button class="btn btn-ghost" onclick="document.getElementById('claude-modal').style.display='none';" style="flex:1;">Cancel</button>
     </div>
   </div>
+</div>
+
+<div id="save-confirm" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#0a0d14 0%,#0d1a2e 60%,#0a1520 100%);align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:40px;">
+  <img src="dgc-logo-white.png" alt="DGC" style="height:80px;object-fit:contain;filter:brightness(0) invert(1);margin-bottom:24px;opacity:0.9;">
+  <div style="font-size:48px;margin-bottom:16px;">&#10003;</div>
+  <div style="font-size:24px;font-weight:900;color:#fff;margin-bottom:8px;">Saved</div>
+  <div style="font-size:14px;color:rgba(255,255,255,.5);">Tomorrow's plan submitted. Good work.</div>
 </div>
 
 <script>
