@@ -10,11 +10,11 @@
 <meta http-equiv="Expires" content="0">
 <title>DGC Daily Sheet</title>
 <script>
-// DGC Daily Sheet v1.3.1 — SOD improvements: dates, EOD checklist, sign-off, skip logic, edit button
+// DGC Daily Sheet v1.3.2 — Three-state SOD checklist: Done/Missed tracking, sign-off blocked until complete
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='1.3.1';
+var APP_VERSION='1.3.2';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -143,6 +143,20 @@ select{
 .chki:last-child{border:none;}
 .chkb{width:30px;height:30px;min-width:30px;border-radius:8px;border:2px solid var(--bdr);background:none;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;margin-top:1px;transition:background .15s,border-color .15s;}
 .chkb.on{background:var(--green);border-color:var(--green);}
+
+/* ── SOD THREE-STATE CHECKLIST ── */
+.sod-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--bdr);}
+.sod-row:last-child{border:none;}
+.sod-btns{display:flex;gap:6px;flex-shrink:0;}
+.sod-btn{padding:7px 11px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;border:1.5px solid var(--bdr);background:var(--s2);color:var(--muted);font-family:inherit;min-height:36px;transition:background .15s,border-color .15s,color .15s;white-space:nowrap;}
+.sod-btn.done{background:rgba(34,197,94,.15);border-color:var(--green);color:var(--green);}
+.sod-btn.missed{background:rgba(245,158,11,.15);border-color:var(--acc);color:var(--acc);}
+.sod-label{flex:1;font-size:13px;font-weight:600;color:var(--txt);}
+.sod-row.is-done .sod-label{color:var(--green);}
+.sod-row.is-missed .sod-label{color:var(--acc);}
+.sod-reason{margin-top:6px;margin-left:0;width:100%;padding:8px 10px;background:var(--s2);border:1.5px solid var(--acc);border-radius:8px;color:var(--txt);font-size:12px;font-weight:600;font-family:inherit;outline:none;}
+.sod-reason:focus{border-color:var(--acc);box-shadow:0 0 0 2px rgba(245,158,11,.18);}
+.btn-submit:disabled{opacity:.4;cursor:not-allowed;filter:none;box-shadow:none;}
 
 /* ── NOISE / ITEMS ROWS ── */
 .nr{display:grid;grid-template-columns:90px 1fr 1fr 40px;gap:6px;align-items:center;margin-bottom:8px;}
@@ -280,7 +294,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please choose your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;">Start &rarr;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.3.1</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.3.2</div>
   </div>
 </div>
 
@@ -301,7 +315,8 @@ select{
     <div style="margin-bottom:20px;">
       <div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--acc);border-left:3px solid var(--acc);padding-left:10px;margin-bottom:12px;">Site Check &mdash; End of Yesterday</div>
       <div id="sod-checklist" style="background:var(--surf);border:1px solid var(--bdr);border-radius:var(--radius);padding:4px 12px;"></div>
-      <button class="btn btn-submit" id="sod-signoff-btn" onclick="sodSignOff()" style="margin-top:12px;">&#10003; Sign Off Morning Check</button>
+      <div id="sod-progress" style="font-size:13px;font-weight:700;color:var(--muted);margin-top:10px;text-align:center;"></div>
+      <button class="btn btn-submit" id="sod-signoff-btn" onclick="sodSignOff()" style="margin-top:10px;" disabled>&#10003; Sign Off Morning Check</button>
       <div id="sod-signoff-done" style="display:none;font-size:13px;font-weight:800;color:var(--green);margin-top:8px;text-align:center;"></div>
     </div>
     <div style="margin-top:4px;display:flex;flex-direction:column;gap:10px;">
@@ -325,7 +340,7 @@ select{
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
     <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
     <button onclick="reopenSOD()" style="background:none;border:1.5px solid rgba(245,158,11,.4);border-radius:9px;color:var(--acc);font-size:11px;font-weight:800;padding:6px 10px;cursor:pointer;white-space:nowrap;font-family:inherit;min-height:36px;" class="no-print" title="Open morning check">&#128203; AM check</button>
-    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.3.1</span>
+    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.3.2</span>
   </div>
 </div>
 
@@ -1252,7 +1267,41 @@ var SOD_ITEMS=[
   {k:'cabins',l:'All cabins locked'},
   {k:'gen',l:'Generator switched off'}
 ];
+// _sodChecks: {key: {state:'done'|'missed'|'', reason:''}}
 var _sodChecks={};
+
+function updateSODProgress(){
+  var total=SOD_ITEMS.length;
+  var done=0,missed=0,remaining=0;
+  SOD_ITEMS.forEach(function(item){
+    var s=_sodChecks[item.k]?_sodChecks[item.k].state:'';
+    if(s==='done')done++;
+    else if(s==='missed')missed++;
+    else remaining++;
+  });
+  var progEl=document.getElementById('sod-progress');
+  if(progEl){
+    var parts=[];
+    if(done>0)parts.push('<span style="color:var(--green);font-weight:800;">'+done+' done</span>');
+    if(missed>0)parts.push('<span style="color:var(--acc);font-weight:800;">'+missed+' missed</span>');
+    if(remaining>0)parts.push('<span style="color:var(--muted);">'+remaining+' remaining</span>');
+    progEl.innerHTML=parts.join(' &middot; ');
+  }
+  var btnEl=document.getElementById('sod-signoff-btn');
+  if(btnEl){
+    if(remaining===0){
+      btnEl.disabled=false;
+      if(missed>0){
+        btnEl.textContent='Sign Off — '+missed+' item'+(missed===1?'':'s')+' missed (I acknowledge this)';
+      }else{
+        btnEl.textContent='✓ Sign Off Morning Check';
+      }
+    }else{
+      btnEl.disabled=true;
+      btnEl.textContent='✓ Sign Off Morning Check';
+    }
+  }
+}
 
 function showSOD(planData,name){
   _sodPlanData=planData;
@@ -1302,30 +1351,95 @@ function showSOD(planData,name){
     }).join('');
   }
 
-  // Build SOD checklist
+  // Build SOD checklist — three-state: done / missed / blank
   _sodChecks={};
   var clEl=document.getElementById('sod-checklist');
   if(clEl){
     clEl.innerHTML='';
     SOD_ITEMS.forEach(function(item){
-      _sodChecks[item.k]=false;
+      _sodChecks[item.k]={state:'',reason:''};
+
+      var wrapper=document.createElement('div');
+      wrapper.style.cssText='padding:4px 0;border-bottom:1px solid var(--bdr);';
+
       var row=document.createElement('div');
-      row.className='chki';
-      row.innerHTML='<div class="chkb" id="sod-chk-'+item.k+'"></div>'
-        +'<div style="font-size:14px;font-weight:600;color:var(--txt);">'+item.l+'</div>';
-      row.onclick=function(){
-        _sodChecks[item.k]=!_sodChecks[item.k];
-        var b=document.getElementById('sod-chk-'+item.k);
-        if(b){b.classList.toggle('on',_sodChecks[item.k]);b.textContent=_sodChecks[item.k]?'✓':'';}
-      };
-      clEl.appendChild(row);
+      row.className='sod-row';
+      row.id='sod-row-'+item.k;
+
+      var btnGroup=document.createElement('div');
+      btnGroup.className='sod-btns';
+
+      var btnDone=document.createElement('button');
+      btnDone.className='sod-btn';
+      btnDone.id='sod-done-'+item.k;
+      btnDone.textContent='✓ Done';
+
+      var btnMissed=document.createElement('button');
+      btnMissed.className='sod-btn';
+      btnMissed.id='sod-miss-'+item.k;
+      btnMissed.textContent='✗ Missed';
+
+      var lbl=document.createElement('div');
+      lbl.className='sod-label';
+      lbl.innerHTML=item.l;
+
+      // Reason input (hidden until missed)
+      var reasonWrap=document.createElement('div');
+      reasonWrap.id='sod-reason-wrap-'+item.k;
+      reasonWrap.style.display='none';
+      var reasonIn=document.createElement('input');
+      reasonIn.type='text';
+      reasonIn.className='sod-reason';
+      reasonIn.id='sod-reason-'+item.k;
+      reasonIn.placeholder='Why? (optional)';
+      reasonIn.oninput=function(){_sodChecks[item.k].reason=reasonIn.value;};
+      reasonWrap.appendChild(reasonIn);
+
+      function applyState(newState){
+        var cur=_sodChecks[item.k].state;
+        // Tapping active button resets to blank
+        if(cur===newState)newState='';
+        _sodChecks[item.k].state=newState;
+
+        // Update button classes
+        btnDone.classList.toggle('done',newState==='done');
+        btnMissed.classList.toggle('missed',newState==='missed');
+
+        // Update row class
+        row.classList.toggle('is-done',newState==='done');
+        row.classList.toggle('is-missed',newState==='missed');
+
+        // Show reason input only when missed
+        reasonWrap.style.display=(newState==='missed')?'block':'none';
+        if(newState!=='missed'){_sodChecks[item.k].reason='';reasonIn.value='';}
+
+        updateSODProgress();
+      }
+
+      btnDone.onclick=function(e){e.stopPropagation();applyState('done');};
+      btnMissed.onclick=function(e){e.stopPropagation();applyState('missed');};
+
+      btnGroup.appendChild(btnDone);
+      btnGroup.appendChild(btnMissed);
+      row.appendChild(btnGroup);
+      row.appendChild(lbl);
+      wrapper.appendChild(row);
+      wrapper.appendChild(reasonWrap);
+      clEl.appendChild(wrapper);
     });
+    // Add wrapper styles via last-child trick — remove border on last wrapper
+    var wrappers=clEl.querySelectorAll('div[style]');
+    if(wrappers.length>0)wrappers[wrappers.length-1].style.borderBottom='none';
   }
+
   // Reset sign-off state
   var doneEl=document.getElementById('sod-signoff-done');
   var btnEl=document.getElementById('sod-signoff-btn');
   if(doneEl)doneEl.style.display='none';
-  if(btnEl)btnEl.style.display='block';
+  if(btnEl){btnEl.style.display='block';btnEl.disabled=true;btnEl.textContent='✓ Sign Off Morning Check';}
+
+  // Show initial progress (all blank = 0 remaining counter shown)
+  updateSODProgress();
 
   document.getElementById('ls').style.display='none';
   document.getElementById('app').style.display='none';
@@ -1334,28 +1448,44 @@ function showSOD(planData,name){
 }
 
 function sodSignOff(){
-  var checks=Object.assign({},_sodChecks);
+  // Guard: block if any items are still blank (should not happen — button is disabled — but safety net)
+  var remaining=SOD_ITEMS.filter(function(item){return !_sodChecks[item.k]||_sodChecks[item.k].state==='';}).length;
+  if(remaining>0){toast('✗ Address all items first','err');return;}
+
+  var checks={};
+  var missedItems=[];
+  var missedCount=0;
+  SOD_ITEMS.forEach(function(item){
+    var s=_sodChecks[item.k]||{state:'',reason:''};
+    checks[item.k]=s.state;
+    if(s.state==='missed'){missedCount++;missedItems.push(item.l);}
+  });
+  var allDone=(missedCount===0);
+
   var signedAt=new Date().toISOString();
-  var rec={type:'dgc-sod',signer:_uname,signedAt:signedAt,checks:checks};
+  var rec={type:'dgc-sod',signer:_uname,signedAt:signedAt,
+    checks:checks,missedItems:missedItems,missedCount:missedCount,allDone:allDone};
   var btn=document.getElementById('sod-signoff-btn');
   if(btn){btn.disabled=true;btn.textContent='Saving...';}
   if(sb){
     sb.from('daily_records').insert({project_ref:PROJECT_REF,gang:'SOD_'+_uname,date:tod(),data:rec,updated_at:signedAt})
       .then(function(r){
-        if(r&&r.error){toast('Sign-off save failed: '+(r.error.message||'unknown error'),'err');if(btn){btn.disabled=false;btn.textContent='✓ Sign Off Morning Check';}}
+        if(r&&r.error){toast('Sign-off save failed: '+(r.error.message||'unknown error'),'err');if(btn){btn.disabled=false;updateSODProgress();}}
         else{
           toast('✓ Morning check signed off');
           var doneEl=document.getElementById('sod-signoff-done');
-          if(doneEl){doneEl.textContent='✓ Signed off by '+_uname+' at '+new Date(signedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});doneEl.style.display='block';}
+          var suffix=missedCount>0?' ('+missedCount+' item'+(missedCount===1?'':'s')+' missed)':'';
+          if(doneEl){doneEl.textContent='✓ Signed off by '+_uname+' at '+new Date(signedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+suffix;doneEl.style.display='block';}
           if(btn)btn.style.display='none';
           setTimeout(function(){startDay();},1200);
         }
       })
-      .catch(function(e){toast('Sign-off save failed','err');if(btn){btn.disabled=false;btn.textContent='✓ Sign Off Morning Check';}});
+      .catch(function(e){toast('Sign-off save failed','err');if(btn){btn.disabled=false;updateSODProgress();}});
   }else{
     toast('✓ Morning check signed off (offline)');
     var doneEl=document.getElementById('sod-signoff-done');
-    if(doneEl){doneEl.textContent='✓ Signed off by '+_uname+' at '+new Date(signedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});doneEl.style.display='block';}
+    var suffix=missedCount>0?' ('+missedCount+' item'+(missedCount===1?'':'s')+' missed)':'';
+    if(doneEl){doneEl.textContent='✓ Signed off by '+_uname+' at '+new Date(signedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+suffix;doneEl.style.display='block';}
     if(btn)btn.style.display='none';
     setTimeout(function(){startDay();},1200);
   }
