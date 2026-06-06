@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0f1117">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>DGC Daily Sheet</title>
 <script>
 // DGC Daily Sheet v1.1.0 — Updated after boardroom TWEAK session 2026-06-06
@@ -1119,6 +1122,22 @@ function toast(m,t){var el=document.getElementById('toast');el.textContent=m;el.
   </div>
 </div>
 
-
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/dgc-ballasalla/sw.js').then(function(reg){
+    reg.addEventListener('updatefound',function(){
+      var newSW=reg.installing;
+      newSW.addEventListener('statechange',function(){
+        if(newSW.state==='installed'&&navigator.serviceWorker.controller){
+          // New version available — reload automatically
+          window.location.reload();
+        }
+      });
+    });
+    // Force update check every time page loads
+    reg.update();
+  }).catch(function(){});
+}
+</script>
 </body>
 </html>
