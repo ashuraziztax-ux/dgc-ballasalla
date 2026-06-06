@@ -10,11 +10,11 @@
 <meta http-equiv="Expires" content="0">
 <title>DGC Daily Sheet</title>
 <script>
-// DGC Daily Sheet v1.5.0 — TWEAK boardroom pass: today's output, programme check btn, split sessions, qty fields, nav rename, EOD checklist restored, UX fixes
+// DGC Daily Sheet v1.5.2 — Voice pause 3s silence timer, dictate team additive+multi-task, site diary 8s pause+append, remove plant check from detail panel
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='1.5.0';
+var APP_VERSION='1.5.2';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -293,7 +293,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please choose your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;">Start &rarr;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.5.0</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.5.2</div>
   </div>
 </div>
 
@@ -351,7 +351,7 @@ select{
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
     <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
     <button onclick="reopenSOD()" style="background:none;border:1.5px solid rgba(245,158,11,.4);border-radius:9px;color:var(--acc);font-size:11px;font-weight:800;padding:6px 10px;cursor:pointer;white-space:nowrap;font-family:inherit;min-height:36px;" class="no-print" title="Open morning check">&#128203; AM check</button>
-    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.5.0</span>
+    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.5.2</span>
   </div>
 </div>
 
@@ -486,10 +486,10 @@ select{
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#128241; Comms Done</span></div></div>
   <div class="card" id="comms-c"></div>
 
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Site Notes</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Site Diary</span></div></div>
   <div class="card">
-    <button class="mic" id="mic-nt" onclick="vm('nt','fnt')"><span class="mic-icon">&#127908;</span><span class="mic-label">Record site notes</span></button>
-    <textarea id="fnt" rows="4" placeholder="Manager notes for today..."></textarea>
+    <button class="mic" id="mic-nt" onclick="vm('nt','fnt')"><span class="mic-icon">&#127908;</span><span class="mic-label">Record site diary entry</span></button>
+    <textarea id="fnt" rows="4" placeholder="Manager diary entry for today..."></textarea>
   </div>
 
   <!-- EOD RESPONSIBILITY — moved to bottom -->
@@ -608,6 +608,7 @@ var TLTRS=['A','B','C','D','E'];
 var CHK={},COM={},PT_I=0,AL_I=0,NR_I=0,IR_I=0;
 var _mic=null,_ma=null,_mid='';
 var _micStopping=false;
+var _silenceTimer=null;
 var _uname='';
 
 (function init(){
@@ -748,14 +749,8 @@ function addPT(){
       +'<textarea id="'+resId+'" rows="2" placeholder="Plant, materials, deliveries needed for this team..." style="font-size:13px;min-height:56px;"></textarea>'
     +'</div>'
     +'<div class="pt-detail" id="'+detailId+'">'
-      +'<div class="mb8"><label style="font-size:11px;">Plant Check Confirmed</label>'
-        +'<div style="display:flex;gap:8px;align-items:center;">'
-          +'<div class="ptick" id="ptick'+i+'" onclick="var t=this;t.classList.toggle(\'on\');t.textContent=t.classList.contains(\'on\')?\'&#10003;\':\'\';"></div>'
-          +'<input type="text" id="ali'+i+'in" placeholder="Initials" style="width:80px;padding:9px 10px;font-size:13px;">'
-        +'</div>'
-      +'</div>'
-      +'<div><label style="font-size:11px;">Team Notes</label>'
-        +'<textarea id="pt-notes-'+i+'" rows="3" placeholder="Any additional notes for this team..."></textarea>'
+      +'<div><label style="font-size:11px;">Team Notes / Site Issues</label>'
+        +'<textarea id="pt-notes-'+i+'" rows="3" placeholder="Team notes, site issues, anything worth recording for this team..."></textarea>'
       +'</div>'
     +'</div>';
   document.getElementById('pt-container').appendChild(d);
@@ -819,11 +814,16 @@ function vm(id,tid){if(!('webkitSpeechRecognition'in window||'SpeechRecognition'
   var lb=btn.querySelector('.mic-label');if(lb){_micLabels[id]=lb.textContent;}
   btn.classList.add('on');var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent='⏹';if(lb)lb.textContent='Stop — tap to finish';
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;_mic=new SR();_mic.continuous=true;_mic.interimResults=true;_mic.lang='en-GB';var final='',existing=document.getElementById(tid).value;var valueAtStop='';
-  _mic.onresult=function(e){var interim='';for(var i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';else interim+=e.results[i][0].transcript;}document.getElementById(tid).value=(existing?existing+' ':'')+(final+interim).trim();};
-  _mic.onerror=function(){stopV();};
+  _mic.onresult=function(e){var interim='';for(var i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';else interim+=e.results[i][0].transcript;}document.getElementById(tid).value=(existing?existing+' ':'')+(final+interim).trim();
+    // Reset silence timer — 8s for site diary (id='nt'), 3s for everything else
+    if(_silenceTimer)clearTimeout(_silenceTimer);
+    var silenceMs=(_ma==='nt')?8000:3000;
+    _silenceTimer=setTimeout(function(){stopV();},silenceMs);
+  };
+  _mic.onerror=function(){if(_silenceTimer){clearTimeout(_silenceTimer);_silenceTimer=null;}stopV();};
   _mic.onend=function(){if(_micStopping){_micStopping=false;return;}var captured=final.trim();valueAtStop=document.getElementById(tid).value;stopV();if(captured&&CLAUDE_KEY){var cleanBtn=document.getElementById('mic-'+id);if(cleanBtn){var cic=cleanBtn.querySelector('.mic-icon');if(cic)cic.textContent='⏳';var clb=cleanBtn.querySelector('.mic-label');if(clb)clb.textContent='Cleaning up...';}aiClean(tid,captured,valueAtStop,id);}};
   _mic.start();}
-function stopV(){if(_mic){try{_micStopping=true;_mic.stop();}catch(e){_micStopping=false;}}_mic=null;if(_ma){var btn=document.getElementById('mic-'+_ma);if(btn){btn.classList.remove('on');var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent=MIC_ICON;var lb=btn.querySelector('.mic-label');if(lb)lb.textContent=_micLabels[_ma]||'Dictate';}_ma=null;}}
+function stopV(){if(_silenceTimer){clearTimeout(_silenceTimer);_silenceTimer=null;}if(_mic){try{_micStopping=true;_mic.stop();}catch(e){_micStopping=false;}}_mic=null;if(_ma){var btn=document.getElementById('mic-'+_ma);if(btn){btn.classList.remove('on');var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent=MIC_ICON;var lb=btn.querySelector('.mic-label');if(lb)lb.textContent=_micLabels[_ma]||'Dictate';}_ma=null;}}
 function aiClean(tid,raw,valueAtStop,micId){
   var ta=document.getElementById(tid);if(!ta)return;
   if(!CLAUDE_KEY){toast('AI key not set','err');return;}
@@ -848,6 +848,9 @@ function aiClean(tid,raw,valueAtStop,micId){
   });}
 
 // ── DICTATE TEAM ──
+// NOTE: The individual mic buttons on the resources textarea (id='mic-res{i}') call
+// vm('res'+i, 'fres'+i) — this writes ONLY to the resources field (fres{i}) via the
+// standard vm()/aiClean() path. They do not touch leader, members, or tasks.
 function dictateTeam(i){
   if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){toast('✗ Voice needs Chrome or Safari','err');return;}
   if(!CLAUDE_KEY){toast('AI key not set — cannot parse team dictation','err');return;}
@@ -897,7 +900,15 @@ function dictateTeam(i){
     btn.style.borderColor='var(--blue)';
     btn.style.color='var(--blue)';
     var namesJoined=NAMES.join(', ');
-    var prompt='Parse this construction site manager\'s voice instruction into a team plan. Available staff names: '+namesJoined+'. Extract: team_leader (full name from the list, or best match), members (array of full names from the list), tasks (array of {description: string, target: number between 1-100}), notes (any other info). If someone says \'target\' or \'percent\' or \'%\', that\'s the target for the last task mentioned. Return ONLY valid JSON, no other text: {"team_leader":"","members":[],"tasks":[{"description":"","target":100}],"notes":""}';
+    var prompt='Parse this construction site manager\'s voice instruction into a team plan. Available staff names: '+namesJoined+'. '
+      +'Rules:\n'
+      +'- Extract ALL tasks mentioned as separate items (e.g. "we\'re gonna do this, we\'re gonna do that" = 2 tasks)\n'
+      +'- Each task gets its own entry in the tasks array\n'
+      +'- If target percentage is mentioned (e.g. "80 percent", "about half") apply it to the preceding task\n'
+      +'- If no target mentioned for a task, set it to 100\n'
+      +'- Only extract leader/members if names are explicitly mentioned\n'
+      +'Return ONLY valid JSON: {"team_leader":"","members":[],"tasks":[{"description":"","target":100},{"description":"","target":100}],"notes":""}\n'
+      +'Return as many tasks as are mentioned.';
     fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:600,messages:[{role:'user',content:prompt+'\n\nVoice transcript: '+captured}]})})
     .then(function(r){return r.json();})
     .then(function(d){
@@ -907,22 +918,20 @@ function dictateTeam(i){
       var text=d.content[0].text.trim().replace(/^```[a-z]*\n?/,'').replace(/\n?```$/,'');
       var parsed;
       try{parsed=JSON.parse(text);}catch(e){toast('✗ Could not parse response','err');return;}
-      // Populate leader
+      // ADDITIVE: only set leader if current field is blank
       var leaderEl=document.getElementById('ptl'+i);
-      if(leaderEl&&parsed.team_leader)leaderEl.value=parsed.team_leader;
-      // Populate members
+      if(leaderEl&&parsed.team_leader&&!leaderEl.value.trim())leaderEl.value=parsed.team_leader;
+      // ADDITIVE: only set members if the respective field is currently blank
       var members=parsed.members||[];
       members.forEach(function(name,mi){
         var memEl=document.getElementById('ptm'+i+'_'+mi);
-        if(memEl)memEl.value=name;
+        if(memEl&&!memEl.value.trim())memEl.value=name;
       });
-      // Clear existing tasks and add new ones
-      var taskCont=document.getElementById('ptt'+i);
-      if(taskCont)taskCont.innerHTML='';
+      // ADDITIVE: add tasks without clearing existing ones
       var tasks=parsed.tasks||[];
       if(!tasks.length)tasks=[{description:'',target:100}];
       tasks.forEach(function(tk){addTask(i,tk.description,tk.target);});
-      // Populate resources/notes
+      // Set resources only if response.notes is non-empty
       var notesEl=document.getElementById('fres'+i);
       if(notesEl&&parsed.notes)notesEl.value=parsed.notes;
       toast('✓ Team plan filled in');
