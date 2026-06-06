@@ -14,7 +14,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='2.0.0';
+var APP_VERSION='2.0.5';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -214,8 +214,8 @@ select{
 .nb{
   flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:8px 2px;background:none;border:none;color:var(--muted);
-  font-size:10px;font-weight:800;cursor:pointer;gap:3px;text-transform:uppercase;
-  letter-spacing:.01em;min-height:56px;transition:color .15s;
+  font-size:11px;font-weight:800;cursor:pointer;gap:4px;text-transform:uppercase;
+  letter-spacing:.02em;min-height:60px;transition:color .15s;
 }
 .nb .ni{font-size:22px;line-height:1;}
 .nb.active{color:var(--acc);}
@@ -271,12 +271,15 @@ select{
 
 <div class="lock" id="ls">
   <div class="lock-card">
-    <div style="font-size:26px;font-weight:900;color:#fff;letter-spacing:-.4px;margin-bottom:4px;">DGC Daily Sheet</div>
-    <div style="font-size:13px;color:rgba(255,255,255,.45);font-weight:500;margin-bottom:28px;letter-spacing:.02em;">Ballasalla Phase 4</div>
+    <div style="text-align:center;margin-bottom:20px;">
+      <img src="dgc-logo-white.png" alt="DGC" style="height:52px;object-fit:contain;filter:brightness(0) invert(1);margin-bottom:14px;display:block;margin-left:auto;margin-right:auto;">
+      <div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-.3px;line-height:1.1;">DGC Daily Sheet</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.45);font-weight:500;margin-top:4px;letter-spacing:.02em;">Ballasalla Phase 4</div>
+    </div>
     <div class="mb12">
-      <label style="color:rgba(255,255,255,.55);text-align:left;display:block;">Who are you?</label>
-      <select id="ln" style="font-size:16px;padding:14px 16px;font-weight:700;border-radius:12px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);color:#fff;width:100%;-webkit-appearance:none;appearance:none;cursor:pointer;min-height:54px;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23f59e0b' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 14px center;">
-        <option value="">— Select your name —</option>
+      <label style="color:rgba(255,255,255,.55);text-align:left;display:block;margin-bottom:8px;">Select your name</label>
+      <select id="ln" style="font-size:16px;padding:14px 16px;font-weight:700;border-radius:12px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);color:#fff;width:100%;-webkit-appearance:none;appearance:none;cursor:pointer;min-height:54px;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23f59e0b' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 14px center;">
+        <option value="">&#8212; Select your name &#8212;</option>
         <option value="James Cosgrove">James Cosgrove</option>
         <option value="David Smith">David Smith</option>
         <option value="Stephen Lamb">Stephen Lamb</option>
@@ -292,11 +295,10 @@ select{
         <option value="Lewis Peck">Lewis Peck</option>
         <option value="Liam Smith">Liam Smith</option>
       </select>
-      <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please choose your name to continue</div>
+      <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
-    <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;">Start &rarr;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;" id="login-ver">DGC Construction &middot; Silverdale Group</div>
-    <script>document.getElementById('login-ver').textContent='DGC Construction · Silverdale Group · v'+APP_VERSION;</script>
+    <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.0.5</div>
   </div>
 </div>
 
@@ -311,19 +313,20 @@ select{
     </div>
   </div>
   <div style="padding:20px;max-width:860px;margin:0 auto;">
-    <div style="font-size:22px;font-weight:900;margin-bottom:4px;" id="sod-greeting">Good morning</div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:8px;" id="sod-subtitle">Here's what was planned for today</div>
+    <div style="font-size:24px;font-weight:900;margin-bottom:2px;" id="sod-greeting">Good morning</div>
+    <div style="font-size:14px;color:var(--acc);font-weight:800;margin-bottom:4px;" id="sod-dateshow"></div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:12px;" id="sod-subtitle">Here's what was planned for today</div>
     <div id="sod-dates" style="margin-bottom:8px;display:flex;flex-direction:column;gap:3px;font-size:13px;font-weight:600;color:var(--muted);"></div>
     <div id="sod-eod-resp" style="display:none;font-size:13px;font-weight:800;color:var(--acc);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:10px 14px;margin-bottom:16px;"></div>
     <div id="sod-tasks" style="margin-bottom:20px;"></div>
     <!-- SOD checklist: morning site check -->
     <div style="margin-bottom:20px;">
       <div style="background:var(--surf);border:1.5px solid var(--bdr);border-radius:12px;padding:16px;margin-bottom:16px;">
-        <div style="font-size:14px;font-weight:800;margin-bottom:6px;">&#128269; Morning Site Check</div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">When you arrived this morning, was the site secure and as expected from yesterday?</div>
+        <div style="font-size:15px;font-weight:900;margin-bottom:4px;">&#128269; Morning Site Check</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5;">When you arrived, was the site secure and as expected?</div>
         <div style="display:flex;gap:8px;">
-          <button id="sod-site-ok" onclick="setSiteCheck(true)" class="btn btn-ghost" style="flex:1;border-color:var(--green);">&#10003; All good</button>
-          <button id="sod-site-nok" onclick="setSiteCheck(false)" class="btn btn-ghost" style="flex:1;border-color:var(--red);">&#10007; Issues found</button>
+          <button id="sod-site-ok" onclick="setSiteCheck(true)" class="btn btn-ghost" style="flex:1;border-color:var(--green);color:var(--green);min-height:52px;font-size:15px;">&#10003; All good</button>
+          <button id="sod-site-nok" onclick="setSiteCheck(false)" class="btn btn-ghost" style="flex:1;border-color:var(--red);color:var(--red);min-height:52px;font-size:15px;">&#10007; Issues</button>
         </div>
         <div id="sod-site-issue-row" style="display:none;margin-top:10px;">
           <textarea id="sod-site-issues" rows="2" placeholder="What was wrong? (e.g. gate open, plant not secured, bins not emptied)" style="font-size:14px;"></textarea>
@@ -346,10 +349,10 @@ select{
 <div id="today-plan" style="display:none;min-height:100vh;background:var(--bg);padding:0;">
   <div class="hdr">
     <img class="dgc-logo" src="dgc-logo-white.png" alt="DGC">
+    <div style="font-size:14px;font-weight:900;color:var(--txt);margin-left:10px;">Today's Plan</div>
     <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
       <button class="btn btn-blue btn-sm" onclick="window.print()" title="Print today's plan" style="min-width:44px;min-height:44px;font-size:18px;padding:0;">&#128424;</button>
-      <button class="btn btn-ghost btn-sm" id="tp-email-btn" onclick="emailTodayPlan(window._sodPlanData)">&#9993; Email Plan</button>
-      <button class="btn btn-acc btn-sm" onclick="showApp()" style="white-space:nowrap;">Start Planning Tomorrow &rarr;</button>
+      <button class="btn btn-acc btn-sm" onclick="showApp()" style="white-space:nowrap;">Plan Tonight &#8594;</button>
     </div>
   </div>
   <div style="padding:20px;max-width:860px;margin:0 auto;" id="today-plan-inner"></div>
@@ -386,7 +389,7 @@ select{
       <select id="fw"><option value="">Select...</option><option>Fine &amp; dry</option><option>Overcast</option><option>Light rain</option><option>Heavy rain</option><option>Wind &amp; rain</option><option>Cold &amp; wet</option><option>Hot &amp; sunny</option><option>Cold &amp; dry</option><option>Frost</option></select>
     </div>
     <div><label>Temp (&#176;C)</label>
-      <div style="display:flex;gap:5px;flex-wrap:wrap;"><input type="number" id="ft" placeholder="&#176;C" inputmode="numeric" style="flex:1;min-width:60px;"><button class="btn btn-blue btn-sm" onclick="fetchWx()" title="Fetch tomorrow's weather" style="white-space:nowrap;">&#9728; Fetch</button><button class="btn btn-blue btn-sm" onclick="fetchWx('brief')" title="Fetch with brief summary" style="white-space:nowrap;">&#128203; Brief</button></div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;"><input type="number" id="ft" placeholder="&#176;C" inputmode="numeric" style="flex:1;min-width:60px;"><button class="btn btn-blue btn-sm" onclick="fetchWx('brief')" title="Fetch tomorrow's weather" style="white-space:nowrap;">&#9728; Fetch weather</button></div>
       <div id="wx-brief" style="display:none;font-size:12px;font-weight:600;color:var(--blue);margin-top:6px;padding:6px 10px;background:rgba(56,189,248,.08);border-radius:8px;border:1px solid rgba(56,189,248,.25);"></div>
     </div>
   </div>
@@ -417,14 +420,14 @@ select{
       <button class="btn btn-blue btn-sm" id="prog-check-btn" onclick="checkPlanVsProgramme()" title="Check tasks against BA4 master programme">&#128197; Check Programme</button>
     </div>
   </div>
-  <div style="font-size:12px;color:var(--muted);margin-bottom:8px;padding:8px 12px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-radius:8px;">
-    <strong style="color:var(--acc);">Target %</strong> = how far through that task you expect to be by end of tomorrow. Leave blank for 100% (task finishes tomorrow).
+  <div style="font-size:12px;color:var(--muted);margin-bottom:8px;padding:7px 10px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-radius:8px;">
+    <strong style="color:var(--acc);">Target %</strong> = how far done by end of day. Blank = 100%.
   </div>
   <div id="pt-container"></div>
 
   <div id="prog-check-panel" style="display:none;margin-bottom:12px;"></div>
 
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; Day Diary</span><span class="sec-s">How did it go today? Just talk it through.</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#127908; How Did Today Go?</span><span class="sec-s">Voice dictate your day — what happened, what moved, any issues</span></div></div>
   <div class="card">
     <div style="display:flex;flex-direction:column;gap:10px;">
       <div style="font-size:11px;font-weight:800;color:var(--muted);padding:8px 10px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.18);border-radius:8px;line-height:1.6;">
@@ -555,7 +558,11 @@ select{
 <!-- MORNING TAB — shows SOD content inline -->
 <div class="tab active" id="tab-sod-tab">
   <div id="sod-inline-content" style="padding:8px 0;">
-    <div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Loading morning check...</div>
+    <div style="text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;line-height:1.7;">
+      <div style="font-size:28px;margin-bottom:10px;">&#9728;</div>
+      <div style="font-size:15px;font-weight:700;color:var(--txt);margin-bottom:6px;">Complete the morning check first</div>
+      <div>Log in and sign off the morning check to see today's summary here.</div>
+    </div>
   </div>
 </div>
 
@@ -568,11 +575,11 @@ select{
 
 </div><!-- /main -->
 <div class="bnav">
-  <button class="nb active" id="nav-sod-tab" onclick="sw('sod-tab',this)"><span class="ni">&#127749;</span>Morning</button>
-  <button class="nb" id="nav-today-tab" onclick="sw('today-tab',this)"><span class="ni">&#128203;</span>Today</button>
-  <button class="nb" id="nav-eod" onclick="sw('eod',this)"><span class="ni">&#128221;</span>Plan</button>
+  <button class="nb active" id="nav-sod-tab" onclick="sw('sod-tab',this)"><span class="ni">&#9728;</span>Morning</button>
+  <button class="nb" id="nav-today-tab" onclick="sw('today-tab',this)"><span class="ni">&#128196;</span>Today</button>
+  <button class="nb" id="nav-eod" onclick="sw('eod',this)"><span class="ni">&#128221;</span>Tonight</button>
   <button class="nb" id="nav-achv" onclick="sw('achv',this)"><span class="ni">&#9989;</span>Results</button>
-  <button class="nb" id="nav-hist" onclick="sw('hist',this)"><span class="ni">&#128202;</span>History</button>
+  <button class="nb" id="nav-hist" onclick="sw('hist',this)"><span class="ni">&#128218;</span>History</button>
 </div>
 </div><!-- /app -->
 <datalist id="nl"></datalist>
@@ -1788,6 +1795,8 @@ function showSOD(planData,name){
   var greet=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
   document.getElementById('sod-greeting').textContent=greet+', '+name;
   document.getElementById('sod-name').textContent=name;
+  var dateShowEl=document.getElementById('sod-dateshow');
+  if(dateShowEl)dateShowEl.textContent=fmtD(tod());
 
   // If SOD already completed today, show banner + quick continue button
   var alreadyDone=sessionStorage.getItem('dgc_sod_done_'+tod());
@@ -2240,8 +2249,8 @@ function showTodayPlan(planData){
     teamHours[a.team]={present:present,total:total,personHours:present*hours};
   });
 
-  var html='<div style="font-size:22px;font-weight:900;margin-bottom:4px;">Today\'s Plan</div>';
-  html+='<div style="font-size:13px;color:var(--muted);margin-bottom:12px;">'+fmtD(tod())+'</div>';
+  var html='<div style="font-size:24px;font-weight:900;margin-bottom:2px;color:var(--txt);">Today\'s Plan</div>';
+  html+='<div style="font-size:15px;color:var(--acc);font-weight:800;margin-bottom:14px;">'+fmtD(tod())+'</div>';
 
   // Working hours bar
   var dayType=(new Date().getDay()===6)?'Saturday':'Weekday';
@@ -2431,8 +2440,10 @@ function showTodayPlanInline(){
     teamHours[a.team]={present:present,total:total,personHours:present*hours};
   });
   var html='';
-  html+='<div style="background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:12px;padding:12px 14px;margin-bottom:14px;">';
-  html+='<div style="font-size:13px;font-weight:900;color:var(--blue);">'+fmtD(tod())+' &mdash; '+hours+'h working day</div>';
+  html+='<div style="background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:12px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">';
+  html+='<span style="font-size:26px;">&#128196;</span>';
+  html+='<div><div style="font-size:15px;font-weight:900;color:var(--blue);">'+fmtD(tod())+'</div>';
+  html+='<div style="font-size:13px;color:var(--muted);font-weight:700;">'+hours+'h working day</div></div>';
   html+='</div>';
   var meeting=d.meeting||{};
   if(meeting.topics){
