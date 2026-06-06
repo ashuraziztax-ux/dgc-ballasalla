@@ -717,19 +717,19 @@ function showAchvNone(msg,sub){
   el.style.display='';
 }
 function loadAchv(){
-  if(!sb){showAchvNone(‘No plan found’,’Fill in today\’s EOD plan —<br>tomorrow you can record how you got on.’);return;}
+  if(!sb){showAchvNone('No plan found','Fill in today\'s EOD plan —<br>tomorrow you can record how you got on.');return;}
   // Search up to 7 days back for the most recent plan (handles weekends and gaps)
   var searchDates=[];for(var di=1;di<=7;di++){var d=new Date();d.setDate(d.getDate()-di);searchDates.push(d.toISOString().slice(0,10));}
-  document.getElementById(‘achv-sub’).textContent=’Loading most recent plan...’;
-  sb.from(‘daily_records’).select(‘date,data’).eq(‘project_ref’,PROJECT_REF).in(‘date’,searchDates).not(‘gang’,’like’,’ACHV_%’).order(‘date’,{ascending:false}).limit(20)
+  document.getElementById('achv-sub').textContent='Loading most recent plan...';
+  sb.from('daily_records').select('date,data').eq('project_ref',PROJECT_REF).in('date',searchDates).not('gang','like','ACHV_%').order('date',{ascending:false}).limit(20)
     .then(function(r){
       var found=(r.data||[]).find(function(x){return x.data&&x.data.plan&&x.data.plan.length>0;});
       if(found){
-        document.getElementById(‘achv-sub’).textContent=’Based on plan from ‘+fmtD(found.date);
+        document.getElementById('achv-sub').textContent='Based on plan from '+fmtD(found.date);
         buildAchv(found.data);
-      }else showAchvNone(‘No recent plan found’,’Fill in today\’s EOD plan —<br>tomorrow you can record how you got on.’);
+      }else showAchvNone('No recent plan found','Fill in today\'s EOD plan —<br>tomorrow you can record how you got on.');
     })
-    .catch(function(){showAchvNone(‘Could not load plan’,’Check your internet connection and try again.’);});
+    .catch(function(){showAchvNone('Could not load plan','Check your internet connection and try again.');});
 }
 function buildAchv(data){
   var plan=data.plan||[];var tasks=[];
