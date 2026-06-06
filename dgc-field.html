@@ -10,11 +10,11 @@
 <meta http-equiv="Expires" content="0">
 <title>DGC Daily Sheet</title>
 <script>
-// DGC Daily Sheet v1.3.0 — Boardroom TWEAK session 2026-06-06: items row labels, task % placeholder, noise required indicator
+// DGC Daily Sheet v1.3.1 — SOD improvements: dates, EOD checklist, sign-off, skip logic, edit button
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='1.3.0';
+var APP_VERSION='1.3.1';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -280,7 +280,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please choose your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;">Start &rarr;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.3.0</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.3.1</div>
   </div>
 </div>
 
@@ -293,11 +293,20 @@ select{
   </div>
   <div style="padding:20px;max-width:860px;margin:0 auto;">
     <div style="font-size:22px;font-weight:900;margin-bottom:4px;" id="sod-greeting">Good morning</div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:20px;" id="sod-subtitle">Here's what was planned for today</div>
-    <div id="sod-tasks"></div>
-    <div style="margin-top:20px;">
+    <div style="font-size:13px;color:var(--muted);margin-bottom:8px;" id="sod-subtitle">Here's what was planned for today</div>
+    <div id="sod-dates" style="margin-bottom:8px;display:flex;flex-direction:column;gap:3px;font-size:13px;font-weight:600;color:var(--muted);"></div>
+    <div id="sod-eod-resp" style="display:none;font-size:13px;font-weight:800;color:var(--acc);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:10px 14px;margin-bottom:16px;"></div>
+    <div id="sod-tasks" style="margin-bottom:20px;"></div>
+    <!-- SOD checklist: site check for end of yesterday -->
+    <div style="margin-bottom:20px;">
+      <div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--acc);border-left:3px solid var(--acc);padding-left:10px;margin-bottom:12px;">Site Check &mdash; End of Yesterday</div>
+      <div id="sod-checklist" style="background:var(--surf);border:1px solid var(--bdr);border-radius:var(--radius);padding:4px 12px;"></div>
+      <button class="btn btn-submit" id="sod-signoff-btn" onclick="sodSignOff()" style="margin-top:12px;">&#10003; Sign Off Morning Check</button>
+      <div id="sod-signoff-done" style="display:none;font-size:13px;font-weight:800;color:var(--green);margin-top:8px;text-align:center;"></div>
+    </div>
+    <div style="margin-top:4px;display:flex;flex-direction:column;gap:10px;">
       <button class="btn btn-submit" onclick="startDay()">Start the Day &rarr;</button>
-      <button class="btn btn-ghost" style="width:100%;margin-top:10px;" onclick="startDay()">Skip &mdash; go to tomorrow's plan</button>
+      <button class="btn btn-ghost" style="width:100%;font-size:13px;min-height:44px;" onclick="startDaySkip()">Skip &mdash; already checked in this morning</button>
     </div>
   </div>
 </div>
@@ -315,7 +324,8 @@ select{
     <button class="btn btn-blue btn-sm no-print" onclick="window.print()" title="Print tomorrow's plan" style="min-width:44px;min-height:44px;font-size:18px;padding:0;">&#128424;</button>
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
     <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
-    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.3.0</span>
+    <button onclick="reopenSOD()" style="background:none;border:1.5px solid rgba(245,158,11,.4);border-radius:9px;color:var(--acc);font-size:11px;font-weight:800;padding:6px 10px;cursor:pointer;white-space:nowrap;font-family:inherit;min-height:36px;" class="no-print" title="Open morning check">&#128203; AM check</button>
+    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.3.1</span>
   </div>
 </div>
 
@@ -574,11 +584,19 @@ function doLogin(){
       setTimeout(function(){var h=document.getElementById('ai-hint');if(h)h.style.display='none';},8000);
     },1200);
   }
+  // Skip SOD if already checked in this session today
+  if(sessionStorage.getItem('dgc_sod_done_'+tod())){
+    document.getElementById('ls').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.body.style.overflow='';
+    loadAchv();loadHist();
+    return;
+  }
   // Try to find yesterday's/today's plan to show Start of Day
   if(sb){
     var today=tod();
     var yesterday=(function(){var d=new Date();d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);})();
-    sb.from('daily_records').select('data').eq('project_ref',PROJECT_REF).in('date',[today,yesterday]).not('gang','like','ACHV_%').order('date',{ascending:false}).limit(3)
+    sb.from('daily_records').select('data').eq('project_ref',PROJECT_REF).in('date',[today,yesterday]).not('gang','like','ACHV_%').not('gang','like','SOD_%').order('date',{ascending:false}).limit(3)
       .then(function(r){
         var found=r.data&&r.data.find(function(x){return x.data&&x.data.plan&&x.data.plan.length>0;});
         if(found){
@@ -1223,17 +1241,54 @@ function fmtD(s){if(!s)return'';return new Date(s+'T12:00:00').toLocaleDateStrin
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function toast(m,t){var el=document.getElementById('toast');el.textContent=m;el.className='toast show'+(t==='err'?' err':'');setTimeout(function(){el.classList.remove('show');},2800);}
 
+var _sodPlanData=null;
+var SOD_ITEMS=[
+  {k:'site_clean',l:'Site &amp; compound clean'},
+  {k:'bins',l:'Bins emptied'},
+  {k:'welfare',l:'Welfare clean &amp; tidy'},
+  {k:'tools',l:'Tools stored / locked away'},
+  {k:'heras',l:'Heras / fencing secure'},
+  {k:'plant',l:'Plant immobilised, keys removed'},
+  {k:'cabins',l:'All cabins locked'},
+  {k:'gen',l:'Generator switched off'}
+];
+var _sodChecks={};
+
 function showSOD(planData,name){
+  _sodPlanData=planData;
   var hour=new Date().getHours();
   var greet=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
   document.getElementById('sod-greeting').textContent=greet+', '+name;
   document.getElementById('sod-name').textContent=name;
+
+  // Show two dates: plan saved date + today
+  var datesEl=document.getElementById('sod-dates');
+  if(datesEl){
+    var savedDate=planData.date?fmtD(planData.date):'unknown';
+    var todayDate=fmtD(tod());
+    datesEl.innerHTML='<div><span style="color:var(--muted);">Plan saved:</span> <strong style="color:var(--txt);">'+savedDate+'</strong></div>'
+      +'<div><span style="color:var(--muted);">Today:</span> <strong style="color:var(--txt);">'+todayDate+'</strong></div>';
+  }
+
+  // Show EOD responsibility from yesterday's plan
+  var eodEl=document.getElementById('sod-eod-resp');
+  if(eodEl){
+    var eodResp=planData.eodResponsibility;
+    if(eodResp&&eodResp.person){
+      var teamStr=eodResp.team?(' (Team '+eodResp.team+')'):'';
+      eodEl.textContent='EOD responsibility yesterday: '+eodResp.person+teamStr;
+      eodEl.style.display='block';
+    }else{
+      eodEl.style.display='none';
+    }
+  }
+
   var plan=planData.plan||[];
   var tasks=[];
   plan.forEach(function(t){(t.tasks||[]).forEach(function(tk){tasks.push({team:t.team,desc:tk.desc,target:tk.target||100});});});
   var container=document.getElementById('sod-tasks');
   if(!tasks.length){
-    container.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px 0;">No plan recorded for today. Carry on!</div>';
+    container.innerHTML='<div style="color:var(--muted);font-size:13px;padding:12px 0;">No plan recorded for yesterday. Carry on!</div>';
   }else{
     container.innerHTML=tasks.map(function(t,i){
       var col={A:'#f59e0b',B:'#38bdf8',C:'#a78bfa',D:'#22c55e',E:'#fb923c'}[t.team]||'#94a3b8';
@@ -1246,17 +1301,89 @@ function showSOD(planData,name){
         +'</div>';
     }).join('');
   }
+
+  // Build SOD checklist
+  _sodChecks={};
+  var clEl=document.getElementById('sod-checklist');
+  if(clEl){
+    clEl.innerHTML='';
+    SOD_ITEMS.forEach(function(item){
+      _sodChecks[item.k]=false;
+      var row=document.createElement('div');
+      row.className='chki';
+      row.innerHTML='<div class="chkb" id="sod-chk-'+item.k+'"></div>'
+        +'<div style="font-size:14px;font-weight:600;color:var(--txt);">'+item.l+'</div>';
+      row.onclick=function(){
+        _sodChecks[item.k]=!_sodChecks[item.k];
+        var b=document.getElementById('sod-chk-'+item.k);
+        if(b){b.classList.toggle('on',_sodChecks[item.k]);b.textContent=_sodChecks[item.k]?'✓':'';}
+      };
+      clEl.appendChild(row);
+    });
+  }
+  // Reset sign-off state
+  var doneEl=document.getElementById('sod-signoff-done');
+  var btnEl=document.getElementById('sod-signoff-btn');
+  if(doneEl)doneEl.style.display='none';
+  if(btnEl)btnEl.style.display='block';
+
   document.getElementById('ls').style.display='none';
   document.getElementById('app').style.display='none';
   document.getElementById('sod').style.display='block';
   document.body.style.overflow='';
 }
 
+function sodSignOff(){
+  var checks=Object.assign({},_sodChecks);
+  var signedAt=new Date().toISOString();
+  var rec={type:'dgc-sod',signer:_uname,signedAt:signedAt,checks:checks};
+  var btn=document.getElementById('sod-signoff-btn');
+  if(btn){btn.disabled=true;btn.textContent='Saving...';}
+  if(sb){
+    sb.from('daily_records').insert({project_ref:PROJECT_REF,gang:'SOD_'+_uname,date:tod(),data:rec,updated_at:signedAt})
+      .then(function(r){
+        if(r&&r.error){toast('Sign-off save failed: '+(r.error.message||'unknown error'),'err');if(btn){btn.disabled=false;btn.textContent='✓ Sign Off Morning Check';}}
+        else{
+          toast('✓ Morning check signed off');
+          var doneEl=document.getElementById('sod-signoff-done');
+          if(doneEl){doneEl.textContent='✓ Signed off by '+_uname+' at '+new Date(signedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});doneEl.style.display='block';}
+          if(btn)btn.style.display='none';
+          setTimeout(function(){startDay();},1200);
+        }
+      })
+      .catch(function(e){toast('Sign-off save failed','err');if(btn){btn.disabled=false;btn.textContent='✓ Sign Off Morning Check';}});
+  }else{
+    toast('✓ Morning check signed off (offline)');
+    var doneEl=document.getElementById('sod-signoff-done');
+    if(doneEl){doneEl.textContent='✓ Signed off by '+_uname+' at '+new Date(signedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});doneEl.style.display='block';}
+    if(btn)btn.style.display='none';
+    setTimeout(function(){startDay();},1200);
+  }
+}
+
 function startDay(){
+  sessionStorage.setItem('dgc_sod_done_'+tod(),'1');
   document.getElementById('sod').style.display='none';
   document.getElementById('app').style.display='block';
   loadAchv();
   loadHist();
+}
+
+function startDaySkip(){
+  sessionStorage.setItem('dgc_sod_done_'+tod(),'1');
+  document.getElementById('sod').style.display='none';
+  document.getElementById('app').style.display='block';
+  loadAchv();
+  loadHist();
+}
+
+function reopenSOD(){
+  if(_sodPlanData){
+    document.getElementById('app').style.display='none';
+    document.getElementById('sod').style.display='block';
+  }else{
+    toast('No plan loaded yet','err');
+  }
 }
 </script>
 
