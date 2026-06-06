@@ -10,11 +10,11 @@
 <meta http-equiv="Expires" content="0">
 <title>DGC Daily Sheet</title>
 <script>
-// DGC Daily Sheet v1.4.0 — Attendance check, Today Plan read-only, programme benchmark rates, KPI, email plan
+// DGC Daily Sheet v1.4.1 — Fix voice cleanup, team dictation, remove flip card, target required, clean up
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='1.4.0';
+var APP_VERSION='1.4.1';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -237,14 +237,9 @@ select{
 /* ── MISC ── */
 .sess-hd{font-size:11px;font-weight:900;padding:7px 12px;border-radius:8px;margin-bottom:8px;}
 
-/* ── FLIP CARD ── */
-.flip-container{perspective:1000px;}
-.flip-inner{position:relative;transition:transform .5s ease;transform-style:preserve-3d;}
-.flip-inner.flipped{transform:rotateY(180deg);}
-.flip-front,.flip-back{backface-visibility:hidden;-webkit-backface-visibility:hidden;}
-.flip-back{transform:rotateY(180deg);display:none;}
-.flip-inner.flipped .flip-front{display:none;}
-.flip-inner.flipped .flip-back{display:block;}
+/* ── TEAM DETAIL PANEL (replaces flip card) ── */
+.pt-detail{display:none;margin-top:12px;padding-top:12px;border-top:1.5px solid var(--bdr);}
+.pt-detail.open{display:block;}
 
 @media print{
   @page{size:A4;margin:18mm;}
@@ -298,7 +293,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please choose your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;">Start &rarr;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.4.0</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.4.1</div>
   </div>
 </div>
 
@@ -356,7 +351,7 @@ select{
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
     <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
     <button onclick="reopenSOD()" style="background:none;border:1.5px solid rgba(245,158,11,.4);border-radius:9px;color:var(--acc);font-size:11px;font-weight:800;padding:6px 10px;cursor:pointer;white-space:nowrap;font-family:inherit;min-height:36px;" class="no-print" title="Open morning check">&#128203; AM check</button>
-    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.4.0</span>
+    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.4.1</span>
   </div>
 </div>
 
@@ -404,9 +399,6 @@ select{
   </div>
   <div id="pt-container"></div>
 
-  <div class="btns no-print" style="margin-top:4px;margin-bottom:8px;">
-    <button class="btn btn-ghost" onclick="checkPlanVsProgramme()" id="prog-check-btn" style="flex:1;border-color:var(--blue);color:var(--blue);">&#128197; Check Against Programme</button>
-  </div>
   <div id="prog-check-panel" style="display:none;"></div>
 
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#9203; Session Times</span></div></div>
@@ -660,58 +652,55 @@ function sw(name,btn){
 function addPT(){
   var i=PT_I++,l=TLTRS[i]||('T'+(i+1)),c=TCOLS[i]||'#94a3b8';
   var d=document.createElement('div');d.className='tblk';d.id='pt'+i;
-  var micResId='mic-res'+i,resId='fres'+i;
-  var front=
+  var micResId='mic-res'+i,resId='fres'+i,detailId='pt-detail-'+i;
+  var micDictId='mic-dict'+i;
+  d.innerHTML=
     '<div class="thd">'
       +'<div class="tdot" style="background:'+c+'"></div>'
       +'<div style="font-size:13px;font-weight:800;">Team '+l+'</div>'
       +'<div style="margin-left:auto;display:flex;gap:5px;">'
-        +'<button class="btn btn-ghost btn-sm" onclick="flipCard('+i+')" title="More detail">&#8861; Detail</button>'
+        +'<button class="btn btn-blue btn-sm" id="'+micDictId+'" onclick="dictateTeam('+i+')" title="Dictate whole team plan">&#127908; Dictate Team</button>'
+        +'<button class="btn btn-ghost btn-sm" onclick="toggleTeamDetail('+i+')" title="Show detail panel">&#128203; Details</button>'
         +'<button class="btn btn-ghost btn-sm" onclick="addTask('+i+')">+ Task</button>'
         +'<button class="btn btn-red btn-sm" onclick="this.closest(\'.tblk\').remove()">x</button>'
       +'</div>'
     +'</div>'
     +'<div class="g2" style="margin-bottom:10px;">'
       +'<div><label style="font-size:11px;">Team Leader</label><input type="text" id="ptl'+i+'" list="nl" placeholder="Leader name" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
-      +'<div><label style="font-size:11px;">Member 1</label><input type="text" id="ptm'+i+'a" list="nl" placeholder="Member name" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
-      +'<div><label style="font-size:11px;">Member 2</label><input type="text" id="ptm'+i+'b" list="nl" placeholder="Member name" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
+      +'<div><label style="font-size:11px;">Member 1</label><input type="text" id="ptm'+i+'_0" list="nl" placeholder="Member name" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
+      +'<div><label style="font-size:11px;">Member 2</label><input type="text" id="ptm'+i+'_1" list="nl" placeholder="Member name" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
     +'</div>'
     +'<div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:1fr 72px 40px;gap:6px;padding:0 2px 6px;text-transform:uppercase;letter-spacing:.05em;"><span>Task / Activity</span><span>Target %</span><span></span></div>'
     +'<div id="ptt'+i+'"></div>'
     +'<div style="margin-top:10px;"><label style="font-size:11px;">Resources needed</label>'
       +'<button class="mic" id="'+micResId+'" onclick="vm(\'res'+i+'\',\''+resId+'\')" style="margin-bottom:6px;"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate resources</span></button>'
       +'<textarea id="'+resId+'" rows="2" placeholder="Plant, materials, deliveries needed for this team..." style="font-size:13px;min-height:56px;"></textarea>'
-    +'</div>';
-  var back=
-    '<div style="background:var(--surf);border-radius:var(--radius);padding:14px;">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
-        +'<div style="font-size:13px;font-weight:800;">Team '+l+' &mdash; Detail</div>'
-        +'<button class="btn btn-ghost btn-sm" onclick="flipCard('+i+')">&larr; Back</button>'
-      +'</div>'
-      +'<div class="mb8"><label>Plant Check Confirmed</label>'
+    +'</div>'
+    +'<div class="pt-detail" id="'+detailId+'">'
+      +'<div class="mb8"><label style="font-size:11px;">Plant Check Confirmed</label>'
         +'<div style="display:flex;gap:8px;align-items:center;">'
           +'<div class="ptick" id="ptick'+i+'" onclick="var t=this;t.classList.toggle(\'on\');t.textContent=t.classList.contains(\'on\')?\'&#10003;\':\'\';"></div>'
-          +'<input type="text" id="ali'+i+'in" placeholder="Initials" style="width:80px;">'
+          +'<input type="text" id="ali'+i+'in" placeholder="Initials" style="width:80px;padding:9px 10px;font-size:13px;">'
         +'</div>'
       +'</div>'
-      +'<div class="mb8"><label>Programme Task Reference</label>'
-        +'<div id="prog-ref-'+i+'" style="font-size:12px;color:var(--muted);padding:8px;background:var(--s2);border-radius:8px;">Not yet checked against programme</div>'
-      +'</div>'
-      +'<div><label>Team Notes</label>'
+      +'<div><label style="font-size:11px;">Team Notes</label>'
         +'<textarea id="pt-notes-'+i+'" rows="3" placeholder="Any additional notes for this team..."></textarea>'
-      +'</div>'
-    +'</div>';
-  d.innerHTML=
-    '<div class="flip-container">'
-      +'<div class="flip-inner" id="flip-inner-'+i+'">'
-        +'<div class="flip-front">'+front+'</div>'
-        +'<div class="flip-back">'+back+'</div>'
       +'</div>'
     +'</div>';
   document.getElementById('pt-container').appendChild(d);
   addTask(i);
 }
-function flipCard(i){var el=document.getElementById('flip-inner-'+i);if(el)el.classList.toggle('flipped');}
+function toggleTeamDetail(i){
+  var el=document.getElementById('pt-detail-'+i);
+  if(!el)return;
+  el.classList.toggle('open');
+  // Update button label
+  var tblk=document.getElementById('pt'+i);
+  if(tblk){
+    var btns=tblk.querySelectorAll('.thd button');
+    btns.forEach(function(b){if(b.textContent.indexOf('Details')>=0||b.textContent.indexOf('Hide')>=0){b.textContent=(el.classList.contains('open')?'Hide':'&#128203; Details');b.innerHTML=(el.classList.contains('open')?'Hide Details':'&#128203; Details');}});
+  }
+}
 function addTask(ti,desc,pct){
   var c=document.getElementById('ptt'+ti);if(!c)return;
   var rateHintId='rh'+ti+'_'+Date.now();
@@ -766,21 +755,115 @@ function vm(id,tid){if(!('webkitSpeechRecognition'in window||'SpeechRecognition'
 function stopV(){if(_mic){try{_micStopping=true;_mic.stop();}catch(e){_micStopping=false;}}_mic=null;if(_ma){var btn=document.getElementById('mic-'+_ma);if(btn){btn.classList.remove('on');var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent=MIC_ICON;var lb=btn.querySelector('.mic-label');if(lb)lb.textContent=_micLabels[_ma]||'Dictate';}_ma=null;}}
 function aiClean(tid,raw,valueAtStop,micId){
   var ta=document.getElementById(tid);if(!ta)return;
-  toast('Cleaning with AI...');
+  if(!CLAUDE_KEY){toast('AI key not set','err');return;}
+  toast('Cleaning up...');
   fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:300,messages:[{role:'user',content:'Fix the grammar and punctuation of this voice transcript from a UK construction site manager. Keep all the meaning and facts. Preserve technical terms, place names (Ballasalla, Dandara, Isle of Man), construction jargon (MH, HDPE, RC wall, kerb, etc.) and measurements exactly as spoken. Return ONLY the corrected text, no explanation:\n\n'+raw}]})})
   .then(function(r){return r.json();})
   .then(function(d){
     if(d.content&&d.content[0]){
       // Only overwrite if user hasn't edited the field since voice stopped
       if(ta.value===valueAtStop){ta.value=d.content[0].text.trim();}
-      toast('✓ AI cleaned up');
-    }else{toast('✓ Voice saved (AI unavailable)');}
+      toast('✓ Cleaned up');
+    }else if(d.error){
+      toast('✗ AI error: '+(d.error.message||JSON.stringify(d.error)),'err');
+    }else{
+      toast('✓ Voice saved (AI unavailable)');
+    }
     if(micId){var btn=document.getElementById('mic-'+micId);if(btn){var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent=MIC_ICON;var lb=btn.querySelector('.mic-label');if(lb)lb.textContent=_micLabels[micId]||'Dictate';}}
   })
   .catch(function(e){
-    toast('✗ AI cleanup failed — raw text saved','err');
+    toast('✗ AI cleanup error: '+(e&&e.message?e.message:'unknown'),'err');
     if(micId){var btn=document.getElementById('mic-'+micId);if(btn){var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent=MIC_ICON;var lb=btn.querySelector('.mic-label');if(lb)lb.textContent=_micLabels[micId]||'Dictate';}}
   });}
+
+// ── DICTATE TEAM ──
+function dictateTeam(i){
+  if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){toast('✗ Voice needs Chrome or Safari','err');return;}
+  if(!CLAUDE_KEY){toast('AI key not set — cannot parse team dictation','err');return;}
+  var btn=document.getElementById('mic-dict'+i);
+  if(!btn)return;
+  // If already recording for this team, stop
+  if(btn._recording){
+    if(btn._sr){try{btn._sr.stop();}catch(e){}}
+    return;
+  }
+  btn._recording=true;
+  btn.innerHTML='&#9209; Stop';
+  btn.style.background='rgba(245,158,11,.25)';
+  btn.style.borderColor='var(--acc)';
+  btn.style.color='var(--acc)';
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  var sr=new SR();
+  btn._sr=sr;
+  sr.continuous=true;sr.interimResults=true;sr.lang='en-GB';
+  var finalText='';
+  sr.onresult=function(e){
+    var interim='';
+    for(var j=e.resultIndex;j<e.results.length;j++){
+      if(e.results[j].isFinal)finalText+=e.results[j][0].transcript+' ';
+      else interim+=e.results[j][0].transcript;
+    }
+    btn.innerHTML='&#9209; '+((finalText+interim).trim().slice(0,30)||'Listening...');
+  };
+  sr.onerror=function(){
+    btn._recording=false;btn._sr=null;
+    btn.innerHTML='&#127908; Dictate Team';
+    btn.style.background='';btn.style.borderColor='';btn.style.color='';
+    toast('✗ Voice error','err');
+  };
+  sr.onend=function(){
+    btn._recording=false;btn._sr=null;
+    var captured=finalText.trim();
+    if(!captured){
+      btn.innerHTML='&#127908; Dictate Team';
+      btn.style.background='';btn.style.borderColor='';btn.style.color='';
+      toast('Nothing heard — try again','err');
+      return;
+    }
+    // Show loading state
+    btn.innerHTML='&#9203; Parsing...';
+    btn.style.background='rgba(56,189,248,.15)';
+    btn.style.borderColor='var(--blue)';
+    btn.style.color='var(--blue)';
+    var namesJoined=NAMES.join(', ');
+    var prompt='Parse this construction site manager\'s voice instruction into a team plan. Available staff names: '+namesJoined+'. Extract: team_leader (full name from the list, or best match), members (array of full names from the list), tasks (array of {description: string, target: number between 1-100}), notes (any other info). If someone says \'target\' or \'percent\' or \'%\', that\'s the target for the last task mentioned. Return ONLY valid JSON, no other text: {"team_leader":"","members":[],"tasks":[{"description":"","target":100}],"notes":""}';
+    fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:600,messages:[{role:'user',content:prompt+'\n\nVoice transcript: '+captured}]})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      btn.innerHTML='&#127908; Dictate Team';
+      btn.style.background='';btn.style.borderColor='';btn.style.color='';
+      if(!d.content||!d.content[0]){toast('✗ AI parse error','err');return;}
+      var text=d.content[0].text.trim().replace(/^```[a-z]*\n?/,'').replace(/\n?```$/,'');
+      var parsed;
+      try{parsed=JSON.parse(text);}catch(e){toast('✗ Could not parse response','err');return;}
+      // Populate leader
+      var leaderEl=document.getElementById('ptl'+i);
+      if(leaderEl&&parsed.team_leader)leaderEl.value=parsed.team_leader;
+      // Populate members
+      var members=parsed.members||[];
+      members.forEach(function(name,mi){
+        var memEl=document.getElementById('ptm'+i+'_'+mi);
+        if(memEl)memEl.value=name;
+      });
+      // Clear existing tasks and add new ones
+      var taskCont=document.getElementById('ptt'+i);
+      if(taskCont)taskCont.innerHTML='';
+      var tasks=parsed.tasks||[];
+      if(!tasks.length)tasks=[{description:'',target:100}];
+      tasks.forEach(function(tk){addTask(i,tk.description,tk.target);});
+      // Populate resources/notes
+      var notesEl=document.getElementById('fres'+i);
+      if(notesEl&&parsed.notes)notesEl.value=parsed.notes;
+      toast('✓ Team plan filled in');
+    })
+    .catch(function(e){
+      btn.innerHTML='&#127908; Dictate Team';
+      btn.style.background='';btn.style.borderColor='';btn.style.color='';
+      toast('✗ AI error: '+(e&&e.message?e.message:'check connection'),'err');
+    });
+  };
+  sr.start();
+}
 
 
 function fetchWx(mode){
@@ -804,7 +887,7 @@ function fetchWx(mode){
   .catch(function(){toast('✗ Cannot fetch weather','err');});
 }
 
-function getPlan(){var teams=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var rows=div.querySelectorAll('.trow');var tasks=[];rows.forEach(function(r){var ins=r.querySelectorAll('input');var desc=ins[0].value.trim();if(desc)tasks.push({desc:desc,target:parseFloat(ins[1].value)||100});});if(tasks.length)teams.push({team:TLTRS[i]||('T'+(i+1)),tasks:tasks});});return teams;}
+function getPlan(){var teams=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var rows=div.querySelectorAll('.trow');var tasks=[];rows.forEach(function(r){var ins=r.querySelectorAll('input');var desc=ins[0].value.trim();if(desc)tasks.push({desc:desc,target:parseFloat(ins[1].value)||100});});var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var leader=g('ptl'+i);var members=[g('ptm'+i+'_0'),g('ptm'+i+'_1')].filter(Boolean);var notes=g('pt-notes-'+i);var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');if(tasks.length||leader)teams.push({team:TLTRS[i]||('T'+(i+1)),leader:leader,members:members,tasks:tasks,notes:notes,plantOk:plantOk});});return teams;}
 function getAlloc(){var a=[];document.querySelectorAll('.tblk[id^="al"]').forEach(function(div,i){var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};a.push({team:TLTRS[i]||('T'+(i+1)),lead:g('ali'+i+'l'),ops:[g('ali'+i+'o0'),g('ali'+i+'o1'),g('ali'+i+'o2')].filter(Boolean),plantType:g('ali'+i+'pt'),plantOk:document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on'),initials:g('ali'+i+'in')});});return a;}
 
 function noNet(){toast('✗ No internet — check your connection','err');}
@@ -853,6 +936,17 @@ function submitEOD(){
   if(!sb){noNet();return;}
   var date=document.getElementById('fd').value;
   if(!date){toast('✗ Set the date first','err');return;}
+  // Check all task targets are filled
+  var missingTarget=false;
+  document.querySelectorAll('.trow').forEach(function(r){
+    var ins=r.querySelectorAll('input');
+    if(ins[0]&&ins[0].value.trim()&&(!ins[1]||!ins[1].value.trim())){
+      ins[1].style.borderColor='var(--red)';
+      missingTarget=true;
+      setTimeout(function(){ins[1].style.borderColor='';},3000);
+    }
+  });
+  if(missingTarget){toast('Fill in target % for all tasks','err');return;}
   // Noise reading count warning (H&S requirement)
   var noiseRows=[];document.querySelectorAll('.nr').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value)noiseRows.push(ins[1].value);});
   if(noiseRows.length<3){if(!confirm('Only '+noiseRows.length+' noise reading(s) recorded — 3 are required. Submit anyway?'))return;}
@@ -1067,10 +1161,8 @@ function checkPlanVsProgramme() {
 
   var btn = document.getElementById('prog-check-btn');
   var panel = document.getElementById('prog-check-panel');
-  btn.disabled = true;
-  btn.textContent = 'Checking...';
-  panel.style.display = 'block';
-  panel.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Checking plan against Ballasalla Phase 4 programme...</div>';
+  if(btn){btn.disabled = true;btn.textContent = 'Checking...';}
+  if(panel){panel.style.display = 'block';panel.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Checking plan against Ballasalla Phase 4 programme...</div>';}
 
   var progSummary = BA4_PROGRAMME.map(function(t) {
     return t.wbs + ': ' + t.task + ' (' + t.section + ', ' + t.gang + ', ' + t.pct + '% done, ' + t.start + ' to ' + t.end + ')';
@@ -1096,9 +1188,8 @@ function checkPlanVsProgramme() {
   })
   .then(function(r) { return r.json(); })
   .then(function(d) {
-    btn.disabled = false;
-    btn.textContent = '📅 Check Against Programme';
-    if (!d.content || !d.content[0]) { panel.innerHTML = '<div style="color:var(--red);padding:12px;">AI error — try again</div>'; return; }
+    if(btn){btn.disabled = false;btn.textContent = '📅 Check Against Programme';}
+    if (!d.content || !d.content[0]) { if(panel)panel.innerHTML = '<div style="color:var(--red);padding:12px;">AI error — try again</div>'; return; }
     try {
       var text = d.content[0].text.trim();
       // Strip markdown code fences if present
@@ -1106,13 +1197,12 @@ function checkPlanVsProgramme() {
       var results = JSON.parse(text);
       renderProgCheckResults(results, tasks, panel);
     } catch(e) {
-      panel.innerHTML = '<div style="color:var(--red);padding:12px;">Could not parse response — try again</div>';
+      if(panel)panel.innerHTML = '<div style="color:var(--red);padding:12px;">Could not parse response — try again</div>';
     }
   })
   .catch(function(e) {
-    btn.disabled = false;
-    btn.textContent = '📅 Check Against Programme';
-    panel.innerHTML = '<div style="color:var(--red);padding:12px;">Connection error — check internet</div>';
+    if(btn){btn.disabled = false;btn.textContent = '📅 Check Against Programme';}
+    if(panel)panel.innerHTML = '<div style="color:var(--red);padding:12px;">Connection error — check internet</div>';
   });
 }
 
