@@ -10,11 +10,11 @@
 <meta http-equiv="Expires" content="0">
 <title>DGC Daily Sheet</title>
 <script>
-// DGC Daily Sheet v1.5.2 — Voice pause 3s silence timer, dictate team additive+multi-task, site diary 8s pause+append, remove plant check from detail panel
+// DGC Daily Sheet v1.6.0 — 4x boardroom TWEAK complete: voice dupe fix, aiClean fallback, Results .gte() fix, tick UX, delay attribution, plant check restored, variation flag, design polish
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='1.5.5';
+var APP_VERSION='1.6.0';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -220,6 +220,8 @@ select{
 .nb .ni{font-size:24px;line-height:1;}
 .nb.active{color:var(--acc);}
 .nb.active .ni{filter:drop-shadow(0 0 6px rgba(245,158,11,.45));}
+.nb.active::before{content:'';position:absolute;top:6px;left:50%;transform:translateX(-50%);width:48px;height:30px;border-radius:10px;background:rgba(245,158,11,.12);z-index:-1;}
+.nb{position:relative;}
 
 /* ── TABS ── */
 .tab{display:none;}.tab.active{display:block;}
@@ -293,7 +295,8 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please choose your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;">Start &rarr;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.5.2</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;" id="login-ver">DGC Construction &middot; Silverdale Group</div>
+    <script>document.getElementById('login-ver').textContent='DGC Construction · Silverdale Group · v'+APP_VERSION;</script>
   </div>
 </div>
 
@@ -351,7 +354,7 @@ select{
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
     <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
     <button onclick="reopenSOD()" style="background:none;border:1.5px solid rgba(245,158,11,.4);border-radius:9px;color:var(--acc);font-size:11px;font-weight:800;padding:6px 10px;cursor:pointer;white-space:nowrap;font-family:inherit;min-height:36px;" class="no-print" title="Open morning check">&#128203; AM check</button>
-    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.5.5</span>
+    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.6.0</span>
   </div>
 </div>
 
@@ -364,7 +367,7 @@ select{
     <div><label>Date</label><input type="date" id="fd"></div>
     <div><label>Site Manager</label><input type="text" id="fm" list="nl" onclick="nc(this)" onblur="nb2(this)" placeholder="Tap to pick"></div>
     <div><label>Weather</label>
-      <select id="fw"><option value="">Select...</option><option>Fine &amp; dry</option><option>Overcast</option><option>Light rain</option><option>Heavy rain</option><option>Wind &amp; rain</option><option>Hot &amp; sunny</option><option>Cold &amp; dry</option><option>Frost</option></select>
+      <select id="fw"><option value="">Select...</option><option>Fine &amp; dry</option><option>Overcast</option><option>Light rain</option><option>Heavy rain</option><option>Wind &amp; rain</option><option>Cold &amp; wet</option><option>Hot &amp; sunny</option><option>Cold &amp; dry</option><option>Frost</option></select>
     </div>
     <div><label>Temp (&#176;C)</label>
       <div style="display:flex;gap:5px;"><input type="number" id="ft" placeholder="&#176;C" inputmode="numeric" style="flex:1;"><button class="btn btn-blue btn-sm" onclick="fetchWx()" title="Fetch tomorrow's weather">&#9728;</button><button class="btn btn-blue btn-sm" onclick="fetchWx('brief')" title="Fetch with brief summary">&#128203;</button></div>
@@ -388,6 +391,18 @@ select{
         <option value="poor">Poor day — significantly behind plan</option>
         <option value="disrupted">Disrupted — weather / plant / access issue</option>
         <option value="nowork">No work — site closed / holiday</option>
+      </select>
+    </div>
+    <div class="mb8" style="border-left:3px solid var(--acc);padding-left:10px;background:rgba(245,158,11,.04);border-radius:0 8px 8px 0;padding:10px 10px 10px 13px;margin-left:-1px;">
+      <label>Delay caused by <span style="font-weight:600;text-transform:none;font-size:11px;color:var(--acc);">— EOT / claim evidence</span></label>
+      <select id="fdelaycause">
+        <option value="">None / on plan</option>
+        <option value="weather">Weather</option>
+        <option value="dandara">Dandara (client instruction / access)</option>
+        <option value="plant">Plant failure / breakdown</option>
+        <option value="thirdparty">Third party (utility / subcontractor)</option>
+        <option value="ground">Unforeseen ground conditions</option>
+        <option value="dgc">DGC (own resource / planning)</option>
       </select>
     </div>
     <div>
@@ -434,17 +449,17 @@ select{
   <div class="card">
     <div style="display:flex;flex-direction:column;gap:10px;">
       <div>
-        <div style="border-left:3px solid var(--acc);padding-left:9px;margin-bottom:6px;"><div style="font-size:11px;font-weight:900;color:var(--acc);">07:30 – 10:00 Morning</div></div>
+        <div style="border-left:3px solid var(--acc);padding-left:9px;margin-bottom:6px;"><div style="font-size:11px;font-weight:900;color:var(--acc);">Morning session</div></div>
         <button class="mic" id="mic-s1" onclick="vm('s1','fses1')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate morning session</span></button>
         <textarea id="fses1" rows="2" placeholder="How the morning session went..."></textarea>
       </div>
       <div>
-        <div style="border-left:3px solid var(--blue);padding-left:9px;margin-bottom:6px;"><div style="font-size:11px;font-weight:900;color:var(--blue);">10:30 – 13:00 Mid-morning</div></div>
+        <div style="border-left:3px solid var(--blue);padding-left:9px;margin-bottom:6px;"><div style="font-size:11px;font-weight:900;color:var(--blue);">Mid-morning</div></div>
         <button class="mic" id="mic-s2" onclick="vm('s2','fses2')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate mid-morning session</span></button>
         <textarea id="fses2" rows="2" placeholder="How the mid-morning went..."></textarea>
       </div>
       <div>
-        <div style="border-left:3px solid var(--green);padding-left:9px;margin-bottom:6px;"><div style="font-size:11px;font-weight:900;color:var(--green);">13:30 – 17:30 Afternoon</div></div>
+        <div style="border-left:3px solid var(--green);padding-left:9px;margin-bottom:6px;"><div style="font-size:11px;font-weight:900;color:var(--green);">Afternoon</div></div>
         <button class="mic" id="mic-s3" onclick="vm('s3','fses3')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate afternoon session</span></button>
         <textarea id="fses3" rows="2" placeholder="How the afternoon went..."></textarea>
       </div>
@@ -453,7 +468,7 @@ select{
     <textarea id="fses" style="display:none;"></textarea>
   </div>
 
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128202; Noise Readings <span style="color:var(--red);font-size:10px;font-weight:900;vertical-align:middle;letter-spacing:0;">&#9733; REQUIRED</span></span><span class="sec-s">3 spot readings — H&amp;S requirement. Delete button only if you have a 4th.</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128202; Noise Readings <span style="color:var(--red);font-size:10px;font-weight:900;vertical-align:middle;letter-spacing:0;">&#9733; REQUIRED</span></span><span class="sec-s">3 spot readings — H&amp;S requirement. Use delete button to remove extras if needed.</span></div></div>
   <div class="card">
     <div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:90px 1fr 1fr 40px;gap:6px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;"><span>Time</span><span>Level (dB)</span><span>Location</span><span></span></div>
     <div id="nr-c"></div>
@@ -531,7 +546,7 @@ select{
   <div id="achv-prog-banner" style="display:none;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:13px;font-weight:700;color:var(--acc);line-height:1.6;"></div>
   <div id="achv-none" class="card">
     <div style="text-align:center;padding:32px 16px;color:var(--muted);" id="achv-none-inner">
-      <div style="font-size:32px;margin-bottom:12px;opacity:.6;">&#8987;</div>
+      <div style="font-size:32px;margin-bottom:12px;opacity:.6;animation:bl 1.2s infinite;">&#8987;</div>
       <div style="font-size:15px;font-weight:700;color:var(--txt);margin-bottom:6px;">Checking yesterday's plan...</div>
       <div style="font-size:13px;line-height:1.6;">Loading&hellip;</div>
     </div>
@@ -600,7 +615,6 @@ var EODS=[
 var COMMS=[
   {k:'wa',l:'Site images sent to client WhatsApp group'},
   {k:'ash',l:'Update sent to Ash / Harry'},
-  {k:'eod',l:'EOD plan submitted via app'},
   {k:'dandara',l:'Dandara notified of any changes / delays'}
 ];
 var TCOLS=['#f59e0b','#38bdf8','#a78bfa','#22c55e','#fb923c'];
@@ -610,6 +624,7 @@ var _mic=null,_ma=null,_mid='';
 var _micStopping=false;
 var _silenceTimer=null;
 var _uname='';
+var _lastResultIdx=-1;
 
 (function init(){
   rebuildNL();
@@ -749,6 +764,15 @@ function addPT(){
       +'<textarea id="'+resId+'" rows="2" placeholder="Plant, materials, deliveries needed for this team..." style="font-size:13px;min-height:56px;"></textarea>'
     +'</div>'
     +'<div class="pt-detail" id="'+detailId+'">'
+      +'<div style="margin-bottom:10px;"><label style="font-size:11px;">Plant Check</label>'
+        +'<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;flex-wrap:wrap;">'
+          +'<input type="text" id="pt-plant-type-'+i+'" placeholder="Plant type (e.g. CAT 308)" style="flex:2;min-width:140px;padding:8px 10px;font-size:13px;min-height:42px;">'
+          +'<input type="number" id="pt-plant-hrs-'+i+'" placeholder="Hrs on site" inputmode="numeric" style="width:90px;padding:8px 10px;font-size:13px;min-height:42px;" title="Plant hours on site today">'
+          +'<div class="ptick" id="ptick-det-'+i+'" onclick="var t=this;t.classList.toggle(\'on\');t.innerHTML=t.classList.contains(\'on\')?\'&#10003;\':\'\';"></div>'
+          +'<input type="text" id="pt-plant-init-'+i+'" placeholder="Initials" style="width:70px;padding:8px 10px;font-size:13px;min-height:42px;" title="Operator initials confirming check">'
+        +'</div>'
+        +'<div style="font-size:11px;color:var(--muted);margin-top:4px;">Plant type &mdash; hours on site &mdash; tick to confirm check &mdash; initials</div>'
+      +'</div>'
       +'<div><label style="font-size:11px;">Team Notes / Site Issues</label>'
         +'<textarea id="pt-notes-'+i+'" rows="3" placeholder="Team notes, site issues, anything worth recording for this team..."></textarea>'
       +'</div>'
@@ -813,15 +837,17 @@ function vm(id,tid){if(!('webkitSpeechRecognition'in window||'SpeechRecognition'
   // Store original label before changing it
   var lb=btn.querySelector('.mic-label');if(lb){_micLabels[id]=lb.textContent;}
   btn.classList.add('on');var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent='⏹';if(lb)lb.textContent='Stop — tap to finish';
+  _lastResultIdx=-1;
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;_mic=new SR();_mic.continuous=true;_mic.interimResults=true;_mic.lang='en-GB';var final='',existing=document.getElementById(tid).value;var valueAtStop='';
-  _mic.onresult=function(e){var interim='';for(var i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';else interim+=e.results[i][0].transcript;}document.getElementById(tid).value=(existing?existing+' ':'')+(final+interim).trim();
+  _mic.onresult=function(e){if(e.resultIndex<_lastResultIdx)return;_lastResultIdx=e.results.length;var interim='';for(var i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';else interim+=e.results[i][0].transcript;}document.getElementById(tid).value=(existing?existing+' ':'')+(final+interim).trim();
     // Reset silence timer — 8s for site diary (id='nt'), 3s for everything else
     if(_silenceTimer)clearTimeout(_silenceTimer);
     var silenceMs=(_ma==='nt')?8000:3000;
     _silenceTimer=setTimeout(function(){stopV();},silenceMs);
   };
   _mic.onerror=function(){if(_silenceTimer){clearTimeout(_silenceTimer);_silenceTimer=null;}stopV();};
-  _mic.onend=function(){if(_micStopping){_micStopping=false;return;}var captured=final.trim();valueAtStop=document.getElementById(tid).value;stopV();if(captured&&CLAUDE_KEY){var cleanBtn=document.getElementById('mic-'+id);if(cleanBtn){var cic=cleanBtn.querySelector('.mic-icon');if(cic)cic.textContent='⏳';var clb=cleanBtn.querySelector('.mic-label');if(clb)clb.textContent='Cleaning up...';}aiClean(tid,captured,valueAtStop,id);}};
+  _mic.onend=function(){if(_micStopping){_micStopping=false;return;}var captured=final.trim();valueAtStop=document.getElementById(tid).value;// Fallback: if no final transcript, use what's in the field minus the existing prefix
+if(!captured){var cur=document.getElementById(tid).value;var exTrim=(existing?existing.trim():'');captured=cur.replace(exTrim,'').trim();}stopV();if(captured&&CLAUDE_KEY){var cleanBtn=document.getElementById('mic-'+id);if(cleanBtn){var cic=cleanBtn.querySelector('.mic-icon');if(cic)cic.textContent='⏳';var clb=cleanBtn.querySelector('.mic-label');if(clb)clb.textContent='Cleaning up...';}aiClean(tid,captured,valueAtStop,id);}};
   _mic.start();}
 function stopV(){if(_silenceTimer){clearTimeout(_silenceTimer);_silenceTimer=null;}if(_mic){try{_micStopping=true;_mic.stop();}catch(e){_micStopping=false;}}_mic=null;if(_ma){var btn=document.getElementById('mic-'+_ma);if(btn){btn.classList.remove('on');var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent=MIC_ICON;var lb=btn.querySelector('.mic-label');if(lb)lb.textContent=_micLabels[_ma]||'Dictate';}_ma=null;}}
 function aiClean(tid,raw,valueAtStop,micId){
@@ -967,7 +993,7 @@ function fetchWx(mode){
   .catch(function(){toast('✗ Cannot fetch weather','err');});
 }
 
-function getPlan(){var teams=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var rows=div.querySelectorAll('.trow');var tasks=[];rows.forEach(function(r){var ins=r.querySelectorAll('input');var desc=ins[0].value.trim();if(desc){var tpct=ins[1]&&ins[1].value.trim()?parseFloat(ins[1].value):100;tasks.push({desc:desc,target:tpct});}});var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var leader=g('ptl'+i);var members=[g('ptm'+i+'_0'),g('ptm'+i+'_1')].filter(Boolean);var notes=g('pt-notes-'+i);var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');if(tasks.length||leader)teams.push({team:TLTRS[i]||('T'+(i+1)),leader:leader,members:members,tasks:tasks,notes:notes,plantOk:plantOk});});return teams;}
+function getPlan(){var teams=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var rows=div.querySelectorAll('.trow');var tasks=[];rows.forEach(function(r){var ins=r.querySelectorAll('input');var desc=ins[0].value.trim();if(desc){var tpct=ins[1]&&ins[1].value.trim()?parseFloat(ins[1].value):100;tasks.push({desc:desc,target:tpct});}});var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var leader=g('ptl'+i);var members=[g('ptm'+i+'_0'),g('ptm'+i+'_1')].filter(Boolean);var notes=g('pt-notes-'+i);var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');var plantType=g('pt-plant-type-'+i);var plantHrs=g('pt-plant-hrs-'+i);var plantCheckOk=document.getElementById('ptick-det-'+i)&&document.getElementById('ptick-det-'+i).classList.contains('on');var plantInit=g('pt-plant-init-'+i);var plantCheck={type:plantType,hours:plantHrs?parseFloat(plantHrs):null,confirmed:plantCheckOk,initials:plantInit};if(tasks.length||leader)teams.push({team:TLTRS[i]||('T'+(i+1)),leader:leader,members:members,tasks:tasks,notes:notes,plantOk:plantOk,plantCheck:plantCheck});});return teams;}
 function getAlloc(){var a=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var lead=g('ptl'+i);var members=[g('ptm'+i+'_0'),g('ptm'+i+'_1'),g('ptm'+i+'_2'),g('ptm'+i+'_3')].filter(Boolean);var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');var initials=g('pti'+i);if(lead||members.length)a.push({team:TLTRS[i]||('T'+(i+1)),lead:lead,ops:members,plantOk:plantOk,initials:initials});});return a;}
 
 function noNet(){toast('✗ No internet — check your connection','err');}
@@ -992,6 +1018,7 @@ function saveDraft(){
       ses2:document.getElementById('fses2')?document.getElementById('fses2').value:'',
       ses3:document.getElementById('fses3')?document.getElementById('fses3').value:'',
       todayRating:document.getElementById('ftodayrating')?document.getElementById('ftodayrating').value:'',
+      delayCause:document.getElementById('fdelaycause')?document.getElementById('fdelaycause').value:'',
       todayNotes:document.getElementById('ftodaynotes')?document.getElementById('ftodaynotes').value:'',
       obs:document.getElementById('fob').value,
       notes:document.getElementById('fnt').value,
@@ -1009,7 +1036,7 @@ function restoreDraft(){
     set('fv',d.visitors);set('ftp',d.topics);set('frk',d.risks);
     set('feod-resp',d.eodResp);set('feod-team',d.eodTeam);
     set('fses1',d.ses1);set('fses2',d.ses2);set('fses3',d.ses3);
-    set('ftodayrating',d.todayRating);set('ftodaynotes',d.todayNotes);
+    set('ftodayrating',d.todayRating);set('fdelaycause',d.delayCause);set('ftodaynotes',d.todayNotes);
     set('fob',d.obs);set('fnt',d.notes);
     if(d.savedAt)toast('Draft restored from '+(new Date(d.savedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})));
   }catch(e){}
@@ -1090,7 +1117,7 @@ function submitEOD(){
           actual:parseFloat((document.getElementById('tod-pct-'+i)||{}).value)||null,
           actualQty:parseFloat((document.getElementById('tod-qty-'+i)||{}).value)||null};
       });
-      return{rating:document.getElementById('ftodayrating')?document.getElementById('ftodayrating').value:'',notes:document.getElementById('ftodaynotes')?document.getElementById('ftodaynotes').value:'',tasks:taskResults};
+      return{rating:document.getElementById('ftodayrating')?document.getElementById('ftodayrating').value:'',delayCause:document.getElementById('fdelaycause')?document.getElementById('fdelaycause').value:'',notes:document.getElementById('ftodaynotes')?document.getElementById('ftodaynotes').value:'',tasks:taskResults};
     })(),
     eodChecklist:eodCheckState,
     noise:noise,obs:document.getElementById('fob').value,items:items,comms:Object.assign({},COM),notes:document.getElementById('fnt').value};
@@ -1102,7 +1129,7 @@ function submitEOD(){
   var progCheck = {};
   Object.keys(_progCheckState).forEach(function(k) {
     var s = _progCheckState[k];
-    progCheck[k] = { confirmed: s.confirmed, rogue: s.rogue, wbs: s.confirmedWbs || (s.result ? s.result.match_wbs : null) };
+    progCheck[k] = { confirmed: s.confirmed, rogue: s.rogue, variation: s.variation||false, wbs: s.confirmedWbs || (s.result ? s.result.match_wbs : null) };
   });
   data.programmeCheck = progCheck;
   data.hasRogueTasks = Object.values(progCheck).some(function(v) { return v.rogue; });
@@ -1129,9 +1156,9 @@ function loadAchv(){
   if(!sb){showAchvNone('No connection','Fill in today\'s EOD plan — tomorrow you can record how you got on.');return;}
   try{
     // Search up to 7 days back for the most recent plan (handles weekends and gaps)
-    var searchDates=[];for(var di=1;di<=7;di++){var d=new Date();d.setDate(d.getDate()-di);searchDates.push(d.toISOString().slice(0,10));}
+    var sevenDaysAgo=(function(){var d=new Date();d.setDate(d.getDate()-7);return d.toISOString().slice(0,10);})();
     var subEl=document.getElementById('achv-sub');if(subEl)subEl.textContent='Loading most recent plan...';
-    sb.from('daily_records').select('date,data').eq('project_ref',PROJECT_REF).in('date',searchDates).not('gang','like','ACHV_%').order('date',{ascending:false}).limit(20)
+    sb.from('daily_records').select('date,data').eq('project_ref',PROJECT_REF).gte('date',sevenDaysAgo).not('gang','like','ACHV_%').not('gang','like','SOD_%').order('date',{ascending:false}).limit(10)
       .then(function(r){
         var found=(r.data||[]).find(function(x){return x.data&&x.data.plan&&x.data.plan.length>0;});
         if(found){
@@ -1142,6 +1169,22 @@ function loadAchv(){
       .catch(function(){showAchvNone('Could not load plan','Check your internet connection and try again.');});
   }catch(e){showAchvNone('Error loading results','Something went wrong — try refreshing.');}
 }
+window._achvTicked={};
+function tickTask(i){
+  var task=(window._atasks||[])[i];if(!task)return;
+  window._achvTicked[i]=true;
+  var apEl=document.getElementById('ap'+i);if(apEl)apEl.value=task.target;
+  var row=document.getElementById('achv-row-'+i);
+  if(row){row.style.background='rgba(34,197,94,.12)';row.style.borderColor='var(--green)';}
+  var tickBtn=document.getElementById('tick-btn-'+i);
+  if(tickBtn){tickBtn.style.background='var(--green)';tickBtn.style.color='#0f1117';tickBtn.textContent='Done';}
+  var inputArea=document.getElementById('achv-input-'+i);
+  if(inputArea)inputArea.style.display='none';
+  var doneLabel=document.getElementById('achv-done-'+i);
+  if(doneLabel){doneLabel.textContent='Target hit: '+task.target+'%';doneLabel.style.display='block';}
+  calcEff();
+}
+
 function buildAchv(data){
   var plan=data.plan||[];var tasks=[];
   plan.forEach(function(t){(t.tasks||[]).forEach(function(tk){tasks.push({team:t.team,desc:tk.desc,target:tk.target||100});});});
@@ -1149,6 +1192,7 @@ function buildAchv(data){
   document.getElementById('achv-none').style.display='none';document.getElementById('achv-none-inner').innerHTML='';
   document.getElementById('achv-score').style.display='';
   document.getElementById('achv-form').style.display='';
+  window._achvTicked={};
   // Programme banner — which BA4 tasks are in play today
   var banner=document.getElementById('achv-prog-banner');
   if(banner){
@@ -1162,33 +1206,47 @@ function buildAchv(data){
   tasks.forEach(function(task,i){
     var col=cm[task.team]||'#94a3b8';
     var est=estimateHours(task.desc);
-    var benchHtml='';
-    if(est.matched){
-      var expectedOutput=Math.round(est.dailyOutput*(todayHours/9)*10)/10;
-      benchHtml='<div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Programme Benchmark</div>'
-        +'<div style="font-size:13px;font-weight:900;color:var(--blue);">~'+expectedOutput+' '+est.unit+'/day</div>'
-        +'<div style="font-size:10px;color:var(--muted);margin-top:2px;">'+est.rateDescription.split(':')[0]+'</div>'
-        +'<div id="kpi-verdict-'+i+'" style="font-size:11px;font-weight:800;margin-top:4px;"></div>';
-    }else{
-      benchHtml='<div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Programme Benchmark</div>'
-        +'<div style="font-size:12px;color:var(--muted);">No rate match</div>';
-    }
-    var colCols=est.matched?'1fr 1fr 1fr':'1fr 1fr';
     var d=document.createElement('div');
-    d.style.cssText='background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:11px 12px;margin-bottom:8px;';
-    d.innerHTML='<div style="font-size:12px;font-weight:700;color:var(--txt);margin-bottom:8px;"><span style="color:'+col+';font-weight:900;">Team '+task.team+'</span> - '+esc(task.desc)+'</div>'+
-      '<div style="display:grid;grid-template-columns:'+colCols+';gap:10px;margin-bottom:8px;" id="kpi-row-'+i+'">'+
-        '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Target (planned)</div><div style="font-size:26px;font-weight:900;color:var(--blue);">'+(task.target||'?')+'%</div></div>'+
-        '<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Actual % achieved</div><input type="number" id="ap'+i+'" placeholder="%" min="0" max="100" inputmode="numeric" oninput="calcEff();calcKPI('+i+','+task.target+','+JSON.stringify(est.matched)+','+JSON.stringify(est.dailyOutput||0)+',\''+esc(est.unit||'')+'\')" style="font-size:20px;font-weight:900;text-align:center;border-color:'+col+'44;padding:8px;"><div style="font-size:10px;color:var(--muted);margin-top:4px;">'+(est.matched?'Also enter metres/units below':'')+'</div></div>'+
-        (est.matched?'<div>'+benchHtml+'</div>':'')+
-      '</div>'+
-      (est.matched?'<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--muted);">Actual output ('+esc(est.unit||'units')+')</label><input type="number" id="aq'+i+'" placeholder="e.g. 18" inputmode="decimal" style="font-size:16px;font-weight:900;text-align:center;border-color:'+col+'44;padding:8px;" title="How many '+esc(est.unit||'units')+' did you actually complete?"></div>':'')+
-      '<button onclick="(function(n){var nb=document.getElementById(\'anb\'+n),tb=document.getElementById(\'ant\'+n);var vis=nb.style.display===\'flex\';nb.style.display=vis?\'none\':\'flex\';tb.style.display=vis?\'none\':\'block\';})('+i+')" style="background:none;border:none;color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;padding:4px 0;display:block;text-align:left;letter-spacing:.01em;">+ Add note on this task</button>'+
-      '<div id="anb'+i+'" style="display:none;"><button class="mic" id="mic-a'+i+'" onclick="vm(\'a'+i+'\',\'an'+i+'\')"><span class="mic-icon">'+MIC_ICON+'</span><span class="mic-label">Why didn\'t you hit it?</span></button></div>'+
-      '<textarea id="an'+i+'" rows="2" placeholder="Reason if under target, or what helped if ahead..." style="display:none;"></textarea>';
+    d.id='achv-row-'+i;
+    d.style.cssText='background:var(--s2);border:1.5px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:10px;transition:background .2s,border-color .2s;';
+    // Header: team + task description + target
+    var headerHtml='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;">'
+      +'<div style="flex:1;">'
+      +'<div style="font-size:11px;font-weight:900;color:'+col+';margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;">Team '+esc(task.team)+'</div>'
+      +'<div style="font-size:14px;font-weight:700;color:var(--txt);line-height:1.4;">'+esc(task.desc)+'</div>'
+      +'<div style="font-size:12px;color:var(--blue);font-weight:700;margin-top:3px;">Target: '+esc(String(task.target))+'%</div>'
+      +(est.matched?'<div style="font-size:11px;color:var(--muted);margin-top:2px;">Rate: ~'+est.dailyOutput+' '+esc(est.unit)+'/day</div>':'')
+      +'</div>'
+      +'<button id="tick-btn-'+i+'" onclick="tickTask('+i+')" style="width:64px;height:64px;min-width:64px;flex-shrink:0;border-radius:14px;border:2px solid var(--green);background:rgba(34,197,94,.1);color:var(--green);font-size:30px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;font-family:inherit;">&#10003;</button>'
+      +'</div>';
+    // Done label (hidden until ticked)
+    var doneLabelHtml='<div id="achv-done-'+i+'" style="display:none;font-size:13px;font-weight:800;color:var(--green);margin-bottom:8px;padding:8px 12px;background:rgba(34,197,94,.1);border-radius:8px;border:1px solid rgba(34,197,94,.3);"></div>';
+    // Input area (shown when NOT ticked)
+    var inputHtml='<div id="achv-input-'+i+'">'
+      +'<div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Or enter actual % below</div>'
+      +'<div style="display:grid;grid-template-columns:1fr'+(est.matched?' 1fr':'')+';gap:8px;margin-bottom:8px;">'
+      +'<div><div style="font-size:10px;color:var(--muted);font-weight:800;margin-bottom:3px;">ACTUAL % DONE</div>'
+      +'<input type="number" id="ap'+i+'" placeholder="%" min="0" max="100" inputmode="numeric" oninput="calcEff();checkNoteThreshold('+i+','+task.target+');'+(est.matched?'calcKPI('+i+','+task.target+',true,'+JSON.stringify(est.dailyOutput||0)+',\''+esc(est.unit||'')+'\')':'')+';" style="font-size:20px;font-weight:900;text-align:center;width:100%;padding:10px 8px;background:var(--bg);border:1.5px solid var(--bdr);border-radius:8px;color:var(--txt);outline:none;min-height:52px;transition:border-color .15s;">'
+      +'</div>'
+      +(est.matched?'<div><div style="font-size:10px;color:var(--muted);font-weight:800;margin-bottom:3px;">ACTUAL '+esc(est.unit||'UNITS').toUpperCase()+'</div><input type="number" id="aq'+i+'" placeholder="e.g. 18" inputmode="decimal" style="font-size:20px;font-weight:900;text-align:center;width:100%;padding:10px 8px;background:var(--bg);border:1.5px solid var(--bdr);border-radius:8px;color:var(--txt);outline:none;min-height:52px;"></div>':'')
+      +'</div>'
+      +(est.matched?'<div id="kpi-verdict-'+i+'" style="font-size:11px;font-weight:800;margin-bottom:6px;"></div>':'')
+      +'<button class="btn btn-ghost btn-sm" onclick="(function(n){var nb=document.getElementById(\'anb\'+n),ta=document.getElementById(\'an\'+n);var vis=nb.style.display===\'flex\';nb.style.display=vis?\'none\':\'flex\';ta.style.display=vis?\'none\':\'block\';})('+i+')" style="margin-top:6px;width:100%;justify-content:flex-start;">&#127908; Add note on this task</button>'
+      +'<div id="anb'+i+'" style="display:none;"><button class="mic" id="mic-a'+i+'" onclick="vm(\'a'+i+'\',\'an'+i+'\')"><span class="mic-icon">'+MIC_ICON+'</span><span class="mic-label">Why didn\'t you hit it?</span></button></div>'
+      +'<textarea id="an'+i+'" rows="2" placeholder="Reason if under target, or what helped if ahead..." style="display:none;"></textarea>'
+      +'</div>';
+    d.innerHTML=headerHtml+doneLabelHtml+inputHtml;
     container.appendChild(d);
   });
   window._atasks=tasks;calcEff();
+}
+function checkNoteThreshold(i,target){
+  var el=document.getElementById('ap'+i);if(!el)return;
+  var actual=parseFloat(el.value);
+  if(!isNaN(actual)&&actual<target*0.9){
+    var nb=document.getElementById('anb'+i);var ta=document.getElementById('an'+i);
+    if(nb)nb.style.display='flex';if(ta)ta.style.display='block';
+  }
 }
 function calcEff(){
   var tasks=window._atasks;if(!tasks||!tasks.length)return;
@@ -1202,14 +1260,20 @@ function calcEff(){
   var col=eff>=90?'#22c55e':eff>=70?'#f59e0b':'#ef4444';
   var lbl=eff>=90?'On or ahead of plan — great work':eff>=70?'Slightly under plan':('Significantly under plan — '+cnt+' task(s) scored');
   document.getElementById('eff-n').textContent=eff+'%';document.getElementById('eff-n').style.color=col;
-  document.getElementById('eff-l').textContent=lbl;document.getElementById('eff-p').textContent='Avg target: '+Math.round(totT/cnt)+'%';
+  var lbEl=document.getElementById('eff-l');if(lbEl){lbEl.textContent=lbl;lbEl.style.color=col;}
+  document.getElementById('eff-p').textContent='Avg target: '+Math.round(totT/cnt)+'%';
   document.getElementById('eff-b').style.width=Math.min(100,eff)+'%';document.getElementById('eff-b').style.background=col;
 }
 function calcKPI(i,target,hasRate,dailyOutput,unit){
   var el=document.getElementById('ap'+i);
   var verdict=document.getElementById('kpi-verdict-'+i);
-  if(!el||!verdict)return;
+  if(!el)return;
   var actual=parseFloat(el.value);
+  // Auto-show note field if actual < 90% of target
+  if(!isNaN(actual)&&actual<target*0.9){
+    var nb=document.getElementById('anb'+i);var ta=document.getElementById('an'+i);
+    if(nb)nb.style.display='flex';if(ta)ta.style.display='block';
+  }
   if(isNaN(actual)||!hasRate){if(verdict)verdict.innerHTML='';return;}
   var todayHours=getWorkingHours(tod());
   var expectedOutput=Math.round(dailyOutput*(todayHours/9)*10)/10;
@@ -1452,10 +1516,18 @@ function goRogue(idx) {
   el.style.borderColor = 'var(--red)';
   el.querySelectorAll('button').forEach(function(b) { b.style.display = 'none'; });
   var flag = document.createElement('div');
-  flag.style.cssText = 'font-size:12px;font-weight:800;color:var(--red);margin-top:6px;';
-  flag.textContent = '⚠ Flagged as unplanned — will be noted in record';
+  flag.style.cssText = 'margin-top:8px;';
+  flag.innerHTML = '<div style="font-size:12px;font-weight:800;color:var(--red);margin-bottom:8px;">⚠ Flagged as unplanned — will be noted in record</div>'
+    + '<button class="btn btn-ghost btn-sm" style="border-color:var(--acc);color:var(--acc);width:100%;" onclick="flagVariation('+idx+')" id="var-btn-'+idx+'">&#128203; Flag as Variation Claim</button>';
   el.appendChild(flag);
   toast('Flagged as unplanned task');
+}
+function flagVariation(idx){
+  var state = _progCheckState['task_' + idx];
+  if (state) { state.variation = true; }
+  var btn = document.getElementById('var-btn-'+idx);
+  if(btn){btn.style.background='rgba(245,158,11,.2)';btn.style.borderColor='var(--acc)';btn.textContent='✓ Variation claim flagged — tell Ash';}
+  toast('Variation flagged — record saved');
 }
 
 // ── TRELLO INTEGRATION (hardcoded — Dandara B4 board, Driver Auto list) ───
