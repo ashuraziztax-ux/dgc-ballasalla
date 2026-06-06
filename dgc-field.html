@@ -10,11 +10,11 @@
 <meta http-equiv="Expires" content="0">
 <title>DGC Daily Sheet</title>
 <script>
-// DGC Daily Sheet v1.6.0 — 4x boardroom TWEAK complete: voice dupe fix, aiClean fallback, Results .gte() fix, tick UX, delay attribution, plant check restored, variation flag, design polish
+// DGC Daily Sheet v1.6.2 — Reset button, noise presets+DND, end of day diary, morning site check
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='1.6.0';
+var APP_VERSION='1.6.2';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -159,7 +159,7 @@ select{
 .btn-submit:disabled{opacity:.4;cursor:not-allowed;filter:none;box-shadow:none;}
 
 /* ── NOISE / ITEMS ROWS ── */
-.nr{display:grid;grid-template-columns:90px 1fr 1fr 40px;gap:6px;align-items:center;margin-bottom:8px;}
+.nr{display:grid;grid-template-columns:90px 1fr auto 40px;gap:6px;align-items:center;margin-bottom:8px;}
 .ir{display:grid;grid-template-columns:58px 1fr 80px 80px 40px;gap:5px;align-items:center;margin-bottom:6px;}
 .nr input,.ir input{padding:10px 10px;font-size:13px;min-height:44px;}
 
@@ -262,7 +262,7 @@ select{
   .ir{display:flex;flex-direction:column;gap:5px;padding:8px;background:var(--s2);border-radius:8px;margin-bottom:8px;}
   .ir input{width:100%;min-height:44px;}
   .ir .del{width:100%;border-radius:8px;}
-  .nr{grid-template-columns:90px 1fr 40px;}
+  .nr{grid-template-columns:90px 1fr auto 40px;}
 }
 #print-header{display:none;}
 </style>
@@ -313,12 +313,23 @@ select{
     <div id="sod-dates" style="margin-bottom:8px;display:flex;flex-direction:column;gap:3px;font-size:13px;font-weight:600;color:var(--muted);"></div>
     <div id="sod-eod-resp" style="display:none;font-size:13px;font-weight:800;color:var(--acc);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:10px 14px;margin-bottom:16px;"></div>
     <div id="sod-tasks" style="margin-bottom:20px;"></div>
-    <!-- SOD checklist: site check for end of yesterday -->
+    <!-- SOD checklist: morning site check -->
     <div style="margin-bottom:20px;">
-      <div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--acc);border-left:3px solid var(--acc);padding-left:10px;margin-bottom:12px;">Site Check &mdash; End of Yesterday</div>
-      <div id="sod-checklist" style="background:var(--surf);border:1px solid var(--bdr);border-radius:var(--radius);padding:4px 12px;"></div>
-      <div id="sod-progress" style="font-size:13px;font-weight:700;color:var(--muted);margin-top:10px;text-align:center;"></div>
-      <button class="btn btn-submit" id="sod-signoff-btn" onclick="sodSignOff()" style="margin-top:10px;" disabled>&#10003; Sign Off Morning Check</button>
+      <div style="background:var(--surf);border:1.5px solid var(--bdr);border-radius:12px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:14px;font-weight:800;margin-bottom:6px;">&#128269; Morning Site Check</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">When you arrived this morning, was the site secure and as expected from yesterday?</div>
+        <div style="display:flex;gap:8px;">
+          <button id="sod-site-ok" onclick="setSiteCheck(true)" class="btn btn-ghost" style="flex:1;border-color:var(--green);">&#10003; All good</button>
+          <button id="sod-site-nok" onclick="setSiteCheck(false)" class="btn btn-ghost" style="flex:1;border-color:var(--red);">&#10007; Issues found</button>
+        </div>
+        <div id="sod-site-issue-row" style="display:none;margin-top:10px;">
+          <textarea id="sod-site-issues" rows="2" placeholder="What was wrong? (e.g. gate open, plant not secured, bins not emptied)" style="font-size:14px;"></textarea>
+        </div>
+      </div>
+      <!-- hidden legacy elements kept for sodSignOff() compatibility -->
+      <div id="sod-checklist" style="display:none;"></div>
+      <div id="sod-progress" style="display:none;"></div>
+      <button class="btn btn-submit" id="sod-signoff-btn" onclick="sodSignOff()" style="margin-top:10px;">&#10003; Sign Off Morning Check</button>
       <div id="sod-signoff-done" style="display:none;font-size:13px;font-weight:800;color:var(--green);margin-top:8px;text-align:center;"></div>
     </div>
     <div style="margin-top:4px;display:flex;flex-direction:column;gap:10px;">
@@ -353,8 +364,9 @@ select{
     <button class="btn btn-blue btn-sm no-print" onclick="window.print()" title="Print tomorrow's plan" style="min-width:44px;min-height:44px;font-size:18px;padding:0;">&#128424;</button>
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
     <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
+    <button id="reset-sod-btn" onclick="resetMorningCheck()" class="no-print" title="Reset morning check (test only)" style="background:none;border:none;color:rgba(100,116,139,.3);font-size:10px;cursor:pointer;padding:4px;font-family:inherit;">&#8635;</button>
     <button onclick="reopenSOD()" style="background:none;border:1.5px solid rgba(245,158,11,.4);border-radius:9px;color:var(--acc);font-size:11px;font-weight:800;padding:6px 10px;cursor:pointer;white-space:nowrap;font-family:inherit;min-height:36px;" class="no-print" title="Open morning check">&#128203; AM check</button>
-    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.6.0</span>
+    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.6.2</span>
   </div>
 </div>
 
@@ -445,32 +457,26 @@ select{
 
   <div id="prog-check-panel" style="display:none;margin-bottom:12px;"></div>
 
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#9203; Session Notes <span style="color:var(--muted);font-weight:600;font-size:10px;text-transform:none;letter-spacing:0;">(optional — fill what's useful)</span></span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; End of Day Diary</span></div></div>
   <div class="card">
     <div style="display:flex;flex-direction:column;gap:10px;">
-      <div>
-        <div style="border-left:3px solid var(--acc);padding-left:9px;margin-bottom:6px;"><div style="font-size:11px;font-weight:900;color:var(--acc);">Morning session</div></div>
-        <button class="mic" id="mic-s1" onclick="vm('s1','fses1')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate morning session</span></button>
-        <textarea id="fses1" rows="2" placeholder="How the morning session went..."></textarea>
+      <div style="font-size:11px;font-weight:800;color:var(--muted);padding:8px 10px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.18);border-radius:8px;line-height:1.6;">
+        <span style="color:var(--blue);">07:30&ndash;10:00</span> Morning &nbsp;&middot;&nbsp; <span style="color:var(--blue);">10:30&ndash;13:00</span> Mid-morning &nbsp;&middot;&nbsp; <span style="color:var(--blue);">13:30&ndash;17:30</span> Afternoon
       </div>
       <div>
-        <div style="border-left:3px solid var(--blue);padding-left:9px;margin-bottom:6px;"><div style="font-size:11px;font-weight:900;color:var(--blue);">Mid-morning</div></div>
-        <button class="mic" id="mic-s2" onclick="vm('s2','fses2')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate mid-morning session</span></button>
-        <textarea id="fses2" rows="2" placeholder="How the mid-morning went..."></textarea>
-      </div>
-      <div>
-        <div style="border-left:3px solid var(--green);padding-left:9px;margin-bottom:6px;"><div style="font-size:11px;font-weight:900;color:var(--green);">Afternoon</div></div>
-        <button class="mic" id="mic-s3" onclick="vm('s3','fses3')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate afternoon session</span></button>
-        <textarea id="fses3" rows="2" placeholder="How the afternoon went..."></textarea>
+        <button class="mic" id="mic-s1" onclick="vm('s1','fses1')"><span class="mic-icon">&#127908;</span><span class="mic-label">Record end of day diary entry</span></button>
+        <textarea id="fses1" rows="4" placeholder="How did the day go? What happened? Any issues, delays, or highlights — just talk through it."></textarea>
       </div>
     </div>
-    <!-- legacy hidden field keeps backward compat with submitEOD which reads fses -->
+    <!-- legacy hidden fields for backward compat -->
+    <textarea id="fses2" style="display:none;"></textarea>
+    <textarea id="fses3" style="display:none;"></textarea>
     <textarea id="fses" style="display:none;"></textarea>
   </div>
 
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#128202; Noise Readings <span style="color:var(--red);font-size:10px;font-weight:900;vertical-align:middle;letter-spacing:0;">&#9733; REQUIRED</span></span><span class="sec-s">3 spot readings — H&amp;S requirement. Use delete button to remove extras if needed.</span></div></div>
   <div class="card">
-    <div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:90px 1fr 1fr 40px;gap:6px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;"><span>Time</span><span>Level (dB)</span><span>Location</span><span></span></div>
+    <div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:90px 1fr auto 40px;gap:6px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;"><span>Time</span><span>Level (dB)</span><span></span><span></span></div>
     <div id="nr-c"></div>
     <button class="btn btn-ghost btn-sm" onclick="addNoise()">+ Reading</button>
   </div>
@@ -658,7 +664,7 @@ var _lastResultIdx=-1;
     document.getElementById('comms-c').appendChild(d);
   });
   addPT();addPT();addPT();
-  addNoise();addNoise();addNoise();
+  addNoise('10:00');addNoise('13:00');addNoise('15:00');
   addItem();addItem();
   // Pre-select last used name in dropdown (still requires pressing Start)
   var s=localStorage.getItem('dgc_uname');
@@ -827,7 +833,30 @@ function addAL(){
 }
 
 function nowTime(){var n=new Date();return ('0'+n.getHours()).slice(-2)+':'+('0'+n.getMinutes()).slice(-2);}
-function addNoise(t,v,loc){NR_I++;var id='nr'+NR_I;var r=document.createElement('div');r.className='nr';r.id=id;r.innerHTML='<input type="time" value="'+(t||nowTime())+'"><input type="number" placeholder="dB" min="0" max="140" inputmode="numeric" value="'+(v||'')+'"><input type="text" placeholder="Location (e.g. Zone 9)" value="'+(loc||'')+'"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('nr-c').appendChild(r);}
+function addNoise(t,v){
+  NR_I++;
+  var id='nr'+NR_I;
+  var r=document.createElement('div');
+  r.className='nr';
+  r.id=id;
+  r.style.cssText='display:grid;grid-template-columns:90px 1fr auto 40px;gap:6px;align-items:center;margin-bottom:8px;';
+  r.innerHTML='<input type="time" value="'+(t||'')+'" style="font-size:13px;min-height:44px;">'
+    +'<input type="number" placeholder="dB" min="0" max="140" inputmode="numeric" value="'+(v||'')+'" style="font-size:13px;min-height:44px;">'
+    +'<button onclick="toggleDND(\''+id+'\')" style="background:none;border:1.5px solid var(--bdr);border-radius:8px;color:var(--muted);font-size:11px;font-weight:800;cursor:pointer;padding:6px 8px;min-height:40px;white-space:nowrap;font-family:inherit;">DND</button>'
+    +'<button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';
+  document.getElementById('nr-c').appendChild(r);
+}
+function toggleDND(id){
+  var el=document.getElementById(id);
+  if(!el)return;
+  var isDND=el.dataset.dnd==='1';
+  el.dataset.dnd=isDND?'0':'1';
+  el.style.opacity=isDND?'1':'0.4';
+  var btn=el.querySelector('button');
+  if(btn){btn.style.color=isDND?'var(--muted)':'var(--red)';btn.style.borderColor=isDND?'var(--bdr)':'var(--red)';}
+  var inputs=el.querySelectorAll('input');
+  inputs.forEach(function(inp){inp.disabled=!isDND;});
+}
 function addItem(q,it,s,tm){IR_I++;var id='ir'+IR_I;var r=document.createElement('div');r.className='ir';r.id=id;r.innerHTML='<input placeholder="Qty" value="'+(q||'')+'"><input placeholder="Item / description" value="'+(it||'')+'"><input placeholder="Supplier" value="'+(s||'')+'"><input type="time" title="By time (e.g. 07:30)" placeholder="By time" value="'+(tm||'')+'" style="font-size:12px;"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('ir-c').appendChild(r);}
 
 var MIC_ICON='🎙';
@@ -1141,9 +1170,9 @@ function submitEOD(){
   // Target % is optional — blank = 100% (task expected to complete)
   // No validation block needed
   // Noise reading count warning (H&S requirement)
-  var noiseRows=[];document.querySelectorAll('.nr').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value)noiseRows.push(ins[1].value);});
+  var noiseRows=[];document.querySelectorAll('.nr').forEach(function(r){var ins=r.querySelectorAll('input');var isDND=r.dataset&&r.dataset.dnd==='1';if(!isDND&&ins[1]&&ins[1].value)noiseRows.push(ins[1].value);});
   if(noiseRows.length<3){if(!confirm('Only '+noiseRows.length+' noise reading(s) recorded — 3 are required. Submit anyway?'))return;}
-  var noise=[];document.querySelectorAll('.nr').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value)noise.push({time:ins[0].value,db:parseFloat(ins[1].value),location:ins[2]?ins[2].value:''});});
+  var noise=[];document.querySelectorAll('.nr').forEach(function(r){var ins=r.querySelectorAll('input');var isDND=r.dataset&&r.dataset.dnd==='1';if(!isDND&&ins[1]&&ins[1].value){noise.push({time:ins[0].value,db:parseFloat(ins[1].value)});}else if(isDND){noise.push({time:ins[0].value,db:null,dnd:true});}});
   var items=[];document.querySelectorAll('.ir').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value.trim())items.push({qty:ins[0].value,item:ins[1].value,source:ins[2].value,byTime:ins[3]?ins[3].value:''});});
   items.sort(function(a,b){return (a.byTime||'99:99').localeCompare(b.byTime||'99:99');});
   // Merge split session notes into combined field + keep individual
@@ -1867,14 +1896,17 @@ function showSOD(planData,name){
     if(wrappers.length>0)wrappers[wrappers.length-1].style.borderBottom='none';
   }
 
-  // Reset sign-off state
+  // Reset sign-off state and site check
+  _siteCheckOk=null;
+  var okBtn=document.getElementById('sod-site-ok');var nokBtn=document.getElementById('sod-site-nok');
+  if(okBtn){okBtn.style.background='';okBtn.style.color='';}
+  if(nokBtn){nokBtn.style.background='';nokBtn.style.color='';}
+  var issueRow=document.getElementById('sod-site-issue-row');if(issueRow)issueRow.style.display='none';
+  var issueTA=document.getElementById('sod-site-issues');if(issueTA)issueTA.value='';
   var doneEl=document.getElementById('sod-signoff-done');
   var btnEl=document.getElementById('sod-signoff-btn');
   if(doneEl)doneEl.style.display='none';
-  if(btnEl){btnEl.style.display='block';btnEl.disabled=true;btnEl.textContent='✓ Sign Off Morning Check';}
-
-  // Show initial progress (all blank = 0 remaining counter shown)
-  updateSODProgress();
+  if(btnEl){btnEl.style.display='block';btnEl.disabled=false;btnEl.textContent='✓ Sign Off Morning Check';}
 
   document.getElementById('ls').style.display='none';
   document.getElementById('app').style.display='none';
@@ -1882,10 +1914,25 @@ function showSOD(planData,name){
   document.body.style.overflow='';
 }
 
+function resetMorningCheck(){
+  var today=tod();
+  sessionStorage.removeItem('dgc_sod_done_'+today);
+  toast('Morning check reset — restart app to test flow');
+}
+
+var _siteCheckOk=null;
+function setSiteCheck(ok){
+  _siteCheckOk=ok;
+  document.getElementById('sod-site-ok').style.background=ok?'var(--green)':'';
+  document.getElementById('sod-site-ok').style.color=ok?'#0f1117':'';
+  document.getElementById('sod-site-nok').style.background=!ok?'var(--red)':'';
+  document.getElementById('sod-site-nok').style.color=!ok?'#fff':'';
+  document.getElementById('sod-site-issue-row').style.display=ok?'none':'block';
+}
+
 function sodSignOff(){
-  // Guard: block if any items are still blank (should not happen — button is disabled — but safety net)
-  var remaining=SOD_ITEMS.filter(function(item){return !_sodChecks[item.k]||_sodChecks[item.k].state==='';}).length;
-  if(remaining>0){toast('✗ Address all items first','err');return;}
+  // Guard: require site check to have been answered
+  if(_siteCheckOk===null){toast('✗ Please answer the morning site check first','err');return;}
 
   var checks={};
   var missedItems=[];
@@ -1896,9 +1943,11 @@ function sodSignOff(){
     if(s.state==='missed'){missedCount++;missedItems.push(item.l);}
   });
   var allDone=(missedCount===0);
+  var siteIssueText=document.getElementById('sod-site-issues')?document.getElementById('sod-site-issues').value:'';
 
   var signedAt=new Date().toISOString();
   var rec={type:'dgc-sod',signer:_uname,signedAt:signedAt,
+    siteCheckOk:_siteCheckOk,siteIssues:_siteCheckOk===false?siteIssueText:'',
     checks:checks,missedItems:missedItems,missedCount:missedCount,allDone:allDone,
     attendance:Object.assign({},_sodAttendance)};
   var btn=document.getElementById('sod-signoff-btn');
