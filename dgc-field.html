@@ -10,11 +10,11 @@
 <meta http-equiv="Expires" content="0">
 <title>DGC Daily Sheet</title>
 <script>
-// DGC Daily Sheet v1.2.0 — Updated after boardroom TWEAK session 2026-06-06
+// DGC Daily Sheet v1.2.1 — Boardroom TWEAK session 2026-06-06: items row labels, task % placeholder, noise required indicator
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='1.2.0';
+var APP_VERSION='1.2.1';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -271,7 +271,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please choose your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;">Start &rarr;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.2.0</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:18px;line-height:1.5;">DGC Construction &middot; Silverdale Group &middot; v1.2.1</div>
   </div>
 </div>
 
@@ -288,7 +288,7 @@ select{
     <button class="btn btn-blue btn-sm no-print" onclick="window.print()" title="Print tomorrow's plan" style="min-width:44px;min-height:44px;font-size:18px;padding:0;">&#128424;</button>
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
     <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
-    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.2.0</span>
+    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span><span id="ver-badge" style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.05em;padding:2px 0;white-space:nowrap;">v1.2.1</span>
   </div>
 </div>
 
@@ -352,7 +352,7 @@ select{
     <textarea id="fses" rows="3" placeholder="How the day went across all three sessions..."></textarea>
   </div>
 
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128202; Noise Readings</span><span class="sec-s">3 spot readings required</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128202; Noise Readings <span style="color:var(--red);font-size:10px;font-weight:900;vertical-align:middle;letter-spacing:0;">&#9733; REQUIRED</span></span><span class="sec-s">3 spot readings — H&amp;S requirement. Delete button only if you have a 4th.</span></div></div>
   <div class="card">
     <div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:90px 1fr 1fr 40px;gap:6px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;"><span>Time</span><span>Level (dB)</span><span>Location</span><span></span></div>
     <div id="nr-c"></div>
@@ -369,7 +369,7 @@ select{
 
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#128230; Items Required for Tomorrow</span></div></div>
   <div class="card">
-    <div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:58px 1fr 80px 80px 40px;gap:5px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;"><span>Qty</span><span>Item</span><span>Supplier</span><span>By Time</span><span></span></div>
+    <div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:58px 1fr 80px 80px 40px;gap:5px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;" class="no-print"><span>Qty</span><span>Item / Description</span><span>Supplier</span><span>By Time</span><span></span></div>
     <div id="ir-c"></div>
     <div class="btns" style="margin-top:8px;">
       <button class="btn btn-ghost btn-sm" onclick="addItem()">+ Item</button>
@@ -583,7 +583,7 @@ function addPT(){
   document.getElementById('pt-container').appendChild(d);
   addTask(i);
 }
-function addTask(ti,desc,pct){var c=document.getElementById('ptt'+ti);if(!c)return;var r=document.createElement('div');r.className='trow';r.innerHTML='<input type="text" placeholder="e.g. Drain run S4.5 to MH7, kerbing Zone G" value="'+(desc||'')+'"><input type="number" placeholder="%" min="0" max="100" inputmode="numeric" value="'+(pct||'')+'" style="text-align:center;font-weight:900;" title="Leave blank = 100% target"><button class="del" onclick="this.closest(\'.trow\').remove()">x</button>';c.appendChild(r);}
+function addTask(ti,desc,pct){var c=document.getElementById('ptt'+ti);if(!c)return;var r=document.createElement('div');r.className='trow';r.innerHTML='<input type="text" placeholder="e.g. Drain run S4.5 to MH7, kerbing Zone G" value="'+(desc||'')+'"><input type="number" placeholder="%(blank=100)" min="0" max="100" inputmode="numeric" value="'+(pct||'')+'" style="text-align:center;font-weight:900;" title="Leave blank = 100% target"><button class="del" onclick="this.closest(\'.trow\').remove()">x</button>';c.appendChild(r);}
 
 function addAL(){
   var i=AL_I++,l=TLTRS[i]||('T'+(i+1)),c=TCOLS[i]||'#94a3b8';
@@ -597,7 +597,7 @@ function addAL(){
 
 function nowTime(){var n=new Date();return ('0'+n.getHours()).slice(-2)+':'+('0'+n.getMinutes()).slice(-2);}
 function addNoise(t,v,loc){NR_I++;var id='nr'+NR_I;var r=document.createElement('div');r.className='nr';r.id=id;r.innerHTML='<input type="time" value="'+(t||nowTime())+'"><input type="number" placeholder="dB" min="0" max="140" inputmode="numeric" value="'+(v||'')+'"><input type="text" placeholder="Location (e.g. Zone 9)" value="'+(loc||'')+'"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('nr-c').appendChild(r);}
-function addItem(q,it,s,tm){IR_I++;var id='ir'+IR_I;var r=document.createElement('div');r.className='ir';r.id=id;r.innerHTML='<input placeholder="Qty" value="'+(q||'')+'"><input placeholder="Item" value="'+(it||'')+'"><input placeholder="Supplier" value="'+(s||'')+'"><input type="time" title="By time" value="'+(tm||'')+'" style="font-size:12px;"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('ir-c').appendChild(r);}
+function addItem(q,it,s,tm){IR_I++;var id='ir'+IR_I;var r=document.createElement('div');r.className='ir';r.id=id;r.innerHTML='<input placeholder="Qty" value="'+(q||'')+'"><input placeholder="Item / description" value="'+(it||'')+'"><input placeholder="Supplier" value="'+(s||'')+'"><input type="time" title="By time (e.g. 07:30)" placeholder="By time" value="'+(tm||'')+'" style="font-size:12px;"><button class="del" onclick="document.getElementById(\''+id+'\').remove()">x</button>';document.getElementById('ir-c').appendChild(r);}
 
 var MIC_ICON='🎙';
 // Store original mic button labels so we can restore them after recording
