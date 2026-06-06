@@ -31,7 +31,7 @@
   --font: 'Segoe UI', system-ui, sans-serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 15px; }
 /* ── HYBRID THEME: keep header + nav dark, rest is light ── */
 .header { background: #1a1d27 !important; border-bottom-color: #2e3347 !important; }
 .header .project-title { color: #94a3b8; }
@@ -101,7 +101,7 @@ body.client-mode .dashboard-secondary-row { display: none !important; }
 .pv5-deadline strong { color: #f59e0b; }
 .pv5-hero-flex { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
 .pv5-bar-section { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; }
-.pv5-bar-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 6px; }
+.pv5-bar-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 6px; }
 .pv5-bar-track { background: #e2e8f0; border-radius: 6px; height: 12px; overflow: hidden; margin-bottom: 4px; }
 .pv5-bar-fill-actual { background: #22c55e; height: 100%; border-radius: 6px; transition: width 0.6s ease; }
 .pv5-bar-fill-plan { background: #f59e0b; height: 100%; border-radius: 6px; transition: width 0.6s ease; }
@@ -117,7 +117,7 @@ body.client-mode .dashboard-secondary-row { display: none !important; }
 .pv5-section-pct.pv5-complete { color: #16a34a; }
 .pv5-section-pct.pv5-active { color: #d97706; }
 .pv5-section-pct.pv5-upcoming { color: #94a3b8; }
-.pv5-section-name { font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 3px; }
+.pv5-section-name { font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 3px; }
 .pv5-section-sub { font-size: 10px; color: #94a3b8; margin-bottom: 10px; }
 .pv5-section-bar { background: #e2e8f0; border-radius: 4px; height: 6px; overflow: hidden; }
 .pv5-section-bar-fill { height: 100%; border-radius: 4px; }
@@ -130,7 +130,7 @@ body.client-mode .dashboard-secondary-row { display: none !important; }
 
 /* NAV TABS */
 .nav { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; overflow-x: auto; position: sticky; top: 57px; z-index: 99; }
-.nav button { padding: 12px 20px; background: none; border: none; color: var(--muted); font-size: 13px; cursor: pointer; font-family: var(--font); border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; }
+.nav button { padding: 12px 20px; background: none; border: none; color: var(--muted); font-size: 13px; cursor: pointer; font-family: var(--font); border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; min-height: 48px; }
 .nav button:hover { color: var(--text); }
 .nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
 
@@ -145,9 +145,9 @@ body.client-mode .dashboard-secondary-row { display: none !important; }
 /* KPI GRID */
 .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
 .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
-.kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-.kpi-value { font-size: 26px; font-weight: 700; line-height: 1; }
-.kpi-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.kpi-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.kpi-value { font-size: 30px; font-weight: 700; line-height: 1; }
+.kpi-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
 .kpi-card.accent .kpi-value { color: var(--accent); }
 .kpi-card.green .kpi-value { color: var(--green); }
 .kpi-card.blue .kpi-value { color: var(--accent2); }
@@ -161,7 +161,7 @@ body.client-mode .dashboard-secondary-row { display: none !important; }
 
 /* CARDS */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
-.card-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 14px; font-weight: 800; }
+.card-title { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; font-weight: 800; }
 
 /* ZONE CARDS */
 .zone-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; margin-bottom: 20px; }
@@ -360,22 +360,24 @@ body.admin-mode .mode-label-left { color: var(--muted); }
 body:not(.admin-mode) .mode-label-left { color: var(--accent2); }
 body:not(.admin-mode) .mode-thumb { background: var(--accent2); }
 
-/* MODE BUTTONS (v211) */
+/* MODE BUTTONS (v211 — enlarged for tablet) */
 .mode-btn {
-  padding: 5px 14px;
+  padding: 7px 16px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--surface2);
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition: all .15s;
+  min-height: 36px;
 }
 .mode-btn.active, .mode-btn:hover {
   background: #f59e0b;
   color: #1a1d27;
   border-color: #f59e0b;
+  box-shadow: 0 2px 8px rgba(245,158,11,0.35);
 }
 .admin-drawer-btn {
   font-size: 11px !important;
@@ -1207,8 +1209,8 @@ html, body {
   display: none;
 }
 
-@media (max-width: 768px) {
-  /* Show bottom nav, hide top nav tabs */
+@media (max-width: 860px) {
+  /* Show bottom nav on tablet portrait + phones — hide top nav tabs */
   #mobile-bottom-nav {
     display: flex;
     position: fixed;
@@ -1233,19 +1235,20 @@ html, body {
     background: none;
     border: none;
     color: var(--muted);
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: .04em;
+    letter-spacing: .03em;
     cursor: pointer;
     border-radius: 8px;
     transition: color .15s;
+    min-height: 52px;
   }
   #mobile-bottom-nav .mob-btn.active {
     color: #f59e0b;
   }
   #mobile-bottom-nav .mob-btn .mob-icon {
-    font-size: 20px;
+    font-size: 22px;
     line-height: 1;
   }
 
@@ -1409,6 +1412,46 @@ html, body {
 }
 .mob-drawer-btn:last-child { border-bottom: none; }
 .mob-drawer-btn:active { background: var(--surface2); }
+
+/* ── v2026.06.c: Tablet Readability Pass ──────────────────────────────────
+   All text < 11px is illegible on a Samsung Tab S6 Lite at arm's length.
+   These overrides lift the floor globally. Inline styles still dominate
+   where they're intentionally sized (chart labels etc).
+   ─────────────────────────────────────────────────────────────────────── */
+/* Data table row text — was 11–12px, now 13px minimum */
+.prog-table td, .payment-table td, .delay-table td,
+.gantt-table td, .ph-table td {
+  font-size: 13px !important;
+}
+.prog-table th, .payment-table th, .delay-table th,
+.gantt-table th, .ph-table th {
+  font-size: 12px !important;
+}
+/* Status pills / badges that used 10px */
+.zone-status { font-size: 11px !important; padding: 3px 9px !important; }
+.status-dot { width: 8px !important; height: 8px !important; }
+/* ph-kpi labels */
+.ph-kpi .k-val { font-size: 24px !important; }
+.ph-kpi .k-lbl { font-size: 11px !important; }
+/* Section card sub labels */
+.pv5-section-sub { font-size: 11px !important; }
+/* Financial fin items */
+.pv5-fin-item .f-lbl, .pv5-fin-item .f-sub { font-size: 11px !important; }
+/* Report KPI labels */
+.report-kpi .lbl { font-size: 11px !important; }
+/* chip labels */
+.chip { font-size: 11px !important; padding: 3px 9px !important; }
+/* AFP card numbers */
+.afp-card__num { font-size: 14px !important; }
+.afp-card__sublabel { font-size: 12px !important; }
+.afp-card__badge { font-size: 11px !important; }
+/* Btn — enforce minimum touch target */
+.btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+/* task row text */
+.task-row { font-size: 12px !important; }
+.task-dates { font-size: 11px !important; }
+/* nav button */
+.nav button { font-size: 13.5px; }
 </style>
 </head>
 <body>
@@ -2032,7 +2075,7 @@ function gpExportCSV(){
   <button class="admin-only nav-hidden" onclick="showTab('financial',this)">AFP &amp; Payment</button>
   <button class="admin-only nav-hidden" onclick="showTab('delays',this)">Delays &amp; EOT</button>
   <button class="admin-only nav-hidden" onclick="showTab('variations',this)">Variations</button>
-  <button class="admin-only nav-hidden" onclick="showTab('efficiency',this)">Velocity</button>
+  <button class="admin-only nav-hidden" onclick="showTab('efficiency',this)">Output Rate</button>
   <button class="admin-only nav-hidden no-client" onclick="showTab('materials',this)">Materials</button>
   <button class="admin-only nav-hidden" onclick="showTab('data',this)">Analytics</button>
   <button class="admin-only nav-hidden" onclick="showTab('setup',this)">Project Setup</button>
@@ -2088,7 +2131,7 @@ function gpExportCSV(){
   <button class="mob-drawer-btn" onclick="mobDrawerTab('risks')">⚠️ &nbsp;Risk Tickets</button>
   <button class="mob-drawer-btn" onclick="mobDrawerTab('report')">📄 &nbsp;Progress Report</button>
   <button class="mob-drawer-btn" onclick="mobDrawerTab('daily')">📋 &nbsp;Daily Log</button>
-  <button class="mob-drawer-btn" onclick="mobDrawerTab('efficiency')">⚡ &nbsp;Velocity</button>
+  <button class="mob-drawer-btn" onclick="mobDrawerTab('efficiency')">⚡ &nbsp;Output Rate</button>
   <button class="mob-drawer-btn" onclick="mobDrawerTab('gantt')">📅 &nbsp;Timeline</button>
   <button class="mob-drawer-btn" onclick="mobDrawerTab('drawings')">📐 &nbsp;Drawings</button>
   <button class="mob-drawer-btn" onclick="mobDrawerTab('materials')">📦 &nbsp;Materials</button>
@@ -2619,10 +2662,32 @@ function gpExportCSV(){
     </div>
   </div>
 
+  <!-- AFP 3 Certification Alert — Board 2 v2026.06.c -->
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;margin-bottom:14px;border-radius:10px;background:#fef3c720;border:1.5px solid #f59e0b55;">
+    <div style="font-size:22px;line-height:1;flex-shrink:0;">⏳</div>
+    <div style="flex:1;">
+      <div style="font-size:14px;font-weight:800;color:#d97706;margin-bottom:3px;">AFP 3 Awaiting Certification — £128,109 due</div>
+      <div style="font-size:13px;color:#92400e;">Submitted to Dandara 22 May 2026 · Measured to 29 May · Certification target: <strong>26 Jun 2026</strong> · Certifier: Ian Barnes</div>
+    </div>
+    <div style="text-align:right;flex-shrink:0;">
+      <div style="font-size:11px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Days to target cert.</div>
+      <div id="afp3-days-remaining" style="font-size:28px;font-weight:900;color:#d97706;line-height:1;">—</div>
+    </div>
+  </div>
+  <script>
+  (function(){
+    var target = new Date('2026-06-26');
+    var today = new Date('2026-05-26'); // frozen to DATA_AS_OF
+    var diff = Math.ceil((target - today) / 86400000);
+    var el = document.getElementById('afp3-days-remaining');
+    if(el) el.textContent = diff > 0 ? diff : (diff === 0 ? 'TODAY' : 'OVERDUE');
+  })();
+  </script>
+
   <!-- AFP Schedule — v159: expandable cards, no ugly table rows -->
   <div class="card" style="margin-bottom:16px;">
     <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
-      <span>Application for Payment Schedule</span>
+      <span>Payment Schedule (AFP)</span>
       <span style="font-size:12px;font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0;">Contract Sum: <strong style="color:var(--text);">£450,142</strong></span>
     </div>
 
@@ -2687,6 +2752,7 @@ function gpExportCSV(){
           <div class="afp-detail-row afp-detail-row--deduct"><span>Less AFP 1+2 paid</span><span>−£156,739</span></div>
           <div class="afp-detail-row afp-detail-row--total"><span>Net due</span><span style="color:#d97706;">£128,109</span></div>
           <div class="afp-detail-info">Submitted to Dandara 22 May 2026 · Measured to 29 May · Awaiting Ian Barnes certification · Target cert. 26 Jun 2026 · EOT claims D–I (~£16,167) carried to AFP 5</div>
+          <div class="afp-detail-warn" style="margin-top:8px;background:#ef444410;border:1px solid #ef444430;border-radius:6px;padding:8px 10px;font-size:11px;color:#ef4444;">⚠ Dandara challenge risk: External Works at 28.3% likely to be queried — RC wall remediation progress may be counted differently. Materials on site (£10,347) needs delivery notes to support. Prepare contemporaneous evidence before cert. meeting.</div>
         </div>
       </div>
 
@@ -3362,6 +3428,7 @@ function gpExportCSV(){
             <th>Category</th>
             <th>Description</th>
             <th>Days</th>
+            <th>DGC Fault?</th>
             <th>Status</th>
             <th class="admin-only">Cost (£)</th>
           </tr>
@@ -3424,6 +3491,19 @@ function gpExportCSV(){
 </div>
 <!-- ═══════════════════════════════ VARIATIONS ═══════════════════════════════ -->
 <div id="tab-variations" class="tab-content admin-only">
+
+  <!-- Variation commercial position banner — Board 2 v2026.06.c -->
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;margin-bottom:14px;border-radius:10px;background:#3b82f610;border:1.5px solid #3b82f640;">
+    <div style="font-size:22px;flex-shrink:0;">💼</div>
+    <div style="flex:1;">
+      <div style="font-size:14px;font-weight:800;color:#1e293b;margin-bottom:3px;">Variation Commercial Position</div>
+      <div style="font-size:13px;color:var(--muted);">AFP 3 includes £14,148 in agreed variations. EOT claims D–I (~£16,167 additional) carried to AFP 5. Submit variation schedule to Dandara before next certification meeting.</div>
+    </div>
+    <div style="text-align:right;flex-shrink:0;">
+      <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Claimed in AFP 3</div>
+      <div style="font-size:26px;font-weight:900;color:#3b82f6;line-height:1;">£14,148</div>
+    </div>
+  </div>
 
   <!-- AFA summary -->
   <div class="kpi-grid" id="afa-kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:16px;"></div>
@@ -11739,7 +11819,8 @@ function buildTwoWeekReport() {
   h.push('<div class="rpt-meta"><strong>TWO-WEEK PROGRESS REPORT</strong><br>'
     + 'Contract: Ballasalla Phase 4 &mdash; Dandara Homes<br>'
     + 'Report Period: ' + periodStr + '<br>'
-    + 'Report Date: ' + reportDate + '</div>');
+    + 'Report Date: ' + reportDate + '<br>'
+    + '<span style="font-size:8.5pt;color:#f59e0b;font-weight:700;">Data correct as of: 26 May 2026 (next refresh ~9 Jun 2026)</span></div>');
   h.push('</div>');
 
   h.push('<div class="rpt-body">');
@@ -12948,7 +13029,14 @@ function buildRTLogHTML(tickets) {
     if (_rtFilters.dateTo   && (t.date||'') > _rtFilters.dateTo)   return false;
     return true;
   });
-  filtered.sort(function(a,b){ return (b.rtNum||0)-(a.rtNum||0); });
+  // Board 2 v2026.06.c: sort critical/high-risk tickets first, then by number
+  var priorityOrder = { 'critical': 0, 'high': 1, 'medium': 2, 'low': 3 };
+  filtered.sort(function(a,b){
+    var pa = priorityOrder[String(a.severity||a.priority||'').toLowerCase()] !== undefined ? priorityOrder[String(a.severity||a.priority||'').toLowerCase()] : 4;
+    var pb = priorityOrder[String(b.severity||b.priority||'').toLowerCase()] !== undefined ? priorityOrder[String(b.severity||b.priority||'').toLowerCase()] : 4;
+    if (pa !== pb) return pa - pb;
+    return (b.rtNum||0)-(a.rtNum||0);
+  });
 
   if (anyFilter) h.push('<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">' + filtered.length + ' of ' + tickets.length + ' tickets</div>');
 
@@ -19354,32 +19442,7 @@ if ('serviceWorker' in navigator) {
 </script>
 
 <script>
-var CP_VERSION = '2026.06.a';
-(function(){
-  function checkCPUpdate(){
-    fetch('/dgc-ballasalla/control-panel.html?_v='+Math.random(),{cache:'no-store'})
-      .then(function(r){return r.text();})
-      .then(function(h){
-        var m=h.match(/var CP_VERSION = '([^']+)'/);
-        if(m&&m[1]&&m[1]!==CP_VERSION){
-          var b=document.getElementById('cp-update-banner');
-          if(!b){
-            b=document.createElement('div');
-            b.id='cp-update-banner';
-            b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#f59e0b;color:#0f1117;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,.4);';
-            b.innerHTML='<span style="font-size:13px;font-weight:800;">&#128260; Control Panel update ready ('+m[1]+')</span><button onclick="window.location.reload()" style="background:#0f1117;color:#f59e0b;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:900;cursor:pointer;min-height:40px;">Tap to update</button>';
-            document.body.insertBefore(b,document.body.firstChild);
-          }
-        }
-      }).catch(function(){});
-  }
-  setTimeout(checkCPUpdate,5000);
-  setInterval(checkCPUpdate,60000);
-})();
-</script>
-
-<script>
-var CP_VERSION = '2026.06.b';
+var CP_VERSION = '2026.06.c';
 (function(){
   function checkCPUpdate(){
     fetch('/dgc-ballasalla/control-panel.html?_v='+Math.random(),{cache:'no-store'})
