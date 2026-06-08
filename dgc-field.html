@@ -17,7 +17,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='2.2.3';
+var APP_VERSION='2.2.4';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -307,7 +307,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.3</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.4</div>
   </div>
 </div>
 
@@ -1922,7 +1922,7 @@ function buildSODResults2(planData){
       html+='<div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:4px;">'+esc(task.desc||'')+'</div>';
       html+='<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Planned: <strong>'+(task.target||100)+'%</strong></div>';
       html+='<div style="display:flex;align-items:center;gap:10px;">';
-      html+='<input type="range" min="0" max="100" value="0" id="sod-slider-'+i+'-'+j+'" data-col="'+col+'" oninput="sodSliderUpdate('+i+','+j+',''+col+'')" class="sod-slider" style="flex:1;background:linear-gradient(to right,'+col+' 0%,var(--bdr) 0%);">';
+      html+='<input type="range" min="0" max="100" value="0" id="sod-slider-'+i+'-'+j+'" data-col="'+col+'" oninput="sodSliderUpdate('+i+','+j+')" class="sod-slider" style="flex:1;background:linear-gradient(to right,'+col+' 0%,var(--bdr) 0%);">';
       html+='<input type="number" min="0" max="100" value="0" id="sod-num-'+i+'-'+j+'" oninput="sodNumChange('+i+','+j+')" style="width:64px;font-size:16px;font-weight:900;text-align:center;padding:8px 4px;min-height:44px;border-color:'+col+'44;">';
       html+='<button id="sod-tick-'+i+'-'+j+'" onclick="sodTickResult('+i+','+j+','+totalTeams+')" style="width:48px;height:48px;min-width:48px;border-radius:10px;border:2px solid var(--bdr);background:var(--s2);color:var(--txt);font-size:20px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;transition:background .15s,border-color .15s,color .15s;">&#10003;</button>';
       html+='</div>';
@@ -1935,11 +1935,12 @@ function buildSODResults2(planData){
   container.innerHTML=html;
 }
 
-function sodSliderUpdate(i,j,col){
+function sodSliderUpdate(i,j){
   var s=document.getElementById('sod-slider-'+i+'-'+j);
   var n=document.getElementById('sod-num-'+i+'-'+j);
   if(!s||!n)return;
   var v=parseInt(s.value)||0;
+  var col=s.dataset.col||'var(--acc)';
   n.value=v;
   s.style.background='linear-gradient(to right,'+col+' '+v+'%,var(--bdr) '+v+'%)';
 }
