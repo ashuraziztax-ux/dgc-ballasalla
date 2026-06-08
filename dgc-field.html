@@ -17,7 +17,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='2.2.0';
+var APP_VERSION='2.2.2';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -190,6 +190,7 @@ select{
 .mic .mic-icon{font-size:22px;line-height:1;flex-shrink:0;}
 .mic.on{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.5);color:var(--acc);animation:bl 1s infinite;}
 @keyframes bl{0%,100%{opacity:1}50%{opacity:.6}}
+@keyframes spin{to{transform:rotate(360deg)}}
 
 /* ── COMMS CHECKLIST ── */
 .cr{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--bdr);cursor:pointer;}
@@ -306,7 +307,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.0</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.2</div>
   </div>
 </div>
 
@@ -679,7 +680,6 @@ function doLogin(){
   var el=document.getElementById('ln');
   var n=(el?el.value:'').trim();
   if(!n){
-    // Shake the select to indicate they need to pick
     if(el){el.style.borderColor='var(--red)';setTimeout(function(){el.style.borderColor='';},1500);}
     var msg=document.getElementById('ln-err');if(msg){msg.style.display='block';setTimeout(function(){msg.style.display='none';},2000);}
     return;
@@ -690,38 +690,40 @@ function doLogin(){
   document.getElementById('fm').value=n;
   restoreDraft();
   startDraftTimer();
-  // Show one-time AI setup hint if no key saved yet
-  if(!localStorage.getItem('dgc_claude_key')&&!localStorage.getItem('dgc_ai_hint_seen')){
-    localStorage.setItem('dgc_ai_hint_seen','1');
-    setTimeout(function(){
-      var hint=document.getElementById('ai-hint');if(hint)hint.style.display='flex';
-      setTimeout(function(){var h=document.getElementById('ai-hint');if(h)h.style.display='none';},8000);
-    },1200);
+
+  // ── IMMEDIATELY hide login, show loading spinner ──
+  var ls=document.getElementById('ls');
+  if(ls){
+    ls.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:18px;"><div style="width:48px;height:48px;border:4px solid rgba(245,158,11,.2);border-top-color:var(--acc);border-radius:50%;animation:spin 0.8s linear infinite;"></div><div style="font-size:14px;font-weight:700;color:var(--acc);">Loading...</div></div>';
+    ls.style.display='flex';
   }
-  // SOD always shows — no bypass
-  // Try to find yesterday's/today's plan to show Start of Day
+
+  // ── 5-second fallback: if Supabase hangs, go to app anyway ──
+  var _loginDone=false;
+  function finishLogin(planData){
+    if(_loginDone)return;
+    _loginDone=true;
+    if(ls)ls.style.display='none';
+    if(planData){showSOD(planData,_uname);}else{showApp();}
+  }
+  var _loginTimeout=setTimeout(function(){finishLogin(null);},5000);
+
   if(sb){
-    var today=tod();
     var yesterday=(function(){var d=new Date();d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);})();
     sb.from('daily_records').select('data').eq('project_ref',PROJECT_REF).gte('date',yesterday).not('gang','like','ACHV_%').not('gang','like','SOD_%').order('date',{ascending:false}).limit(5)
       .then(function(r){
+        clearTimeout(_loginTimeout);
         var recs=r.data||[];
         var found=recs.find(function(x){return x.data&&x.data.plan&&x.data.plan.length>0;});
-        if(found){
-          toast('Loading morning check...');
-          showSOD(found.data,_uname);
-        }else{
-          document.getElementById('ls').style.display='none';
-          showApp();
-        }
+        finishLogin(found?found.data:null);
       })
       .catch(function(){
-        document.getElementById('ls').style.display='none';
-        showApp();
+        clearTimeout(_loginTimeout);
+        finishLogin(null);
       });
   }else{
-    document.getElementById('ls').style.display='none';
-    showApp();
+    clearTimeout(_loginTimeout);
+    finishLogin(null);
   }
 }
 
