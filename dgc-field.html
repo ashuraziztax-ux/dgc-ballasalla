@@ -17,7 +17,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='2.2.6';
+var APP_VERSION='2.2.7';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -307,7 +307,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.6</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.7</div>
   </div>
 </div>
 
@@ -385,13 +385,8 @@ select{
     <button class="btn btn-blue btn-sm no-print" onclick="window.print()" title="Print tomorrow's plan" style="min-width:44px;min-height:44px;font-size:18px;padding:0;">&#128424;</button>
     <button class="theme-btn no-print" id="theme-btn" onclick="toggleTheme()" title="Toggle dark/light mode">&#9790;</button>
     <button class="theme-btn no-print" id="ai-btn" onclick="showClaudeSetup()" title="Claude AI settings" style="display:none;"></button>
-    <button onclick="reopenSOD()" style="background:none;border:1.5px solid rgba(245,158,11,.4);border-radius:9px;color:var(--acc);font-size:11px;font-weight:800;padding:6px 10px;cursor:pointer;white-space:nowrap;font-family:inherit;min-height:36px;" class="no-print" title="Open morning check">&#128203; AM check</button>
-    <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span>
+<span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span>
   </div>
-</div>
-<div id="ver-strip" style="background:rgba(245,158,11,.08);border-bottom:1px solid rgba(245,158,11,.15);padding:4px 16px;font-size:11px;font-weight:800;color:rgba(245,158,11,.6);letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between;">
-  <span>DGC Daily Sheet</span>
-  <span id="ver-display">v2.2.0</span>
 </div>
 
 <div class="main">
@@ -679,6 +674,24 @@ var _lastResultIdx=-1;
   }
 })();
 
+// Demo seed data — used by Reset for demo button when no live Supabase data
+var DEMO_PLAN_DATA={
+  plan:[
+    {team:'A',leader:'James Cosgrove',tasks:[
+      {desc:'Drain run S4.5 to MH7 — 80m',target:80},
+      {desc:'Backfill plot 4 excavation trench',target:100}
+    ]},
+    {team:'B',leader:'Denny Walsh',tasks:[
+      {desc:'S4 to S4.2 reverse backfill + dig plot 4',target:75}
+    ]}
+  ],
+  alloc:[
+    {team:'A',lead:'James Cosgrove',ops:['Dean Garrett','Jake Smith']},
+    {team:'B',lead:'Denny Walsh',ops:['Tony Brannigan']}
+  ],
+  eodResponsibility:{person:'Dean Garrett',team:'A'}
+};
+
 function doLogin(){
   // Get selected name — try both value and selectedIndex
   var el=document.getElementById('ln');
@@ -708,6 +721,9 @@ function doLogin(){
   var sodEl=document.getElementById('sod');
   if(sodEl)sodEl.style.display='block';
   document.body.style.overflow='';
+  // Always reset sign-off button — clears any stuck "Saving..." state from previous session
+  var _sfBtn=document.querySelector('#sod-signoff-section .btn-submit');
+  if(_sfBtn){_sfBtn.disabled=false;_sfBtn.innerHTML='&#128221; Sign Off Morning Check &#8594;';}
   var hour=new Date().getHours();
   var greet=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
   var gl=document.getElementById('sod-greeting');
@@ -1740,14 +1756,21 @@ function toggleTheme(){
   if(logo) logo.src=isLight?'dgc-logo-dark.png':'dgc-logo-white.png';
 }
 function changeUser(){
-  // Show lock screen again so they can re-select from dropdown
+  // Pre-select current user in dropdown so Start Day works immediately
   var sel=document.getElementById('ln');
   if(sel&&_uname){
     for(var oi=0;oi<sel.options.length;oi++){
       if(sel.options[oi].value===_uname){sel.selectedIndex=oi;break;}
     }
   }
-  document.getElementById('ls').style.display='flex';document.body.style.overflow='hidden';
+  // Reset sign-off button so it's never stuck on "Saving..." when returning to login
+  var signoffBtn=document.querySelector('#sod-signoff-section .btn-submit');
+  if(signoffBtn){signoffBtn.disabled=false;signoffBtn.innerHTML='&#128221; Sign Off Morning Check &#8594;';}
+  // Hide SOD and app, show login screen
+  var sodEl=document.getElementById('sod');
+  if(sodEl)sodEl.style.display='none';
+  document.getElementById('ls').style.display='flex';
+  document.body.style.overflow='hidden';
   document.getElementById('app').style.display='none';
 }
 // Restore theme + Claude key status on load
@@ -1849,11 +1872,12 @@ function buildSODEodCheck(planData){
       var allocEntry=alloc.find(function(a){return a.team===teamLetter;});
       if(allocEntry)lead=allocEntry.lead||'';
     }
-    html+='<div style="background:var(--s2);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;font-weight:700;line-height:1.7;">';
-    html+='<div>Assigned to: <strong style="color:var(--txt);">'+esc(eod.person)+'</strong>';
-    if(teamLetter)html+='&nbsp;&nbsp;Team <strong style="color:var(--acc);">'+esc(teamLetter)+'</strong>';
-    html+='</div>';
-    if(teamLetter&&lead)html+='<div style="color:var(--muted);font-size:12px;">Team '+esc(teamLetter)+' leader: <strong style="color:var(--txt);">'+esc(lead)+'</strong></div>';
+    html+='<div style="background:var(--s2);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;font-weight:700;line-height:1.9;">';
+    var eodLine='';
+    if(teamLetter){eodLine+='Assigned to Team <strong style="color:var(--acc);">'+esc(teamLetter)+'</strong>';}else{eodLine+='Assigned to';}
+    if(teamLetter&&lead){eodLine+=' <span style="color:var(--muted);">&#8212;</span> Team Leader: <strong style="color:var(--txt);">'+esc(lead)+'</strong>';}
+    eodLine+=' <span style="color:var(--muted);">&#8212;</span> <strong style="color:var(--txt);">'+esc(eod.person)+'</strong>';
+    html+=eodLine;
     html+='</div>';
   }else{
     html+='<div style="font-size:13px;color:var(--muted);margin-bottom:14px;padding:10px 14px;background:var(--s2);border-radius:10px;">No EOD person assigned yesterday</div>';
@@ -2041,19 +2065,21 @@ function sodSignOff(){
 }
 
 function sodDemoReset(){
-  // Reset all SOD user inputs — keeps yesterday's plan data loaded
+  // Reset all SOD user inputs
   _sodEodStatus=null;
   _sodTaskResults={};
   _sodResults={};
   _sodAttendance2={};
-  // Rebuild the interactive sections from the loaded plan
-  if(_sodPlanData){
-    buildSODEodCheck(_sodPlanData);
-    buildSODResults2(_sodPlanData);
-  }
+  // Rebuild from live data if available, otherwise use demo seed
+  var dataToUse=_sodPlanData||DEMO_PLAN_DATA;
+  buildSODEodCheck(dataToUse);
+  buildSODResults2(dataToUse);
   // Clear any sign-off note
   var note=document.getElementById('sod-signoff-note');
   if(note)note.textContent='';
+  // Reset sign-off button — clears any stuck "Saving..." state
+  var signoffBtn=document.querySelector('#sod-signoff-section .btn-submit');
+  if(signoffBtn){signoffBtn.disabled=false;signoffBtn.innerHTML='&#128221; Sign Off Morning Check &#8594;';}
   // Scroll back to top of SOD screen
   var sod=document.getElementById('sod');
   if(sod)sod.scrollTo({top:0,behavior:'smooth'});
