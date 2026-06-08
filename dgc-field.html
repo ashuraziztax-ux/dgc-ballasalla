@@ -166,6 +166,11 @@ select{
 .ir{display:grid;grid-template-columns:58px 1fr 80px 80px 44px;gap:5px;align-items:center;margin-bottom:6px;}
 .nr input,.ir input{padding:10px 10px;font-size:13px;min-height:44px;}
 
+/* ── RESULT SLIDER ── */
+.sod-slider{-webkit-appearance:none;appearance:none;height:12px;border-radius:6px;outline:none;cursor:pointer;width:100%;}
+.sod-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:28px;height:28px;border-radius:50%;background:var(--acc);cursor:pointer;border:3px solid var(--bg);box-shadow:0 2px 6px rgba(0,0,0,.4);}
+.sod-slider::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:var(--acc);cursor:pointer;border:3px solid var(--bg);}
+
 /* ── DELETE BUTTON ── */
 .del{width:44px;height:44px;min-width:44px;background:var(--s2);border:1.5px solid var(--bdr);border-radius:8px;color:var(--red);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,border-color .15s;}
 .del:hover{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.4);}
@@ -1844,7 +1849,7 @@ function buildSODEodCheck(planData){
 
 function setEodStatus(status){
   _sodEodStatus=status;
-  ['done','notdone','unchecked'].forEach(function(s){
+  ['done','notdone'].forEach(function(s){
     var btn=document.getElementById('eod-btn-'+s);
     if(btn){
       var activeColor=s==='done'?'var(--green)':s==='notdone'?'var(--red)':'var(--muted)';
@@ -1854,7 +1859,7 @@ function setEodStatus(status){
     }
   });
   var noteRow=document.getElementById('eod-note-row');
-  if(noteRow)noteRow.style.display=(status==='notdone'||status==='unchecked')?'block':'none';
+  if(noteRow)noteRow.style.display=(status==='notdone')?'block':'none';
   var noteEl=document.getElementById('sod-signoff-note');
   if(noteEl)noteEl.textContent='';
 }
@@ -1895,7 +1900,7 @@ function buildSODResults2(planData){
       html+='<div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:4px;">'+esc(task.desc||'')+'</div>';
       html+='<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Planned: <strong>'+(task.target||100)+'%</strong></div>';
       html+='<div style="display:flex;align-items:center;gap:10px;">';
-      html+='<input type="range" min="0" max="100" value="0" id="sod-slider-'+i+'-'+j+'" oninput="sodSliderChange('+i+','+j+')" style="flex:1;accent-color:'+col+';height:6px;cursor:pointer;">';
+      html+='<input type="range" min="0" max="100" value="0" id="sod-slider-'+i+'-'+j+'" data-col="'+col+'" oninput="sodSliderUpdate('+i+','+j+',''+col+'')" class="sod-slider" style="flex:1;background:linear-gradient(to right,'+col+' 0%,var(--bdr) 0%);">';
       html+='<input type="number" min="0" max="100" value="0" id="sod-num-'+i+'-'+j+'" oninput="sodNumChange('+i+','+j+')" style="width:64px;font-size:16px;font-weight:900;text-align:center;padding:8px 4px;min-height:44px;border-color:'+col+'44;">';
       html+='<button id="sod-tick-'+i+'-'+j+'" onclick="sodTickResult('+i+','+j+','+totalTeams+')" style="width:48px;height:48px;min-width:48px;border-radius:10px;border:2px solid var(--bdr);background:var(--s2);color:var(--txt);font-size:20px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;transition:background .15s,border-color .15s,color .15s;">&#10003;</button>';
       html+='</div>';
@@ -1908,6 +1913,14 @@ function buildSODResults2(planData){
   container.innerHTML=html;
 }
 
+function sodSliderUpdate(i,j,col){
+  var s=document.getElementById('sod-slider-'+i+'-'+j);
+  var n=document.getElementById('sod-num-'+i+'-'+j);
+  if(!s||!n)return;
+  var v=parseInt(s.value)||0;
+  n.value=v;
+  s.style.background='linear-gradient(to right,'+col+' '+v+'%,var(--bdr) '+v+'%)';
+}
 function sodSliderChange(i,j){
   var slider=document.getElementById('sod-slider-'+i+'-'+j);
   var num=document.getElementById('sod-num-'+i+'-'+j);
@@ -1916,27 +1929,41 @@ function sodSliderChange(i,j){
 function sodNumChange(i,j){
   var slider=document.getElementById('sod-slider-'+i+'-'+j);
   var num=document.getElementById('sod-num-'+i+'-'+j);
-  if(slider&&num)slider.value=num.value||0;
+  if(!slider||!num)return;
+  var v=Math.min(100,Math.max(0,parseInt(num.value)||0));
+  slider.value=v;
+  num.value=v;
+  var col=slider.dataset.col||'var(--acc)';
+  slider.style.background='linear-gradient(to right,'+col+' '+v+'%,var(--bdr) '+v+'%)';
 }
 
 function sodTickResult(i,j,totalTeams){
   var num=document.getElementById('sod-num-'+i+'-'+j);
   var tickBtn=document.getElementById('sod-tick-'+i+'-'+j);
   var slider=document.getElementById('sod-slider-'+i+'-'+j);
-  var val=parseInt(num?num.value:0)||0;
+  var key=i+'-'+j;
+  var already=_sodTaskResults[key]&&_sodTaskResults[key].confirmed;
+  if(already){
+    // UN-TICK — allow changes
+    _sodTaskResults[key]={pct:0,confirmed:false};
+    if(tickBtn){tickBtn.innerHTML='&#10003;';tickBtn.style.background='var(--s2)';tickBtn.style.color='var(--txt)';tickBtn.style.borderColor='var(--bdr)';}
+    return;
+  }
+  // TICK — lock in value
+  var rawVal=num?Number(num.value):0;
+  var val=isNaN(rawVal)?0:Math.min(100,Math.max(0,Math.round(rawVal)));
   if(val===0)val=100;
   if(num)num.value=val;
-  if(slider)slider.value=val;
-  _sodTaskResults[i+'-'+j]={pct:val,confirmed:true};
-  if(tickBtn){
-    tickBtn.textContent='&#10003;';
-    tickBtn.style.background='var(--green)';
-    tickBtn.style.color='#0f1117';
-    tickBtn.style.borderColor='var(--green)';
+  if(slider){
+    slider.value=val;
+    var col=slider.dataset.col||'var(--acc)';
+    slider.style.background='linear-gradient(to right,'+col+' '+val+'%,var(--bdr) '+val+'%)';
   }
+  _sodTaskResults[key]={pct:val,confirmed:true};
+  if(tickBtn){tickBtn.innerHTML='&#10003;';tickBtn.style.background='var(--green)';tickBtn.style.color='#0f1117';tickBtn.style.borderColor='var(--green)';}
   var nextCard=document.getElementById('sod-team-card-'+(i+1));
   var target=nextCard||document.getElementById('sod-signoff-section');
-  if(target)setTimeout(function(){target.scrollIntoView({behavior:'smooth',block:'start'});},150);
+  if(target)setTimeout(function(){target.scrollIntoView({behavior:'smooth',block:'start'});},200);
 }
 
 function sodMarkAttend(name){_sodAttendance2[name]='in';_sodAttendance[name]='in';}
