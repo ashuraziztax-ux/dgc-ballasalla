@@ -307,7 +307,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.20</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.21</div>
   </div>
 </div>
 
@@ -783,14 +783,10 @@ function doLogin(){
 function sw(name,btn){
   try{
     document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
-    document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('active');b.style.display='';});
+    document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('active');});
     var tab=document.getElementById('tab-'+name);
     if(tab)tab.classList.add('active');
     if(btn)btn.classList.add('active');
-    // Hide the nav button for whichever tab is now active
-    var navHide={'today-tab':'nav-today-tab','eod':'nav-eod'};
-    var hid=navHide[name];
-    if(hid){var hb=document.getElementById(hid);if(hb)hb.style.display='none';}
     if(name==='hist')loadHist();
     if(name==='achv')loadAchv();
     if(name==='sod-tab')loadSODTab();
@@ -2559,10 +2555,10 @@ function showApp(){
   document.body.style.overflow='';
   loadAchv();loadHist();
   // Land on Today tab
-  document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('active');b.style.display='';});
+  document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('active');});
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
   var todayBtn=document.getElementById('nav-today-tab');
-  if(todayBtn){todayBtn.classList.add('active');todayBtn.style.display='none';}
+  if(todayBtn)todayBtn.classList.add('active');
   var todayTab=document.getElementById('tab-today-tab');
   if(todayTab)todayTab.classList.add('active');
   showTodayPlanInline();
