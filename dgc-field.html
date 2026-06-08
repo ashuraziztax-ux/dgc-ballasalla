@@ -2529,7 +2529,7 @@ if('serviceWorker' in navigator){
     fetch(window.location.href+'?_v='+Math.random(),{cache:'no-store'})
       .then(function(r){return r.text();})
       .then(function(h){
-        var m=h.match(/var APP_VERSION='2.0.12']+)'/);
+        var m=h.match(/var APP_VERSION='([^']+)'/);;
         if(m&&m[1]&&m[1]!==APP_VERSION){
           var b=document.getElementById('update-banner');
           if(!b){
