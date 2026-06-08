@@ -17,7 +17,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='2.2.10';
+var APP_VERSION='2.2.11';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -307,7 +307,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.10</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.11</div>
   </div>
 </div>
 
@@ -678,8 +678,17 @@ var DEMO_PLAN_DATA={
     {team:'A',lead:'Craig Thomas',ops:['Lee Duffy','Jake Smith']},
     {team:'B',lead:'Denny Walsh',ops:['Tony Brannigan']}
   ],
+  meeting:{topics:'Today\'s plan — Team A drain run S4.5 to MH7, Team B backfill and dig plot 4.',risks:'Soft ground in zone S4 after yesterday\'s rain — watch trench sides.'},
   eodResponsibility:{person:'Lee Duffy',team:'A'}
 };
+
+// Demo history records — shown in History tab when no Supabase records exist
+var DEMO_HISTORY=[
+  {date:'2026-06-06',data:{header:{sm:'James Cosgrove',weather:'Overcast',temp:14},meeting:{topics:'Team A — drain run S4.3 to S4.5. Team B — backfill plots 1–3.'},plan:[{team:'A',leader:'Craig Thomas',tasks:[{desc:'Drain run S4.3 to S4.5 — 60m',target:100},{desc:'Set MH6 manhole',target:100}]},{team:'B',leader:'Denny Walsh',tasks:[{desc:'Backfill plots 1, 2, 3',target:85}]}],noise:[{time:'10:00',db:72},{time:'13:00',db:68},{time:'15:00',db:74}],notes:'Ground conditions good. MH6 set correctly to invert. Plots 1 and 2 fully backfilled, plot 3 75% done — left for tomorrow.'},achv:{efficiency:88,tasks:[{desc:'Drain run S4.3 to S4.5 — 60m',actual:100},{desc:'Set MH6 manhole',actual:100},{desc:'Backfill plots 1, 2, 3',actual:75}]}},
+  {date:'2026-06-05',data:{header:{sm:'James Cosgrove',weather:'Fine & dry',temp:17},meeting:{topics:'Team A — kerbing zone G south side. Team B — S4 drainage from MH4.'},plan:[{team:'A',leader:'Craig Thomas',tasks:[{desc:'Kerbing zone G south — 45m',target:100}]},{team:'B',leader:'Denny Walsh',tasks:[{desc:'S4 drainage MH4 to MH5 — 35m',target:80}]}],noise:[{time:'10:00',db:69},{time:'13:00',db:71},{time:'15:00',db:67}],notes:'Good day. Kerbing completed ahead of schedule. MH5 set. Pipe bedding done.'},achv:{efficiency:96,tasks:[{desc:'Kerbing zone G south — 45m',actual:100},{desc:'S4 drainage MH4 to MH5 — 35m',actual:95}]}},
+  {date:'2026-06-04',data:{header:{sm:'James Cosgrove',weather:'Light rain',temp:12},meeting:{topics:'Reduced output expected — wet ground. Team A on MH5 build, Team B shutters plots 5–6.'},plan:[{team:'A',leader:'Craig Thomas',tasks:[{desc:'Build MH5 — 1200mm dia',target:100}]},{team:'B',leader:'Denny Walsh',tasks:[{desc:'Shutters and concrete plots 5 and 6 footings',target:70}]}],noise:[{time:'10:00',db:65},{time:'13:00',db:63},{time:'15:00',db:61}],notes:'Rain from 11am. MH5 completed. Plot 5 footing poured, plot 6 shutters set but pour held — ground too wet for access.'},achv:{efficiency:72,tasks:[{desc:'Build MH5 — 1200mm dia',actual:100},{desc:'Shutters and concrete plots 5 and 6 footings',actual:50}]}},
+  {date:'2026-06-03',data:{header:{sm:'James Cosgrove',weather:'Hot & sunny',temp:19},meeting:{topics:'Full day — Team A excavate S4.2 to S4.3. Team B kerb zone F.'},plan:[{team:'A',leader:'Craig Thomas',tasks:[{desc:'Excavate trench S4.2 to S4.3 — 55m',target:100},{desc:'Lay 300mm pipe S4.2 to S4.3',target:80}]},{team:'B',leader:'Denny Walsh',tasks:[{desc:'Kerbing zone F north — 50m',target:100}]}],noise:[{time:'10:00',db:73},{time:'13:00',db:70},{time:'15:00',db:75}],notes:'Excellent conditions. Excavation complete, pipe laying 85% — last 8m held pending bedding aggregate delivery (tomorrow morning). Kerbing zone F done.'},achv:{efficiency:94,tasks:[{desc:'Excavate trench S4.2 to S4.3 — 55m',actual:100},{desc:'Lay 300mm pipe S4.2 to S4.3',actual:85},{desc:'Kerbing zone F north — 50m',actual:100}]}}
+];
 
 function doLogin(){
   // Get selected name — try both value and selectedIndex
@@ -1407,6 +1416,48 @@ function submitAchv(){
     .then(function(r){toast(r.error?'Save failed: '+r.error.message:'Saved — '+eff+'% efficiency ✓');});
 }
 
+function renderHistoryCard(date,r,achv){
+  var plan=r.plan||[];
+  var eff=achv&&achv.efficiency!=null?achv.efficiency:null;
+  var effColor=eff!=null?(eff>=90?'var(--green)':eff>=70?'var(--acc)':'var(--red)'):'var(--muted)';
+  var h='<div style="background:var(--surf);border:1.5px solid var(--bdr);border-radius:14px;padding:16px;margin-bottom:14px;">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--bdr);">';
+  h+='<div><div style="font-size:17px;font-weight:900;color:var(--acc);">'+fmtD(date)+'</div>';
+  if(r.header){h+='<div style="font-size:12px;color:var(--muted);">'+(r.header.weather||'')+(r.header.temp?' &middot; '+r.header.temp+'&deg;C':'')+'</div>';}
+  h+='</div>';
+  if(eff!=null){h+='<div style="font-size:28px;font-weight:900;color:'+effColor+';">'+eff+'%</div>';}
+  h+='</div>';
+  if(r.header&&r.header.sm){h+='<div style="font-size:13px;color:var(--muted);margin-bottom:10px;">Site Manager: <strong style="color:var(--txt);">'+esc(r.header.sm)+'</strong></div>';}
+  if(r.meeting&&r.meeting.topics){h+='<div style="font-size:12px;color:var(--muted);margin-bottom:10px;"><strong>Briefing:</strong> '+esc(r.meeting.topics.substring(0,140))+(r.meeting.topics.length>140?'...':'')+'</div>';}
+  if(plan.length){
+    h+='<div style="margin-bottom:10px;">';
+    plan.forEach(function(t){
+      var col={A:'#f59e0b',B:'#38bdf8',C:'#a78bfa',D:'#22c55e',E:'#fb923c'}[t.team]||'#94a3b8';
+      h+='<div style="margin-bottom:8px;padding:10px;background:var(--s2);border-radius:10px;border-left:3px solid '+col+';">';
+      h+='<div style="font-size:11px;font-weight:900;color:'+col+';margin-bottom:4px;">TEAM '+esc(t.team)+(t.leader?' &mdash; '+esc(t.leader):'')+'</div>';
+      (t.tasks||[]).forEach(function(tk){
+        var actual=null;
+        if(achv&&achv.tasks){var match=achv.tasks.find(function(at){return at.desc===tk.desc;});if(match)actual=match.actual;}
+        var rate=estimateHours(tk.desc||'');
+        h+='<div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;margin-bottom:3px;">';
+        h+='<div style="flex:1;color:var(--txt);font-size:13px;font-weight:600;">'+esc(tk.desc||'')+'</div>';
+        h+='<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">';
+        h+='<span style="color:var(--muted);font-size:10px;">Plan: '+(tk.target||100)+'%</span>';
+        if(actual!=null){var actColor=actual>=(tk.target||100)?'var(--green)':actual>=(tk.target||100)*0.8?'var(--acc)':'var(--red)';h+='<span style="color:'+actColor+';font-weight:800;font-size:11px;">Got: '+actual+'%</span>';}
+        if(rate&&rate.matched){h+='<span style="font-size:9px;color:var(--blue);background:rgba(56,189,248,.1);padding:2px 5px;border-radius:4px;">~'+rate.rateDescription+'</span>';}
+        h+='</div></div>';
+      });
+      h+='</div>';
+    });
+    h+='</div>';
+  }
+  if(r.noise&&r.noise.filter(function(n){return n.db;}).length){h+='<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Noise: '+r.noise.filter(function(n){return n.db;}).map(function(n){return '<span style="white-space:nowrap;">'+n.time+' &#10132; '+n.db+'dB</span>';}).join('  ')+'</div>';}
+  if(r.items&&r.items.filter(function(i){return i.item;}).length){h+='<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Materials ordered: '+r.items.filter(function(i){return i.item;}).map(function(i){return i.qty+' '+i.item;}).join(', ')+'</div>';}
+  if(r.notes&&r.notes.trim()){h+='<div style="font-size:11px;color:var(--muted);font-style:italic;border-top:1px solid var(--bdr);padding-top:8px;margin-top:8px;">'+esc(r.notes.substring(0,150))+(r.notes.length>150?'...':'')+'</div>';}
+  h+='</div>';
+  return h;
+}
+
 function loadHist(){
   var el=document.getElementById('hist');
   if(!el)return;
@@ -1424,8 +1475,13 @@ function loadHist(){
           var achvs=achvRes.data||[];
           var amap={};achvs.forEach(function(a){if(a.data)amap[a.date]=a.data;});
 
+          // Fall back to demo history when no real Supabase records exist
           if(!eods.length){
-            el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);">No records yet</div>';
+            var demoHtml='<div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:4px 2px 12px;">Demo records — submit a form to see real data</div>';
+            DEMO_HISTORY.forEach(function(entry){
+              demoHtml+=renderHistoryCard(entry.date,entry.data,entry.achv);
+            });
+            el.innerHTML=demoHtml;
             return;
           }
 
@@ -1435,77 +1491,8 @@ function loadHist(){
 
           var html='';
           Object.keys(byDate).sort().reverse().forEach(function(date){
-            var r=byDate[date]||{};
-            var achv=amap[date];
-            var plan=r.plan||[];
-
-            // Day header
-            var eff=achv&&achv.efficiency!=null?achv.efficiency:null;
-            var effColor=eff!=null?(eff>=90?'var(--green)':eff>=70?'var(--acc)':'var(--red)'):'var(--muted)';
-
-            html+='<div style="background:var(--surf);border:1.5px solid var(--bdr);border-radius:14px;padding:16px;margin-bottom:14px;">';
-
-            // Header row
-            html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--bdr);">';
-            html+='<div>';
-            html+='<div style="font-size:17px;font-weight:900;color:var(--acc);">'+fmtD(date)+'</div>';
-            if(r.header){html+='<div style="font-size:12px;color:var(--muted);">'+(r.header.weather||'')+(r.header.temp?' &middot; '+r.header.temp+'&deg;C':'')+'</div>';}
-            html+='</div>';
-            if(eff!=null){html+='<div style="font-size:28px;font-weight:900;color:'+effColor+';">'+eff+'%</div>';}
-            html+='</div>';
-
-            // SM + meeting brief
-            if(r.header&&r.header.sm){html+='<div style="font-size:13px;color:var(--muted);margin-bottom:10px;">Site Manager: <strong style="color:var(--txt);">'+esc(r.header.sm)+'</strong></div>';}
-            if(r.meeting&&r.meeting.topics){html+='<div style="font-size:12px;color:var(--muted);margin-bottom:10px;"><strong>Briefing:</strong> '+esc(r.meeting.topics.substring(0,140))+(r.meeting.topics.length>140?'...':'')+'</div>';}
-
-            // Teams — planned vs actual
-            if(plan.length){
-              html+='<div style="margin-bottom:10px;">';
-              plan.forEach(function(t){
-                var col={A:'#f59e0b',B:'#38bdf8',C:'#a78bfa',D:'#22c55e',E:'#fb923c'}[t.team]||'#94a3b8';
-                html+='<div style="margin-bottom:8px;padding:10px;background:var(--s2);border-radius:10px;border-left:3px solid '+col+';">';
-                html+='<div style="font-size:11px;font-weight:900;color:'+col+';margin-bottom:4px;">TEAM '+esc(t.team)+(t.leader?' &mdash; '+esc(t.leader):'')+'</div>';
-                (t.tasks||[]).forEach(function(tk){
-                  var actual=null;
-                  if(achv&&achv.tasks){
-                    var match=achv.tasks.find(function(at){return at.desc===tk.desc;});
-                    if(match)actual=match.actual;
-                  }
-                  var rate=estimateHours(tk.desc||'');
-                  html+='<div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;margin-bottom:3px;">';
-                  html+='<div style="flex:1;color:var(--txt);font-size:13px;font-weight:600;">'+esc(tk.desc||'')+'</div>';
-                  html+='<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">';
-                  html+='<span style="color:var(--muted);font-size:10px;">Plan: '+(tk.target||100)+'%</span>';
-                  if(actual!=null){
-                    var actColor=actual>=(tk.target||100)?'var(--green)':actual>=(tk.target||100)*0.8?'var(--acc)':'var(--red)';
-                    html+='<span style="color:'+actColor+';font-weight:800;font-size:11px;">Got: '+actual+'%</span>';
-                  }
-                  if(rate&&rate.matched){html+='<span style="font-size:9px;color:var(--blue);background:rgba(56,189,248,.1);padding:2px 5px;border-radius:4px;">~'+rate.rateDescription+'</span>';}
-                  html+='</div></div>';
-                });
-                html+='</div>';
-              });
-              html+='</div>';
-            }
-
-            // Noise readings
-            if(r.noise&&r.noise.filter(function(n){return n.db;}).length){
-              html+='<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Noise: '+r.noise.filter(function(n){return n.db;}).map(function(n){return '<span style="white-space:nowrap;">'+n.time+' &#10132; '+n.db+'dB</span>';}).join('  ')+'</div>';
-            }
-
-            // Items ordered
-            if(r.items&&r.items.filter(function(i){return i.item;}).length){
-              html+='<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Materials ordered: '+r.items.filter(function(i){return i.item;}).map(function(i){return i.qty+' '+i.item;}).join(', ')+'</div>';
-            }
-
-            // Site diary snippet
-            if(r.notes&&r.notes.trim()){
-              html+='<div style="font-size:11px;color:var(--muted);font-style:italic;border-top:1px solid var(--bdr);padding-top:8px;margin-top:8px;">'+esc(r.notes.substring(0,150))+(r.notes.length>150?'...':'')+'</div>';
-            }
-
-            html+='</div>';
+            html+=renderHistoryCard(date,byDate[date]||{},amap[date]);
           });
-
           el.innerHTML=html||'<div style="text-align:center;padding:40px;color:var(--muted);">No records</div>';
         });
     })
@@ -2501,10 +2488,8 @@ function showTodayPlanInline(){
   var el=document.getElementById('today-tab-content');
   if(!el)return;
   var d=window._sodPlanData;
-  if(!d||!d.plan||!d.plan.length){
-    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px;">No plan loaded yet.<br><span style="font-size:12px;">Today\'s plan appears here after the morning check.</span></div>';
-    return;
-  }
+  // Fall back to demo data so Today always shows something useful
+  if(!d||!d.plan||!d.plan.length)d=DEMO_PLAN_DATA;
   var hours=getWorkingHours(tod());
   var alloc=d.alloc||[];
   var teamHours={};
