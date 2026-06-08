@@ -17,7 +17,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='2.2.7';
+var APP_VERSION='2.2.8';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -307,7 +307,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.7</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.8</div>
   </div>
 </div>
 
@@ -393,7 +393,7 @@ select{
 
 <!-- TOMORROW'S PLAN / EOD RECORD -->
 <div class="tab" id="tab-eod">
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; Tonight's Record</span><span class="sec-s" id="dl"></span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; Plan</span><span class="sec-s" id="dl"></span></div></div>
   <div class="card g2" style="gap:8px;margin-bottom:10px;">
     <div><label>Plan Date</label><input type="date" id="fd"></div>
     <div><label>Site Manager</label><input type="text" id="fm" list="nl" onclick="nc(this)" onblur="nb2(this)" placeholder="Tap to pick"></div>
@@ -402,9 +402,9 @@ select{
     </div>
     <div><label>Temp (&#176;C)</label>
       <div style="display:flex;gap:5px;flex-wrap:wrap;"><input type="number" id="ft" placeholder="&#176;C" inputmode="numeric" style="flex:1;min-width:60px;"><button class="btn btn-blue btn-sm" onclick="fetchWx('brief')" title="Fetch tomorrow's weather" style="white-space:nowrap;">&#9728; Fetch weather</button></div>
-      <div id="wx-brief" style="display:none;font-size:12px;font-weight:600;color:var(--blue);margin-top:6px;padding:6px 10px;background:rgba(56,189,248,.08);border-radius:8px;border:1px solid rgba(56,189,248,.25);"></div>
     </div>
   </div>
+  <div id="wx-brief" style="display:none;font-size:12px;font-weight:600;color:var(--blue);margin-top:6px;padding:8px 12px;background:rgba(56,189,248,.08);border-radius:8px;border:1px solid rgba(56,189,248,.25);width:100%;box-sizing:border-box;"></div>
 
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#127749; Tomorrow's Morning Meeting</span><span class="sec-s">What you'll say at 7:30</span></div></div>
   <div class="card">
@@ -587,7 +587,7 @@ select{
 
 </div><!-- /main -->
 <div class="bnav">
-  <button class="nb active" id="nav-sod-tab" onclick="sw('sod-tab',this)"><span class="ni">&#9728;</span>Morning</button>
+  <button class="nb active" id="nav-sod-tab" onclick="showSODScreen(this)"><span class="ni">&#9728;</span>Morning</button>
   <button class="nb" id="nav-today-tab" onclick="sw('today-tab',this)"><span class="ni">&#128196;</span>Today</button>
   <button class="nb" id="nav-eod" onclick="sw('eod',this)"><span class="ni">&#128221;</span>Tonight</button>
   <button class="nb" id="nav-achv" onclick="sw('achv',this)"><span class="ni">&#9989;</span>Results</button>
@@ -641,7 +641,7 @@ var _lastResultIdx=-1;
 (function init(){
   rebuildNL();
   document.getElementById('fd').value=todayPlus1();
-  document.getElementById('dl').textContent='Record for '+fmtD(tod())+' — Plan for '+fmtD(todayPlus1());
+  document.getElementById('dl').textContent=fmtD(todayPlus1());
   // Build EOD site checklist
   EODS.forEach(function(e){ CHK[e.k]=false; });
   var eodCard=document.getElementById('eod-chk-items');
@@ -674,10 +674,21 @@ var _lastResultIdx=-1;
   }
 })();
 
+// Show the SOD screen from the bottom nav Morning button
+function showSODScreen(btn){
+  document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('active');});
+  if(btn)btn.classList.add('active');
+  document.getElementById('app').style.display='none';
+  document.getElementById('today-plan').style.display='none';
+  var sodEl=document.getElementById('sod');
+  if(sodEl)sodEl.style.display='block';
+  document.body.style.overflow='';
+}
+
 // Demo seed data — used by Reset for demo button when no live Supabase data
 var DEMO_PLAN_DATA={
   plan:[
-    {team:'A',leader:'James Cosgrove',tasks:[
+    {team:'A',leader:'Craig Thomas',tasks:[
       {desc:'Drain run S4.5 to MH7 — 80m',target:80},
       {desc:'Backfill plot 4 excavation trench',target:100}
     ]},
@@ -686,10 +697,10 @@ var DEMO_PLAN_DATA={
     ]}
   ],
   alloc:[
-    {team:'A',lead:'James Cosgrove',ops:['Dean Garrett','Jake Smith']},
+    {team:'A',lead:'Craig Thomas',ops:['Lee Duffy','Jake Smith']},
     {team:'B',lead:'Denny Walsh',ops:['Tony Brannigan']}
   ],
-  eodResponsibility:{person:'Dean Garrett',team:'A'}
+  eodResponsibility:{person:'Lee Duffy',team:'A'}
 };
 
 function doLogin(){
@@ -1138,7 +1149,8 @@ function restoreDraft(){
     var raw=localStorage.getItem(getDraftKey());if(!raw)return;
     var d=JSON.parse(raw);
     var set=function(id,v){var el=document.getElementById(id);if(el&&v!=null)el.value=v;};
-    set('fm',d.sm);set('fw',d.weather);set('ft',d.temp);set('fbt',d.bt);
+    set('fm',d.sm);set('fbt',d.bt);
+    // weather + temp left empty on purpose — user fetches fresh each time
     set('fv',d.visitors);set('ftp',d.topics);set('frk',d.risks);
     set('feod-resp',d.eodResp);set('feod-team',d.eodTeam);
     set('fses1',d.ses1);set('fses2',d.ses2);set('fses3',d.ses3);
@@ -2070,10 +2082,14 @@ function sodDemoReset(){
   _sodTaskResults={};
   _sodResults={};
   _sodAttendance2={};
-  // Rebuild from live data if available, otherwise use demo seed
-  var dataToUse=_sodPlanData||DEMO_PLAN_DATA;
-  buildSODEodCheck(dataToUse);
-  buildSODResults2(dataToUse);
+  // Use live data if available, otherwise seed with demo data
+  if(!_sodPlanData){
+    _sodPlanData=DEMO_PLAN_DATA;
+    _sodPlanData2=DEMO_PLAN_DATA;
+    _sodPlanData3=DEMO_PLAN_DATA;
+  }
+  buildSODEodCheck(_sodPlanData);
+  buildSODResults2(_sodPlanData);
   // Clear any sign-off note
   var note=document.getElementById('sod-signoff-note');
   if(note)note.textContent='';
@@ -2516,19 +2532,20 @@ function showTodayPlanInline(){
     teamHours[a.team]={present:present,total:total,personHours:present*hours};
   });
   var html='';
-  html+='<div style="background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:12px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">';
-  html+='<span style="font-size:26px;">&#128196;</span>';
-  html+='<div><div style="font-size:15px;font-weight:900;color:var(--blue);">'+fmtD(tod())+'</div>';
-  html+='<div style="font-size:13px;color:var(--muted);font-weight:700;">'+hours+'h working day</div></div>';
-  html+='</div>';
+  html+='<div style="font-size:13px;font-weight:900;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;padding:2px 0 14px;">'+fmtD(tod())+'</div>';
   var meeting=d.meeting||{};
-  if(meeting.topics){
-    html+='<div style="background:var(--surf);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:12px;">';
-    html+='<div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--acc);margin-bottom:6px;">&#127749; Morning Meeting &mdash; '+(meeting.time||'07:30')+'</div>';
-    html+='<div style="font-size:13px;font-weight:600;">'+esc(meeting.topics)+'</div>';
-    if(meeting.risks)html+='<div style="font-size:12px;color:var(--red);margin-top:6px;font-weight:700;">Risks: '+esc(meeting.risks)+'</div>';
-    html+='</div>';
+  html+='<div style="background:var(--surf);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:14px;">';
+  html+='<div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--acc);margin-bottom:8px;">&#127749; Morning Meeting</div>';
+  var topicText=meeting.topics||'';
+  if(!topicText){
+    // Auto-generate from plan data
+    var planBits=(d.plan||[]).map(function(t){return 'Team '+t.team+': '+(t.tasks||[]).map(function(tk){return tk.desc;}).join(', ');}).join(' | ');
+    topicText=planBits?'Today\'s plan — '+planBits:'Review yesterday\'s progress and confirm today\'s plan.';
   }
+  html+='<div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:8px;line-height:1.5;">'+esc(topicText)+'</div>';
+  var riskText=meeting.risks||'';
+  html+='<div style="font-size:12px;font-weight:700;color:var(--red);border-top:1px solid var(--bdr);padding-top:8px;">&#9888; Risks: '+(riskText?esc(riskText):'<span style="color:var(--muted);font-weight:600;">No risks logged — check site conditions on arrival</span>')+'</div>';
+  html+='</div>';
   var tcols={A:'#f59e0b',B:'#38bdf8',C:'#a78bfa',D:'#22c55e',E:'#fb923c'};
   (d.plan||[]).forEach(function(t){
     var col=tcols[t.team]||'#94a3b8';
