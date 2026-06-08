@@ -380,6 +380,10 @@ select{
     <span class="user-chip" id="ub" onclick="changeUser()" title="Tap to change name"></span>
   </div>
 </div>
+<div id="ver-strip" style="background:rgba(245,158,11,.08);border-bottom:1px solid rgba(245,158,11,.15);padding:4px 16px;font-size:11px;font-weight:800;color:rgba(245,158,11,.6);letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between;">
+  <span>DGC Daily Sheet</span>
+  <span id="ver-display">v2.2.0</span>
+</div>
 
 <div class="main">
 
@@ -1715,6 +1719,7 @@ function changeUser(){
 }
 // Restore theme + Claude key status on load
 (function(){
+  var vd=document.getElementById('ver-display');if(vd)vd.textContent='v'+APP_VERSION;
   var t=localStorage.getItem('dgc_theme');
   if(t==='light'){document.body.classList.add('light');setTimeout(function(){var btn=document.getElementById('theme-btn');if(btn)btn.textContent='\u263D';var logo=document.getElementById('hdr-logo');if(logo)logo.src='dgc-logo-dark.png';},50);}
   // Style AI button green if key already saved (button is always visible)
