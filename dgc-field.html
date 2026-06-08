@@ -17,7 +17,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='2.2.11';
+var APP_VERSION='2.2.12';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -307,7 +307,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.11</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.12</div>
   </div>
 </div>
 
@@ -469,8 +469,8 @@ select{
 
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Formal Site Diary</span><span class="sec-s">Official manager record — kept for DGC files and any future disputes</span></div></div>
   <div class="card">
+    <textarea id="fnt" rows="10" style="min-height:220px;margin-bottom:6px;" placeholder="Official record: ground conditions, weather impact, what was done, what was delayed and why. Be specific. Dates, names, quantities."></textarea>
     <button class="mic" id="mic-nt" onclick="vm('nt','fnt')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate formal site diary</span></button>
-    <textarea id="fnt" rows="10" style="min-height:220px;" placeholder="Official record: ground conditions, weather impact, what was done, what was delayed and why. Be specific. Dates, names, quantities."></textarea>
   </div>
 
   <!-- EOD RESPONSIBILITY — moved to bottom -->
@@ -779,46 +779,47 @@ function sw(name,btn){
   }catch(e){toast('Tab error — try again','err');}
 }
 
+function mkNameSel(id,style){
+  var opts='<option value="">— pick name —</option>';
+  (NAMES||[]).forEach(function(n){opts+='<option value="'+esc(n)+'">'+esc(n)+'</option>';});
+  return '<select id="'+id+'" style="'+(style||'font-size:16px;padding:10px 12px;min-height:48px;')+'">'+opts+'</select>';
+}
 function addPT(){
   var i=PT_I++,l=TLTRS[i]||('T'+(i+1)),c=TCOLS[i]||'#94a3b8';
   var d=document.createElement('div');d.className='tblk';d.id='pt'+i;
-  var micResId='mic-res'+i,resId='fres'+i;
-  var micDictId='mic-dict'+i;
+  var resId='fres'+i,micResId='mic-res'+i;
   d.innerHTML=
     '<div class="thd">'
       +'<div class="tdot" style="background:'+c+'"></div>'
       +'<div style="font-size:13px;font-weight:800;">Team '+l+'</div>'
-      +'<div style="margin-left:auto;display:flex;gap:5px;">'
-        +'<button class="btn btn-ghost btn-sm" onclick="addTask('+i+')">+ Task</button>'
-        +'<button class="btn btn-red btn-sm" onclick="this.closest(\'.tblk\').remove()">&#10005;</button>'
-      +'</div>'
+      +'<button class="btn btn-red btn-sm" style="margin-left:auto;" onclick="this.closest(\'.tblk\').remove()">&#10005;</button>'
     +'</div>'
     +'<div style="margin-bottom:8px;">'
       +'<div class="g2" style="margin-bottom:4px;">'
-        +'<div><label style="font-size:11px;">Team Leader</label><input type="text" id="ptl'+i+'" list="nl" placeholder="Tap to pick" onclick="nc(this)" onblur="nb2(this)" style="font-size:16px;padding:10px 12px;min-height:48px;"></div>'
+        +'<div><label style="font-size:11px;">Team Leader</label>'+mkNameSel('ptl'+i)+'</div>'
       +'</div>'
       +'<div id="members-'+i+'" class="g2" style="margin-bottom:4px;"></div>'
       +'<button onclick="addTeamMember('+i+')" style="background:none;border:1.5px dashed var(--bdr);border-radius:9px;color:var(--muted);font-size:13px;font-weight:800;padding:10px 14px;cursor:pointer;width:100%;font-family:inherit;min-height:48px;text-align:center;">+ New team member</button>'
     +'</div>'
     +'<div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:1fr 40px;gap:6px;padding:0 2px 6px;text-transform:uppercase;letter-spacing:.05em;"><span>Task / Activity</span><span></span></div>'
     +'<div id="ptt'+i+'"></div>'
+    +'<button onclick="addTask('+i+')" style="background:none;border:1.5px dashed var(--bdr);border-radius:9px;color:var(--muted);font-size:13px;font-weight:800;padding:8px 14px;cursor:pointer;width:100%;font-family:inherit;min-height:44px;text-align:center;margin-top:4px;">+ New task</button>'
     +'<div style="margin-top:10px;"><label style="font-size:11px;">Resources &amp; materials needed for this team</label>'
-      +'<button class="mic" id="'+micResId+'" onclick="vm(\'res'+i+'\',\''+resId+'\')" style="margin-bottom:6px;"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate resources</span></button>'
-      +'<textarea id="'+resId+'" rows="2" placeholder="Plant, materials, deliveries needed for this team..." style="font-size:13px;min-height:56px;"></textarea>'
-    +'</div>'
-    +'<div style="margin-top:10px;border-top:1px solid var(--bdr);padding-top:10px;">'
-      +'<button class="btn btn-blue" id="'+micDictId+'" onclick="dictateTeam('+i+')" style="width:100%;min-height:52px;font-size:14px;font-weight:900;">&#127908; Dictate whole team</button>'
+      +'<textarea id="'+resId+'" rows="2" placeholder="Plant, materials, deliveries needed for this team..." style="font-size:13px;min-height:56px;margin-bottom:4px;"></textarea>'
+      +'<button class="mic" id="'+micResId+'" onclick="vm(\'res'+i+'\',\''+resId+'\')" style="margin-top:2px;"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate resources</span></button>'
     +'</div>';
   document.getElementById('pt-container').appendChild(d);
+  // Pre-populate 2 member slots
+  addTeamMember(i);addTeamMember(i);
   addTask(i);
 }
 function addTeamMember(i){
   var container=document.getElementById('members-'+i);
   if(!container)return;
-  var count=container.querySelectorAll('input[type=text]').length+1;
+  var count=container.querySelectorAll('select').length+1;
   var wrap=document.createElement('div');
   wrap.innerHTML='<div><label style="font-size:11px;">Member '+count+'</label>'
-    +'<input type="text" id="ptm'+i+'_'+(count-1)+'" list="nl" placeholder="Tap to pick" onclick="nc(this)" onblur="nb2(this)" style="font-size:16px;padding:10px 12px;min-height:48px;"></div>';
+    +mkNameSel('ptm'+i+'_'+(count-1))+'</div>';
   container.appendChild(wrap.firstChild);
 }
 function toggleTeamDetail(i){
@@ -960,6 +961,7 @@ function dictateTeam(i){
   btn._sr=sr;
   sr.continuous=true;sr.interimResults=true;sr.lang='en-GB';
   var finalText='';
+  var _dictSilence=null;
   sr.onresult=function(e){
     var interim='';
     for(var j=e.resultIndex;j<e.results.length;j++){
@@ -967,6 +969,9 @@ function dictateTeam(i){
       else interim+=e.results[j][0].transcript;
     }
     btn.innerHTML='&#9209; '+((finalText+interim).trim().slice(0,30)||'Listening...');
+    // Reset 3-second silence timer on each speech result
+    if(_dictSilence)clearTimeout(_dictSilence);
+    _dictSilence=setTimeout(function(){try{sr.stop();}catch(e){}},3000);
   };
   sr.onerror=function(){
     btn._recording=false;btn._sr=null;
@@ -1010,16 +1015,18 @@ function dictateTeam(i){
       // ADDITIVE: only set leader if current field is blank
       var leaderEl=document.getElementById('ptl'+i);
       if(leaderEl&&parsed.team_leader&&!leaderEl.value.trim())leaderEl.value=parsed.team_leader;
-      // ADDITIVE: add members via addTeamMember(), skip names already in the list
+      // ADDITIVE: fill members into existing select slots, then add more if needed
       var members=parsed.members||[];
       var memContainer=document.getElementById('members-'+i);
-      var existingNames=memContainer?Array.from(memContainer.querySelectorAll('input[type=text]')).map(function(el){return el.value.trim().toLowerCase();}).filter(Boolean):[];
+      var existingNames=memContainer?Array.from(memContainer.querySelectorAll('select')).map(function(el){return el.value.trim().toLowerCase();}).filter(Boolean):[];
       members.forEach(function(name){
         if(!name)return;
-        if(existingNames.indexOf(name.toLowerCase())!==-1)return; // already there
-        addTeamMember(i);
-        // Set the value on the last added input
-        if(memContainer){var ins=memContainer.querySelectorAll('input[type=text]');var last=ins[ins.length-1];if(last)last.value=name;}
+        if(existingNames.indexOf(name.toLowerCase())!==-1)return;
+        // Try to fill an empty slot first
+        var sels=memContainer?memContainer.querySelectorAll('select'):[];
+        var filled=false;
+        for(var si=0;si<sels.length;si++){if(!sels[si].value){sels[si].value=name;filled=true;break;}}
+        if(!filled){addTeamMember(i);if(memContainer){var sl=memContainer.querySelectorAll('select');sl[sl.length-1].value=name;}}
         existingNames.push(name.toLowerCase());
       });
       // ADDITIVE: add tasks without clearing existing ones
@@ -1102,8 +1109,8 @@ function fetchWx(mode){
     });
 }
 
-function getPlan(){var teams=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var rows=div.querySelectorAll('.trow');var tasks=[];rows.forEach(function(r){var ins=r.querySelectorAll('input[type=text]');var desc=ins[0]?ins[0].value.trim():'';if(desc){tasks.push({desc:desc,target:100});}});var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var leader=g('ptl'+i);var memContainer=document.getElementById('members-'+i);var members=memContainer?Array.from(memContainer.querySelectorAll('input[type=text]')).map(function(el){return el.value.trim();}).filter(Boolean):[];var notes=g('pt-notes-'+i);var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');var plantType=g('pt-plant-type-'+i);var plantHrs=g('pt-plant-hrs-'+i);var plantCheckOk=document.getElementById('ptick-det-'+i)&&document.getElementById('ptick-det-'+i).classList.contains('on');var plantInit=g('pt-plant-init-'+i);var plantCheck={type:plantType,hours:plantHrs?parseFloat(plantHrs):null,confirmed:plantCheckOk,initials:plantInit};if(tasks.length||leader)teams.push({team:TLTRS[i]||('T'+(i+1)),leader:leader,members:members,tasks:tasks,notes:notes,plantOk:plantOk,plantCheck:plantCheck});});return teams;}
-function getAlloc(){var a=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var lead=g('ptl'+i);var memContainer=document.getElementById('members-'+i);var members=memContainer?Array.from(memContainer.querySelectorAll('input[type=text]')).map(function(el){return el.value.trim();}).filter(Boolean):[];var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');var initials=g('pti'+i);if(lead||members.length)a.push({team:TLTRS[i]||('T'+(i+1)),lead:lead,ops:members,plantOk:plantOk,initials:initials});});return a;}
+function getPlan(){var teams=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var rows=div.querySelectorAll('.trow');var tasks=[];rows.forEach(function(r){var ins=r.querySelectorAll('input[type=text]');var desc=ins[0]?ins[0].value.trim():'';if(desc){tasks.push({desc:desc,target:100});}});var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var leader=g('ptl'+i);var memContainer=document.getElementById('members-'+i);var members=memContainer?Array.from(memContainer.querySelectorAll('select')).map(function(el){return el.value.trim();}).filter(Boolean):[];var notes=g('pt-notes-'+i);var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');var plantType=g('pt-plant-type-'+i);var plantHrs=g('pt-plant-hrs-'+i);var plantCheckOk=document.getElementById('ptick-det-'+i)&&document.getElementById('ptick-det-'+i).classList.contains('on');var plantInit=g('pt-plant-init-'+i);var plantCheck={type:plantType,hours:plantHrs?parseFloat(plantHrs):null,confirmed:plantCheckOk,initials:plantInit};if(tasks.length||leader)teams.push({team:TLTRS[i]||('T'+(i+1)),leader:leader,members:members,tasks:tasks,notes:notes,plantOk:plantOk,plantCheck:plantCheck});});return teams;}
+function getAlloc(){var a=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var lead=g('ptl'+i);var memContainer=document.getElementById('members-'+i);var members=memContainer?Array.from(memContainer.querySelectorAll('select')).map(function(el){return el.value.trim();}).filter(Boolean):[];var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');var initials=g('pti'+i);if(lead||members.length)a.push({team:TLTRS[i]||('T'+(i+1)),lead:lead,ops:members,plantOk:plantOk,initials:initials});});return a;}
 
 function noNet(){toast('✗ No internet — check your connection','err');}
 
@@ -1197,7 +1204,11 @@ function submitEOD(){
   // No validation block needed
   // Noise reading count warning (H&S requirement)
   var noiseRows=[];document.querySelectorAll('.nr').forEach(function(r){var ins=r.querySelectorAll('input');var isDND=r.dataset&&r.dataset.dnd==='1';if(!isDND&&ins[1]&&ins[1].value)noiseRows.push(ins[1].value);});
-  if(noiseRows.length<3){if(!confirm('Only '+noiseRows.length+' noise reading(s) recorded — 3 are required. Submit anyway?'))return;}
+  if(noiseRows.length<3){
+    toast('&#9888; '+noiseRows.length+'/3 noise readings filled — all 3 required before saving','err');
+    var noiseEl=document.getElementById('nr-c');if(noiseEl)noiseEl.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
   var noise=[];document.querySelectorAll('.nr').forEach(function(r){var ins=r.querySelectorAll('input');var isDND=r.dataset&&r.dataset.dnd==='1';if(!isDND&&ins[1]&&ins[1].value){noise.push({time:ins[0].value,db:parseFloat(ins[1].value)});}else if(isDND){noise.push({time:ins[0].value,db:null,dnd:true});}});
   var items=[];document.querySelectorAll('.ir').forEach(function(r){var ins=r.querySelectorAll('input');if(ins[1]&&ins[1].value.trim())items.push({qty:ins[0].value,item:ins[1].value,source:ins[2].value,byTime:ins[3]?ins[3].value:''});});
   items.sort(function(a,b){return (a.byTime||'99:99').localeCompare(b.byTime||'99:99');});
