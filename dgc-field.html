@@ -984,74 +984,63 @@ function dictateTeam(i){
 
 
 function fetchWx(mode){
-  // Primary: IoM Government Met Office (Ronaldsway) via CORS proxy
-  var govUrl='https://www.gov.im/weather/5-day-forecast/Rss5DayForecast';
-  var proxy='https://api.allorigins.win/get?url='+encodeURIComponent(govUrl);
-  fetch(proxy,{cache:'no-store'})
-    .then(function(r){return r.json();})
-    .then(function(json){
-      if(!json||!json.contents)throw new Error('no content');
-      var parser=new DOMParser();
-      var xml=parser.parseFromString(json.contents,'text/xml');
-      var items=xml.querySelectorAll('item');
-      // items[0]=today, items[1]=tomorrow
-      var item=items.length>1?items[1]:items[0];
-      if(!item)throw new Error('no item');
-      var descEl=item.querySelector('description');
-      if(!descEl)throw new Error('no desc');
-      var htmlDoc=parser.parseFromString(descEl.textContent,'text/html');
-      var maxTemp=null,conditions='';
-      htmlDoc.querySelectorAll('h3').forEach(function(h3){
-        var txt=h3.textContent.trim().toLowerCase();
-        var sib=h3.nextElementSibling;
-        if(!sib)return;
-        var val=sib.textContent.trim();
-        if(txt.indexOf('max')>-1||txt.indexOf('maximum')>-1){var m=val.match(/(\d+)/);if(m)maxTemp=parseInt(m[1]);}
-        else if(txt.indexOf('condition')>-1||txt.indexOf('weather')>-1||txt.indexOf('summary')>-1){conditions=val;}
-      });
-      // Also try first paragraph as conditions
-      if(!conditions){var p=htmlDoc.querySelector('p');if(p)conditions=p.textContent.trim();}
-      if(maxTemp)document.getElementById('ft').value=maxTemp;
-      // Map to dropdown
-      var c=conditions.toLowerCase();
+  var MO_KEY=(function(){var k='dgcwx2',b=atob('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');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
+  var url='https://data.hub.api.metoffice.gov.uk/sitespecific/v0/point/hourly?latitude=54.0833&longitude=-4.6333&includeLocationName=true';
+  fetch(url,{headers:{'apikey':MO_KEY}})
+    .then(function(r){if(!r.ok)throw new Error('Status '+r.status);return r.json();})
+    .then(function(data){
+      var ts=(data.features&&data.features[0]&&data.features[0].properties&&data.features[0].properties.timeSeries)||[];
+      if(!ts.length)throw new Error('no data');
+      var tmrw=new Date();tmrw.setDate(tmrw.getDate()+1);
+      var tmrwStr=tmrw.toISOString().slice(0,10);
+      var entries=ts.filter(function(e){return e.time&&e.time.slice(0,10)===tmrwStr;});
+      if(!entries.length)entries=ts.slice(0,24);
+      var temps=entries.filter(function(e){return e.screenTemperature!=null;}).map(function(e){return e.screenTemperature;});
+      var maxTemp=temps.length?Math.max.apply(null,temps):null;
+      var rainHours=entries.filter(function(e){return(e.probOfPrecipitation||0)>=40;});
+      var daytime=entries.filter(function(e){var h=parseInt((e.time||'').slice(11,13));return h>=7&&h<=18;});
+      var codes=daytime.map(function(e){return e.significantWeatherCode;}).filter(function(c){return c!=null;});
+      var codeCount={};codes.forEach(function(c){codeCount[c]=(codeCount[c]||0)+1;});
+      var domCode=codes.length?parseInt(Object.keys(codeCount).sort(function(a,b){return codeCount[b]-codeCount[a];})[0]):1;
+      var windSpeeds=entries.filter(function(e){return e.windSpeed10m!=null;}).map(function(e){return e.windSpeed10m*2.237;});
+      var windMax=windSpeeds.length?Math.round(Math.max.apply(null,windSpeeds)):0;
+      var dirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+      var windDir=daytime.length&&daytime[0].windDirectionFrom10m!=null?dirs[Math.round(daytime[0].windDirectionFrom10m/22.5)%16]:'';
+      var WM={0:'Clear',1:'Sunny',2:'Partly cloudy',3:'Partly cloudy',5:'Mist',6:'Fog',7:'Cloudy',8:'Overcast',9:'Light showers',10:'Light showers',11:'Drizzle',12:'Light rain',13:'Heavy showers',14:'Heavy showers',15:'Heavy rain',16:'Sleet',17:'Sleet',18:'Sleet',22:'Light snow',23:'Light snow',24:'Light snow',25:'Heavy snow',26:'Heavy snow',27:'Heavy snow',28:'Thunder',29:'Thunder',30:'Thunder'};
+      var WD={1:'Fine & dry',2:'Overcast',3:'Overcast',5:'Overcast',6:'Overcast',7:'Overcast',8:'Overcast',9:'Light rain',10:'Light rain',11:'Light rain',12:'Light rain',13:'Heavy rain',14:'Heavy rain',15:'Heavy rain',22:'Cold & dry',23:'Cold & dry',24:'Cold & dry',25:'Cold & dry',28:'Wind & rain',29:'Wind & rain',30:'Wind & rain'};
+      var desc=WM[domCode]||'Cloudy';
+      if(rainHours.length>=3)desc='Rain likely';
+      else if(rainHours.length>0)desc='Showers possible';
+      if(maxTemp!=null)document.getElementById('ft').value=Math.round(maxTemp);
       var sel=document.getElementById('fw');
-      if(sel){
-        var matched='';
-        if(c.indexOf('sunny')>-1||c.indexOf('fine')>-1||(c.indexOf('dry')>-1&&c.indexOf('rain')<0))matched='Fine & dry';
-        else if(c.indexOf('hot')>-1)matched='Hot & sunny';
-        else if(c.indexOf('heavy rain')>-1||c.indexOf('heavy shower')>-1)matched='Heavy rain';
-        else if(c.indexOf('light rain')>-1||c.indexOf('drizzle')>-1)matched='Light rain';
-        else if(c.indexOf('rain')>-1||c.indexOf('shower')>-1)matched='Light rain';
-        else if(c.indexOf('wind')>-1&&c.indexOf('rain')>-1)matched='Wind & rain';
-        else if(c.indexOf('gale')>-1)matched='Wind & rain';
-        else if(c.indexOf('cloud')>-1||c.indexOf('overcast')>-1)matched='Overcast';
-        else if(c.indexOf('snow')>-1||c.indexOf('frost')>-1)matched='Cold & dry';
-        else if(c.indexOf('cold')>-1)matched='Cold & dry';
-        else if(c.indexOf('cold')>-1&&c.indexOf('wet')>-1)matched='Cold & wet';
-        if(matched){for(var i=0;i<sel.options.length;i++){if(sel.options[i].text===matched){sel.selectedIndex=i;break;}}}
+      if(sel){var mapped=WD[domCode]||'Overcast';for(var i=0;i<sel.options.length;i++){if(sel.options[i].text===mapped){sel.selectedIndex=i;break;}}}
+      var tempStr=maxTemp!=null?Math.round(maxTemp)+'\xb0C':'';
+      var brief=desc+(tempStr?', max '+tempStr:'')+(windMax&&windDir?', '+windDir+' '+windMax+'mph':'');
+      if(rainHours.length>0&&rainHours[0].time){
+        var f=rainHours[0].time.slice(11,16);var l=rainHours[rainHours.length-1].time.slice(11,16);
+        brief+=' (rain '+f+'-'+l+')';
       }
-      if(mode==='brief'){
-        var brief=document.getElementById('wx-brief');
-        if(brief){brief.textContent='IoM Met: '+(conditions||'see forecast')+(maxTemp?', max '+maxTemp+'°C':'');brief.style.display='block';}
-      }
-      toast('IoM Met: '+(conditions?conditions.substring(0,40):'loaded')+(maxTemp?', '+maxTemp+'°C':''));
+      var bEl=document.getElementById('wx-brief');
+      if(bEl){bEl.textContent='Tomorrow (Met Office): '+brief;bEl.style.display='block';}
+      toast('Met Office: '+brief);
     })
     .catch(function(){
-      // Fallback: open-meteo global model
-      fetch('https://api.open-meteo.com/v1/forecast?latitude=54.0833&longitude=-4.6333&daily=temperature_2m_max,weathercode&timezone=Europe%2FLondon&forecast_days=2')
-        .then(function(r){return r.json();})
-        .then(function(d){
-          if(!d.daily||!d.daily.temperature_2m_max)return;
-          var t=Math.round(d.daily.temperature_2m_max[1]);
-          var code=d.daily.weathercode[1];
-          var wm={0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',51:'Light drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',80:'Showers',95:'Thunderstorm'};
-          var dm={0:'Fine & dry',1:'Fine & dry',2:'Overcast',3:'Overcast',51:'Light rain',61:'Light rain',63:'Light rain',65:'Heavy rain',80:'Light rain',81:'Heavy rain',95:'Wind & rain'};
-          document.getElementById('ft').value=t;
-          var wx=document.getElementById('fw');if(wx&&dm[code])wx.value=dm[code];
-          if(mode==='brief'){var brief=document.getElementById('wx-brief');if(brief){brief.textContent='Tomorrow: '+(wm[code]||'')+', max '+t+'°C (global model)';brief.style.display='block';}}
-          toast((wm[code]||'Code '+code)+', '+t+'°C (fallback)');
-        })
-        .catch(function(){toast('✗ Cannot fetch weather','err');});
+      var govUrl='https://www.gov.im/weather/5-day-forecast/Rss5DayForecast';
+      var proxy='https://api.allorigins.win/get?url='+encodeURIComponent(govUrl);
+      fetch(proxy,{cache:'no-store'}).then(function(r){return r.json();}).then(function(json){
+        if(!json||!json.contents)throw new Error('no content');
+        var parser=new DOMParser();var xml=parser.parseFromString(json.contents,'text/xml');
+        var items=xml.querySelectorAll('item');var item=items.length>1?items[1]:items[0];
+        var descEl=item&&item.querySelector('description');if(!descEl)throw new Error('no desc');
+        var htmlDoc=parser.parseFromString(descEl.textContent,'text/html');
+        var maxTemp2=null,conditions='';
+        htmlDoc.querySelectorAll('h3').forEach(function(h3){var txt=h3.textContent.trim().toLowerCase();var sib=h3.nextElementSibling;if(!sib)return;var val=sib.textContent.trim();if(txt.indexOf('max')>-1){var m=val.match(/(\d+)/);if(m)maxTemp2=parseInt(m[1]);}else if(txt.indexOf('condition')>-1){conditions=val;}});
+        if(!conditions){var p=htmlDoc.querySelector('p');if(p)conditions=p.textContent.trim();}
+        if(maxTemp2)document.getElementById('ft').value=maxTemp2;
+        var bf=document.getElementById('wx-brief');
+        if(bf){bf.textContent='Tomorrow (IoM Met): '+(conditions||'')+(maxTemp2?' '+maxTemp2+'\xb0C':'');bf.style.display='block';}
+        toast('IoM Met: '+(conditions||'loaded')+(maxTemp2?', '+maxTemp2+'\xb0C':''));
+      }).catch(function(){toast('Cannot fetch weather','err');});
     });
 }
 
