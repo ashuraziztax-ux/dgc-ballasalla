@@ -17,7 +17,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='2.2.12';
+var APP_VERSION='2.2.13';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -292,8 +292,8 @@ select{
         <option value="James Cosgrove">James Cosgrove</option>
         <option value="David Smith">David Smith</option>
         <option value="Stephen Lamb">Stephen Lamb</option>
-        <option value="Ash Aziz">Ash Aziz</option>
-        <option value="Harry Harrison">Harry Harrison</option>
+        <option value="Ash">Ash</option>
+        <option value="Harry">Harry</option>
         <option value="Bradley McKevitt">Bradley McKevitt</option>
         <option value="Dean Garrett">Dean Garrett</option>
         <option value="Craig Walsh">Craig Walsh</option>
@@ -307,7 +307,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.12</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.13</div>
   </div>
 </div>
 
@@ -358,6 +358,12 @@ select{
 <div id="sod-results-list" style="display:none;"></div>
 <div id="sod-attendance-list" style="display:none;"></div>
 <div id="sod-signoff-done" style="display:none;"></div>
+<!-- SOD bottom nav — Today | Plan | History -->
+<div style="position:fixed;bottom:0;left:0;right:0;z-index:10001;background:var(--surf);border-top:1.5px solid var(--bdr);display:flex;justify-content:space-around;padding:6px 0 max(6px,env(safe-area-inset-bottom));" id="sod-bnav">
+  <button onclick="sodGoTo('today-tab','nav-today-tab')" style="flex:1;background:none;border:none;color:var(--muted);font-size:11px;font-weight:800;font-family:inherit;padding:8px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:52px;"><span style="font-size:22px;line-height:1;">&#128196;</span>Today</button>
+  <button onclick="sodGoTo('eod','nav-eod')" style="flex:1;background:none;border:none;color:var(--muted);font-size:11px;font-weight:800;font-family:inherit;padding:8px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:52px;"><span style="font-size:22px;line-height:1;">&#128203;</span>Plan</button>
+  <button onclick="sodGoTo('hist','nav-hist')" style="flex:1;background:none;border:none;color:var(--muted);font-size:11px;font-weight:800;font-family:inherit;padding:8px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:52px;"><span style="font-size:22px;line-height:1;">&#128218;</span>History</button>
+</div>
 </div>
 
 <div id="today-plan" style="display:none;min-height:100vh;background:var(--bg);padding:0;">
@@ -565,6 +571,7 @@ select{
 
 </div><!-- /main -->
 <div class="bnav">
+  <button class="nb" id="nav-start" onclick="showSODScreen(this)"><span class="ni">&#9728;</span>Start</button>
   <button class="nb active" id="nav-today-tab" onclick="sw('today-tab',this)"><span class="ni">&#128196;</span>Today</button>
   <button class="nb" id="nav-eod" onclick="sw('eod',this)"><span class="ni">&#128203;</span>Plan</button>
   <button class="nb" id="nav-hist" onclick="sw('hist',this)"><span class="ni">&#128218;</span>History</button>
@@ -578,7 +585,7 @@ var sb=null;
 try{if(SUPA_URL.indexOf('supabase')>0)sb=supabase.createClient(SUPA_URL,SUPA_KEY);}catch(e){}
 
 function getNames(){
-  var base=['Ash Aziz','Harry Harrison','David Smith','Bradley McKevitt','Craig Walsh','Daniel Seed','Dean Garrett','Jake Whetnall','James Cosgrove','James Shannon','Lee Clinton','Lewis Peck','Liam Smith','Stephen Lamb','Stephen Smithies'];
+  var base=['Ash','Harry','David Smith','Bradley McKevitt','Craig Walsh','Daniel Seed','Dean Garrett','Jake Whetnall','James Cosgrove','James Shannon','Lee Clinton','Lewis Peck','Liam Smith','Stephen Lamb','Stephen Smithies'];
   var ex=JSON.parse(localStorage.getItem('dgc_xstaff')||'[]');
   return base.concat(ex.filter(function(n){return base.indexOf(n)<0;}));
 }
@@ -652,7 +659,7 @@ var _lastResultIdx=-1;
   }
 })();
 
-// Show the SOD screen from the bottom nav Morning button
+// Show the SOD screen — called from Start button in main nav and from login
 function showSODScreen(btn){
   document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('active');});
   if(btn)btn.classList.add('active');
@@ -661,6 +668,15 @@ function showSODScreen(btn){
   var sodEl=document.getElementById('sod');
   if(sodEl)sodEl.style.display='block';
   document.body.style.overflow='';
+}
+// Navigate from SOD bottom nav into app on a specific tab
+function sodGoTo(tab,navId){
+  var sodEl=document.getElementById('sod');
+  if(sodEl)sodEl.style.display='none';
+  document.getElementById('app').style.display='block';
+  document.body.style.overflow='';
+  var btn=document.getElementById(navId);
+  sw(tab,btn);
 }
 
 // Demo seed data — used by Reset for demo button when no live Supabase data
@@ -2411,10 +2427,11 @@ function showTodayPlan(planData){
 
 function showApp(){
   document.getElementById('today-plan').style.display='none';
+  var sodEl=document.getElementById('sod');if(sodEl)sodEl.style.display='none';
   document.getElementById('app').style.display='block';
   document.body.style.overflow='';
   loadAchv();loadHist();
-  // Land on Today tab — activate nav button and render content
+  // Land on Today tab
   var todayBtn=document.getElementById('nav-today-tab');
   document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('active');});
   if(todayBtn)todayBtn.classList.add('active');
