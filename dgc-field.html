@@ -1834,9 +1834,8 @@ function buildSODEodCheck(planData){
   }
 
   html+='<div style="display:flex;gap:8px;margin-bottom:12px;">';
-  html+='<button id="eod-btn-done" onclick="setEodStatus(\'done\')" class="btn btn-ghost" style="flex:1;border-color:var(--green);color:var(--green);min-height:52px;font-size:13px;font-weight:800;">&#10003; Done &mdash; site was as expected</button>';
-  html+='<button id="eod-btn-notdone" onclick="setEodStatus(\'notdone\')" class="btn btn-ghost" style="flex:1;border-color:var(--red);color:var(--red);min-height:52px;font-size:13px;font-weight:800;">&#10007; Not done / issues found</button>';
-  html+='<button id="eod-btn-unchecked" onclick="setEodStatus(\'unchecked\')" class="btn btn-ghost" style="flex:1;border-color:var(--muted);color:var(--muted);min-height:52px;font-size:13px;font-weight:800;">? Not checked yet</button>';
+  html+='<button id="eod-btn-done" onclick="setEodStatus(\'done\')" class="btn btn-ghost" style="flex:1;border-color:var(--green);color:var(--green);min-height:60px;font-size:15px;font-weight:900;">&#10003; Done</button>';
+  html+='<button id="eod-btn-notdone" onclick="setEodStatus(\'notdone\')" class="btn btn-ghost" style="flex:1;border-color:var(--red);color:var(--red);min-height:60px;font-size:15px;font-weight:900;">&#10007; Not done</button>';
   html+='</div>';
 
   html+='<div id="eod-note-row" style="display:none;">';
