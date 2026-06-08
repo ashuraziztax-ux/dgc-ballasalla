@@ -307,7 +307,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.18</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.19</div>
   </div>
 </div>
 
@@ -821,6 +821,7 @@ function addPT(){
     +'<div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:1fr 40px;gap:6px;padding:0 2px 6px;text-transform:uppercase;letter-spacing:.05em;"><span>Task / Activity</span><span></span></div>'
     +'<div id="ptt'+i+'"></div>'
     +'<button onclick="addTask('+i+')" style="background:none;border:1.5px dashed var(--bdr);border-radius:9px;color:var(--muted);font-size:13px;font-weight:800;padding:8px 14px;cursor:pointer;width:100%;font-family:inherit;min-height:44px;text-align:center;margin-top:4px;">+ New task</button>'
+    +'<button class="mic" id="mic-td'+i+'" onclick="dictateTask('+i+')" style="margin-top:6px;width:100%;"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate task</span></button>'
     +'<div style="margin-top:10px;"><label style="font-size:11px;">Resources &amp; materials needed for this team</label>'
       +'<textarea id="'+resId+'" rows="2" placeholder="Plant, materials, deliveries needed for this team..." style="font-size:13px;min-height:56px;margin-bottom:4px;"></textarea>'
       +'<button class="mic" id="'+micResId+'" onclick="vm(\'res'+i+'\',\''+resId+'\')" style="margin-top:2px;"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate resources</span></button>'
@@ -838,6 +839,18 @@ function addTeamMember(i){
   wrap.innerHTML='<div><label style="font-size:11px;">Member '+count+'</label>'
     +mkNameInput('ptm'+i+'_'+(count-1))+'</div>';
   container.appendChild(wrap.firstChild);
+}
+function dictateTask(i){
+  addTask(i);
+  var container=document.getElementById('ptt'+i);
+  if(!container)return;
+  var inputs=container.querySelectorAll('input[type=text]');
+  var inp=inputs[inputs.length-1];
+  if(!inp)return;
+  var tid='td-inp-'+i+'-'+Date.now();
+  inp.id=tid;
+  inp.focus();
+  vm('td'+i,tid);
 }
 function toggleTeamDetail(i){
   var el=document.getElementById('pt-detail-'+i);
