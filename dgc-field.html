@@ -117,7 +117,7 @@ select{
 .btn-ghost:hover{border-color:var(--acc);color:var(--acc);}
 .btn-red{background:rgba(239,68,68,.1);border:1.5px solid rgba(239,68,68,.3);color:var(--red);}
 .btn-blue{background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.3);color:var(--blue);}
-.btn-sm{padding:9px 13px;font-size:12px;border-radius:8px;min-height:40px;width:auto;}
+.btn-sm{padding:9px 13px;font-size:12px;border-radius:8px;min-height:44px;width:auto;}
 .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
 
 /* ── SUBMIT / PRIMARY CTA ── */
@@ -785,10 +785,10 @@ function addPT(){
     +'</div>'
     +'<div style="margin-bottom:8px;">'
       +'<div class="g2" style="margin-bottom:4px;">'
-        +'<div><label style="font-size:11px;">Team Leader</label><input type="text" id="ptl'+i+'" list="nl" placeholder="Tap to pick" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
+        +'<div><label style="font-size:11px;">Team Leader</label><input type="text" id="ptl'+i+'" list="nl" placeholder="Tap to pick" onclick="nc(this)" onblur="nb2(this)" style="font-size:16px;padding:10px 12px;min-height:48px;"></div>'
       +'</div>'
       +'<div id="members-'+i+'" class="g2" style="margin-bottom:4px;"></div>'
-      +'<button onclick="addTeamMember('+i+')" style="background:none;border:1.5px dashed var(--bdr);border-radius:9px;color:var(--muted);font-size:12px;font-weight:800;padding:8px 14px;cursor:pointer;width:100%;font-family:inherit;min-height:40px;text-align:center;">+ New team member</button>'
+      +'<button onclick="addTeamMember('+i+')" style="background:none;border:1.5px dashed var(--bdr);border-radius:9px;color:var(--muted);font-size:13px;font-weight:800;padding:10px 14px;cursor:pointer;width:100%;font-family:inherit;min-height:48px;text-align:center;">+ New team member</button>'
     +'</div>'
     +'<div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:1fr 40px;gap:6px;padding:0 2px 6px;text-transform:uppercase;letter-spacing:.05em;"><span>Task / Activity</span><span></span></div>'
     +'<div id="ptt'+i+'"></div>'
@@ -808,7 +808,7 @@ function addTeamMember(i){
   var count=container.querySelectorAll('input[type=text]').length+1;
   var wrap=document.createElement('div');
   wrap.innerHTML='<div><label style="font-size:11px;">Member '+count+'</label>'
-    +'<input type="text" id="ptm'+i+'_'+(count-1)+'" list="nl" placeholder="Tap to pick" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>';
+    +'<input type="text" id="ptm'+i+'_'+(count-1)+'" list="nl" placeholder="Tap to pick" onclick="nc(this)" onblur="nb2(this)" style="font-size:16px;padding:10px 12px;min-height:48px;"></div>';
   container.appendChild(wrap.firstChild);
 }
 function toggleTeamDetail(i){
