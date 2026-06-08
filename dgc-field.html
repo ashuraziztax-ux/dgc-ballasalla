@@ -307,7 +307,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.16</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.17</div>
   </div>
 </div>
 
@@ -362,7 +362,6 @@ select{
 <div style="position:fixed;bottom:0;left:0;right:0;z-index:10001;background:var(--surf);border-top:1.5px solid var(--bdr);display:flex;justify-content:space-around;padding:6px 0 max(6px,env(safe-area-inset-bottom));" id="sod-bnav">
   <button onclick="sodGoTo('today-tab','nav-today-tab')" style="flex:1;background:none;border:none;color:var(--muted);font-size:11px;font-weight:800;font-family:inherit;padding:8px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:52px;"><span style="font-size:22px;line-height:1;">&#128196;</span>Today</button>
   <button onclick="sodGoTo('eod','nav-eod')" style="flex:1;background:none;border:none;color:var(--muted);font-size:11px;font-weight:800;font-family:inherit;padding:8px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:52px;"><span style="font-size:22px;line-height:1;">&#128203;</span>Plan</button>
-  <button onclick="sodGoTo('hist','nav-hist')" style="flex:1;background:none;border:none;color:var(--muted);font-size:11px;font-weight:800;font-family:inherit;padding:8px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:52px;"><span style="font-size:22px;line-height:1;">&#128218;</span>History</button>
 </div>
 </div>
 
@@ -399,7 +398,7 @@ select{
 
 <!-- TOMORROW'S PLAN / EOD RECORD -->
 <div class="tab" id="tab-eod">
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; Plan</span><span class="sec-s" id="dl"></span><button onclick="showProgramme()" style="background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.3);border-radius:8px;color:var(--blue);font-size:11px;font-weight:800;font-family:inherit;padding:5px 10px;cursor:pointer;white-space:nowrap;min-height:32px;">&#128202; Programme</button></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; Plan</span><span class="sec-s" id="dl"></span><button onclick="sw('hist',null)" style="background:rgba(148,163,184,.1);border:1.5px solid rgba(148,163,184,.25);border-radius:8px;color:var(--muted);font-size:11px;font-weight:800;font-family:inherit;padding:5px 10px;cursor:pointer;white-space:nowrap;min-height:32px;">&#128336; History</button><button onclick="showProgramme()" style="background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.3);border-radius:8px;color:var(--blue);font-size:11px;font-weight:800;font-family:inherit;padding:5px 10px;cursor:pointer;white-space:nowrap;min-height:32px;">&#128202; Programme</button></div></div>
   <div class="card g2" style="gap:8px;margin-bottom:10px;">
     <div><label>Plan Date</label><input type="date" id="fd"></div>
     <div><label>Site Manager</label><input type="text" id="fm" list="nl" onclick="nc(this)" onblur="nb2(this)" placeholder="Tap to pick"></div>
@@ -574,7 +573,6 @@ select{
   <button class="nb" id="nav-start" onclick="showSODScreen(this)"><span class="ni">&#9728;</span>Start</button>
   <button class="nb active" id="nav-today-tab" onclick="sw('today-tab',this)"><span class="ni">&#128196;</span>Today</button>
   <button class="nb" id="nav-eod" onclick="sw('eod',this)"><span class="ni">&#128203;</span>Plan</button>
-  <button class="nb" id="nav-hist" onclick="sw('hist',this)"><span class="ni">&#128218;</span>History</button>
 </div>
 </div><!-- /app -->
 <datalist id="nl"></datalist>
@@ -790,7 +788,7 @@ function sw(name,btn){
     if(tab)tab.classList.add('active');
     if(btn)btn.classList.add('active');
     // Hide the nav button for whichever tab is now active
-    var navHide={'today-tab':'nav-today-tab','eod':'nav-eod','hist':'nav-hist'};
+    var navHide={'today-tab':'nav-today-tab','eod':'nav-eod'};
     var hid=navHide[name];
     if(hid){var hb=document.getElementById(hid);if(hb)hb.style.display='none';}
     if(name==='hist')loadHist();
