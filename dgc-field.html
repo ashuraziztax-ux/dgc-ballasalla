@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/dgc-ballasalla/manifest-field.json">
+<link rel="apple-touch-icon" href="/dgc-ballasalla/apple-touch-icon.png">
 <meta name="theme-color" content="#0f1117">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -14,7 +17,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='2.0.10';
+var APP_VERSION='2.0.12';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -2568,7 +2571,7 @@ if('serviceWorker' in navigator){
     fetch(window.location.href+'?_v='+Math.random(),{cache:'no-store'})
       .then(function(r){return r.text();})
       .then(function(h){
-        var m=h.match(/var APP_VERSION='([^']+)'/);
+        var m=h.match(/var APP_VERSION='2.0.12']+)'/);
         if(m&&m[1]&&m[1]!==APP_VERSION){
           var b=document.getElementById('update-banner');
           if(!b){
