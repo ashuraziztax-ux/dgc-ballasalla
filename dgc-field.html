@@ -17,7 +17,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='2.2.9';
+var APP_VERSION='2.2.10';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -307,7 +307,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.9</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.10</div>
   </div>
 </div>
 
@@ -546,7 +546,7 @@ select{
 </div>
 
 <!-- MORNING TAB — shows SOD content inline -->
-<div class="tab active" id="tab-sod-tab">
+<div class="tab" id="tab-sod-tab">
   <div id="sod-inline-content" style="padding:8px 0;">
     <div style="text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;line-height:1.7;">
       <div style="font-size:28px;margin-bottom:10px;">&#9728;</div>
@@ -557,7 +557,7 @@ select{
 </div>
 
 <!-- TODAY'S PLAN TAB -->
-<div class="tab" id="tab-today-tab">
+<div class="tab active" id="tab-today-tab">
   <div id="today-tab-content" style="padding:8px 0;">
     <div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Loading today's plan...</div>
   </div>
@@ -565,9 +565,8 @@ select{
 
 </div><!-- /main -->
 <div class="bnav">
-  <button class="nb active" id="nav-sod-tab" onclick="showSODScreen(this)"><span class="ni">&#9728;</span>Morning</button>
-  <button class="nb" id="nav-today-tab" onclick="sw('today-tab',this)"><span class="ni">&#128196;</span>Today</button>
-  <button class="nb" id="nav-eod" onclick="sw('eod',this)"><span class="ni">&#128221;</span>Tonight</button>
+  <button class="nb active" id="nav-today-tab" onclick="sw('today-tab',this)"><span class="ni">&#128196;</span>Today</button>
+  <button class="nb" id="nav-eod" onclick="sw('eod',this)"><span class="ni">&#128203;</span>Plan</button>
   <button class="nb" id="nav-hist" onclick="sw('hist',this)"><span class="ni">&#128218;</span>History</button>
 </div>
 </div><!-- /app -->
@@ -632,10 +631,12 @@ var _lastResultIdx=-1;
   }
   COMMS.forEach(function(c){
     COM[c.k]=false;
+    var commsEl=document.getElementById('comms-c');
+    if(!commsEl)return; // comms section removed — skip silently
     var d=document.createElement('div');d.className='chki';
     d.onclick=function(){COM[c.k]=!COM[c.k];var b=d.querySelector('.chkb');b.classList.toggle('on',COM[c.k]);b.textContent=COM[c.k]?'✓':'';};
     d.innerHTML='<div class="chkb"></div><div style="font-size:13px;font-weight:600;color:var(--txt);">'+c.l+'</div>';
-    document.getElementById('comms-c').appendChild(d);
+    commsEl.appendChild(d);
   });
   addPT();addPT();addPT();
   addNoise('10:00');addNoise('13:00');addNoise('15:00');
@@ -2415,8 +2416,13 @@ function showApp(){
   document.getElementById('app').style.display='block';
   document.body.style.overflow='';
   loadAchv();loadHist();
-  // Refresh tab content if already on a tab
-  loadSODTab();
+  // Land on Today tab — activate nav button and render content
+  var todayBtn=document.getElementById('nav-today-tab');
+  document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('active');});
+  if(todayBtn)todayBtn.classList.add('active');
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  var todayTab=document.getElementById('tab-today-tab');
+  if(todayTab)todayTab.classList.add('active');
   showTodayPlanInline();
 }
 
