@@ -307,7 +307,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.15</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.16</div>
   </div>
 </div>
 
@@ -399,7 +399,7 @@ select{
 
 <!-- TOMORROW'S PLAN / EOD RECORD -->
 <div class="tab" id="tab-eod">
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; Plan</span><span class="sec-s" id="dl"></span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; Plan</span><span class="sec-s" id="dl"></span><button onclick="showProgramme()" style="background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.3);border-radius:8px;color:var(--blue);font-size:11px;font-weight:800;font-family:inherit;padding:5px 10px;cursor:pointer;white-space:nowrap;min-height:32px;">&#128202; Programme</button></div></div>
   <div class="card g2" style="gap:8px;margin-bottom:10px;">
     <div><label>Plan Date</label><input type="date" id="fd"></div>
     <div><label>Site Manager</label><input type="text" id="fm" list="nl" onclick="nc(this)" onblur="nb2(this)" placeholder="Tap to pick"></div>
@@ -578,6 +578,7 @@ select{
 </div>
 </div><!-- /app -->
 <datalist id="nl"></datalist>
+<datalist id="tdl"></datalist>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -857,7 +858,7 @@ function addTask(ti,desc,pct){
   var r=document.createElement('div');
   r.className='trow';
   r.innerHTML='<div style="display:flex;flex-direction:column;gap:3px;">'
-    +'<input type="text" placeholder="e.g. Drain run S4.5 to MH7, kerbing Zone G" value="'+(desc||'')+'">'
+    +'<input type="text" list="tdl" placeholder="e.g. Drain run S4.5 to MH7, kerbing Zone G" value="'+(desc||'')+'">'
     +'<div id="'+rateHintId+'" style="display:none;font-size:11px;font-weight:700;color:var(--blue);padding:3px 6px;background:rgba(56,189,248,.08);border-radius:6px;border:1px solid rgba(56,189,248,.2);"></div>'
     +'</div>'
     +'<button class="del" onclick="this.closest(\'.trow\').remove()">x</button>';
@@ -1012,7 +1013,8 @@ function dictateTeam(i){
     btn.style.borderColor='var(--blue)';
     btn.style.color='var(--blue)';
     var namesJoined=NAMES.join(', ');
-    var prompt='Parse this construction site manager\'s voice instruction into a team plan. Available staff names: '+namesJoined+'. '
+    var taskHint=window.GP_TASK_NAMES&&window.GP_TASK_NAMES.length?'\nKnown BA4 site activities (use as reference for task descriptions): '+window.GP_TASK_NAMES.join(', '):'';
+    var prompt='Parse this construction site manager\'s voice instruction into a team plan. Available staff names: '+namesJoined+'. '+taskHint+' '
       +'Rules:\n'
       +'- Extract ALL tasks mentioned as separate items (e.g. "we\'re gonna do this, we\'re gonna do that" = 2 tasks)\n'
       +'- Each task gets its own entry in the tasks array\n'
@@ -2116,6 +2118,104 @@ function buildSODResults(planData){/* legacy stub — replaced by buildSODResult
 function sodResultChange(idx,target){/* legacy stub */}
 function buildSODAttendance(planData){/* legacy stub */}
 
+// ── GANTTPRO PROGRAMME ──
+var GP_KEY=(function(){var k='dgcgp1',b=atob('VgNWXkACVgIGBkNSUFRbAUkHB1RSBUhUBVJVVEdXAAM=');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
+var GP_PROJECT_ID='1773319194241';
+window.GP_TASKS=null;
+window.GP_TASK_NAMES=[];
+
+function buildTaskDL(){
+  var dl=document.getElementById('tdl');if(!dl)return;
+  dl.innerHTML='';
+  (window.GP_TASK_NAMES||[]).forEach(function(n){
+    var o=document.createElement('option');o.value=n;dl.appendChild(o);
+  });
+}
+
+function loadGPTasks(cb){
+  if(window.GP_TASKS){if(cb)cb(window.GP_TASKS);return;}
+  fetch('https://api.ganttpro.com/v1.0/tasks?projectId='+GP_PROJECT_ID,{
+    headers:{'X-API-KEY':GP_KEY,'Content-Type':'application/json'}
+  })
+  .then(function(r){return r.json();})
+  .then(function(tasks){
+    window.GP_TASKS=tasks;
+    // Build flat unique name list — exclude parent summary rows, keep leaf tasks
+    var names={};
+    tasks.forEach(function(t){
+      var n=t.name.trim();
+      // Skip variation entries and summary rows for the dictionary
+      if(n&&!n.match(/^(Total estimate|Site Setup|ZONE|Gang|Top Road|Mid Road|Lower Road|Drain Run\s*\(|Jet Washing Drains)/i))names[n]=1;
+    });
+    window.GP_TASK_NAMES=Object.keys(names).sort();
+    buildTaskDL();
+    if(cb)cb(tasks);
+  })
+  .catch(function(){toast('Programme unavailable — check connection','err');if(cb)cb(null);});
+}
+
+function showProgramme(){
+  var overlay=document.getElementById('prog-overlay');
+  if(!overlay)return;
+  overlay.style.display='block';
+  document.body.style.overflow='hidden';
+  var body=document.getElementById('prog-body');
+  if(body)body.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--muted);font-size:13px;">Loading programme…</div>';
+  loadGPTasks(function(tasks){
+    if(!tasks){if(body)body.innerHTML='<div style="color:var(--red);padding:20px;font-size:13px;">Could not load programme. Check your connection.</div>';return;}
+    var today=new Date();today.setHours(0,0,0,0);
+    // Group by parent
+    var parentMap={};var topLevel=[];
+    tasks.forEach(function(t){
+      if(!t.parent)topLevel.push(t);
+      else{if(!parentMap[t.parent])parentMap[t.parent]=[];parentMap[t.parent].push(t);}
+    });
+    var html='<div style="margin-bottom:6px;font-size:11px;color:var(--muted);font-weight:700;">Tap any section to expand. Green = done · Amber = in progress · Red = not started.</div>';
+    topLevel.forEach(function(p){
+      if(p.type==='milestone')return;
+      var pct=Math.round(p.progress*100);
+      var col=pct===100?'#22c55e':pct>0?'#f59e0b':'#ef4444';
+      var children=parentMap[p.id]||[];
+      var endD=new Date(p.endDate);endD.setHours(0,0,0,0);
+      var late=endD<today&&pct<100;
+      html+='<div style="margin-bottom:8px;border:1.5px solid var(--bdr);border-radius:10px;overflow:hidden;">';
+      html+='<div style="background:var(--surf);padding:10px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'block\':\'none\'">';
+      html+='<div style="width:10px;height:10px;border-radius:50%;background:'+col+';flex-shrink:0;"></div>';
+      html+='<div style="flex:1;font-size:13px;font-weight:800;">'+esc(p.name)+'</div>';
+      html+='<div style="font-size:12px;font-weight:800;color:'+col+';">'+pct+'%'+(late?' ⚠':'')+'</div>';
+      html+='</div>';
+      html+='<div style="display:none;padding:6px 10px;background:rgba(0,0,0,.15);">';
+      if(children.length===0){
+        html+='<div style="color:var(--muted);font-size:12px;padding:6px 0;">'+p.startDate.slice(0,10)+' → '+p.endDate.slice(0,10)+'</div>';
+      } else {
+        children.forEach(function(c){
+          var cpct=Math.round(c.progress*100);
+          var ccol=cpct===100?'#22c55e':cpct>0?'#f59e0b':'#ef4444';
+          var cEnd=new Date(c.endDate);cEnd.setHours(0,0,0,0);
+          var clate=cEnd<today&&cpct<100;
+          html+='<div style="display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid rgba(255,255,255,.06);">';
+          html+='<div style="width:8px;height:8px;border-radius:50%;background:'+ccol+';flex-shrink:0;"></div>';
+          html+='<div style="flex:1;font-size:12px;font-weight:600;">'+esc(c.name)+'</div>';
+          html+='<div style="font-size:11px;color:var(--muted);white-space:nowrap;">'+c.endDate.slice(0,10)+'</div>';
+          html+='<div style="font-size:12px;font-weight:800;color:'+ccol+';white-space:nowrap;">'+cpct+'%'+(clate?' ⚠':'')+'</div>';
+          html+='</div>';
+        });
+      }
+      html+='</div></div>';
+    });
+    if(body)body.innerHTML=html;
+  });
+}
+
+function closeProgramme(){
+  var overlay=document.getElementById('prog-overlay');
+  if(overlay)overlay.style.display='none';
+  document.body.style.overflow='';
+}
+
+// Pre-load task names into datalist on startup (silent)
+(function(){try{loadGPTasks(null);}catch(e){}})();
+
 // ── SIMON'S OUTPUT RATES (gang of 2: 1 operator + 1 labourer, 9h day weekday) ──
 var SIMON_RATES=[
   {keywords:['110mm','foul','surface water','sw','foul drain'],depth:'1.5m',output:17.8,unit:'m',hoursPerUnit:0.506,label:'110mm drain at 1.5m'},
@@ -2673,5 +2773,17 @@ if('serviceWorker' in navigator){
   }
 })();
 </script>
+
+<!-- Programme Overlay -->
+<div id="prog-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:11000;background:var(--bg);overflow-y:auto;padding-bottom:env(safe-area-inset-bottom);">
+  <div style="background:var(--surf);border-bottom:1.5px solid var(--bdr);padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:2;">
+    <span style="font-size:18px;">&#128202;</span>
+    <span style="font-size:14px;font-weight:800;flex:1;">BA4 Programme</span>
+    <button onclick="closeProgramme()" style="background:none;border:none;color:var(--muted);font-size:22px;font-weight:800;font-family:inherit;cursor:pointer;padding:4px 8px;line-height:1;">&#10005;</button>
+  </div>
+  <div id="prog-body" style="padding:14px 16px;">
+    <div style="text-align:center;padding:40px 0;color:var(--muted);font-size:13px;">Loading programme…</div>
+  </div>
+</div>
 </body>
 </html>
