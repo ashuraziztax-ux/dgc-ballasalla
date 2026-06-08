@@ -307,7 +307,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.13</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.14</div>
   </div>
 </div>
 
@@ -795,10 +795,8 @@ function sw(name,btn){
   }catch(e){toast('Tab error — try again','err');}
 }
 
-function mkNameSel(id,style){
-  var opts='<option value="">— pick name —</option>';
-  (NAMES||[]).forEach(function(n){opts+='<option value="'+esc(n)+'">'+esc(n)+'</option>';});
-  return '<select id="'+id+'" style="'+(style||'font-size:16px;padding:10px 12px;min-height:48px;')+'">'+opts+'</select>';
+function mkNameInput(id){
+  return '<input type="text" id="'+id+'" list="nl" placeholder="Type or pick name…" autocomplete="off" style="font-size:16px;padding:9px 10px;min-height:42px;">';
 }
 function addPT(){
   var i=PT_I++,l=TLTRS[i]||('T'+(i+1)),c=TCOLS[i]||'#94a3b8';
@@ -812,7 +810,7 @@ function addPT(){
     +'</div>'
     +'<div style="margin-bottom:8px;">'
       +'<div class="g2" style="margin-bottom:4px;">'
-        +'<div><label style="font-size:11px;">Team Leader</label>'+mkNameSel('ptl'+i)+'</div>'
+        +'<div><label style="font-size:11px;">Team Leader</label>'+mkNameInput('ptl'+i)+'</div>'
       +'</div>'
       +'<div id="members-'+i+'" class="g2" style="margin-bottom:4px;"></div>'
       +'<button onclick="addTeamMember('+i+')" style="background:none;border:1.5px dashed var(--bdr);border-radius:9px;color:var(--muted);font-size:13px;font-weight:800;padding:10px 14px;cursor:pointer;width:100%;font-family:inherit;min-height:48px;text-align:center;">+ New team member</button>'
@@ -832,10 +830,10 @@ function addPT(){
 function addTeamMember(i){
   var container=document.getElementById('members-'+i);
   if(!container)return;
-  var count=container.querySelectorAll('select').length+1;
+  var count=container.querySelectorAll('input[list]').length+1;
   var wrap=document.createElement('div');
   wrap.innerHTML='<div><label style="font-size:11px;">Member '+count+'</label>'
-    +mkNameSel('ptm'+i+'_'+(count-1))+'</div>';
+    +mkNameInput('ptm'+i+'_'+(count-1))+'</div>';
   container.appendChild(wrap.firstChild);
 }
 function toggleTeamDetail(i){
@@ -1034,15 +1032,15 @@ function dictateTeam(i){
       // ADDITIVE: fill members into existing select slots, then add more if needed
       var members=parsed.members||[];
       var memContainer=document.getElementById('members-'+i);
-      var existingNames=memContainer?Array.from(memContainer.querySelectorAll('select')).map(function(el){return el.value.trim().toLowerCase();}).filter(Boolean):[];
+      var existingNames=memContainer?Array.from(memContainer.querySelectorAll('input[list]')).map(function(el){return el.value.trim().toLowerCase();}).filter(Boolean):[];
       members.forEach(function(name){
         if(!name)return;
         if(existingNames.indexOf(name.toLowerCase())!==-1)return;
         // Try to fill an empty slot first
-        var sels=memContainer?memContainer.querySelectorAll('select'):[];
+        var sels=memContainer?memContainer.querySelectorAll('input[list]'):[];
         var filled=false;
         for(var si=0;si<sels.length;si++){if(!sels[si].value){sels[si].value=name;filled=true;break;}}
-        if(!filled){addTeamMember(i);if(memContainer){var sl=memContainer.querySelectorAll('select');sl[sl.length-1].value=name;}}
+        if(!filled){addTeamMember(i);if(memContainer){var sl=memContainer.querySelectorAll('input[list]');sl[sl.length-1].value=name;}}
         existingNames.push(name.toLowerCase());
       });
       // ADDITIVE: add tasks without clearing existing ones
@@ -1125,8 +1123,8 @@ function fetchWx(mode){
     });
 }
 
-function getPlan(){var teams=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var rows=div.querySelectorAll('.trow');var tasks=[];rows.forEach(function(r){var ins=r.querySelectorAll('input[type=text]');var desc=ins[0]?ins[0].value.trim():'';if(desc){tasks.push({desc:desc,target:100});}});var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var leader=g('ptl'+i);var memContainer=document.getElementById('members-'+i);var members=memContainer?Array.from(memContainer.querySelectorAll('select')).map(function(el){return el.value.trim();}).filter(Boolean):[];var notes=g('pt-notes-'+i);var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');var plantType=g('pt-plant-type-'+i);var plantHrs=g('pt-plant-hrs-'+i);var plantCheckOk=document.getElementById('ptick-det-'+i)&&document.getElementById('ptick-det-'+i).classList.contains('on');var plantInit=g('pt-plant-init-'+i);var plantCheck={type:plantType,hours:plantHrs?parseFloat(plantHrs):null,confirmed:plantCheckOk,initials:plantInit};if(tasks.length||leader)teams.push({team:TLTRS[i]||('T'+(i+1)),leader:leader,members:members,tasks:tasks,notes:notes,plantOk:plantOk,plantCheck:plantCheck});});return teams;}
-function getAlloc(){var a=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var lead=g('ptl'+i);var memContainer=document.getElementById('members-'+i);var members=memContainer?Array.from(memContainer.querySelectorAll('select')).map(function(el){return el.value.trim();}).filter(Boolean):[];var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');var initials=g('pti'+i);if(lead||members.length)a.push({team:TLTRS[i]||('T'+(i+1)),lead:lead,ops:members,plantOk:plantOk,initials:initials});});return a;}
+function getPlan(){var teams=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var rows=div.querySelectorAll('.trow');var tasks=[];rows.forEach(function(r){var ins=r.querySelectorAll('input[type=text]');var desc=ins[0]?ins[0].value.trim():'';if(desc){tasks.push({desc:desc,target:100});}});var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var leader=g('ptl'+i);var memContainer=document.getElementById('members-'+i);var members=memContainer?Array.from(memContainer.querySelectorAll('input[list]')).map(function(el){return el.value.trim();}).filter(Boolean):[];var notes=g('pt-notes-'+i);var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');var plantType=g('pt-plant-type-'+i);var plantHrs=g('pt-plant-hrs-'+i);var plantCheckOk=document.getElementById('ptick-det-'+i)&&document.getElementById('ptick-det-'+i).classList.contains('on');var plantInit=g('pt-plant-init-'+i);var plantCheck={type:plantType,hours:plantHrs?parseFloat(plantHrs):null,confirmed:plantCheckOk,initials:plantInit};if(tasks.length||leader)teams.push({team:TLTRS[i]||('T'+(i+1)),leader:leader,members:members,tasks:tasks,notes:notes,plantOk:plantOk,plantCheck:plantCheck});});return teams;}
+function getAlloc(){var a=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var lead=g('ptl'+i);var memContainer=document.getElementById('members-'+i);var members=memContainer?Array.from(memContainer.querySelectorAll('input[list]')).map(function(el){return el.value.trim();}).filter(Boolean):[];var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');var initials=g('pti'+i);if(lead||members.length)a.push({team:TLTRS[i]||('T'+(i+1)),lead:lead,ops:members,plantOk:plantOk,initials:initials});});return a;}
 
 function noNet(){toast('✗ No internet — check your connection','err');}
 
