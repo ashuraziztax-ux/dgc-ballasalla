@@ -307,7 +307,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.17</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.18</div>
   </div>
 </div>
 
@@ -799,7 +799,7 @@ function sw(name,btn){
 }
 
 function mkNameInput(id){
-  return '<input type="text" id="'+id+'" list="nl" placeholder="Type or pick name…" autocomplete="off" style="font-size:16px;padding:9px 10px;min-height:42px;">';
+  return '<input type="text" id="'+id+'" list="nl" placeholder="Name" autocomplete="off" style="font-size:16px;padding:9px 10px;min-height:42px;">';
 }
 function addPT(){
   var i=PT_I++,l=TLTRS[i]||('T'+(i+1)),c=TCOLS[i]||'#94a3b8';
