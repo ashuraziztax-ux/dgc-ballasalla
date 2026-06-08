@@ -698,10 +698,12 @@ function doLogin(){
   if(sb){
     var today=tod();
     var yesterday=(function(){var d=new Date();d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);})();
-    sb.from('daily_records').select('data').eq('project_ref',PROJECT_REF).in('date',[today,yesterday]).not('gang','like','ACHV_%').not('gang','like','SOD_%').order('date',{ascending:false}).limit(3)
+    sb.from('daily_records').select('data').eq('project_ref',PROJECT_REF).gte('date',yesterday).not('gang','like','ACHV_%').not('gang','like','SOD_%').order('date',{ascending:false}).limit(5)
       .then(function(r){
-        var found=r.data&&r.data.find(function(x){return x.data&&x.data.plan&&x.data.plan.length>0;});
+        var recs=r.data||[];
+        var found=recs.find(function(x){return x.data&&x.data.plan&&x.data.plan.length>0;});
         if(found){
+          toast('Loading morning check...');
           showSOD(found.data,_uname);
         }else{
           document.getElementById('ls').style.display='none';
