@@ -17,7 +17,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='2.2.5';
+var APP_VERSION='2.2.6';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -307,7 +307,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.5</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.6</div>
   </div>
 </div>
 
@@ -336,6 +336,9 @@ select{
   <div id="sod-signoff-section" style="padding:16px 0;">
     <button class="btn btn-submit" onclick="sodSignOff()">&#128221; Sign Off Morning Check &#8594;</button>
     <div id="sod-signoff-note" style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px;"></div>
+    <div style="text-align:center;margin-top:20px;">
+      <button onclick="sodDemoReset()" style="background:none;border:1px solid var(--bdr);border-radius:8px;color:var(--muted);font-size:11px;font-weight:700;padding:7px 16px;cursor:pointer;letter-spacing:.04em;opacity:.6;">&#8635; Reset for demo</button>
+    </div>
   </div>
 
 </div>
@@ -2035,6 +2038,27 @@ function sodSignOff(){
       })
       .catch(function(){afterSave();});
   }else{afterSave();}
+}
+
+function sodDemoReset(){
+  // Reset all SOD user inputs — keeps yesterday's plan data loaded
+  _sodEodStatus=null;
+  _sodTaskResults={};
+  _sodResults={};
+  _sodAttendance2={};
+  // Rebuild the interactive sections from the loaded plan
+  if(_sodPlanData){
+    buildSODEodCheck(_sodPlanData);
+    buildSODResults2(_sodPlanData);
+  }
+  // Clear any sign-off note
+  var note=document.getElementById('sod-signoff-note');
+  if(note)note.textContent='';
+  // Scroll back to top of SOD screen
+  var sod=document.getElementById('sod');
+  if(sod)sod.scrollTo({top:0,behavior:'smooth'});
+  window.scrollTo({top:0,behavior:'smooth'});
+  toast('Reset — back to start of day');
 }
 
 function _sodAfterSignOff(){
