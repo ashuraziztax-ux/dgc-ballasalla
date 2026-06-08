@@ -17,7 +17,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='2.2.8';
+var APP_VERSION='2.2.9';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -138,7 +138,7 @@ select{
 .tdot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
 
 /* ── TABLE ROWS ── */
-.trow{display:grid;grid-template-columns:1fr 72px 40px;gap:6px;align-items:center;margin-bottom:8px;}
+.trow{display:grid;grid-template-columns:1fr 40px;gap:6px;align-items:center;margin-bottom:8px;}
 .trow input{padding:11px 10px;font-size:13px;min-height:44px;}
 
 /* ── CHECKLIST ── */
@@ -307,7 +307,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.8</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.9</div>
   </div>
 </div>
 
@@ -425,36 +425,21 @@ select{
   </div>
 
   <div class="sec">
-    <div class="sec-inner"><span class="sec-t">&#128208; Tomorrow's Plan</span><span class="sec-s">What each team will do &middot; set target % complete by end of day</span></div>
+    <div class="sec-inner"><span class="sec-t">&#128208; Plan</span><span class="sec-s">What each team will do tomorrow</span></div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;" class="no-print">
-      <button class="btn btn-ghost btn-sm" onclick="addPerson()">+ Person</button>
       <button class="btn btn-ghost btn-sm" onclick="addPT()">+ Team</button>
-      <button class="btn btn-blue btn-sm" id="prog-check-btn" onclick="checkPlanVsProgramme()" title="Check tasks against BA4 master programme">&#128197; Check Programme</button>
+      <button class="btn btn-ghost btn-sm" id="prog-check-btn" onclick="toast('Programme not yet connected — coming soon')" title="Programme integration coming soon" style="opacity:.55;">&#128197; Programme</button>
     </div>
-  </div>
-  <div style="font-size:12px;color:var(--muted);margin-bottom:8px;padding:7px 10px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-radius:8px;">
-    <strong style="color:var(--acc);">Target %</strong> = how far done by end of day. Blank = 100%.
   </div>
   <div id="pt-container"></div>
 
   <div id="prog-check-panel" style="display:none;margin-bottom:12px;"></div>
 
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#127908; How Did Today Go?</span><span class="sec-s">Voice dictate your day — what happened, what moved, any issues</span></div></div>
-  <div class="card">
-    <div style="display:flex;flex-direction:column;gap:10px;">
-      <div style="font-size:11px;font-weight:800;color:var(--muted);padding:8px 10px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.18);border-radius:8px;line-height:1.6;">
-        <span style="color:var(--blue);">07:30&ndash;10:00</span> Morning &nbsp;&middot;&nbsp; <span style="color:var(--blue);">10:30&ndash;13:00</span> Mid-morning &nbsp;&middot;&nbsp; <span style="color:var(--blue);">13:30&ndash;17:30</span> Afternoon
-      </div>
-      <div>
-        <button class="mic" id="mic-s1" onclick="vm('s1','fses1')"><span class="mic-icon">&#127908;</span><span class="mic-label">Tap to dictate — talk through your day</span></button>
-        <textarea id="fses1" rows="6" style="min-height:140px;" placeholder="How did the day go? What happened? Any issues, delays, or highlights — just talk through it naturally."></textarea>
-      </div>
-    </div>
-    <!-- legacy hidden fields for backward compat -->
-    <textarea id="fses2" style="display:none;"></textarea>
-    <textarea id="fses3" style="display:none;"></textarea>
-    <textarea id="fses" style="display:none;"></textarea>
-  </div>
+  <!-- legacy hidden fields for backward compat -->
+  <textarea id="fses1" style="display:none;"></textarea>
+  <textarea id="fses2" style="display:none;"></textarea>
+  <textarea id="fses3" style="display:none;"></textarea>
+  <textarea id="fses" style="display:none;"></textarea>
 
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#128202; Noise Readings <span style="color:var(--red);font-size:10px;font-weight:900;vertical-align:middle;letter-spacing:0;">REQUIRED</span></span><span class="sec-s">3 spot readings every day — H&amp;S requirement. Presets: 10:00, 13:00, 15:00.</span></div></div>
   <div class="card">
@@ -463,11 +448,6 @@ select{
     <button class="btn btn-ghost btn-sm" onclick="addNoise()">+ Reading</button>
   </div>
 
-  <!-- EOD SITE CHECKLIST — end-of-day sign-off -->
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#9989; End of Day Site Check <span style="color:var(--red);font-size:10px;font-weight:900;vertical-align:middle;">REQUIRED</span></span><span class="sec-s">Tick off before you leave site</span></div></div>
-  <div class="card" style="padding:4px 12px;" id="eod-checklist-card">
-    <div id="eod-chk-items"></div>
-  </div>
 
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#9888;&#65039; Safety &amp; Site Observations</span><span class="sec-s">Near misses, damage, ground conditions, anything unusual</span></div></div>
   <div class="card">
@@ -486,13 +466,11 @@ select{
     <div id="trello-status" style="font-size:12px;font-weight:600;margin-top:8px;"></div>
   </div>
 
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128241; Comms Checklist</span><span class="sec-s">Tick what you've done before you leave</span></div></div>
-  <div class="card" id="comms-c"></div>
 
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Formal Site Diary</span><span class="sec-s">Official manager record — kept for DGC files and any future disputes</span></div></div>
   <div class="card">
     <button class="mic" id="mic-nt" onclick="vm('nt','fnt')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate formal site diary</span></button>
-    <textarea id="fnt" rows="6" style="min-height:140px;" placeholder="Official record: ground conditions, weather impact, what was done, what was delayed and why. Be specific. Dates, names, quantities."></textarea>
+    <textarea id="fnt" rows="10" style="min-height:220px;" placeholder="Official record: ground conditions, weather impact, what was done, what was delayed and why. Be specific. Dates, names, quantities."></textarea>
   </div>
 
   <!-- EOD RESPONSIBILITY — moved to bottom -->
@@ -590,7 +568,6 @@ select{
   <button class="nb active" id="nav-sod-tab" onclick="showSODScreen(this)"><span class="ni">&#9728;</span>Morning</button>
   <button class="nb" id="nav-today-tab" onclick="sw('today-tab',this)"><span class="ni">&#128196;</span>Today</button>
   <button class="nb" id="nav-eod" onclick="sw('eod',this)"><span class="ni">&#128221;</span>Tonight</button>
-  <button class="nb" id="nav-achv" onclick="sw('achv',this)"><span class="ni">&#9989;</span>Results</button>
   <button class="nb" id="nav-hist" onclick="sw('hist',this)"><span class="ni">&#128218;</span>History</button>
 </div>
 </div><!-- /app -->
@@ -795,47 +772,44 @@ function sw(name,btn){
 function addPT(){
   var i=PT_I++,l=TLTRS[i]||('T'+(i+1)),c=TCOLS[i]||'#94a3b8';
   var d=document.createElement('div');d.className='tblk';d.id='pt'+i;
-  var micResId='mic-res'+i,resId='fres'+i,detailId='pt-detail-'+i;
+  var micResId='mic-res'+i,resId='fres'+i;
   var micDictId='mic-dict'+i;
   d.innerHTML=
     '<div class="thd">'
       +'<div class="tdot" style="background:'+c+'"></div>'
       +'<div style="font-size:13px;font-weight:800;">Team '+l+'</div>'
       +'<div style="margin-left:auto;display:flex;gap:5px;">'
-        +'<button class="btn btn-blue btn-sm" id="'+micDictId+'" onclick="dictateTeam('+i+')" title="Dictate whole team plan">&#127908; Dictate Team</button>'
-        +'<button class="btn btn-ghost btn-sm" onclick="toggleTeamDetail('+i+')" title="Show detail panel">&#128203; Details</button>'
         +'<button class="btn btn-ghost btn-sm" onclick="addTask('+i+')">+ Task</button>'
-        +'<button class="btn btn-red btn-sm" onclick="this.closest(\'.tblk\').remove()">x</button>'
+        +'<button class="btn btn-red btn-sm" onclick="this.closest(\'.tblk\').remove()">&#10005;</button>'
       +'</div>'
     +'</div>'
-    +'<div class="g2" style="margin-bottom:10px;">'
-      +'<div><label style="font-size:11px;">Team Leader</label><input type="text" id="ptl'+i+'" list="nl" placeholder="Tap to pick" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
-      +'<div><label style="font-size:11px;">Member 1</label><input type="text" id="ptm'+i+'_0" list="nl" placeholder="Tap to pick" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
-      +'<div><label style="font-size:11px;">Member 2</label><input type="text" id="ptm'+i+'_1" list="nl" placeholder="Tap to pick" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
-      +'<div><label style="font-size:11px;">Member 3</label><input type="text" id="ptm'+i+'_2" list="nl" placeholder="Tap to pick" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
+    +'<div style="margin-bottom:8px;">'
+      +'<div class="g2" style="margin-bottom:4px;">'
+        +'<div><label style="font-size:11px;">Team Leader</label><input type="text" id="ptl'+i+'" list="nl" placeholder="Tap to pick" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>'
+      +'</div>'
+      +'<div id="members-'+i+'" class="g2" style="margin-bottom:4px;"></div>'
+      +'<button onclick="addTeamMember('+i+')" style="background:none;border:1.5px dashed var(--bdr);border-radius:9px;color:var(--muted);font-size:12px;font-weight:800;padding:8px 14px;cursor:pointer;width:100%;font-family:inherit;min-height:40px;text-align:center;">+ New team member</button>'
     +'</div>'
-    +'<div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:1fr 72px 40px;gap:6px;padding:0 2px 6px;text-transform:uppercase;letter-spacing:.05em;"><span>Task / Activity</span><span>Target %</span><span></span></div>'
+    +'<div style="font-size:11px;font-weight:800;color:var(--muted);display:grid;grid-template-columns:1fr 40px;gap:6px;padding:0 2px 6px;text-transform:uppercase;letter-spacing:.05em;"><span>Task / Activity</span><span></span></div>'
     +'<div id="ptt'+i+'"></div>'
     +'<div style="margin-top:10px;"><label style="font-size:11px;">Resources &amp; materials needed for this team</label>'
       +'<button class="mic" id="'+micResId+'" onclick="vm(\'res'+i+'\',\''+resId+'\')" style="margin-bottom:6px;"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate resources</span></button>'
       +'<textarea id="'+resId+'" rows="2" placeholder="Plant, materials, deliveries needed for this team..." style="font-size:13px;min-height:56px;"></textarea>'
     +'</div>'
-    +'<div class="pt-detail" id="'+detailId+'">'
-      +'<div style="margin-bottom:10px;"><label style="font-size:11px;">Plant Check</label>'
-        +'<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;flex-wrap:wrap;">'
-          +'<input type="text" id="pt-plant-type-'+i+'" placeholder="Plant type (e.g. CAT 308)" style="flex:2;min-width:140px;padding:8px 10px;font-size:13px;min-height:42px;">'
-          +'<input type="number" id="pt-plant-hrs-'+i+'" placeholder="Hrs on site" inputmode="numeric" style="width:90px;padding:8px 10px;font-size:13px;min-height:42px;" title="Plant hours on site today">'
-          +'<div class="ptick" id="ptick-det-'+i+'" onclick="var t=this;t.classList.toggle(\'on\');t.innerHTML=t.classList.contains(\'on\')?\'&#10003;\':\'\';"></div>'
-          +'<input type="text" id="pt-plant-init-'+i+'" placeholder="Initials" style="width:70px;padding:8px 10px;font-size:13px;min-height:42px;" title="Operator initials confirming check">'
-        +'</div>'
-        +'<div style="font-size:11px;color:var(--muted);margin-top:4px;">Plant type &mdash; hours on site &mdash; tick to confirm check &mdash; initials</div>'
-      +'</div>'
-      +'<div><label style="font-size:11px;">Team Notes / Site Issues</label>'
-        +'<textarea id="pt-notes-'+i+'" rows="3" placeholder="Team notes, site issues, anything worth recording for this team..."></textarea>'
-      +'</div>'
+    +'<div style="margin-top:10px;border-top:1px solid var(--bdr);padding-top:10px;">'
+      +'<button class="btn btn-blue" id="'+micDictId+'" onclick="dictateTeam('+i+')" style="width:100%;min-height:52px;font-size:14px;font-weight:900;">&#127908; Dictate whole team</button>'
     +'</div>';
   document.getElementById('pt-container').appendChild(d);
   addTask(i);
+}
+function addTeamMember(i){
+  var container=document.getElementById('members-'+i);
+  if(!container)return;
+  var count=container.querySelectorAll('input[type=text]').length+1;
+  var wrap=document.createElement('div');
+  wrap.innerHTML='<div><label style="font-size:11px;">Member '+count+'</label>'
+    +'<input type="text" id="ptm'+i+'_'+(count-1)+'" list="nl" placeholder="Tap to pick" onclick="nc(this)" onblur="nb2(this)" style="font-size:13px;padding:9px 10px;min-height:42px;"></div>';
+  container.appendChild(wrap.firstChild);
 }
 function toggleTeamDetail(i){
   var el=document.getElementById('pt-detail-'+i);
@@ -857,7 +831,6 @@ function addTask(ti,desc,pct){
     +'<input type="text" placeholder="e.g. Drain run S4.5 to MH7, kerbing Zone G" value="'+(desc||'')+'">'
     +'<div id="'+rateHintId+'" style="display:none;font-size:11px;font-weight:700;color:var(--blue);padding:3px 6px;background:rgba(56,189,248,.08);border-radius:6px;border:1px solid rgba(56,189,248,.2);"></div>'
     +'</div>'
-    +'<input type="number" placeholder="100%" min="0" max="100" inputmode="numeric" value="'+(pct||'')+'" style="text-align:center;font-weight:900;" title="% complete target by end of day. Leave blank = 100% (task finishes tomorrow)">'
     +'<button class="del" onclick="this.closest(\'.trow\').remove()">x</button>';
   var inp=r.querySelector('input[type=text]');
   if(inp){
@@ -1027,11 +1000,17 @@ function dictateTeam(i){
       // ADDITIVE: only set leader if current field is blank
       var leaderEl=document.getElementById('ptl'+i);
       if(leaderEl&&parsed.team_leader&&!leaderEl.value.trim())leaderEl.value=parsed.team_leader;
-      // ADDITIVE: only set members if the respective field is currently blank
+      // ADDITIVE: add members via addTeamMember(), skip names already in the list
       var members=parsed.members||[];
-      members.forEach(function(name,mi){
-        var memEl=document.getElementById('ptm'+i+'_'+mi);
-        if(memEl&&!memEl.value.trim())memEl.value=name;
+      var memContainer=document.getElementById('members-'+i);
+      var existingNames=memContainer?Array.from(memContainer.querySelectorAll('input[type=text]')).map(function(el){return el.value.trim().toLowerCase();}).filter(Boolean):[];
+      members.forEach(function(name){
+        if(!name)return;
+        if(existingNames.indexOf(name.toLowerCase())!==-1)return; // already there
+        addTeamMember(i);
+        // Set the value on the last added input
+        if(memContainer){var ins=memContainer.querySelectorAll('input[type=text]');var last=ins[ins.length-1];if(last)last.value=name;}
+        existingNames.push(name.toLowerCase());
       });
       // ADDITIVE: add tasks without clearing existing ones
       var tasks=parsed.tasks||[];
@@ -1113,8 +1092,8 @@ function fetchWx(mode){
     });
 }
 
-function getPlan(){var teams=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var rows=div.querySelectorAll('.trow');var tasks=[];rows.forEach(function(r){var ins=r.querySelectorAll('input');var desc=ins[0].value.trim();if(desc){var tpct=ins[1]&&ins[1].value.trim()?parseFloat(ins[1].value):100;tasks.push({desc:desc,target:tpct});}});var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var leader=g('ptl'+i);var members=[g('ptm'+i+'_0'),g('ptm'+i+'_1'),g('ptm'+i+'_2')].filter(Boolean);var notes=g('pt-notes-'+i);var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');var plantType=g('pt-plant-type-'+i);var plantHrs=g('pt-plant-hrs-'+i);var plantCheckOk=document.getElementById('ptick-det-'+i)&&document.getElementById('ptick-det-'+i).classList.contains('on');var plantInit=g('pt-plant-init-'+i);var plantCheck={type:plantType,hours:plantHrs?parseFloat(plantHrs):null,confirmed:plantCheckOk,initials:plantInit};if(tasks.length||leader)teams.push({team:TLTRS[i]||('T'+(i+1)),leader:leader,members:members,tasks:tasks,notes:notes,plantOk:plantOk,plantCheck:plantCheck});});return teams;}
-function getAlloc(){var a=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var lead=g('ptl'+i);var members=[g('ptm'+i+'_0'),g('ptm'+i+'_1'),g('ptm'+i+'_2'),g('ptm'+i+'_3')].filter(Boolean);var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');var initials=g('pti'+i);if(lead||members.length)a.push({team:TLTRS[i]||('T'+(i+1)),lead:lead,ops:members,plantOk:plantOk,initials:initials});});return a;}
+function getPlan(){var teams=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var rows=div.querySelectorAll('.trow');var tasks=[];rows.forEach(function(r){var ins=r.querySelectorAll('input[type=text]');var desc=ins[0]?ins[0].value.trim():'';if(desc){tasks.push({desc:desc,target:100});}});var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var leader=g('ptl'+i);var memContainer=document.getElementById('members-'+i);var members=memContainer?Array.from(memContainer.querySelectorAll('input[type=text]')).map(function(el){return el.value.trim();}).filter(Boolean):[];var notes=g('pt-notes-'+i);var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');var plantType=g('pt-plant-type-'+i);var plantHrs=g('pt-plant-hrs-'+i);var plantCheckOk=document.getElementById('ptick-det-'+i)&&document.getElementById('ptick-det-'+i).classList.contains('on');var plantInit=g('pt-plant-init-'+i);var plantCheck={type:plantType,hours:plantHrs?parseFloat(plantHrs):null,confirmed:plantCheckOk,initials:plantInit};if(tasks.length||leader)teams.push({team:TLTRS[i]||('T'+(i+1)),leader:leader,members:members,tasks:tasks,notes:notes,plantOk:plantOk,plantCheck:plantCheck});});return teams;}
+function getAlloc(){var a=[];document.querySelectorAll('.tblk[id^="pt"]').forEach(function(div,i){var g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};var lead=g('ptl'+i);var memContainer=document.getElementById('members-'+i);var members=memContainer?Array.from(memContainer.querySelectorAll('input[type=text]')).map(function(el){return el.value.trim();}).filter(Boolean):[];var plantOk=document.getElementById('ptick'+i)&&document.getElementById('ptick'+i).classList.contains('on');var initials=g('pti'+i);if(lead||members.length)a.push({team:TLTRS[i]||('T'+(i+1)),lead:lead,ops:members,plantOk:plantOk,initials:initials});});return a;}
 
 function noNet(){toast('✗ No internet — check your connection','err');}
 
