@@ -17,7 +17,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='2.0.12';
+var APP_VERSION='2.1.0';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -301,51 +301,67 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.0.10</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.1.0</div>
   </div>
 </div>
 
-<div id="sod" style="display:none;min-height:100vh;background:var(--bg);padding:0;">
-  <div style="text-align:center;padding:16px 0 8px;">
-    <img id="sod-logo-img" src="dgc-logo-white.png" alt="DGC" style="height:48px;object-fit:contain;filter:brightness(0) invert(1);">
-  </div>
+<div id="sod" style="display:none;min-height:100vh;background:var(--bg);">
+  <!-- Header -->
   <div class="hdr">
-    <img id="sod-logo" class="dgc-logo" src="dgc-logo-white.png" alt="DGC">
-    <div style="margin-left:auto;">
-      <span class="user-chip" id="sod-name"></span>
+    <img class="dgc-logo" src="dgc-logo-white.png" alt="DGC">
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+      <span id="sod-greeting-label" style="font-size:13px;color:var(--muted);font-weight:600;"></span>
+      <span class="user-chip" id="sod-name-display"></span>
     </div>
   </div>
-  <div style="padding:20px;max-width:860px;margin:0 auto;">
-    <div style="font-size:24px;font-weight:900;margin-bottom:2px;" id="sod-greeting">Good morning</div>
-    <div style="font-size:14px;color:var(--acc);font-weight:800;margin-bottom:4px;" id="sod-dateshow"></div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:12px;" id="sod-subtitle">Here's what was planned for today</div>
-    <div id="sod-dates" style="margin-bottom:8px;display:flex;flex-direction:column;gap:3px;font-size:13px;font-weight:600;color:var(--muted);"></div>
-    <div id="sod-eod-resp" style="display:none;font-size:13px;font-weight:800;color:var(--acc);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:10px 14px;margin-bottom:16px;"></div>
-    <div id="sod-tasks" style="margin-bottom:20px;"></div>
-    <!-- SOD checklist: morning site check -->
-    <div style="margin-bottom:20px;">
-      <div style="background:var(--surf);border:1.5px solid var(--bdr);border-radius:12px;padding:16px;margin-bottom:16px;">
-        <div style="font-size:15px;font-weight:900;margin-bottom:4px;">&#128269; Morning Site Check</div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5;">When you arrived, was the site secure and as expected?</div>
-        <div style="display:flex;gap:8px;">
-          <button id="sod-site-ok" onclick="setSiteCheck(true)" class="btn btn-ghost" style="flex:1;border-color:var(--green);color:var(--green);min-height:52px;font-size:15px;">&#10003; All good</button>
-          <button id="sod-site-nok" onclick="setSiteCheck(false)" class="btn btn-ghost" style="flex:1;border-color:var(--red);color:var(--red);min-height:52px;font-size:15px;">&#10007; Issues</button>
-        </div>
-        <div id="sod-site-issue-row" style="display:none;margin-top:10px;">
-          <textarea id="sod-site-issues" rows="2" placeholder="What was wrong? (e.g. gate open, plant not secured, bins not emptied)" style="font-size:14px;"></textarea>
-        </div>
+
+  <!-- Step indicator -->
+  <div id="sod-steps" style="background:var(--surf);border-bottom:1px solid var(--bdr);padding:12px 16px;">
+    <div style="max-width:860px;margin:0 auto;">
+      <div style="background:var(--bdr);border-radius:6px;height:6px;margin-bottom:8px;overflow:hidden;">
+        <div id="sod-step-bar" style="height:100%;background:var(--acc);border-radius:6px;transition:width .35s;width:33%;"></div>
       </div>
-      <!-- hidden legacy elements kept for sodSignOff() compatibility -->
-      <div id="sod-checklist" style="display:none;"></div>
-      <div id="sod-progress" style="display:none;"></div>
-      <div id="sod-signoff-hint" style="display:none;font-size:12px;color:var(--muted);margin-top:8px;text-align:center;">Tick all items above to unlock sign-off</div>
-      <button class="btn btn-submit" id="sod-signoff-btn" onclick="sodSignOff()" style="margin-top:10px;">&#10003; Sign Off Morning Check</button>
-      <div id="sod-signoff-done" style="display:none;font-size:13px;font-weight:800;color:var(--green);margin-top:8px;text-align:center;"></div>
+      <div id="sod-step-label" style="font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--acc);">Step 1 of 3 &#8212; Morning Check</div>
     </div>
-    <div style="margin-top:4px;display:flex;flex-direction:column;gap:10px;">
-      <button class="btn btn-submit" onclick="startDay()">Start the Day &rarr;</button>
-      <button class="btn btn-ghost" style="width:100%;font-size:13px;min-height:44px;" onclick="startDaySkip()">Skip &mdash; already checked in this morning</button>
+  </div>
+
+  <!-- Step 1: Site Check -->
+  <div id="sod-panel-1" style="padding:16px;max-width:860px;margin:0 auto;">
+    <div style="font-size:22px;font-weight:900;margin-bottom:6px;" id="sod-greeting">Good morning</div>
+    <div style="font-size:14px;color:var(--acc);font-weight:800;margin-bottom:20px;" id="sod-dateshow"></div>
+
+    <div style="background:var(--surf);border:1.5px solid var(--bdr);border-radius:14px;padding:20px;margin-bottom:16px;">
+      <div style="font-size:16px;font-weight:900;margin-bottom:8px;color:var(--txt);">When you arrived this morning, was the site secure and as you expected from yesterday?</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.55;">Check perimeter, cabins, plant, materials, fencing.</div>
+      <div style="display:flex;gap:10px;">
+        <button id="sod-site-ok" onclick="setSiteCheck2(true)" class="btn btn-ghost" style="flex:1;border-color:var(--green);color:var(--green);min-height:58px;font-size:15px;font-weight:900;">&#10003; All good &#8212; everything in order</button>
+        <button id="sod-site-nok" onclick="setSiteCheck2(false)" class="btn btn-ghost" style="flex:1;border-color:var(--red);color:var(--red);min-height:58px;font-size:15px;font-weight:900;">&#10007; Issues &#8212; something wasn&#39;t done</button>
+      </div>
+      <div id="sod-site-issue-row" style="display:none;margin-top:14px;">
+        <button class="mic" id="mic-sod-site" onclick="vm('sod-site','sod-site-issues')" style="margin-bottom:8px;"><span class="mic-icon">&#127908;</span><span class="mic-label">What wasn&#39;t done? Tap to record.</span></button>
+        <textarea id="sod-site-issues" rows="3" placeholder="What was wrong? (e.g. gate open, plant not secured, bins not emptied)" style="font-size:14px;"></textarea>
+      </div>
     </div>
+
+    <!-- hidden legacy elements kept for backward compat -->
+    <div id="sod-checklist" style="display:none;"></div>
+    <div id="sod-progress" style="display:none;"></div>
+    <div id="sod-signoff-hint" style="display:none;"></div>
+
+    <button id="sod-next-1" onclick="sodNext(2)" disabled class="btn btn-submit" style="margin-top:8px;">Continue &#8594;</button>
+  </div>
+
+  <!-- Step 2: Yesterday's Results -->
+  <div id="sod-panel-2" style="display:none;padding:16px;max-width:860px;margin:0 auto;">
+    <div id="sod-results-list"></div>
+    <button id="sod-next-2" onclick="sodNext(3)" disabled class="btn btn-submit" style="margin-top:16px;">Continue &#8594;</button>
+  </div>
+
+  <!-- Step 3: Attendance -->
+  <div id="sod-panel-3" style="display:none;padding:16px;max-width:860px;margin:0 auto;">
+    <div id="sod-attendance-list"></div>
+    <button id="sod-signoff" onclick="sodSignOff()" disabled class="btn btn-submit" style="margin-top:16px;background:var(--acc);color:#0f1117;">Sign Off Morning Check &#8594;</button>
+    <div id="sod-signoff-done" style="display:none;font-size:13px;font-weight:800;color:var(--green);margin-top:8px;text-align:center;"></div>
   </div>
 </div>
 
@@ -1748,287 +1764,247 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function toast(m,t){var el=document.getElementById('toast');el.textContent=m;el.className='toast show'+(t==='err'?' err':'');setTimeout(function(){el.classList.remove('show');},2800);}
 
 var _sodPlanData=null;
-var SOD_ITEMS=[
-  {k:'site_clean',l:'Site &amp; compound clean'},
-  {k:'bins',l:'Bins emptied'},
-  {k:'welfare',l:'Welfare clean &amp; tidy'},
-  {k:'tools',l:'Tools stored / locked away'},
-  {k:'heras',l:'Heras / fencing secure'},
-  {k:'plant',l:'Plant immobilised, keys removed'},
-  {k:'cabins',l:'All cabins locked'},
-  {k:'gen',l:'Generator switched off'}
-];
-// _sodChecks: {key: {state:'done'|'missed'|'', reason:''}}
+// ── NEW SOD MULTI-STEP STATE ──
+var _sodStep=1;
+var _sodSiteOk=null;
+var _sodSiteNote='';
+var _sodResults={};
+var _sodAttendance2={};
+var _sodPlanData2=null;
+// Legacy compatibility
+var SOD_ITEMS=[];
 var _sodChecks={};
 
-function updateSODProgress(){
-  var total=SOD_ITEMS.length;
-  var done=0,missed=0,remaining=0;
-  SOD_ITEMS.forEach(function(item){
-    var s=_sodChecks[item.k]?_sodChecks[item.k].state:'';
-    if(s==='done')done++;
-    else if(s==='missed')missed++;
-    else remaining++;
-  });
-  var progEl=document.getElementById('sod-progress');
-  if(progEl){
-    var parts=[];
-    if(done>0)parts.push('<span style="color:var(--green);font-weight:800;">'+done+' done</span>');
-    if(missed>0)parts.push('<span style="color:var(--acc);font-weight:800;">'+missed+' missed</span>');
-    if(remaining>0)parts.push('<span style="color:var(--muted);">'+remaining+' remaining</span>');
-    progEl.innerHTML=parts.join(' &middot; ');
-  }
-  var btnEl=document.getElementById('sod-signoff-btn');
-  var hintEl=document.getElementById('sod-signoff-hint');
-  if(btnEl){
-    if(remaining===0){
-      btnEl.disabled=false;
-      if(hintEl)hintEl.style.display='none';
-      if(missed>0){
-        btnEl.textContent='Sign Off — '+missed+' item'+(missed===1?'':'s')+' missed (I acknowledge this)';
-      }else{
-        btnEl.textContent='✓ Sign Off Morning Check';
-      }
-    }else{
-      btnEl.disabled=true;
-      btnEl.textContent='✓ Sign Off Morning Check';
-      if(hintEl)hintEl.style.display='block';
-    }
-  }
-}
+function updateSODProgress(){/* legacy stub — replaced by multi-step SOD */}
 
 function showSOD(planData,name){
   _sodPlanData=planData;
+  _sodPlanData2=planData;
+  _sodStep=1;
+  _sodSiteOk=null;
+  _sodSiteNote='';
+  _sodResults={};
+  _sodAttendance2={};
+
+  // Set name chip and greeting
+  var nd=document.getElementById('sod-name-display');
+  if(nd)nd.textContent=name;
   var hour=new Date().getHours();
   var greet=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
-  document.getElementById('sod-greeting').textContent=greet+', '+name;
-  document.getElementById('sod-name').textContent=name;
+  var gl=document.getElementById('sod-greeting-label');
+  if(gl)gl.textContent=greet+', '+name;
+  var greetEl=document.getElementById('sod-greeting');
+  if(greetEl)greetEl.textContent=greet+', '+name;
   var dateShowEl=document.getElementById('sod-dateshow');
   if(dateShowEl)dateShowEl.textContent=fmtD(tod());
 
-  // If SOD already completed today, show banner + quick continue button
-  var alreadyDone=sessionStorage.getItem('dgc_sod_done_'+tod());
-  var existingBanner=document.getElementById('sod-already-done-banner');
-  if(existingBanner)existingBanner.parentNode.removeChild(existingBanner);
-  if(alreadyDone){
-    var banner=document.createElement('div');
-    banner.id='sod-already-done-banner';
-    banner.style.cssText='background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;';
-    banner.innerHTML='<div style="font-size:13px;font-weight:700;color:var(--green);">&#10003; Morning check already submitted today &mdash; you can review or continue</div>'
-      +'<button onclick="startDay()" style="background:var(--green);color:#0f1117;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:900;cursor:pointer;white-space:nowrap;min-height:40px;font-family:inherit;">Continue to Daily Planner &rarr;</button>';
-    var greetEl=document.getElementById('sod-greeting');
-    if(greetEl&&greetEl.parentNode)greetEl.parentNode.insertBefore(banner,greetEl);
-  }
-
-  // Show two dates: plan saved date + today
-  var datesEl=document.getElementById('sod-dates');
-  if(datesEl){
-    var savedDate=planData.date?fmtD(planData.date):'unknown';
-    var todayDate=fmtD(tod());
-    datesEl.innerHTML='<div><span style="color:var(--muted);">Plan saved:</span> <strong style="color:var(--txt);">'+savedDate+'</strong></div>'
-      +'<div><span style="color:var(--muted);">Today:</span> <strong style="color:var(--txt);">'+todayDate+'</strong></div>';
-  }
-
-  // Show EOD responsibility from yesterday's plan
-  var eodEl=document.getElementById('sod-eod-resp');
-  if(eodEl){
-    var eodResp=planData.eodResponsibility;
-    if(eodResp&&eodResp.person){
-      var teamStr=eodResp.team?(' (Team '+eodResp.team+')'):'';
-      eodEl.textContent='EOD responsibility yesterday: '+eodResp.person+teamStr;
-      eodEl.style.display='block';
-    }else{
-      eodEl.style.display='none';
-    }
-  }
-
-  var plan=planData.plan||[];
-  var tasks=[];
-  plan.forEach(function(t){(t.tasks||[]).forEach(function(tk){tasks.push({team:t.team,desc:tk.desc,target:tk.target||100});});});
-  var container=document.getElementById('sod-tasks');
-  if(!tasks.length){
-    container.innerHTML='<div style="color:var(--muted);font-size:13px;padding:12px 0;">No plan recorded for yesterday. Carry on!</div>';
-  }else{
-    container.innerHTML=tasks.map(function(t,i){
-      var col={A:'#f59e0b',B:'#38bdf8',C:'#a78bfa',D:'#22c55e',E:'#fb923c'}[t.team]||'#94a3b8';
-      return '<div style="background:var(--surf);border:1.5px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;">'
-        +'<div class="ptick" id="sod-tick-'+i+'" onclick="var el=this;el.classList.toggle(\'on\');el.textContent=el.classList.contains(\'on\')?\'&#10003;\':\'\';"></div>'
-        +'<div style="flex:1;">'
-        +'<div style="font-size:11px;font-weight:800;color:'+col+';margin-bottom:2px;">TEAM '+t.team+' &mdash; Target: '+t.target+'%</div>'
-        +'<div style="font-size:14px;font-weight:600;">'+esc(t.desc)+'</div>'
-        +'</div>'
-        +'</div>';
-    }).join('');
-  }
-
-  // Build attendance section BEFORE site checklist (remove previous if re-opening)
-  var oldAtt=document.getElementById('att-section');
-  if(oldAtt)oldAtt.parentNode.removeChild(oldAtt);
-  var attContainer=document.createElement('div');
-  attContainer.id='att-section';
-  attContainer.style.cssText='margin-bottom:20px;';
-  attContainer.innerHTML=buildAttendanceSection(planData);
-  var clParent=document.getElementById('sod-checklist').parentNode;
-  clParent.parentNode.insertBefore(attContainer,clParent);
-
-  // Build SOD checklist — three-state: done / missed / blank
-  _sodChecks={};
-  var clEl=document.getElementById('sod-checklist');
-  if(clEl){
-    clEl.innerHTML='';
-    SOD_ITEMS.forEach(function(item){
-      _sodChecks[item.k]={state:'',reason:''};
-
-      var wrapper=document.createElement('div');
-      wrapper.style.cssText='padding:4px 0;border-bottom:1px solid var(--bdr);';
-
-      var row=document.createElement('div');
-      row.className='sod-row';
-      row.id='sod-row-'+item.k;
-
-      var btnGroup=document.createElement('div');
-      btnGroup.className='sod-btns';
-
-      var btnDone=document.createElement('button');
-      btnDone.className='sod-btn';
-      btnDone.id='sod-done-'+item.k;
-      btnDone.textContent='✓ Done';
-
-      var btnMissed=document.createElement('button');
-      btnMissed.className='sod-btn';
-      btnMissed.id='sod-miss-'+item.k;
-      btnMissed.textContent='✗ Missed';
-
-      var lbl=document.createElement('div');
-      lbl.className='sod-label';
-      lbl.innerHTML=item.l;
-
-      // Reason input (hidden until missed)
-      var reasonWrap=document.createElement('div');
-      reasonWrap.id='sod-reason-wrap-'+item.k;
-      reasonWrap.style.display='none';
-      var reasonIn=document.createElement('input');
-      reasonIn.type='text';
-      reasonIn.className='sod-reason';
-      reasonIn.id='sod-reason-'+item.k;
-      reasonIn.placeholder='Why? (optional)';
-      reasonIn.oninput=function(){_sodChecks[item.k].reason=reasonIn.value;};
-      reasonWrap.appendChild(reasonIn);
-
-      function applyState(newState){
-        var cur=_sodChecks[item.k].state;
-        // Tapping active button resets to blank
-        if(cur===newState)newState='';
-        _sodChecks[item.k].state=newState;
-
-        // Update button classes
-        btnDone.classList.toggle('done',newState==='done');
-        btnMissed.classList.toggle('missed',newState==='missed');
-
-        // Update row class
-        row.classList.toggle('is-done',newState==='done');
-        row.classList.toggle('is-missed',newState==='missed');
-
-        // Show reason input only when missed
-        reasonWrap.style.display=(newState==='missed')?'block':'none';
-        if(newState!=='missed'){_sodChecks[item.k].reason='';reasonIn.value='';}
-
-        updateSODProgress();
-      }
-
-      btnDone.onclick=function(e){e.stopPropagation();applyState('done');};
-      btnMissed.onclick=function(e){e.stopPropagation();applyState('missed');};
-
-      btnGroup.appendChild(btnDone);
-      btnGroup.appendChild(btnMissed);
-      row.appendChild(btnGroup);
-      row.appendChild(lbl);
-      wrapper.appendChild(row);
-      wrapper.appendChild(reasonWrap);
-      clEl.appendChild(wrapper);
-    });
-    // Add wrapper styles via last-child trick — remove border on last wrapper
-    var wrappers=clEl.querySelectorAll('div[style]');
-    if(wrappers.length>0)wrappers[wrappers.length-1].style.borderBottom='none';
-  }
-
-  // Reset sign-off state and site check
-  _siteCheckOk=null;
+  // Reset Step 1 buttons
   var okBtn=document.getElementById('sod-site-ok');var nokBtn=document.getElementById('sod-site-nok');
   if(okBtn){okBtn.style.background='';okBtn.style.color='';}
   if(nokBtn){nokBtn.style.background='';nokBtn.style.color='';}
   var issueRow=document.getElementById('sod-site-issue-row');if(issueRow)issueRow.style.display='none';
   var issueTA=document.getElementById('sod-site-issues');if(issueTA)issueTA.value='';
-  var doneEl=document.getElementById('sod-signoff-done');
-  var btnEl=document.getElementById('sod-signoff-btn');
-  if(doneEl)doneEl.style.display='none';
-  if(btnEl){btnEl.style.display='block';btnEl.disabled=false;btnEl.textContent='✓ Sign Off Morning Check';}
+  var btn1=document.getElementById('sod-next-1');if(btn1)btn1.disabled=true;
 
+  // Build Step 2 (results)
+  buildSODResults(planData);
+  // Build Step 3 (attendance)
+  buildSODAttendance(planData);
+
+  // Show the SOD screen at step 1
   document.getElementById('ls').style.display='none';
   document.getElementById('app').style.display='none';
   document.getElementById('sod').style.display='block';
   document.body.style.overflow='';
+  sodShowPanel(1);
+}
+
+function sodShowPanel(n){
+  _sodStep=n;
+  [1,2,3].forEach(function(i){
+    var p=document.getElementById('sod-panel-'+i);
+    if(p)p.style.display=i===n?'block':'none';
+  });
+  var bar=document.getElementById('sod-step-bar');
+  if(bar)bar.style.width=(n/3*100)+'%';
+  var lbl=document.getElementById('sod-step-label');
+  if(lbl)lbl.textContent='Step '+n+' of 3 — '+['','Morning Check','Yesterday\'s Results','Attendance'][n];
+  // Scroll to top of page on step change
+  window.scrollTo(0,0);
+}
+
+function sodNext(n){sodShowPanel(n);}
+
+function setSiteCheck2(ok){
+  _sodSiteOk=ok;
+  var okBtn=document.getElementById('sod-site-ok');
+  var nokBtn=document.getElementById('sod-site-nok');
+  if(okBtn){okBtn.style.background=ok?'var(--green)':'';okBtn.style.color=ok?'#0f1117':'';}
+  if(nokBtn){nokBtn.style.background=!ok?'var(--red)':'';nokBtn.style.color=!ok?'#fff':'';}
+  var issueRow=document.getElementById('sod-site-issue-row');
+  if(issueRow)issueRow.style.display=ok?'none':'block';
+  var btn=document.getElementById('sod-next-1');
+  if(btn)btn.disabled=false;
+}
+
+// Legacy alias — keep for any residual references
+function setSiteCheck(ok){setSiteCheck2(ok);}
+
+function buildSODResults(planData){
+  var container=document.getElementById('sod-results-list');
+  if(!container)return;
+  _sodResults={};
+  var plan=planData&&planData.plan||[];
+  if(!plan.length){
+    container.innerHTML='<div style="background:var(--surf);border:1.5px solid var(--bdr);border-radius:12px;padding:24px;text-align:center;color:var(--muted);margin-bottom:12px;">No plan from yesterday to review.</div>';
+    var btn=document.getElementById('sod-next-2');if(btn)btn.disabled=false;
+    return;
+  }
+  var html='<div style="font-size:13px;color:var(--muted);margin-bottom:16px;padding:10px 14px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.18);border-radius:10px;line-height:1.6;">Enter actual % achieved for each team. Be honest &#8212; this is your record.</div>';
+  var taskIdx=0;
+  plan.forEach(function(team){
+    var col={A:'#f59e0b',B:'#38bdf8',C:'#a78bfa',D:'#22c55e',E:'#fb923c'}[team.team]||'#94a3b8';
+    (team.tasks||[]).forEach(function(task){
+      var idx=taskIdx++;
+      _sodResults[idx]={actual:null,note:''};
+      html+='<div style="background:var(--surf);border:1.5px solid var(--bdr);border-left:4px solid '+col+';border-radius:12px;padding:14px;margin-bottom:12px;">';
+      html+='<div style="font-size:11px;font-weight:800;color:'+col+';margin-bottom:4px;">TEAM '+team.team+(team.leader?' — '+team.leader:'')+'</div>';
+      html+='<div style="font-size:14px;font-weight:700;color:var(--txt);margin-bottom:10px;">'+esc(task.desc||'')+'</div>';
+      html+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
+      html+='<div style="font-size:12px;color:var(--muted);">Planned: <strong>'+(task.target||100)+'%</strong></div>';
+      html+='<div style="flex:1;"></div>';
+      html+='<div style="font-size:12px;color:var(--muted);">Actual:</div>';
+      html+='<input type="number" inputmode="numeric" min="0" max="100" placeholder="%" id="sod-actual-'+idx+'" onchange="sodResultChange('+idx+','+(task.target||100)+')" style="width:80px;font-size:20px;font-weight:900;text-align:center;padding:8px;min-height:52px;border-color:'+col+'44;">';
+      html+='</div>';
+      html+='<div id="sod-note-row-'+idx+'" style="display:none;">';
+      html+='<button class="mic" id="mic-sod-'+idx+'" onclick="vm(\'sod-mic-'+idx+'\',\'sod-note-'+idx+'\')" style="margin-bottom:6px;"><span class="mic-icon">&#127908;</span><span class="mic-label"> Why did they miss the target? (optional)</span></button>';
+      html+='<textarea id="sod-note-'+idx+'" rows="2" placeholder="What happened?"></textarea>';
+      html+='</div>';
+      html+='</div>';
+    });
+  });
+  container.innerHTML=html;
+}
+
+function sodResultChange(idx,target){
+  var el=document.getElementById('sod-actual-'+idx);
+  if(!el)return;
+  var val=parseInt(el.value);
+  if(!isNaN(val)){
+    _sodResults[idx].actual=val;
+    var noteRow=document.getElementById('sod-note-row-'+idx);
+    if(noteRow)noteRow.style.display=val<target?'block':'none';
+  }else{
+    _sodResults[idx].actual=null;
+  }
+  var allFilled=Object.keys(_sodResults).every(function(k){return _sodResults[k].actual!==null;});
+  var btn=document.getElementById('sod-next-2');
+  if(btn)btn.disabled=!allFilled;
+}
+
+function buildSODAttendance(planData){
+  var container=document.getElementById('sod-attendance-list');
+  if(!container)return;
+  _sodAttendance2={};
+  var alloc=planData&&planData.alloc||[];
+  var people=[];
+  alloc.forEach(function(a){
+    if(a.lead&&a.lead.trim())people.push({name:a.lead,team:a.team,role:'Lead'});
+    (a.ops||[]).forEach(function(op){if(op&&op.trim())people.push({name:op,team:a.team,role:'Operative'});});
+  });
+  if(!people.length){
+    container.innerHTML='<div style="background:var(--surf);border:1.5px solid var(--bdr);border-radius:12px;padding:24px;text-align:center;color:var(--muted);">No team record from yesterday.<br>Fill in your team on the planning form.</div>';
+    var btn=document.getElementById('sod-signoff');if(btn)btn.disabled=false;
+    return;
+  }
+  var col={A:'#f59e0b',B:'#38bdf8',C:'#a78bfa',D:'#22c55e',E:'#fb923c'};
+  var html='<div style="font-size:13px;color:var(--muted);margin-bottom:16px;padding:10px 14px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.18);border-radius:10px;line-height:1.6;">Mark who is on site today.</div>';
+  people.forEach(function(p){
+    var c=col[p.team]||'#94a3b8';
+    _sodAttendance2[p.name]=null;
+    var key=p.name.replace(/\s/g,'_').replace(/[^A-Za-z0-9_]/g,'');
+    html+='<div style="background:var(--surf);border:1.5px solid var(--bdr);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">';
+    html+='<div style="flex:1;"><div style="font-size:14px;font-weight:700;">'+esc(p.name)+'</div><div style="font-size:11px;color:'+c+';font-weight:800;">Team '+p.team+' '+p.role+'</div></div>';
+    html+='<button onclick="sodMarkAttend(\''+p.name.replace(/'/g,"\\'")+'\')" id="att2-in-'+key+'" class="btn btn-ghost btn-sm" style="border-color:var(--green);min-width:80px;">&#10003; In</button>';
+    html+='<button onclick="sodMarkAbsent(\''+p.name.replace(/'/g,"\\'")+'\')" id="att2-out-'+key+'" class="btn btn-ghost btn-sm" style="border-color:var(--red);min-width:80px;">&#10007; Absent</button>';
+    html+='</div>';
+  });
+  container.innerHTML=html;
+  // Store people for sodSignOff
+  window._sodAttPeople2=people;
+}
+
+function sodMarkAttend(name){
+  _sodAttendance2[name]='in';
+  _sodUpdateAttendBtn(name,'in');
+}
+function sodMarkAbsent(name){
+  _sodAttendance2[name]='absent';
+  _sodUpdateAttendBtn(name,'absent');
+}
+function _sodUpdateAttendBtn(name,status){
+  var key=name.replace(/\s/g,'_').replace(/[^A-Za-z0-9_]/g,'');
+  var inBtn=document.getElementById('att2-in-'+key);
+  var outBtn=document.getElementById('att2-out-'+key);
+  if(inBtn){inBtn.style.background=status==='in'?'var(--green)':'';inBtn.style.color=status==='in'?'#0f1117':'';}
+  if(outBtn){outBtn.style.background=status==='absent'?'var(--red)':'';outBtn.style.color=status==='absent'?'#fff':'';}
+  var allDone=Object.values(_sodAttendance2).every(function(v){return v!==null;});
+  var btn=document.getElementById('sod-signoff');
+  if(btn)btn.disabled=!allDone;
+  // Also sync into legacy _sodAttendance for showTodayPlan compatibility
+  _sodAttendance[name]=status;
 }
 
 function resetMorningCheck(){
-  var today=tod();
-  sessionStorage.removeItem('dgc_sod_done_'+today);
-  toast('Morning check reset — restart app to test flow');
+  toast('Morning check reset — log out and back in to restart the flow');
 }
 
-var _siteCheckOk=null;
-function setSiteCheck(ok){
-  _siteCheckOk=ok;
-  document.getElementById('sod-site-ok').style.background=ok?'var(--green)':'';
-  document.getElementById('sod-site-ok').style.color=ok?'#0f1117':'';
-  document.getElementById('sod-site-nok').style.background=!ok?'var(--red)':'';
-  document.getElementById('sod-site-nok').style.color=!ok?'#fff':'';
-  document.getElementById('sod-site-issue-row').style.display=ok?'none':'block';
-}
+var _siteCheckOk=null;// legacy alias — _sodSiteOk is canonical
 
 function sodSignOff(){
-  // Guard: require site check to have been answered
-  if(_siteCheckOk===null){toast('✗ Please answer the morning site check first','err');return;}
-
-  var checks={};
-  var missedItems=[];
-  var missedCount=0;
-  SOD_ITEMS.forEach(function(item){
-    var s=_sodChecks[item.k]||{state:'',reason:''};
-    checks[item.k]=s.state;
-    if(s.state==='missed'){missedCount++;missedItems.push(item.l);}
+  // Collect results notes
+  Object.keys(_sodResults).forEach(function(k){
+    var ta=document.getElementById('sod-note-'+k);
+    if(ta)_sodResults[k].note=ta.value;
   });
-  var allDone=(missedCount===0);
   var siteIssueText=document.getElementById('sod-site-issues')?document.getElementById('sod-site-issues').value:'';
-
   var signedAt=new Date().toISOString();
   var rec={type:'dgc-sod',signer:_uname,signedAt:signedAt,
-    siteCheckOk:_siteCheckOk,siteIssues:_siteCheckOk===false?siteIssueText:'',
-    checks:checks,missedItems:missedItems,missedCount:missedCount,allDone:allDone,
-    attendance:Object.assign({},_sodAttendance)};
-  var btn=document.getElementById('sod-signoff-btn');
+    siteCheckOk:_sodSiteOk,siteIssues:_sodSiteOk===false?siteIssueText:'',
+    results:Object.assign({},_sodResults),
+    attendance:Object.assign({},_sodAttendance2)};
+  var btn=document.getElementById('sod-signoff');
   if(btn){btn.disabled=true;btn.textContent='Saving...';}
+  function afterSave(){
+    toast('Morning check signed off');
+    var doneEl=document.getElementById('sod-signoff-done');
+    if(doneEl){doneEl.textContent='Signed off by '+_uname+' at '+new Date(signedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});doneEl.style.display='block';}
+    if(btn)btn.style.display='none';
+    // Sync attendance into legacy _sodAttendance for showTodayPlan
+    Object.keys(_sodAttendance2).forEach(function(n){_sodAttendance[n]=_sodAttendance2[n]||'';});
+    setTimeout(function(){_sodAfterSignOff();},1000);
+  }
   if(sb){
     sb.from('daily_records').insert({project_ref:PROJECT_REF,gang:'SOD_'+_uname,date:tod(),data:rec,updated_at:signedAt})
       .then(function(r){
-        if(r&&r.error){toast('Sign-off save failed: '+(r.error.message||'unknown error'),'err');if(btn){btn.disabled=false;updateSODProgress();}}
-        else{
-          toast('✓ Morning check signed off');
-          var doneEl=document.getElementById('sod-signoff-done');
-          var suffix=missedCount>0?' ('+missedCount+' item'+(missedCount===1?'':'s')+' missed)':'';
-          if(doneEl){doneEl.textContent='✓ Signed off by '+_uname+' at '+new Date(signedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+suffix;doneEl.style.display='block';}
-          if(btn)btn.style.display='none';
-          setTimeout(function(){startDay();},1200);
-        }
+        if(r&&r.error){toast('Save failed: '+(r.error.message||'unknown'),'err');if(btn){btn.disabled=false;btn.textContent='Sign Off Morning Check &#8594;';}}
+        else{afterSave();}
       })
-      .catch(function(e){toast('Sign-off save failed','err');if(btn){btn.disabled=false;updateSODProgress();}});
+      .catch(function(){afterSave();});// proceed offline
+  }else{afterSave();}
+}
+
+function _sodAfterSignOff(){
+  document.getElementById('sod').style.display='none';
+  if(_sodPlanData&&_sodPlanData.plan&&_sodPlanData.plan.length){
+    showApp();
+    // Switch to Today tab
+    setTimeout(function(){
+      var todayBtn=document.getElementById('nav-today-tab');
+      if(todayBtn)sw('today-tab',todayBtn);
+    },100);
   }else{
-    toast('✓ Morning check signed off (offline)');
-    var doneEl=document.getElementById('sod-signoff-done');
-    var suffix=missedCount>0?' ('+missedCount+' item'+(missedCount===1?'':'s')+' missed)':'';
-    if(doneEl){doneEl.textContent='✓ Signed off by '+_uname+' at '+new Date(signedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+suffix;doneEl.style.display='block';}
-    if(btn)btn.style.display='none';
-    setTimeout(function(){startDay();},1200);
+    showApp();
   }
 }
 
@@ -2197,13 +2173,9 @@ function updateCapacityDisplay(){
 }
 
 function startDay(){
+  // Legacy — now just goes to app without bypass
   document.getElementById('sod').style.display='none';
-  sessionStorage.setItem('dgc_sod_done_'+tod(),'1');
-  if(window._sodPlanData&&window._sodPlanData.plan&&window._sodPlanData.plan.length){
-    showTodayPlan(window._sodPlanData);
-  }else{
-    showApp();
-  }
+  showApp();
 }
 
 function fetchTodayWeatherBrief(callback){
@@ -2505,16 +2477,13 @@ function emailTodayPlan(planData){
   window.location.href='mailto:david@dgc.im?cc=info@dgc.im&subject='+encodeURIComponent('DGC Daily Plan - '+fmtD(tod()))+'&body='+encodeURIComponent(body);
 }
 
-function startDaySkip(){
-  sessionStorage.setItem('dgc_sod_done_'+tod(),'1');
-  document.getElementById('sod').style.display='none';
-  showApp();
-}
+function startDaySkip(){/* removed — SOD is now mandatory */}
 
 function reopenSOD(){
   if(_sodPlanData){
     document.getElementById('app').style.display='none';
-    document.getElementById('sod').style.display='block';
+    document.getElementById('today-plan').style.display='none';
+    showSOD(_sodPlanData,_uname);
   }else{
     toast('No plan loaded yet','err');
   }
