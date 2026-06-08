@@ -307,7 +307,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.19</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.20</div>
   </div>
 </div>
 
@@ -475,7 +475,7 @@ select{
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Formal Site Diary</span><span class="sec-s">Official manager record — kept for DGC files and any future disputes</span></div></div>
   <div class="card">
     <textarea id="fnt" rows="10" style="min-height:220px;margin-bottom:6px;" placeholder="Official record: ground conditions, weather impact, what was done, what was delayed and why. Be specific. Dates, names, quantities."></textarea>
-    <button class="mic" id="mic-nt" onclick="vm('nt','fnt')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate formal site diary</span></button>
+    <button class="mic" id="mic-nt" onclick="vm('nt','fnt')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate site diary</span></button>
   </div>
 
   <!-- EOD RESPONSIBILITY — moved to bottom -->
@@ -933,15 +933,29 @@ function vm(id,tid){if(!('webkitSpeechRecognition'in window||'SpeechRecognition'
   btn.classList.add('on');var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent='⏹';if(lb)lb.textContent='Stop — tap to finish';
   _lastResultIdx=-1;
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;_mic=new SR();_mic.continuous=true;_mic.interimResults=true;_mic.lang='en-GB';var final='',existing=document.getElementById(tid).value;var valueAtStop='';
-  _mic.onresult=function(e){if(e.resultIndex<_lastResultIdx)return;_lastResultIdx=e.results.length;var interim='';for(var i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';else interim+=e.results[i][0].transcript;}document.getElementById(tid).value=(existing?existing+' ':'')+(final+interim).trim();
+  _mic.onresult=function(e){if(e.resultIndex<_lastResultIdx)return;_lastResultIdx=e.results.length;
+    // Only accumulate FINAL results — don't show interim garbage in the field
+    for(var i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';}
     // Reset silence timer — 8s for site diary (id='nt'), 3s for everything else
     if(_silenceTimer)clearTimeout(_silenceTimer);
     var silenceMs=(_ma==='nt')?8000:3000;
     _silenceTimer=setTimeout(function(){stopV();},silenceMs);
   };
   _mic.onerror=function(){if(_silenceTimer){clearTimeout(_silenceTimer);_silenceTimer=null;}stopV();};
-  _mic.onend=function(){if(_micStopping){_micStopping=false;return;}var captured=final.trim();valueAtStop=document.getElementById(tid).value;// Fallback: if no final transcript, use what's in the field minus the existing prefix
-if(!captured){var cur=document.getElementById(tid).value;var exTrim=(existing?existing.trim():'');captured=cur.replace(exTrim,'').trim();}stopV();if(captured&&CLAUDE_KEY){var cleanBtn=document.getElementById('mic-'+id);if(cleanBtn){var cic=cleanBtn.querySelector('.mic-icon');if(cic)cic.textContent='⏳';var clb=cleanBtn.querySelector('.mic-label');if(clb)clb.textContent='Cleaning up...';}aiClean(tid,captured,valueAtStop,id);}};
+  _mic.onend=function(){
+    _micStopping=false; // Always reset — don't block AI
+    var captured=final.trim();
+    stopV();
+    if(captured&&CLAUDE_KEY){
+      var cleanBtn=document.getElementById('mic-'+id);
+      if(cleanBtn){var cic=cleanBtn.querySelector('.mic-icon');if(cic)cic.textContent='⏳';var clb=cleanBtn.querySelector('.mic-label');if(clb)clb.textContent='Cleaning up...';}
+      aiClean(tid,captured,existing,id);
+    }else if(captured){
+      // No AI key — write raw transcript directly
+      var ta=document.getElementById(tid);
+      if(ta)ta.value=(existing?existing.trim()+' ':'')+captured;
+    }
+  };
   _mic.start();}
 function stopV(){if(_silenceTimer){clearTimeout(_silenceTimer);_silenceTimer=null;}if(_mic){try{_micStopping=true;_mic.stop();}catch(e){_micStopping=false;}}_mic=null;if(_ma){var btn=document.getElementById('mic-'+_ma);if(btn){btn.classList.remove('on');var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent=MIC_ICON;var lb=btn.querySelector('.mic-label');if(lb)lb.textContent=_micLabels[_ma]||'Dictate';}_ma=null;}}
 function aiClean(tid,raw,valueAtStop,micId){
@@ -953,7 +967,7 @@ function aiClean(tid,raw,valueAtStop,micId){
   .then(function(d){
     if(d.content&&d.content[0]){
       // Only overwrite if user hasn't edited the field since voice stopped
-      if(ta.value===valueAtStop){ta.value=d.content[0].text.trim();}
+      if(ta.value===valueAtStop){var cleaned=d.content[0].text.trim();ta.value=valueAtStop?valueAtStop.trim()+' '+cleaned:cleaned;}
       toast('✓ Cleaned up');
     }else if(d.error){
       toast('✗ AI error: '+(d.error.message||JSON.stringify(d.error)),'err');
