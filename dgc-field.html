@@ -17,7 +17,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='2.2.13';
+var APP_VERSION='2.2.22';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -307,7 +307,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.21</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.22</div>
   </div>
 </div>
 
@@ -336,9 +336,6 @@ select{
   <div id="sod-signoff-section" style="padding:16px 0;">
     <button class="btn btn-submit" onclick="sodSignOff()">&#128221; Sign Off Morning Check &#8594;</button>
     <div id="sod-signoff-note" style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px;"></div>
-    <div style="text-align:center;margin-top:20px;">
-      <button onclick="sodDemoReset()" style="background:none;border:1px solid var(--bdr);border-radius:8px;color:var(--muted);font-size:11px;font-weight:700;padding:7px 16px;cursor:pointer;letter-spacing:.04em;opacity:.6;">&#8635; Reset for demo</button>
-    </div>
   </div>
 
 </div>
@@ -398,7 +395,7 @@ select{
 
 <!-- TOMORROW'S PLAN / EOD RECORD -->
 <div class="tab" id="tab-eod">
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; Plan</span><span class="sec-s" id="dl"></span><button onclick="sw('hist',null)" style="background:rgba(148,163,184,.1);border:1.5px solid rgba(148,163,184,.25);border-radius:8px;color:var(--muted);font-size:11px;font-weight:800;font-family:inherit;padding:5px 10px;cursor:pointer;white-space:nowrap;min-height:32px;">&#128336; History</button><button onclick="showProgramme()" style="background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.3);border-radius:8px;color:var(--blue);font-size:11px;font-weight:800;font-family:inherit;padding:5px 10px;cursor:pointer;white-space:nowrap;min-height:32px;">&#128202; Programme</button></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; Plan</span><span class="sec-s" id="dl"></span></div><div style="display:flex;gap:6px;flex-wrap:wrap;align-self:flex-start;"><button onclick="sw('hist',null)" style="background:rgba(148,163,184,.1);border:1.5px solid rgba(148,163,184,.25);border-radius:8px;color:var(--muted);font-size:11px;font-weight:800;font-family:inherit;padding:5px 10px;cursor:pointer;white-space:nowrap;min-height:36px;">&#128336; History</button><button onclick="showProgramme()" style="background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.3);border-radius:8px;color:var(--blue);font-size:11px;font-weight:800;font-family:inherit;padding:5px 10px;cursor:pointer;white-space:nowrap;min-height:36px;">&#128202; Programme</button></div></div>
   <div class="card g2" style="gap:8px;margin-bottom:10px;">
     <div><label>Plan Date</label><input type="date" id="fd"></div>
     <div><label>Site Manager</label><input type="text" id="fm" list="nl" onclick="nc(this)" onblur="nb2(this)" placeholder="Tap to pick"></div>
@@ -433,7 +430,6 @@ select{
     <div class="sec-inner"><span class="sec-t">&#128208; Plan</span><span class="sec-s">What each team will do tomorrow</span></div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;" class="no-print">
       <button class="btn btn-ghost btn-sm" onclick="addPT()">+ Team</button>
-      <button class="btn btn-ghost btn-sm" id="prog-check-btn" onclick="toast('Programme not yet connected — coming soon')" title="Programme integration coming soon" style="opacity:.55;">&#128197; Programme</button>
     </div>
   </div>
   <div id="pt-container"></div>
@@ -1243,10 +1239,12 @@ function submitEOD(){
   if(!date){toast('✗ Set the date first','err');return;}
   // Target % is optional — blank = 100% (task expected to complete)
   // No validation block needed
-  // Noise reading count warning (H&S requirement)
-  var noiseRows=[];document.querySelectorAll('.nr').forEach(function(r){var ins=r.querySelectorAll('input');var isDND=r.dataset&&r.dataset.dnd==='1';if(!isDND&&ins[1]&&ins[1].value)noiseRows.push(ins[1].value);});
-  if(noiseRows.length<3){
-    toast('&#9888; '+noiseRows.length+'/3 noise readings filled — all 3 required before saving','err');
+  // Noise reading count warning (H&S requirement — N/A readings count as valid spot readings)
+  var noiseRows=[];var noiseDND=0;
+  document.querySelectorAll('.nr').forEach(function(r){var ins=r.querySelectorAll('input');var isDND=r.dataset&&r.dataset.dnd==='1';if(isDND){noiseDND++;}else if(ins[1]&&ins[1].value){noiseRows.push(ins[1].value);}});
+  var noiseTotalRecorded=noiseRows.length+noiseDND;
+  if(noiseTotalRecorded<3){
+    toast('&#9888; '+noiseTotalRecorded+'/3 noise readings recorded — enter dB or mark N/A for each','err');
     var noiseEl=document.getElementById('nr-c');if(noiseEl)noiseEl.scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
@@ -1290,10 +1288,17 @@ function submitEOD(){
         toast('✓ Saved to cloud');
         // Show full-screen save confirmation
         var sc=document.getElementById('save-confirm');
-        if(sc){sc.style.display='flex';setTimeout(function(){sc.style.display='none';},3500);}
+        if(sc){
+          sc.style.display='flex';
+          setTimeout(function(){
+            sc.style.display='none';
+            sw('today-tab',document.getElementById('nav-today-tab'));
+          },2500);
+        } else {
+          sw('today-tab',document.getElementById('nav-today-tab'));
+        }
         // Clear the draft from localStorage after successful save
         try{localStorage.removeItem('dgc_draft_'+date);}catch(e){}
-        setTimeout(function(){sw('achv',document.getElementById('nav-achv'));},1200);
       }
     })
     .catch(function(e){toast('✗ Save failed — no internet?','err');errBtn();});
@@ -2057,6 +2062,7 @@ function sodSignOff(){
     if(noteEl)noteEl.textContent='Please confirm the end of day check above first';
     var eodSec=document.getElementById('sod-eod-section');
     if(eodSec)setTimeout(function(){eodSec.scrollIntoView({behavior:'smooth',block:'start'});},50);
+    return;
   }
   var eodNoteText=document.getElementById('eod-note-text')?document.getElementById('eod-note-text').value:'';
   var signedAt=new Date().toISOString();
