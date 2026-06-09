@@ -17,7 +17,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='2.2.24';
+var APP_VERSION='2.2.25';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -306,7 +306,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.24</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.25</div>
   </div>
 </div>
 
@@ -586,7 +586,7 @@ function getNames(){
 }
 var NAMES=getNames();
 function rebuildNL(){var dl=document.getElementById('nl');if(!dl)return;dl.innerHTML='';NAMES.forEach(function(n){var o=document.createElement('option');o.value=n;dl.appendChild(o);});}
-function addPerson(){var n=prompt('New team member name:');if(!n||!n.trim())return;n=n.trim();var ex=JSON.parse(localStorage.getItem('dgc_xstaff')||'[]');if(ex.indexOf(n)<0)ex.push(n);localStorage.setItem('dgc_xstaff',JSON.stringify(ex));NAMES=getNames();rebuildNL();toast(n+' added');}
+function addPerson(){var n=prompt('New team member name:');if(!n||!n.trim())return;n=n.trim();var ex=JSON.parse(localStorage.getItem('dgc_xstaff')||'[]');if(ex.indexOf(n)<0)ex.push(n);localStorage.setItem('dgc_xstaff',JSON.stringify(ex));NAMES=getNames();rebuildNL();learnName(n);toast(n+' added to team list and AI vocabulary');}
 function nc(el){el._p=el.value;el.value='';}
 function nb2(el){if(!el.value.trim()&&el._p)el.value=el._p;}
 
@@ -615,6 +615,63 @@ var _micStopping=false;
 var _silenceTimer=null;
 var _uname='';
 var _lastResultIdx=-1;
+
+// ── DGC VOCAB ENGINE — self-improving vocabulary ────────────────────────
+// Learns corrections (AI wrote X, user changed to Y) and new staff names.
+// Stored in localStorage; fed back into every aiClean() call automatically.
+var _VOCAB_KEY='dgc_vocab_v1';
+function _loadVocab(){try{return JSON.parse(localStorage.getItem(_VOCAB_KEY)||'{"corrections":[],"names":[]}');}catch(e){return{corrections:[],names:[]};}}
+function _saveVocab(v){try{localStorage.setItem(_VOCAB_KEY,JSON.stringify(v));}catch(e){}}
+
+function learnName(name){
+  var n=(name||'').trim();
+  if(!n||n.length<3)return;
+  if(NAMES&&NAMES.indexOf(n)>=0)return; // already in base list
+  var v=_loadVocab();
+  if(v.names.indexOf(n)===-1){v.names.push(n);_saveVocab(v);}
+}
+
+function learnCorrection(aiText,humanText){
+  var ai=(aiText||'').trim(),human=(humanText||'').trim();
+  if(!ai||!human||ai===human||ai.length>800)return; // skip identical or huge diary entries
+  var v=_loadVocab();
+  var idx=-1;
+  for(var i=0;i<v.corrections.length;i++){if(v.corrections[i].ai===ai){idx=i;break;}}
+  if(idx>=0){v.corrections[idx].corrected=human;v.corrections[idx].n=(v.corrections[idx].n||1)+1;}
+  else{v.corrections.push({ai:ai,corrected:human,n:1});}
+  if(v.corrections.length>60)v.corrections=v.corrections.slice(-60);
+  _saveVocab(v);
+}
+
+// Returns extra lines to append to aiClean() VOCAB string
+function getLearnedVocabPrompt(){
+  var v=_loadVocab(),parts=[];
+  if(v.corrections.length>0){
+    parts.push('CORRECTIONS THIS MANAGER HAS MADE (apply same fixes automatically):');
+    v.corrections.slice(-15).forEach(function(c){parts.push('  "'+c.ai+'" → "'+c.corrected+'"');});
+  }
+  if(v.names.length>0)parts.push('ADDITIONAL SITE STAFF (recognise as valid names): '+v.names.join(', '));
+  return parts.join('\n');
+}
+
+// Scan all tagged textareas and learn from any edits the user made to AI output
+function _checkAICorrections(){
+  document.querySelectorAll('textarea[data-ai-version]').forEach(function(t){
+    var aiVer=t.dataset.aiVersion;
+    if(t.value&&aiVer&&t.value.trim()!==aiVer.trim()){
+      learnCorrection(aiVer,t.value);
+    }
+    t.removeAttribute('data-ai-version');
+  });
+}
+
+// Scan all name inputs and learn any new names
+function _learnAllNames(){
+  ['feod-resp','fm'].forEach(function(id){var el=document.getElementById(id);if(el&&el.value.trim())learnName(el.value.trim());});
+  document.querySelectorAll('[id^="ptl"]').forEach(function(el){if(el.value.trim())learnName(el.value.trim());});
+  document.querySelectorAll('#pt-container input[list]').forEach(function(el){if(el.value.trim())learnName(el.value.trim());});
+}
+// ── END VOCAB ENGINE ─────────────────────────────────────────────────────
 
 (function init(){
   rebuildNL();
@@ -956,12 +1013,21 @@ function aiClean(tid,raw,valueAtStop,micId){
     +'LOCATIONS: plots 1-20, zones A-G, S4 S4.1 S4.2 S4.3 S4.4 S4.5 (sewer runs), MH1-MH20 (manholes), Glenfaba, Peel, Living Hope Church\n'
     +'TECHNICAL: MH=manhole, HDPE=pipe material, RC=reinforced concrete, AFP=application for payment, DPC=damp proof course, WBS=work breakdown structure, GRP=glass reinforced plastic, TL=team leader, SM=site manager, QS=quantity surveyor, DOI=Dept of Infrastructure, invert=pipe bottom level, bedding=material under pipe, haunching=concrete around pipe sides, benching=manhole floor, shutters=formwork, backfill=fill material, kerb=road edging, tarmac=asphalt, datum=reference level, surcharge=load above drainage, gully=surface drain, reinstatement=restoring ground, cover and frame=manhole lid, junction=pipe connection, coupling=pipe joint, SOD=start of day, EOD=end of day, m/mm=metres/millimetres\n'
     +'MEASUREMENTS: keep all numbers, dimensions, quantities exactly as spoken (80m, 300mm, 40%, plot 11, MH7, zone G)\n';
+  // Append anything learned from this specific site manager's corrections
+  var learned=getLearnedVocabPrompt();
+  if(learned)VOCAB+='\n'+learned+'\n';
   fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:'You are cleaning up a voice transcript from a UK construction site manager on Isle of Man. Fix ONLY grammar and punctuation — do not change any facts, measurements, names, or technical terms. Do not add information that was not spoken.\n\n'+VOCAB+'\nReturn ONLY the corrected transcript text, nothing else:\n\n'+raw}]})})
   .then(function(r){return r.json();})
   .then(function(d){
     if(d.content&&d.content[0]){
       // Only overwrite if user hasn't edited the field since voice stopped
-      if(ta.value===valueAtStop){var cleaned=d.content[0].text.trim();ta.value=valueAtStop?valueAtStop.trim()+' '+cleaned:cleaned;}
+      if(ta.value===valueAtStop){
+        var cleaned=d.content[0].text.trim();
+        var newVal=valueAtStop?valueAtStop.trim()+' '+cleaned:cleaned;
+        ta.value=newVal;
+        // Tag for correction learning — if user edits this, we'll remember
+        if(newVal.length<800)ta.dataset.aiVersion=newVal;
+      }
       toast('✓ Cleaned up');
     }else if(d.error){
       toast('✗ AI error: '+(d.error.message||JSON.stringify(d.error)),'err');
@@ -972,7 +1038,12 @@ function aiClean(tid,raw,valueAtStop,micId){
   })
   .catch(function(e){
     // API failed — still write the raw transcript so nothing is lost
-    if(ta.value===valueAtStop){ta.value=valueAtStop?valueAtStop.trim()+' '+raw:raw;}
+    if(ta.value===valueAtStop){
+      var rawVal=valueAtStop?valueAtStop.trim()+' '+raw:raw;
+      ta.value=rawVal;
+      // Tag raw version — if user corrects this, we learn the right form
+      if(rawVal.length<800)ta.dataset.aiVersion=rawVal;
+    }
     toast('⚠ Saved without clean-up (no signal?)','err');
     if(micId){var btn=document.getElementById('mic-'+micId);if(btn){var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent=MIC_ICON;var lb=btn.querySelector('.mic-label');if(lb)lb.textContent=_micLabels[micId]||'Dictate';}}
   });}
@@ -1056,12 +1127,15 @@ function dictateTeam(i){
       // ADDITIVE: only set leader if current field is blank
       var leaderEl=document.getElementById('ptl'+i);
       if(leaderEl&&parsed.team_leader&&!leaderEl.value.trim())leaderEl.value=parsed.team_leader;
+      // Learn names from AI-parsed team data
+      if(parsed.team_leader)learnName(parsed.team_leader);
       // ADDITIVE: fill members into existing select slots, then add more if needed
       var members=parsed.members||[];
       var memContainer=document.getElementById('members-'+i);
       var existingNames=memContainer?Array.from(memContainer.querySelectorAll('input[list]')).map(function(el){return el.value.trim().toLowerCase();}).filter(Boolean):[];
       members.forEach(function(name){
         if(!name)return;
+        learnName(name); // learn every member name
         if(existingNames.indexOf(name.toLowerCase())!==-1)return;
         // Try to fill an empty slot first
         var sels=memContainer?memContainer.querySelectorAll('input[list]'):[];
@@ -1160,6 +1234,8 @@ function noNet(){toast('✗ No internet — check your connection','err');}
 // Restores on load if the saved draft date matches today.
 function getDraftKey(){return 'dgc_draft_'+tod();}
 function saveDraft(){
+  _checkAICorrections(); // learn from any edits user made to AI output
+  _learnAllNames();      // pick up any new staff names
   try{
     var d={
       sm:document.getElementById('fm').value,
@@ -1239,6 +1315,8 @@ function buildTodayOutputFromPlan(planData){
 }
 
 function submitEOD(){
+  _checkAICorrections(); // learn from any edits before saving
+  _learnAllNames();
   if(!sb){noNet();return;}
   var date=document.getElementById('fd').value;
   if(!date){toast('✗ Set the date first','err');return;}
@@ -2189,7 +2267,42 @@ function loadGPTasks(cb){
 
 function showFieldGuide(){
   var o=document.getElementById('guide-overlay');
-  if(o){o.style.display='block';o.scrollTop=0;}
+  if(o){o.style.display='block';o.scrollTop=0;_refreshVocabDisplay();}
+}
+function _refreshVocabDisplay(){
+  var el=document.getElementById('learned-vocab-display');
+  if(!el)return;
+  var v=_loadVocab();
+  var html='';
+  if(v.corrections.length===0&&v.names.length===0){
+    html='<div style="font-size:12px;color:var(--muted);line-height:1.7;">Nothing learned yet. Save a record after using the mic — any edits you make to the AI\'s cleaned text are saved here automatically.</div>';
+  }else{
+    if(v.names.length>0){
+      html+='<div style="font-size:11px;font-weight:800;color:var(--txt);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">Staff Names Learned ('+v.names.length+')</div>';
+      html+='<div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.8;">'+v.names.join(' &middot; ')+'</div>';
+    }
+    if(v.corrections.length>0){
+      html+='<div style="font-size:11px;font-weight:800;color:var(--txt);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">Corrections Learned ('+v.corrections.length+')</div>';
+      var recent=v.corrections.slice(-10).reverse();
+      recent.forEach(function(c){
+        html+='<div style="font-size:12px;padding:6px 0;border-bottom:1px solid var(--bdr);display:flex;gap:8px;align-items:flex-start;">';
+        html+='<span style="color:var(--red);flex:1;word-break:break-word;">'+esc(c.ai)+'</span>';
+        html+='<span style="color:var(--muted);font-size:10px;align-self:center;">&#8594;</span>';
+        html+='<span style="color:var(--txt);font-weight:700;flex:1;word-break:break-word;">'+esc(c.corrected)+'</span>';
+        if(c.n>1)html+='<span style="color:var(--acc);font-size:10px;font-weight:800;align-self:center;">&#xd7;'+c.n+'</span>';
+        html+='</div>';
+      });
+    }
+  }
+  el.innerHTML=html;
+}
+function clearLearnedVocab(){
+  if(!confirm('Clear all learned vocabulary? This cannot be undone.'))return;
+  localStorage.removeItem(_VOCAB_KEY);
+  _refreshVocabDisplay();
+  toast('Vocabulary cleared');
+  // Rebuild names list (base names remain)
+  rebuildNL();
 }
 
 function showProgramme(){
@@ -2885,7 +2998,7 @@ if('serviceWorker' in navigator){
     </div>
 
     <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:0 0 10px;">🎙 DICTATION TIPS</div>
-    <div class="card" style="margin-bottom:40px;padding:14px;">
+    <div class="card" style="margin-bottom:20px;padding:14px;">
       <div style="font-size:12px;color:var(--muted);line-height:1.8;">
         &#8226; Press the mic button once to start — press again to stop early.<br>
         &#8226; Stops automatically after <strong style="color:var(--txt);">6 seconds of silence</strong>.<br>
@@ -2893,6 +3006,15 @@ if('serviceWorker' in navigator){
         &#8226; The AI cleans up grammar after you stop — your transcript is saved even if there's no signal.<br>
         &#8226; Use <strong style="color:var(--txt);">Dictate Team</strong> on a team block to speak the whole plan at once: "Team A, Craig Thomas leading, Lee Duffy and Jake Smith, draining from S4.2 to S4.5, 80 metres, target 100 percent."
       </div>
+    </div>
+
+    <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 10px;">&#129504; LEARNED VOCABULARY</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:10px;">The app learns automatically. When you edit the AI's cleaned text, it remembers the correction. New staff names get saved when you fill in team blocks and save a record. These get fed back into every future dictation clean-up.</div>
+    <div class="card" style="margin-bottom:14px;padding:14px;" id="learned-vocab-display">
+      <div style="font-size:12px;color:var(--muted);">Loading...</div>
+    </div>
+    <div style="text-align:right;margin-bottom:40px;">
+      <button onclick="clearLearnedVocab()" style="background:none;border:1.5px solid var(--bdr);border-radius:8px;color:var(--muted);font-size:11px;font-weight:700;padding:6px 14px;cursor:pointer;font-family:inherit;opacity:.6;">&#128465; Clear learned vocab</button>
     </div>
 
   </div>
