@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BA4 Programme Progress Report — 09 Jun 2026</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --ink:#1a1a1a; --mut:#555; --line:#d8d8d8; --acc:#0C447C; --red:#A32D2D; --amber:#854F0B; --green:#0F6E56; --bg-red:#FCEBEB; --bg-amber:#FAEEDA; --bg-green:#E1F5EE; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; color: var(--ink); background:#f0f0f0; font-size: 12px; line-height: 1.45; }
+  .page { background:#fff; max-width: 210mm; margin: 16px auto; padding: 14mm 16mm; box-shadow: 0 2px 12px rgba(0,0,0,.12); }
+  @media print {
+    body { background:#fff; }
+    .page { box-shadow:none; margin:0; max-width:none; padding: 6mm 4mm; }
+    .no-print { display:none !important; }
+    @page { size: A4 portrait; margin: 10mm; }
+    .sec { break-inside: avoid; }
+  }
+  .toolbar { max-width:210mm; margin: 12px auto 0; display:flex; justify-content:flex-end; }
+  .toolbar button { font-size:13px; padding:8px 18px; border:1px solid var(--acc); background:var(--acc); color:#fff; border-radius:6px; cursor:pointer; }
+  header { display:flex; justify-content:space-between; align-items:flex-start; border-bottom: 3px solid var(--acc); padding-bottom: 10px; margin-bottom: 14px; }
+  .co { font-size: 17px; font-weight: 700; letter-spacing:.5px; }
+  .co small { display:block; font-size: 10px; font-weight:400; color:var(--mut); letter-spacing:.3px; }
+  .docmeta { text-align:right; font-size: 10.5px; color:var(--mut); }
+  .docmeta b { color:var(--ink); }
+  h1 { font-size: 16px; margin: 2px 0 10px; }
+  h2 { font-size: 12.5px; text-transform: uppercase; letter-spacing: .8px; color: var(--acc); border-bottom: 1px solid var(--line); padding-bottom: 3px; margin: 16px 0 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { text-align: left; background: #f2f4f7; padding: 5px 7px; border: 1px solid var(--line); font-size: 10px; text-transform: uppercase; letter-spacing:.4px; }
+  td { padding: 5px 7px; border: 1px solid var(--line); vertical-align: top; }
+  .bar { position: relative; background: #eee; height: 11px; border-radius: 3px; min-width: 80px; }
+  .bar i { position: absolute; left:0; top:0; height:11px; border-radius:3px; }
+  .pct { font-weight: 700; }
+  .tag { display:inline-block; font-size: 9.5px; font-weight:700; padding: 1px 7px; border-radius: 9px; text-transform:uppercase; letter-spacing:.3px; }
+  .t-red { background: var(--bg-red); color: var(--red); }
+  .t-amber { background: var(--bg-amber); color: var(--amber); }
+  .t-green { background: var(--bg-green); color: var(--green); }
+  .t-gray { background: #eee; color: #555; }
+  .kpis { display:grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin: 10px 0 4px; }
+  .kpi { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+  .kpi .l { font-size: 9.5px; text-transform: uppercase; letter-spacing:.5px; color: var(--mut); }
+  .kpi .v { font-size: 19px; font-weight: 700; margin-top: 2px; }
+  .kpi.warn .v { color: var(--amber); }
+  ul.notes { margin: 6px 0 0 16px; }
+  ul.notes li { margin-bottom: 4px; }
+  .grid14 th, .grid14 td { font-size: 10px; padding: 4px 5px; }
+  .grid14 td.team { font-weight: 700; background:#f7f8fa; width: 34px; text-align:center; }
+  .footer { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 8px; font-size: 9.5px; color: var(--mut); display:flex; justify-content:space-between; }
+  .signoff { display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; }
+  .sigbox { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 10.5px; color: var(--mut); }
+  .sigbox .line { border-bottom: 1px solid var(--ink); height: 26px; margin: 14px 0 4px; }
+</style>
+</head>
+<body>
+
+<div class="toolbar no-print"><button onclick="window.print()">🖨 Print / Save as PDF</button></div>
+
+<div class="page">
+
+<header>
+  <div class="co">DGC<small>DRAINAGE &amp; GROUNDWORK CONTRACTORS LTD</small></div>
+  <div class="docmeta">
+    <b>BA4 — Ballasalla Phase 4 Main Drainage</b><br>
+    Client: Dandara · Ref: DGC-RPT-BA4-PRG-09.06.26<br>
+    Issued: <b>09 June 2026</b> · Prepared by: D. Smith, PM<br>
+    Sources: Programme Macro Overview v8 · DGC-PRG-15 Rev 03
+  </div>
+</header>
+
+<h1>Programme Progress Report &amp; Two-Week Lookahead</h1>
+
+<div class="kpis sec">
+  <div class="kpi"><div class="l">Overall progress</div><div class="v">72%</div></div>
+  <div class="kpi"><div class="l">Programme end date</div><div class="v">03 Jul 26</div></div>
+  <div class="kpi"><div class="l">Working days remaining</div><div class="v">18</div></div>
+  <div class="kpi warn"><div class="l">Status</div><div class="v">Amber</div></div>
+</div>
+
+<div class="sec">
+<h2>1 · Section status</h2>
+<table>
+  <tr><th style="width:34%">Section</th><th>Gang</th><th>Programme dates</th><th style="width:22%">Progress</th><th>%</th><th>Status</th></tr>
+  <tr><td>1 · Site setup (incl. variations)</td><td>A</td><td>23 Mar – 19 Jun</td><td><div class="bar"><i style="width:85%;background:var(--green)"></i></div></td><td class="pct">85%</td><td><span class="tag t-green">On track</span></td></tr>
+  <tr><td>2 · Top Road (B81 &amp; B82)</td><td>3</td><td>09 Apr – 14 May</td><td><div class="bar"><i style="width:83%;background:var(--mut)"></i></div></td><td class="pct">83%</td><td><span class="tag t-gray">See note A</span></td></tr>
+  <tr><td>3 · Mid Road 1 &amp; Road 3</td><td>1 &amp; 2</td><td>10 Apr – 16 Jun</td><td><div class="bar"><i style="width:87%;background:var(--amber)"></i></div></td><td class="pct">87%</td><td><span class="tag t-amber">Tarmac pending</span></td></tr>
+  <tr><td>4 · Lower Road 1</td><td>3</td><td>11 May – 24 Jun</td><td><div class="bar"><i style="width:62%;background:var(--amber)"></i></div></td><td class="pct">62%</td><td><span class="tag t-amber">Live</span></td></tr>
+  <tr><td>5 · Drain run S4.5–S4.6–Ex S1.21 (S &amp; F)</td><td>1</td><td>10 Jun – 02 Jul</td><td><div class="bar"><i style="width:14%;background:var(--green)"></i></div></td><td class="pct">14%</td><td><span class="tag t-green">Started early</span></td></tr>
+  <tr><td>6 · Jet wash, CCTV, tidy &amp; demobilisation</td><td>—</td><td>29 Jun – 03 Jul</td><td><div class="bar"><i style="width:1%;background:var(--mut)"></i></div></td><td class="pct">0%</td><td><span class="tag t-gray">Pending</span></td></tr>
+</table>
+<ul class="notes">
+  <li><b>Note A — Top Road:</b> drainage, kerbs and subbase complete by DGC; road makeup and surfacing at the top section are being completed by the principal contractor, blending into works already done.</li>
+</ul>
+</div>
+
+<div class="sec">
+<h2>2 · Two-week lookahead — DGC-PRG-15 Rev 03 (Mon 08 → Fri 19 Jun)</h2>
+<table class="grid14">
+  <tr><th></th><th>Mon 08</th><th>Tue 09</th><th>Wed 10</th><th>Thu 11</th><th>Fri 12</th></tr>
+  <tr><td class="team">A</td><td>S4.4–S4.6</td><td>S4.4–S4.6</td><td>Finish F&amp;S4.6</td><td>S4.6 Phase 2</td><td>Finish S4.6 Ph 2</td></tr>
+  <tr><td class="team">B</td><td>No works</td><td>Crossings &amp; gullies</td><td>Crossings &amp; gullies</td><td>Crossings &amp; gullies</td><td>Crossings &amp; gullies</td></tr>
+  <tr><td class="team">C</td><td>Backfill &amp; tails S4.1–S4.2</td><td>Kerb log</td><td>Kerb log</td><td>Kerb log</td><td>Kerb log</td></tr>
+</table>
+<div style="height:6px"></div>
+<table class="grid14">
+  <tr><th></th><th>Mon 15</th><th>Tue 16</th><th>Wed 17</th><th>Thu 18</th><th>Fri 19</th></tr>
+  <tr><td class="team">A</td><td>S4.6 Ph 2 — ring &amp; bench</td><td>Finish S4.6 + start S4.4</td><td>S4.4 Phase 2</td><td>Finish S4.4 Ph 2</td><td>Concrete S4.4 &amp; S4.6 MHs</td></tr>
+  <tr><td class="team">B</td><td>Road formation</td><td>Road formation</td><td>Crossings &amp; gullies</td><td>Crossings &amp; gullies</td><td>Finish crossings &amp; gullies</td></tr>
+  <tr><td class="team">C</td><td>Kerb log</td><td>Kerb log</td><td>Road formation</td><td>Road formation</td><td>Road formation</td></tr>
+</table>
+</div>
+
+<div class="sec">
+<h2>3 · Key dependencies &amp; programme notes</h2>
+<ul class="notes">
+  <li><b>Surfacing (tarmac):</b> Mid Road 1/Road 3 and Lower Road 1 surfacing now programmed beyond the current lookahead window. A surfacing visit in <b>w/c 22 June</b> for the remaining sections is required to hold the 03 July completion date.</li>
+  <li><b>CCTV survey (29–30 Jun):</b> requires all drainage runs complete by 26 June. Drain run S4.5–S4.6 commenced ahead of programme and is tracking to this date.</li>
+  <li><b>Variation 15 — drainage remeasure:</b> additional 32m of pipe run instructed; programmed 15–19 June within Team A's works.</li>
+  <li><b>Street lighting / service ducts (Lower Road 1):</b> progressing within road crossings &amp; gullies activity; completion required ahead of subbase 15–17 June.</li>
+  <li><b>Variations:</b> 15 No. client-instructed variations (CCE-referenced) incorporated into the programme to date, including hand-digs around live services, 300mm incremental scanning regime, service strikes, unforeseen concrete obstructions and attendances on other contractors. Programme movement against the original baseline (19 June) reflects these instructed works; extension of time documentation to follow under separate cover.</li>
+</ul>
+</div>
+
+<div class="sec">
+<h2>4 · Summary</h2>
+<p style="font-size:11.5px">Works are 72% complete against the v8 programme. Drainage operations — the core of DGC's scope — are on or ahead of programme, with the final drain run commenced a day early and kerbing ahead of its planned start on Lower Road 1. Programme completion of <b>Friday 03 July 2026</b> remains achievable subject to the surfacing visit being secured for w/c 22 June and the remaining backfill/subbase activities completing per the lookahead above.</p>
+
+<div class="signoff">
+  <div class="sigbox">Prepared by (DGC)<div class="line"></div>Name · Position · Date</div>
+  <div class="sigbox">Received by (Client)<div class="line"></div>Name · Position · Date</div>
+</div>
+</div>
+
+<div class="footer">
+  <span>DGC — Drainage &amp; Groundwork Contractors Ltd · BA4 Ballasalla Phase 4</span>
+  <span>DGC-RPT-BA4-PRG-09.06.26 · Sheet 1 of 1 · A4</span>
+</div>
+
+</div>
+</body>
+</html>
