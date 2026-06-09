@@ -17,7 +17,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='2.2.22';
+var APP_VERSION='2.2.23';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -292,7 +292,6 @@ select{
         <option value="James Cosgrove">James Cosgrove</option>
         <option value="David Smith">David Smith</option>
         <option value="Stephen Lamb">Stephen Lamb</option>
-        <option value="Ash">Ash</option>
         <option value="Harry">Harry</option>
         <option value="Bradley McKevitt">Bradley McKevitt</option>
         <option value="Dean Garrett">Dean Garrett</option>
@@ -307,7 +306,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.22</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.23</div>
   </div>
 </div>
 
@@ -336,6 +335,9 @@ select{
   <div id="sod-signoff-section" style="padding:16px 0;">
     <button class="btn btn-submit" onclick="sodSignOff()">&#128221; Sign Off Morning Check &#8594;</button>
     <div id="sod-signoff-note" style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px;"></div>
+    <div style="text-align:center;margin-top:24px;">
+      <button onclick="sodDemoReset()" style="background:none;border:1.5px solid var(--bdr);border-radius:8px;color:var(--muted);font-size:11px;font-weight:700;padding:8px 18px;cursor:pointer;letter-spacing:.04em;opacity:.55;">&#8635; Load test data</button>
+    </div>
   </div>
 
 </div>
@@ -355,10 +357,11 @@ select{
 <div id="sod-results-list" style="display:none;"></div>
 <div id="sod-attendance-list" style="display:none;"></div>
 <div id="sod-signoff-done" style="display:none;"></div>
-<!-- SOD bottom nav — Today | Plan | History -->
-<div style="position:fixed;bottom:0;left:0;right:0;z-index:10001;background:var(--surf);border-top:1.5px solid var(--bdr);display:flex;justify-content:space-around;padding:6px 0 max(6px,env(safe-area-inset-bottom));" id="sod-bnav">
-  <button onclick="sodGoTo('today-tab','nav-today-tab')" style="flex:1;background:none;border:none;color:var(--muted);font-size:11px;font-weight:800;font-family:inherit;padding:8px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:52px;"><span style="font-size:22px;line-height:1;">&#128196;</span>Today</button>
-  <button onclick="sodGoTo('eod','nav-eod')" style="flex:1;background:none;border:none;color:var(--muted);font-size:11px;font-weight:800;font-family:inherit;padding:8px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:52px;"><span style="font-size:22px;line-height:1;">&#128203;</span>Plan</button>
+<!-- SOD bottom nav — Start | Today | Plan -->
+<div style="position:fixed;bottom:0;left:0;right:0;z-index:10001;background:var(--surf);border-top:2px solid var(--bdr);display:flex;box-shadow:0 -2px 12px rgba(0,0,0,.22);padding-bottom:max(6px,env(safe-area-inset-bottom));" id="sod-bnav">
+  <button onclick="window.scrollTo({top:0,behavior:'smooth'})" style="flex:1;background:none;border:none;color:var(--acc);font-size:11px;font-weight:800;font-family:inherit;padding:8px 2px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:60px;text-transform:uppercase;letter-spacing:.02em;"><span style="font-size:22px;line-height:1;filter:drop-shadow(0 0 6px rgba(245,158,11,.45));">&#9728;</span>Start</button>
+  <button onclick="sodGoTo('today-tab','nav-today-tab')" style="flex:1;background:none;border:none;color:var(--muted);font-size:11px;font-weight:800;font-family:inherit;padding:8px 2px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:60px;text-transform:uppercase;letter-spacing:.02em;"><span style="font-size:22px;line-height:1;">&#128196;</span>Today</button>
+  <button onclick="sodGoTo('eod','nav-eod')" style="flex:1;background:none;border:none;color:var(--muted);font-size:11px;font-weight:800;font-family:inherit;padding:8px 2px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:60px;text-transform:uppercase;letter-spacing:.02em;"><span style="font-size:22px;line-height:1;">&#128203;</span>Plan</button>
 </div>
 </div>
 
@@ -468,9 +471,9 @@ select{
   </div>
 
 
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Formal Site Diary</span><span class="sec-s">Official manager record — kept for DGC files and any future disputes</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Site Diary</span><span class="sec-s">Official record — clear and factual</span></div></div>
   <div class="card">
-    <textarea id="fnt" rows="10" style="min-height:220px;margin-bottom:6px;" placeholder="Official record: ground conditions, weather impact, what was done, what was delayed and why. Be specific. Dates, names, quantities."></textarea>
+    <textarea id="fnt" rows="10" style="min-height:220px;margin-bottom:6px;" placeholder="What happened today — weather, work done, delays, anything unusual."></textarea>
     <button class="mic" id="mic-nt" onclick="vm('nt','fnt')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate site diary</span></button>
   </div>
 
@@ -508,7 +511,7 @@ select{
 <div class="tab" id="tab-achv">
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#9989; Today's Results</span><span class="sec-s" id="achv-sub">How far did each team actually get?</span></div></div>
   <div style="font-size:13px;color:var(--muted);margin-bottom:8px;padding:10px 14px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.18);border-radius:10px;line-height:1.6;">
-    Enter the actual % complete for each task below. This data goes straight to Ash so he can track the programme without the QS.
+    Enter the actual % complete for each task below. This feeds directly into the programme tracker — be accurate.
   </div>
   <div id="achv-prog-banner" style="display:none;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:13px;font-weight:700;color:var(--acc);line-height:1.6;"></div>
   <div id="achv-none" class="card">
@@ -527,10 +530,10 @@ select{
   </div>
   <div id="achv-rows"></div>
   <div id="achv-form" style="display:none;">
-    <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Notes for Management</span><span class="sec-s">Anything Ash or Harry need to know or act on</span></div></div>
+    <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Notes for Management</span><span class="sec-s">Anything the directors need to know or act on</span></div></div>
     <div class="card">
-      <button class="mic" id="mic-an" onclick="vm('an','fan')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate notes for Ash / Harry</span></button>
-      <textarea id="fan" rows="3" placeholder="Why were tasks under or over target? Any issues Ash or Harry need to act on today? Commercial flags, delays, ground surprises, anything unusual..."></textarea>
+      <button class="mic" id="mic-an" onclick="vm('an','fan')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate management notes</span></button>
+      <textarea id="fan" rows="3" placeholder="Why were tasks under or over target? Commercial flags, delays, ground surprises, anything management need to act on..."></textarea>
     </div>
     <button class="btn btn-submit" onclick="submitAchv()">&#128190; Save Results</button>
     <div style="height:20px;"></div>
@@ -580,7 +583,7 @@ var sb=null;
 try{if(SUPA_URL.indexOf('supabase')>0)sb=supabase.createClient(SUPA_URL,SUPA_KEY);}catch(e){}
 
 function getNames(){
-  var base=['Ash','Harry','David Smith','Bradley McKevitt','Craig Walsh','Daniel Seed','Dean Garrett','Jake Whetnall','James Cosgrove','James Shannon','Lee Clinton','Lewis Peck','Liam Smith','Stephen Lamb','Stephen Smithies'];
+  var base=['Harry','David Smith','Bradley McKevitt','Craig Walsh','Daniel Seed','Dean Garrett','Jake Whetnall','James Cosgrove','James Shannon','Lee Clinton','Lewis Peck','Liam Smith','Stephen Lamb','Stephen Smithies'];
   var ex=JSON.parse(localStorage.getItem('dgc_xstaff')||'[]');
   return base.concat(ex.filter(function(n){return base.indexOf(n)<0;}));
 }
@@ -602,7 +605,7 @@ var EODS=[
   {k:'time',l:'Timesheets / Discovery sheets filled in (if required)'}
 ];
 var COMMS=[
-  {k:'ash_harry',l:'Update sent to Ash and Harry'},
+  {k:'ash_harry',l:'Update sent to management'},
   {k:'whatsapp',l:'Update sent to BA4 WhatsApp group'},
   {k:'changes',l:'Notified of any changes or delays'},
   {k:'risk',l:'Risk ticket updated'}
@@ -618,8 +621,8 @@ var _lastResultIdx=-1;
 
 (function init(){
   rebuildNL();
-  document.getElementById('fd').value=todayPlus1();
-  document.getElementById('dl').textContent=fmtD(todayPlus1());
+  document.getElementById('fd').value=nextWorkingDay();
+  document.getElementById('dl').textContent=fmtD(nextWorkingDay());
   // Build EOD site checklist
   EODS.forEach(function(e){ CHK[e.k]=false; });
   var eodCard=document.getElementById('eod-chk-items');
@@ -643,15 +646,12 @@ var _lastResultIdx=-1;
   addPT();addPT();addPT();
   addNoise('10:00');addNoise('13:00');addNoise('15:00');
   addItem();addItem();addItem();addItem();
-  // Pre-select last used name in dropdown (still requires pressing Start)
+  // Pre-select last used name; fall back to James Cosgrove if name no longer in list
   var s=localStorage.getItem('dgc_uname');
   var sel=document.getElementById('ln');
-  if(s){
-    if(sel){for(var oi=0;oi<sel.options.length;oi++){if(sel.options[oi].value===s){sel.selectedIndex=oi;break;}}}
-  }else{
-    // Default to James Cosgrove when no saved preference
-    if(sel){for(var oi=0;oi<sel.options.length;oi++){if(sel.options[oi].value==='James Cosgrove'){sel.selectedIndex=oi;break;}}}
-  }
+  var _found=false;
+  if(s&&sel){for(var oi=0;oi<sel.options.length;oi++){if(sel.options[oi].value===s){sel.selectedIndex=oi;_found=true;break;}}}
+  if(!_found&&sel){for(var oi=0;oi<sel.options.length;oi++){if(sel.options[oi].value==='James Cosgrove'){sel.selectedIndex=oi;break;}}}
 })();
 
 // Show the SOD screen — called from Start button in main nav and from login
@@ -1187,7 +1187,8 @@ function restoreDraft(){
     set('fv',d.visitors);set('ftp',d.topics);set('frk',d.risks);
     set('feod-resp',d.eodResp);set('feod-team',d.eodTeam);
     set('fses1',d.ses1);set('fses2',d.ses2);set('fses3',d.ses3);
-    set('fob',d.obs);set('fnt',d.notes);
+    set('fob',d.obs);
+    // Site diary (fnt) intentionally NOT restored — starts blank each session
     if(d.savedAt)toast('Draft restored from '+(new Date(d.savedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})));
   }catch(e){}
 }
@@ -1430,7 +1431,7 @@ function calcEff(){
   if(scoreCard)scoreCard.style.display='';
   var eff=Math.round(totA/totT*100);
   var col=eff>=90?'#22c55e':eff>=70?'#f59e0b':'#ef4444';
-  var lbl=eff>=90?'On or ahead of plan':eff>=70?'Slightly under plan — review with Ash':'Significantly under plan — note the reasons below';
+  var lbl=eff>=90?'On or ahead of plan':eff>=70?'Slightly under plan — note the reasons below':'Significantly under plan — detail the causes below';
   document.getElementById('eff-n').textContent=eff+'%';document.getElementById('eff-n').style.color=col;
   var lbEl=document.getElementById('eff-l');if(lbEl){lbEl.textContent=lbl;lbEl.style.color=col;}
   document.getElementById('eff-p').textContent='Avg target: '+Math.round(totT/cnt)+'%';
@@ -1733,7 +1734,7 @@ function flagVariation(idx){
   var state = _progCheckState['task_' + idx];
   if (state) { state.variation = true; }
   var btn = document.getElementById('var-btn-'+idx);
-  if(btn){btn.style.background='rgba(245,158,11,.2)';btn.style.borderColor='var(--acc)';btn.textContent='✓ Variation claim flagged — tell Ash';}
+  if(btn){btn.style.background='rgba(245,158,11,.2)';btn.style.borderColor='var(--acc)';btn.textContent='✓ Variation claim flagged — report to management';}
   toast('Variation flagged — record saved');
 }
 
@@ -1842,6 +1843,7 @@ function saveClaudeKey(){
 }
 function tod(){return new Date().toISOString().slice(0,10);}
 function todayPlus1(){var d=new Date();d.setDate(d.getDate()+1);return d.toISOString().slice(0,10);}
+function nextWorkingDay(){var d=new Date();d.setDate(d.getDate()+1);var day=d.getDay();if(day===6)d.setDate(d.getDate()+2);else if(day===0)d.setDate(d.getDate()+1);return d.toISOString().slice(0,10);}
 function fmtD(s){if(!s)return'';return new Date(s+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function toast(m,t){var el=document.getElementById('toast');el.textContent=m;el.className='toast show'+(t==='err'?' err':'');setTimeout(function(){el.classList.remove('show');},2800);}
@@ -2059,7 +2061,7 @@ function _sodUpdateAttendBtn(name,status){sodMarkAttend(name);}// legacy stub
 function sodSignOff(){
   if(!_sodEodStatus){
     var noteEl=document.getElementById('sod-signoff-note');
-    if(noteEl)noteEl.textContent='Please confirm the end of day check above first';
+    if(noteEl){noteEl.textContent='⚠ Confirm the end of day check above first';noteEl.style.color='var(--red)';}
     var eodSec=document.getElementById('sod-eod-section');
     if(eodSec)setTimeout(function(){eodSec.scrollIntoView({behavior:'smooth',block:'start'});},50);
     return;
