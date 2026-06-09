@@ -17,7 +17,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='2.2.25';
+var APP_VERSION='2.2.26';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -306,7 +306,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.25</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.26</div>
   </div>
 </div>
 
@@ -732,19 +732,18 @@ function sodGoTo(tab,navId){
 var DEMO_PLAN_DATA={
   plan:[
     {team:'A',leader:'Craig Thomas',tasks:[
-      {desc:'Drain run S4.5 to MH7 — 80m',target:80},
-      {desc:'Backfill plot 4 excavation trench',target:100}
+      {desc:'Kerbing zone D',target:23}
     ]},
-    {team:'B',leader:'Denny Walsh',tasks:[
+    {team:'B',leader:'Dean Garrett',tasks:[
       {desc:'S4 to S4.2 reverse backfill + dig plot 4',target:75}
     ]}
   ],
   alloc:[
     {team:'A',lead:'Craig Thomas',ops:['Lee Duffy','Jake Smith']},
-    {team:'B',lead:'Denny Walsh',ops:['Tony Brannigan']}
+    {team:'B',lead:'Dean Garrett',ops:['Lee Clinton']}
   ],
-  meeting:{topics:'Today\'s plan — Team A drain run S4.5 to MH7, Team B backfill and dig plot 4.',risks:'Soft ground in zone S4 after yesterday\'s rain — watch trench sides.'},
-  eodResponsibility:{person:'Lee Duffy',team:'A'}
+  meeting:{topics:'Team A — kerbing zone D. Team B — reverse backfill and dig plot 4.',risks:'Soft ground in zone S4 after yesterday\'s rain — watch trench sides.'},
+  eodResponsibility:{person:'Lee Clinton',team:'B'}
 };
 
 // Demo history records — shown in History tab when no Supabase records exist
