@@ -17,7 +17,7 @@
 // SECURITY NOTE: API keys below are obfuscated, not encrypted. Key exposure is a known
 // accepted risk for this internal deployment. Rotate Trello token quarterly.
 // Claude API costs are borne by the baked-in key unless users supply their own.
-var APP_VERSION='2.2.23';
+var APP_VERSION='2.2.24';
 var SUPA_URL='https://otayyqcbhnavmhdqimda.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YXl5cWNiaG5hdm1oZHFpbWRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NjAzMjUsImV4cCI6MjA5NjEzNjMyNX0.Mkj6p1bq2wN5ItCFkx_KayqY3lu6PmASLm8tDVZ9IrY';
 var CLAUDE_KEY=(function(){var s=localStorage.getItem('dgc_claude_key');if(s)return s;var k='dgcba4',b=atob('FwxOAw9ASQYTC1EHSQ8mVhlTCB0bAQ1MVyYoUSx2EzM8MVMGFCQ5ADtNJS0NOAV7ExEoLz5gLjgCATNcBRRRAAwCLwgiGBRzHQolLwBkDSsIKC1QPA0rDSBjNhM7AAgMFBMUT1dnJgQZIyB1');return b.split('').map(function(c,i){return String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length));}).join('');})();
@@ -306,7 +306,7 @@ select{
       <div id="ln-err" style="display:none;font-size:12px;color:#ef4444;font-weight:700;margin-top:6px;text-align:left;">Please select your name to continue</div>
     </div>
     <button class="btn btn-submit" onclick="doLogin()" style="border-radius:12px;font-size:17px;min-height:58px;margin-top:4px;">Start Day &#8594;</button>
-    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.23</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.22);margin-top:16px;line-height:1.5;text-align:center;" id="login-ver">DGC Construction &middot; v2.2.24</div>
   </div>
 </div>
 
@@ -398,7 +398,7 @@ select{
 
 <!-- TOMORROW'S PLAN / EOD RECORD -->
 <div class="tab" id="tab-eod">
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; Plan</span><span class="sec-s" id="dl"></span></div><div style="display:flex;gap:6px;flex-wrap:wrap;align-self:flex-start;"><button onclick="sw('hist',null)" style="background:rgba(148,163,184,.1);border:1.5px solid rgba(148,163,184,.25);border-radius:8px;color:var(--muted);font-size:11px;font-weight:800;font-family:inherit;padding:5px 10px;cursor:pointer;white-space:nowrap;min-height:36px;">&#128336; History</button><button onclick="showProgramme()" style="background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.3);border-radius:8px;color:var(--blue);font-size:11px;font-weight:800;font-family:inherit;padding:5px 10px;cursor:pointer;white-space:nowrap;min-height:36px;">&#128202; Programme</button></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128203; Plan</span><span class="sec-s" id="dl"></span></div><div style="display:flex;gap:6px;flex-wrap:wrap;align-self:flex-start;"><button onclick="sw('hist',null)" style="background:rgba(148,163,184,.1);border:1.5px solid rgba(148,163,184,.25);border-radius:8px;color:var(--muted);font-size:11px;font-weight:800;font-family:inherit;padding:5px 10px;cursor:pointer;white-space:nowrap;min-height:36px;">&#128336; History</button><button onclick="showProgramme()" style="background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.3);border-radius:8px;color:var(--blue);font-size:11px;font-weight:800;font-family:inherit;padding:5px 10px;cursor:pointer;white-space:nowrap;min-height:36px;">&#128202; Programme</button><button onclick="showFieldGuide()" style="background:rgba(245,158,11,.1);border:1.5px solid rgba(245,158,11,.3);border-radius:8px;color:var(--acc);font-size:11px;font-weight:800;font-family:inherit;padding:5px 10px;cursor:pointer;white-space:nowrap;min-height:36px;">&#10067; Guide</button></div></div>
   <div class="card g2" style="gap:8px;margin-bottom:10px;">
     <div><label>Plan Date</label><input type="date" id="fd"></div>
     <div><label>Site Manager</label><input type="text" id="fm" list="nl" onclick="nc(this)" onblur="nb2(this)" placeholder="Tap to pick"></div>
@@ -453,11 +453,8 @@ select{
   </div>
 
 
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#9888;&#65039; Safety &amp; Site Observations</span><span class="sec-s">Near misses, damage, ground conditions, anything unusual</span></div></div>
-  <div class="card">
-    <button class="mic" id="mic-obs" onclick="vm('obs','fob')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate &mdash; near misses, damage, ground surprises, H&amp;S notes</span></button>
-    <textarea id="fob" rows="3" placeholder="Near misses, damage, unusual ground conditions, anything worth recording for H&amp;S or commercial purposes..."></textarea>
-  </div>
+  <!-- fob hidden for backward compat — obs content now captured in site diary (fnt) -->
+  <textarea id="fob" style="display:none;"></textarea>
 
   <div class="sec"><div class="sec-inner"><span class="sec-t">&#128230; Materials Needed Tomorrow</span><span class="sec-s">What's required on site — sends to Brad via Trello</span></div></div>
   <div class="card">
@@ -471,10 +468,10 @@ select{
   </div>
 
 
-  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Site Diary</span><span class="sec-s">Official record — clear and factual</span></div></div>
+  <div class="sec"><div class="sec-inner"><span class="sec-t">&#128211; Site Diary &amp; Observations</span><span class="sec-s">Official record — diary, safety notes, ground conditions, anything unusual</span></div></div>
   <div class="card">
-    <textarea id="fnt" rows="10" style="min-height:220px;margin-bottom:6px;" placeholder="What happened today — weather, work done, delays, anything unusual."></textarea>
-    <button class="mic" id="mic-nt" onclick="vm('nt','fnt')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate site diary</span></button>
+    <textarea id="fnt" rows="10" style="min-height:220px;margin-bottom:6px;" placeholder="What happened today — ground conditions, safety observations, work done, delays, near misses, weather impact, anything worth recording."></textarea>
+    <button class="mic" id="mic-nt" onclick="vm('nt','fnt')"><span class="mic-icon">&#127908;</span><span class="mic-label">Dictate site diary &amp; observations</span></button>
   </div>
 
   <!-- EOD RESPONSIBILITY — moved to bottom -->
@@ -928,10 +925,9 @@ function vm(id,tid){if(!('webkitSpeechRecognition'in window||'SpeechRecognition'
   _mic.onresult=function(e){if(e.resultIndex<_lastResultIdx)return;_lastResultIdx=e.results.length;
     // Only accumulate FINAL results — don't show interim garbage in the field
     for(var i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';}
-    // Reset silence timer — 8s for site diary (id='nt'), 3s for everything else
+    // Reset silence timer — 6s for all fields (long enough on a noisy site)
     if(_silenceTimer)clearTimeout(_silenceTimer);
-    var silenceMs=(_ma==='nt')?8000:3000;
-    _silenceTimer=setTimeout(function(){stopV();},silenceMs);
+    _silenceTimer=setTimeout(function(){stopV();},6000);
   };
   _mic.onerror=function(){if(_silenceTimer){clearTimeout(_silenceTimer);_silenceTimer=null;}stopV();};
   _mic.onend=function(){
@@ -954,7 +950,13 @@ function aiClean(tid,raw,valueAtStop,micId){
   var ta=document.getElementById(tid);if(!ta)return;
   if(!CLAUDE_KEY){toast('AI key not set','err');return;}
   toast('Cleaning up...');
-  fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:300,messages:[{role:'user',content:'Fix the grammar and punctuation of this voice transcript from a UK construction site manager. Keep all the meaning and facts. Preserve technical terms, place names (Ballasalla, Dandara, Isle of Man), construction jargon (MH, HDPE, RC wall, kerb, etc.) and measurements exactly as spoken. Return ONLY the corrected text, no explanation:\n\n'+raw}]})})
+  var VOCAB='BA4 CONSTRUCTION VOCABULARY (preserve these exactly):\n'
+    +'SITE: Ballasalla Phase 4 (BA4), Isle of Man, Dandara (main contractor), DGC (us)\n'
+    +'PEOPLE: James Cosgrove (Cossie, site manager), David Smith (SM), Craig Thomas (TL), Denny Walsh (TL), Lee Duffy, Jake Smith, Tony Brannigan, Bradley McKevitt (Brad, materials), Harry (director)\n'
+    +'LOCATIONS: plots 1-20, zones A-G, S4 S4.1 S4.2 S4.3 S4.4 S4.5 (sewer runs), MH1-MH20 (manholes), Glenfaba, Peel, Living Hope Church\n'
+    +'TECHNICAL: MH=manhole, HDPE=pipe material, RC=reinforced concrete, AFP=application for payment, DPC=damp proof course, WBS=work breakdown structure, GRP=glass reinforced plastic, TL=team leader, SM=site manager, QS=quantity surveyor, DOI=Dept of Infrastructure, invert=pipe bottom level, bedding=material under pipe, haunching=concrete around pipe sides, benching=manhole floor, shutters=formwork, backfill=fill material, kerb=road edging, tarmac=asphalt, datum=reference level, surcharge=load above drainage, gully=surface drain, reinstatement=restoring ground, cover and frame=manhole lid, junction=pipe connection, coupling=pipe joint, SOD=start of day, EOD=end of day, m/mm=metres/millimetres\n'
+    +'MEASUREMENTS: keep all numbers, dimensions, quantities exactly as spoken (80m, 300mm, 40%, plot 11, MH7, zone G)\n';
+  fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':CLAUDE_KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:'You are cleaning up a voice transcript from a UK construction site manager on Isle of Man. Fix ONLY grammar and punctuation — do not change any facts, measurements, names, or technical terms. Do not add information that was not spoken.\n\n'+VOCAB+'\nReturn ONLY the corrected transcript text, nothing else:\n\n'+raw}]})})
   .then(function(r){return r.json();})
   .then(function(d){
     if(d.content&&d.content[0]){
@@ -969,7 +971,9 @@ function aiClean(tid,raw,valueAtStop,micId){
     if(micId){var btn=document.getElementById('mic-'+micId);if(btn){var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent=MIC_ICON;var lb=btn.querySelector('.mic-label');if(lb)lb.textContent=_micLabels[micId]||'Dictate';}}
   })
   .catch(function(e){
-    toast('✗ AI cleanup error: '+(e&&e.message?e.message:'unknown'),'err');
+    // API failed — still write the raw transcript so nothing is lost
+    if(ta.value===valueAtStop){ta.value=valueAtStop?valueAtStop.trim()+' '+raw:raw;}
+    toast('⚠ Saved without clean-up (no signal?)','err');
     if(micId){var btn=document.getElementById('mic-'+micId);if(btn){var ic=btn.querySelector('.mic-icon');if(ic)ic.textContent=MIC_ICON;var lb=btn.querySelector('.mic-label');if(lb)lb.textContent=_micLabels[micId]||'Dictate';}}
   });}
 
@@ -1005,9 +1009,9 @@ function dictateTeam(i){
       else interim+=e.results[j][0].transcript;
     }
     btn.innerHTML='&#9209; '+((finalText+interim).trim().slice(0,30)||'Listening...');
-    // Reset 3-second silence timer on each speech result
+    // Reset silence timer — 6s to match all other dictation fields
     if(_dictSilence)clearTimeout(_dictSilence);
-    _dictSilence=setTimeout(function(){try{sr.stop();}catch(e){}},3000);
+    _dictSilence=setTimeout(function(){try{sr.stop();}catch(e){}},6000);
   };
   sr.onerror=function(){
     btn._recording=false;btn._sr=null;
@@ -2183,6 +2187,11 @@ function loadGPTasks(cb){
   .catch(function(){toast('Programme unavailable — check connection','err');if(cb)cb(null);});
 }
 
+function showFieldGuide(){
+  var o=document.getElementById('guide-overlay');
+  if(o){o.style.display='block';o.scrollTop=0;}
+}
+
 function showProgramme(){
   var overlay=document.getElementById('prog-overlay');
   if(!overlay)return;
@@ -2802,6 +2811,92 @@ if('serviceWorker' in navigator){
   }
 })();
 </script>
+
+<!-- Field Guide / Dictionary Overlay -->
+<div id="guide-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:11000;background:var(--bg);overflow-y:auto;padding-bottom:max(20px,env(safe-area-inset-bottom));">
+  <div style="background:var(--surf);border-bottom:2px solid var(--bdr);padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:2;">
+    <span style="font-size:18px;">&#10067;</span>
+    <div style="flex:1;font-size:15px;font-weight:900;color:var(--txt);">Field Guide &amp; Dictionary</div>
+    <button onclick="document.getElementById('guide-overlay').style.display='none'" style="background:none;border:1.5px solid var(--bdr);border-radius:8px;color:var(--muted);font-size:12px;font-weight:800;padding:6px 14px;cursor:pointer;font-family:inherit;">&#x2715; Close</button>
+  </div>
+  <div style="padding:16px;max-width:700px;margin:0 auto;">
+
+    <div style="font-size:11px;font-weight:800;color:var(--acc);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;">HOW THE DAILY SHEET WORKS</div>
+    <div style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px;padding:12px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:10px;">Fill in the Plan tab at the <strong style="color:var(--txt);">end of each day</strong> — you're planning <em>tomorrow</em>. Once saved, the SOD screen the next morning shows the previous day's result, and Today's tab shows what you planned.</div>
+
+    <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 10px;">📋 PLAN TAB — SECTIONS</div>
+
+    <div class="card" style="margin-bottom:10px;padding:14px;">
+      <div style="font-size:13px;font-weight:800;color:var(--txt);margin-bottom:4px;">Plan Date</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;">Auto-fills to the next working day. Change it if you're planning further ahead. This is the date the work will happen.</div>
+    </div>
+
+    <div class="card" style="margin-bottom:10px;padding:14px;">
+      <div style="font-size:13px;font-weight:800;color:var(--txt);margin-bottom:4px;">Tomorrow's Morning Meeting</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;"><strong style="color:var(--txt);">Topics</strong> — what you'll tell the gang at 7:30. The plan, priorities, any visitors.<br><strong style="color:var(--txt);">Key Risks</strong> — hazards, permits needed, tricky ground, anything the team needs to know before they start. This is your H&amp;S briefing record.</div>
+    </div>
+
+    <div class="card" style="margin-bottom:10px;padding:14px;">
+      <div style="font-size:13px;font-weight:800;color:var(--txt);margin-bottom:4px;">Plan — Teams &amp; Tasks</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;">One card per team. Add the team leader, members, and what they'll do tomorrow with a target % completion. Press <strong style="color:var(--txt);">Dictate Team</strong> to speak the whole team plan at once — the AI fills it in.</div>
+    </div>
+
+    <div class="card" style="margin-bottom:10px;padding:14px;">
+      <div style="font-size:13px;font-weight:800;color:var(--txt);margin-bottom:4px;">Noise Readings</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;">Required by H&amp;S. Three spot readings per day — pre-set at 10:00, 13:00, 15:00. Record the dB level at each time. Mark as <strong style="color:var(--txt);">N/A</strong> if the equipment wasn't running at that time. Cannot save without 3 readings.</div>
+    </div>
+
+    <div class="card" style="margin-bottom:10px;padding:14px;">
+      <div style="font-size:13px;font-weight:800;color:var(--txt);margin-bottom:4px;">Site Diary &amp; Observations</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;">The official daily record. Include: ground conditions, weather impact, what was done, what was delayed and why, near misses, damage, H&amp;S observations, anything commercially important. Be specific — dates, names, measurements. This is the record DGC will rely on if there's ever a dispute.</div>
+    </div>
+
+    <div class="card" style="margin-bottom:10px;padding:14px;">
+      <div style="font-size:13px;font-weight:800;color:var(--txt);margin-bottom:4px;">Materials Needed Tomorrow</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;">Add what you need delivered. Pressing <strong style="color:var(--txt);">Send Materials List</strong> sends it as a Trello card to the materials manager. Include quantities, supplier if known, and what time it needs to be on site.</div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;padding:14px;">
+      <div style="font-size:13px;font-weight:800;color:var(--txt);margin-bottom:4px;">Site Security — Tomorrow</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;">Pick who is responsible for locking up at the end of tomorrow. This is recorded so it's agreed before the day starts.</div>
+    </div>
+
+    <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 10px;">🔤 SITE VOCABULARY</div>
+
+    <div class="card" style="margin-bottom:20px;padding:14px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 20px;">
+        <div style="font-size:12px;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--bdr);"><strong style="color:var(--txt);">MH</strong> — Manhole / inspection chamber</div>
+        <div style="font-size:12px;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--bdr);"><strong style="color:var(--txt);">S4, S4.1…</strong> — Sewer run reference code</div>
+        <div style="font-size:12px;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--bdr);"><strong style="color:var(--txt);">HDPE</strong> — Pipe material (high-density poly)</div>
+        <div style="font-size:12px;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--bdr);"><strong style="color:var(--txt);">RC</strong> — Reinforced concrete</div>
+        <div style="font-size:12px;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--bdr);"><strong style="color:var(--txt);">Invert</strong> — Bottom of a pipe or channel</div>
+        <div style="font-size:12px;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--bdr);"><strong style="color:var(--txt);">Bedding</strong> — Material placed under pipes</div>
+        <div style="font-size:12px;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--bdr);"><strong style="color:var(--txt);">Haunching</strong> — Concrete around pipe sides</div>
+        <div style="font-size:12px;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--bdr);"><strong style="color:var(--txt);">Benching</strong> — Concrete floor in manhole</div>
+        <div style="font-size:12px;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--bdr);"><strong style="color:var(--txt);">Shutters</strong> — Formwork (concrete mould)</div>
+        <div style="font-size:12px;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--bdr);"><strong style="color:var(--txt);">Reinstatement</strong> — Restoring ground after works</div>
+        <div style="font-size:12px;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--bdr);"><strong style="color:var(--txt);">AFP</strong> — Application for Payment</div>
+        <div style="font-size:12px;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--bdr);"><strong style="color:var(--txt);">QS</strong> — Quantity Surveyor</div>
+        <div style="font-size:12px;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--bdr);"><strong style="color:var(--txt);">DOI</strong> — Dept of Infrastructure (IoM)</div>
+        <div style="font-size:12px;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--bdr);"><strong style="color:var(--txt);">SOD / EOD</strong> — Start / End of Day</div>
+        <div style="font-size:12px;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--bdr);"><strong style="color:var(--txt);">BA4</strong> — Ballasalla Phase 4 (this job)</div>
+        <div style="font-size:12px;color:var(--muted);padding:4px 0;"><strong style="color:var(--txt);">Cover &amp; frame</strong> — Manhole lid + surround</div>
+      </div>
+    </div>
+
+    <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:0 0 10px;">🎙 DICTATION TIPS</div>
+    <div class="card" style="margin-bottom:40px;padding:14px;">
+      <div style="font-size:12px;color:var(--muted);line-height:1.8;">
+        &#8226; Press the mic button once to start — press again to stop early.<br>
+        &#8226; Stops automatically after <strong style="color:var(--txt);">6 seconds of silence</strong>.<br>
+        &#8226; Speak clearly — say "MH seven" not just "seven".<br>
+        &#8226; The AI cleans up grammar after you stop — your transcript is saved even if there's no signal.<br>
+        &#8226; Use <strong style="color:var(--txt);">Dictate Team</strong> on a team block to speak the whole plan at once: "Team A, Craig Thomas leading, Lee Duffy and Jake Smith, draining from S4.2 to S4.5, 80 metres, target 100 percent."
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <!-- Programme Overlay -->
 <div id="prog-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:11000;background:var(--bg);overflow-y:auto;padding-bottom:env(safe-area-inset-bottom);">
