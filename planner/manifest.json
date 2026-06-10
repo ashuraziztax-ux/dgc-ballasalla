@@ -1,0 +1,14 @@
+{
+  "name": "DGC Job Planner",
+  "short_name": "Job Planner",
+  "description": "DGC director planning — jobs, gang loading, timeline, slot finder",
+  "start_url": "/dgc-ballasalla/planner/",
+  "scope": "/dgc-ballasalla/planner/",
+  "display": "standalone",
+  "background_color": "#1a1d27",
+  "theme_color": "#1a1d27",
+  "icons": [
+    { "src": "/dgc-ballasalla/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/dgc-ballasalla/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

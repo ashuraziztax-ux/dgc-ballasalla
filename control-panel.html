@@ -3993,7 +3993,7 @@ function drwFilter() {
 <script>
 // ═══════════════ DATA ═══════════════
 // LAST_UPDATED: date/time of the most recent Claude push — update this with every deploy.
-const LAST_UPDATED = new Date('2026-05-31T23:30:00'); // v190 — Director CSS fix: admin tabs no longer bleed through — Director tabs rebuilt with unique IDs, no conflicts — Ash and Harry director draws raised to £2,000/month each — Overhead corrected to £14,065/month from real payroll — Director mode: 2 proper nav tabs (Jobs + Job Planner)
+const LAST_UPDATED = new Date('2026-06-10T15:30:00'); // v1000 — Job Planner overhaul: anchor date stops weekly bar drift — deleted seed jobs stay deleted (tombstones) — seeds updated to 10 Jun reality (GF2 £1,300,188 bidding, Industrial Units placeholder, LHC on stop) — editable gang ceiling — Export/Import planner data between devices — director data now in full backup
 // DATA_AS_OF: date the site figures were last verified correct.
 const DATA_AS_OF = new Date('2026-05-26T12:00:00'); // noon = BST-safe
 // DATA_STAMP: string version of DATA_AS_OF — used to detect & bust stale localStorage
@@ -5135,7 +5135,8 @@ function exportAFPCSV() {
 
 function exportFullJSON() {
   var keys = ['dgc_log','dgc_delays','dgc_quicklog','dgc_snapshots',
-               'dgc_zone_progress','dgc_prog_live','dgc_var_register'];
+               'dgc_zone_progress','dgc_prog_live','dgc_var_register',
+               'dgc_jobs','dgc_job_history','dgc_jobs_anchor','dgc_jobs_deleted','dgc_avail_staff'];
   var backup = {exportedAt: new Date().toISOString(), version:'v15', data:{}};
   keys.forEach(function(k) {
     try { backup.data[k] = lsGet(k, 'null'); } catch(e) {}
@@ -16062,7 +16063,7 @@ window.mobDrawerTab = function(tabName) {
   //   Harry director draw:                                £2,000/month  ← updated
   //   NOTE: Bradley & Lewis wages ARE in job cost (payroll shows they're site workers)
   //   ────────────────────────────────────────────────────────────────────────────
-  //   Total overhead (from OH&P profit):                  £14,065/month = £168,780/year
+  //   Total overhead (from OH&P profit):                  £16,297/month = £195,564/year
   var ANNUAL_OVERHEAD    = 195564; // £16297/month × 12 (Ash+Harry raised to £2k/month each)
   var BENCHMARK_PMPW     = 742;    // £/man/week benchmark (Ballasalla, real wages May 2026)
   var PROFIT_PER_MAN_MTH = 3216;   // Used in health panel only
@@ -16091,13 +16092,14 @@ window.mobDrawerTab = function(tabName) {
   // ── Jobs localStorage ─────────────────────────────────────────────────────
   // ── All default/seeded jobs — single source of truth ──────────────────────
   var JOB_SEEDS = [
-    { id:1, name:'Ballasalla Phase 4',        value:450142,  weeks:17, people:6,  ohp:15, profit:80000, startWeek:-14, onTimeline:true,  confirmed:true,  status:'running',   note:'Main drainage' },
-    { id:2, name:'Living Hope Church',         value:185551,  weeks:13, people:4,  ohp:15, profit:0,     startWeek:-2,  onTimeline:true,  confirmed:true,  status:'running',   note:'Slab & gabion' },
-    { id:3, name:'Slab Works Plots 7-11',      value:209056,  weeks:10, people:3,  ohp:15, profit:0,     startWeek:4,   onTimeline:true,  confirmed:false, status:'running',   note:'Not started — add when slabs begin' },
+    { id:1, name:'Ballasalla Phase 4',        value:500000,  weeks:17, people:6,  ohp:15, profit:80000, startWeek:-14, onTimeline:true,  confirmed:true,  status:'running',   note:'Main drainage — ~3/4 through, demob ~3 Jul. AFP4 to include tarmac. Cash critical.' },
+    { id:2, name:'Living Hope Church',         value:185551,  weeks:13, people:4,  ohp:15, profit:0,     startWeek:-2,  onTimeline:false, confirmed:true,  status:'running',   note:'ON STOP (Jun 2026) — off gang loading until restart. Slab & gabion.' },
+    { id:3, name:'Slab Works Plots 7-11',      value:209056,  weeks:10, people:3,  ohp:15, profit:0,     startWeek:-3,  onTimeline:true,  confirmed:true,  status:'running',   note:'RUNNING — plots 9+10 paid, 11 in payment, AFP02 submitted. To price: 5, 6, 12–15.' },
     { id:4, name:'Peel Breakwater (DOI)',      value:122995,  weeks:8,  people:5,  ohp:15, profit:0,     startWeek:10,  onTimeline:true,  confirmed:true,  status:'awarded',   note:'AWARDED — August start. Sewage treatment works, Peel harbour. £122,994 brick option. DOI client (IoM Govt).' },
     { id:5, name:'Utmost International (KEBH)',value:500000,  weeks:12, people:4,  ohp:15, profit:0,     startWeek:18,  onTimeline:true,  confirmed:false, status:'bidding',   note:'BIDDING — King Edward Bay House, Onchan. Car park waterproofing + structural repair. £500k Simon estimate.' },
-    { id:6, name:'Glenfaba Ring Road (Est.)',  value:1700000, weeks:52, people:12, ohp:15, profit:0,     startWeek:18,  onTimeline:true,  confirmed:false, status:'estimate',  note:'ESTIMATE — Dandara ring road drainage. ~£1.7m, 4× Ballasalla scale. Kal Chudasama to confirm.' },
-    { id:7, name:'MU Flow Monitoring Ph.2',   value:130000,  weeks:12, people:2,  ohp:15, profit:0,     startWeek:52,  onTimeline:false, confirmed:false, status:'placeholder',note:'PLACEHOLDER — Manx Utilities, ~10 more sites. ~£130k estimated. Not imminent.' }
+    { id:6, name:'Glenfaba Ring Road (GF2)',   value:1289157, weeks:26, people:10, ohp:15, profit:168151,startWeek:8,   onTimeline:true,  confirmed:false, status:'bidding',   note:'SUBMITTED 10 Jun 2026 at £1,289,157.05 — awaiting Dandara response, negotiation expected. Internal plan 26 wks / 2 gangs. 97 houses, Peel.' },
+    { id:7, name:'MU Flow Monitoring Ph.2',   value:130000,  weeks:12, people:2,  ohp:15, profit:0,     startWeek:52,  onTimeline:false, confirmed:false, status:'placeholder',note:'PLACEHOLDER — Manx Utilities, ~10 more sites. ~£130k estimated. Not imminent.' },
+    { id:8, name:'Dandara Industrial Units',   value:310000,  weeks:18, people:4,  ohp:15, profit:40000, startWeek:6,   onTimeline:true,  confirmed:false, status:'bidding',   note:'BIDDING — tender received 10 Jun, internal estimate ~£310k (Simon rates). BT8 Balthane, Blocks P & Q, ~26 units / 2,126 m². 17–18 wks work (~22 cal). Gang of 4 — crossover with BA4-S. Start mid–late Jul per Ian. Return date TBC.' }
   ];
 
   function loadJobs() {
@@ -16107,18 +16109,68 @@ window.mobDrawerTab = function(tabName) {
 
       if (!jobs || !Array.isArray(jobs) || jobs.length === 0) {
         // No data at all — seed with all defaults and save
+        try { localStorage.setItem('dgc_jobs_anchor', new Date().toISOString()); } catch(eA0) {}
         saveJobs(JOB_SEEDS);
         return JOB_SEEDS.map(function(j){ return Object.assign({}, j); });
       }
 
-      // Merge: add any seeded job that isn't already in localStorage (by id OR close name match)
       var changed = false;
+
+      // v1000: anchor — startWeek is relative to the anchor week, not "today".
+      // Shift all startWeeks down by full weeks elapsed since anchor, then re-anchor,
+      // so bars hold their real-world dates instead of drifting a week later every week.
+      try {
+        var anchorS = localStorage.getItem('dgc_jobs_anchor');
+        var WEEK_MS = 7*24*60*60*1000;
+        if (!anchorS) {
+          localStorage.setItem('dgc_jobs_anchor', new Date().toISOString());
+        } else {
+          var elapsedWks = Math.floor((new Date().getTime() - new Date(anchorS).getTime()) / WEEK_MS);
+          if (elapsedWks >= 1) {
+            jobs.forEach(function(j){ if (typeof j.startWeek === 'number') j.startWeek -= elapsedWks; });
+            localStorage.setItem('dgc_jobs_anchor', new Date(new Date(anchorS).getTime() + elapsedWks*WEEK_MS).toISOString());
+            changed = true;
+          }
+        }
+      } catch(eA1) {}
+
+      // v1000: tombstones — seeds the user deleted stay deleted
+      var tombstones = [];
+      try { tombstones = JSON.parse(localStorage.getItem('dgc_jobs_deleted')||'[]'); } catch(eT) { tombstones = []; }
+
+      // Merge: add any seeded job that isn't already in localStorage (by id OR close name match)
       JOB_SEEDS.forEach(function(seed) {
+        if (tombstones.indexOf(seed.id) >= 0) return;
         var exists = jobs.find(function(j) {
           return j.id === seed.id || (j.name && seed.name && j.name.toLowerCase().replace(/\s+/g,'').indexOf(seed.name.toLowerCase().replace(/\s+/g,'').substring(0,8)) >= 0);
         });
         if (!exists) { jobs.push(Object.assign({}, seed)); changed = true; }
       });
+
+      // ONE-TIME v1000 migration: bring director jobs in line with 10 Jun 2026 reality
+      if (!localStorage.getItem('dgc_v1000_jobs')) {
+        jobs.forEach(function(j) {
+          var nm = (j.name||'').toLowerCase();
+          if (nm.indexOf('glenfaba') >= 0) {
+            j.name = 'Glenfaba Ring Road (GF2)'; j.value = 1289157; j.weeks = 26; j.people = 10; j.profit = 168151; j.status = 'bidding';
+            j.note = 'SUBMITTED 10 Jun 2026 at £1,289,157.05 — awaiting Dandara response, negotiation expected. Internal plan 26 wks / 2 gangs. 97 houses, Peel.';
+          }
+          if (nm.indexOf('living hope') >= 0 && j.status === 'running') {
+            j.onTimeline = false;
+            j.note = 'ON STOP (Jun 2026) — off gang loading until restart. Slab & gabion.';
+          }
+          if (nm.indexOf('ballasalla phase 4') >= 0 && j.value === 450142) {
+            j.value = 500000;
+            j.note = 'Main drainage — ~3/4 through, demob ~3 Jul. AFP4 to include tarmac. Cash critical.';
+          }
+          if (nm.indexOf('slab works') >= 0) {
+            j.confirmed = true; j.status = 'running';
+            j.note = 'RUNNING — plots 9+10 paid, 11 in payment, AFP02 submitted. To price: 5, 6, 12–15.';
+          }
+        });
+        localStorage.setItem('dgc_v1000_jobs', '1');
+        changed = true;
+      }
 
       // Fix undefined/null onTimeline → true
       jobs.forEach(function(j) {
@@ -16252,9 +16304,15 @@ window.mobDrawerTab = function(tabName) {
     + '<div style="background:#f59e0b;color:#1a1d27;border-radius:8px;padding:5px 12px;font-size:14px;font-weight:900;">📅 Job Planner</div>'
     + '<div style="font-size:11px;color:var(--muted);">Drag bars · positions auto-save · edit jobs below</div>'
     + '</div>'
-    + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
+    + '<label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--muted);">Gang'
+    + '<input id="dp-avail-staff" type="number" min="1" max="99" value="'+(function(){ var v=parseInt(localStorage.getItem('dgc_avail_staff')); return (v>0&&v<100)?v:10; })()+'" onchange="dpSetAvailStaff&&dpSetAvailStaff(this.value)" style="width:48px;padding:6px 7px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:800;background:var(--surface2);color:var(--text);text-align:center;">'
+    + '</label>'
     + '<button onclick="djShowAllOnPlanner&&djShowAllOnPlanner()" style="padding:7px 14px;background:#f59e0b;border:none;border-radius:8px;color:#1a1d27;font-size:12px;font-weight:900;cursor:pointer;">📋 Show All</button>'
     + '<button onclick="djAddJob&&djAddJob()" style="padding:7px 14px;background:rgba(245,158,11,0.12);border:1px solid #f59e0b55;border-radius:8px;color:#f59e0b;font-size:12px;font-weight:800;cursor:pointer;">+ Add Job</button>'
+    + '<button onclick="dpExportJobs&&dpExportJobs()" style="padding:7px 14px;background:rgba(59,130,246,0.12);border:1px solid #3b82f655;border-radius:8px;color:#3b82f6;font-size:12px;font-weight:800;cursor:pointer;">⬇ Export</button>'
+    + '<button onclick="var fi=document.getElementById(\'dp-import-file\');if(fi)fi.click();" style="padding:7px 14px;background:rgba(59,130,246,0.12);border:1px solid #3b82f655;border-radius:8px;color:#3b82f6;font-size:12px;font-weight:800;cursor:pointer;">⬆ Import</button>'
+    + '<input id="dp-import-file" type="file" accept=".json,application/json" style="display:none;" onchange="dpImportJobs&&dpImportJobs(this)">'
     + '</div>'
     + '</div>'
 
@@ -16291,6 +16349,56 @@ window.mobDrawerTab = function(tabName) {
     dpRenderTimeline();
     dpBuildMonthlySummary();
     dpRenderJobCards();
+  };
+
+  // ── v1000: editable gang ceiling ───────────────────────────────────────────
+  window.dpSetAvailStaff = function(val) {
+    var v = parseInt(val);
+    if (!(v > 0 && v < 100)) { alert('Gang size must be 1–99.'); return; }
+    try { localStorage.setItem('dgc_avail_staff', String(v)); } catch(e) {}
+    buildDirPlannerTab(); // re-render so the red line and slot finder use the new ceiling
+  };
+
+  // ── v1000: export / import all director planner data (move between devices, backup) ──
+  var DP_DATA_KEYS = ['dgc_jobs','dgc_job_history','dgc_jobs_anchor','dgc_jobs_deleted','dgc_avail_staff'];
+  window.dpExportJobs = function() {
+    var backup = { exportedAt: new Date().toISOString(), type:'dgc-director-planner', version:'v1000', data:{} };
+    DP_DATA_KEYS.forEach(function(k) {
+      try { var v = localStorage.getItem(k); if (v !== null) backup.data[k] = v; } catch(e) {}
+    });
+    var json = JSON.stringify(backup, null, 2);
+    try {
+      var blob = new Blob([json], {type:'application/json'});
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'dgc-job-planner-' + new Date().toISOString().slice(0,10) + '.json';
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ try { URL.revokeObjectURL(a.href); document.body.removeChild(a); } catch(e2) {} }, 500);
+    } catch(e3) { alert('Export failed: ' + e3.message); }
+  };
+  window.dpImportJobs = function(input) {
+    if (!input || !input.files || !input.files[0]) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var backup = JSON.parse(e.target.result);
+        if (!backup || backup.type !== 'dgc-director-planner' || !backup.data) {
+          alert('Not a Job Planner export file.'); return;
+        }
+        var jobCount = 0;
+        try { jobCount = (JSON.parse(backup.data.dgc_jobs||'[]')||[]).length; } catch(eC) {}
+        if (!confirm('Import ' + jobCount + ' jobs from backup dated ' + (backup.exportedAt||'unknown').slice(0,10) + '?\n\nThis replaces the planner data on this device.')) return;
+        DP_DATA_KEYS.forEach(function(k) {
+          if (backup.data[k] !== undefined && backup.data[k] !== null) {
+            try { localStorage.setItem(k, backup.data[k]); } catch(eS) {}
+          }
+        });
+        buildDirPlannerTab();
+        alert('Import complete — planner updated.');
+      } catch(err) { alert('Could not read file: ' + err.message); }
+    };
+    reader.readAsText(input.files[0]);
+    input.value = '';
   };
 
   // ── Compact job cards for the planner tab ─────────────────────────────────
@@ -16740,7 +16848,16 @@ window.mobDrawerTab = function(tabName) {
   };
 
   window.djDeleteJob = function(idx) {
-    var jobs = loadJobs(); jobs.splice(idx,1); saveJobs(jobs); djRenderJobs();
+    var jobs = loadJobs();
+    // v1000: tombstone seeded jobs so loadJobs doesn't resurrect them on next load
+    var dead = jobs[idx];
+    if (dead && dead.id !== undefined) {
+      try {
+        var tomb = JSON.parse(localStorage.getItem('dgc_jobs_deleted')||'[]');
+        if (tomb.indexOf(dead.id) < 0) { tomb.push(dead.id); localStorage.setItem('dgc_jobs_deleted', JSON.stringify(tomb)); }
+      } catch(eD) {}
+    }
+    jobs.splice(idx,1); saveJobs(jobs); djRenderJobs();
     try { if (document.getElementById('dp-tl-inner')) { dpRenderTimeline(); dpBuildMonthlySummary(); } } catch(e) {}
   };
 
@@ -16926,7 +17043,7 @@ window.mobDrawerTab = function(tabName) {
     var TL_PAST_WKS   = 16;
     var TL_FUT_WKS    = 104;
     var TL_TOTAL_WKS  = TL_PAST_WKS + TL_FUT_WKS;
-    var TL_AVAIL_STAFF = 10;
+    var TL_AVAIL_STAFF = (function(){ var v = parseInt(localStorage.getItem('dgc_avail_staff')); return (v > 0 && v < 100) ? v : 10; })(); // v1000: editable gang ceiling
     var staffByWeek   = [];
     for (var i=0; i<TL_TOTAL_WKS; i++) staffByWeek[i] = 0;
     loadJobs().filter(function(j){ return j.onTimeline !== false; }).forEach(function(j) {
@@ -17929,7 +18046,7 @@ window.mobDrawerTab = function(tabName) {
     var TL_TOTAL_WKS = TL_PAST_WKS + TL_FUT_WKS;
     var TL_TOTAL_W   = TL_TOTAL_WKS * TL_WEEK_W;
     var TL_TODAY_X   = TL_PAST_WKS * TL_WEEK_W;
-    var TL_AVAIL_STAFF = 10;
+    var TL_AVAIL_STAFF = (function(){ var v = parseInt(localStorage.getItem('dgc_avail_staff')); return (v > 0 && v < 100) ? v : 10; })(); // v1000: editable gang ceiling
     var MONTHLY_OVERHEAD_LOSS = 16297;
 
     var allJobsRaw = loadJobs();
