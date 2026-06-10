@@ -180,10 +180,10 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
     { id:2, name:'Living Hope Church',         value:185551,  weeks:13, people:4,  ohp:15, profit:0,     startWeek:-2,  onTimeline:false, confirmed:true,  status:'running',   note:'ON STOP (Jun 2026) — off gang loading until restart. Slab & gabion.' },
     { id:3, name:'Slab Works Plots 7-11',      value:209056,  weeks:10, people:3,  ohp:15, profit:0,     startWeek:-3,  onTimeline:true,  confirmed:true,  status:'running',   note:'RUNNING — plots 9+10 paid, 11 in payment, AFP02 submitted. To price: 5, 6, 12–15.' },
     { id:4, name:'Peel Breakwater (DOI)',      value:122995,  weeks:8,  people:5,  ohp:15, profit:0,     startWeek:10,  onTimeline:true,  confirmed:true,  status:'awarded',   note:'AWARDED — August start. Sewage treatment works, Peel harbour. £122,994 brick option. DOI client (IoM Govt).' },
-    { id:5, name:'Utmost International (KEBH)',value:500000,  weeks:12, people:4,  ohp:15, profit:0,     startWeek:18,  onTimeline:true,  confirmed:false, status:'bidding',   note:'BIDDING — King Edward Bay House, Onchan. Car park waterproofing + structural repair. £500k Simon estimate.' },
-    { id:6, name:'Glenfaba Ring Road (GF2)',   value:1289157, weeks:26, people:10, ohp:15, profit:168151,startWeek:8,   onTimeline:true,  confirmed:false, status:'bidding',   note:'SUBMITTED 10 Jun 2026 at £1,289,157.05 — awaiting Dandara response, negotiation expected. Internal plan 26 wks / 2 gangs. 97 houses, Peel.' },
-    { id:7, name:'MU Flow Monitoring Ph.2',   value:130000,  weeks:12, people:2,  ohp:15, profit:0,     startWeek:52,  onTimeline:false, confirmed:false, status:'placeholder',note:'PLACEHOLDER — Manx Utilities, ~10 more sites. ~£130k estimated. Not imminent.' },
-    { id:8, name:'Dandara Industrial Units',   value:310000,  weeks:18, people:4,  ohp:15, profit:40000, startWeek:6,   onTimeline:true,  confirmed:false, status:'bidding',   note:'BIDDING — tender received 10 Jun, internal estimate ~£310k (Simon rates). BT8 Balthane, Blocks P & Q, ~26 units / 2,126 m². 17–18 wks work (~22 cal). Gang of 4 — crossover with BA4-S. Start mid–late Jul per Ian. Return date TBC.' }
+    { id:5, name:'Utmost International (KEBH)',value:500000,  weeks:12, people:4,  ohp:15, profit:0,     startWeek:18,  onTimeline:true,  confirmed:false, status:'tendering',     inPipeline:false, note:'BIDDING — King Edward Bay House, Onchan. Car park waterproofing + structural repair. £500k Simon estimate.' },
+    { id:6, name:'Glenfaba Ring Road (GF2)',   value:1289157, weeks:26, people:10, ohp:15, profit:168151,startWeek:8,   onTimeline:true,  confirmed:false, status:'tendering_likely',inPipeline:true,  note:'SUBMITTED 10 Jun 2026 at £1,289,157.05 — awaiting Dandara response, negotiation expected. Internal plan 26 wks / 2 gangs. 97 houses, Peel.' },
+    { id:7, name:'MU Flow Monitoring Ph.2',   value:130000,  weeks:12, people:2,  ohp:15, profit:0,     startWeek:52,  onTimeline:false, confirmed:false, status:'placeholder',    inPipeline:false, note:'PLACEHOLDER — Manx Utilities, ~10 more sites. ~£130k estimated. Not imminent.' },
+    { id:8, name:'Dandara Industrial Units',   value:310000,  weeks:18, people:4,  ohp:15, profit:40000, startWeek:6,   onTimeline:true,  confirmed:false, status:'tendering_likely',inPipeline:true,  note:'BIDDING — tender received 10 Jun, internal estimate ~£310k (Simon rates). BT8 Balthane, Blocks P & Q, ~26 units / 2,126 m². 17–18 wks work (~22 cal). Gang of 4 — crossover with BA4-S. Start mid–late Jul per Ian. Return date TBC.' }
   ];
 
   function loadJobs() {
@@ -236,7 +236,7 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
         jobs.forEach(function(j) {
           var nm = (j.name||'').toLowerCase();
           if (nm.indexOf('glenfaba') >= 0) {
-            j.name = 'Glenfaba Ring Road (GF2)'; j.value = 1289157; j.weeks = 26; j.people = 10; j.profit = 168151; j.status = 'bidding';
+            j.name = 'Glenfaba Ring Road (GF2)'; j.value = 1289157; j.weeks = 26; j.people = 10; j.profit = 168151; j.status = 'tendering_likely';
             j.note = 'SUBMITTED 10 Jun 2026 at £1,289,157.05 — awaiting Dandara response, negotiation expected. Internal plan 26 wks / 2 gangs. 97 houses, Peel.';
           }
           if (nm.indexOf('living hope') >= 0 && j.status === 'running') {
@@ -255,6 +255,22 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
         localStorage.setItem('dgc_v1000_jobs', '1');
         changed = true;
       }
+
+      // ONE-TIME v1001 migration: rename bidding→tendering, estimate→tendering_likely, add inPipeline
+      if (!localStorage.getItem('dgc_v1001_status')) {
+        jobs.forEach(function(j) {
+          if (j.status === 'bidding') j.status = 'tendering';
+          if (j.status === 'estimate') j.status = 'tendering_likely';
+          if (j.inPipeline === undefined) j.inPipeline = true;
+        });
+        localStorage.setItem('dgc_v1001_status', '1');
+        changed = true;
+      }
+
+      // Ensure inPipeline is set on any job that doesn't have it
+      jobs.forEach(function(j) {
+        if (j.inPipeline === undefined) { j.inPipeline = true; changed = true; }
+      });
 
       // Fix undefined/null onTimeline → true
       jobs.forEach(function(j) {
@@ -389,9 +405,18 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
     + '<div style="font-size:11px;color:var(--muted);">Drag bars · positions auto-save · edit jobs below</div>'
     + '</div>'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
-    + '<label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--muted);">Gang'
-    + '<input id="dp-avail-staff" type="number" min="1" max="99" value="'+(function(){ var v=parseInt(localStorage.getItem('dgc_avail_staff')); return (v>0&&v<100)?v:10; })()+'" onchange="dpSetAvailStaff&&dpSetAvailStaff(this.value)" style="width:48px;padding:6px 7px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:800;background:var(--surface2);color:var(--text);text-align:center;">'
-    + '</label>'
+    + (function(){
+        var gang = (function(){ var v=parseInt(localStorage.getItem('dgc_avail_staff')); return (v>0&&v<100)?v:10; })();
+        var ovhd = (function(){ var v=parseInt(localStorage.getItem('dgc_overhead_staff')); return (v>=0&&v<50)?v:2; })();
+        var total = gang + ovhd;
+        return '<label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--muted);">Gang'
+          + '<input id="dp-avail-staff" type="number" min="1" max="99" value="'+gang+'" onchange="dpSetAvailStaff&&dpSetAvailStaff(this.value)" style="width:48px;padding:6px 7px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:800;background:var(--surface2);color:var(--text);text-align:center;">'
+          + '</label>'
+          + '<label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--muted);">Office'
+          + '<input id="dp-overhead-staff" type="number" min="0" max="50" value="'+ovhd+'" onchange="dpSetOverheadStaff&&dpSetOverheadStaff(this.value)" style="width:40px;padding:6px 7px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:800;background:var(--surface2);color:var(--text);text-align:center;">'
+          + '</label>'
+          + '<div id="dp-total-headcount" style="font-size:11px;font-weight:700;color:var(--muted);padding:5px 10px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);">Total: <strong style="color:var(--text);">'+total+'</strong> staff</div>';
+      })()
     + '<button onclick="djShowAllOnPlanner&&djShowAllOnPlanner()" style="padding:7px 14px;background:#f59e0b;border:none;border-radius:8px;color:#1a1d27;font-size:12px;font-weight:900;cursor:pointer;">📋 Show All</button>'
     + '<button onclick="djAddJob&&djAddJob()" style="padding:7px 14px;background:rgba(245,158,11,0.12);border:1px solid #f59e0b55;border-radius:8px;color:#f59e0b;font-size:12px;font-weight:800;cursor:pointer;">+ Add Job</button>'
     + '<button onclick="dpExportJobs&&dpExportJobs()" style="padding:7px 14px;background:rgba(59,130,246,0.12);border:1px solid #3b82f655;border-radius:8px;color:#3b82f6;font-size:12px;font-weight:800;cursor:pointer;">⬇ Export</button>'
@@ -440,11 +465,21 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
     var v = parseInt(val);
     if (!(v > 0 && v < 100)) { alert('Gang size must be 1–99.'); return; }
     try { localStorage.setItem('dgc_avail_staff', String(v)); } catch(e) {}
-    buildDirPlannerTab(); // re-render so the red line and slot finder use the new ceiling
+    buildDirPlannerTab();
   };
 
-  // ── v1000: export / import all director planner data (move between devices, backup) ──
-  var DP_DATA_KEYS = ['dgc_jobs','dgc_job_history','dgc_jobs_anchor','dgc_jobs_deleted','dgc_avail_staff'];
+  window.dpSetOverheadStaff = function(val) {
+    var v = parseInt(val);
+    if (isNaN(v) || v < 0 || v >= 50) { alert('Overhead staff must be 0–49.'); return; }
+    try { localStorage.setItem('dgc_overhead_staff', String(v)); } catch(e) {}
+    // Update total headcount display without full re-render
+    var gang = (function(){ var g=parseInt(localStorage.getItem('dgc_avail_staff')); return (g>0&&g<100)?g:10; })();
+    var el = document.getElementById('dp-total-headcount');
+    if (el) el.innerHTML = 'Total: <strong style="color:var(--text);">'+(gang+v)+'</strong> staff';
+  };
+
+  // ── v1000/v1001: export / import all director planner data ──
+  var DP_DATA_KEYS = ['dgc_jobs','dgc_job_history','dgc_jobs_anchor','dgc_jobs_deleted','dgc_avail_staff','dgc_overhead_staff'];
   window.dpExportJobs = function() {
     var backup = { exportedAt: new Date().toISOString(), type:'dgc-director-planner', version:'v1000', data:{} };
     DP_DATA_KEYS.forEach(function(k) {
@@ -494,8 +529,9 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
     var today = new Date();
     var fmtD = function(d){ return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'}); };
 
-    var statusColors = { running:'#22c55e', awarded:'#3b82f6', bidding:'#f59e0b', estimate:'#fb923c', placeholder:'#94a3b8' };
-    var statusOptions = ['running','awarded','bidding','estimate','placeholder'];
+    var statusColors  = { running:'#22c55e', awarded:'#3b82f6', confirmed:'#10b981', tendering_likely:'#f97316', tendering:'#f59e0b', placeholder:'#94a3b8' };
+    var statusLabels  = { running:'Running', awarded:'Awarded', confirmed:'Confirmed', tendering_likely:'Tendering — Likely', tendering:'Tendering', placeholder:'Placeholder' };
+    var statusOptions = ['running','awarded','confirmed','tendering_likely','tendering','placeholder'];
 
     el.innerHTML = jobs.map(function(job, idx) {
       var col = statusColors[job.status] || '#94a3b8';
@@ -506,7 +542,7 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
       var pmpw = (job.people > 0 && job.weeks > 0) ? Math.round((profit + job.people * AVG_WAGE_MARGIN_PW * job.weeks) / job.people / job.weeks) : 0;
       var pmpwCol = pmpw >= 700 ? '#22c55e' : pmpw >= 500 ? '#f59e0b' : '#ef4444';
 
-      var statusOpts = statusOptions.map(function(s){ return '<option value="'+s+'"'+(job.status===s?' selected':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</option>'; }).join('');
+      var statusOpts = statusOptions.map(function(s){ return '<option value="'+s+'"'+(job.status===s?' selected':'')+'>'+(statusLabels[s]||s)+'</option>'; }).join('');
 
       return '<div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid '+col+';border-radius:12px;padding:14px 16px;margin-bottom:8px;">'
 
@@ -546,9 +582,9 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
         + '<input type="checkbox" id="dpj-tl-'+idx+'" '+(job.onTimeline!==false?'checked':'')+' onchange="dpjToggle('+idx+')" style="accent-color:#f59e0b;">'
         + '<span style="font-size:11px;font-weight:700;color:'+(job.onTimeline!==false?'#f59e0b':'var(--muted)')+';">On timeline</span>'
         + '</label>'
-        + '<label style="cursor:pointer;display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px;background:'+(job.confirmed?'rgba(34,197,94,.1)':'var(--surface2)')+';border:1px solid '+(job.confirmed?'#22c55e55':'var(--border)')+'">'
-        + '<input type="checkbox" id="dpj-con-'+idx+'" '+(job.confirmed?'checked':'')+' onchange="dpjToggle('+idx+')" style="accent-color:#22c55e;">'
-        + '<span style="font-size:11px;font-weight:700;color:'+(job.confirmed?'#22c55e':'var(--muted)')+';">Confirmed</span>'
+        + '<label style="cursor:pointer;display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px;background:'+(job.inPipeline!==false?'rgba(16,185,129,.1)':'var(--surface2)')+';border:1px solid '+(job.inPipeline!==false?'#10b98155':'var(--border)')+'">'
+        + '<input type="checkbox" id="dpj-pip-'+idx+'" '+(job.inPipeline!==false?'checked':'')+' onchange="dpjToggle('+idx+')" style="accent-color:#10b981;">'
+        + '<span style="font-size:11px;font-weight:700;color:'+(job.inPipeline!==false?'#10b981':'var(--muted)')+';">📊 In pipeline</span>'
         + '</label>'
         + '<input id="dpj-note-'+idx+'" type="text" value="'+(job.note||'')+'" placeholder="Status note…" style="flex:1;min-width:120px;padding:5px 9px;border-radius:7px;border:1px dashed var(--border);font-size:11px;color:var(--muted);background:var(--surface2);">'
         + '</div>'
@@ -587,13 +623,12 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
   window.dpjToggle = function(idx) {
     var jobs = loadJobs();
     if (!jobs[idx]) return;
-    var tlEl = document.getElementById('dpj-tl-'+idx);
-    var conEl = document.getElementById('dpj-con-'+idx);
-    if (tlEl) jobs[idx].onTimeline = tlEl.checked;
-    if (conEl) jobs[idx].confirmed = conEl.checked;
+    var tlEl  = document.getElementById('dpj-tl-'+idx);
+    var pipEl = document.getElementById('dpj-pip-'+idx);
+    if (tlEl)  jobs[idx].onTimeline  = tlEl.checked;
+    if (pipEl) jobs[idx].inPipeline  = pipEl.checked;
     saveJobs(jobs);
     try { dpRenderTimeline(); dpBuildMonthlySummary(); } catch(e) {}
-    // Re-render the card toggles visually
     try { dpRenderJobCards(); } catch(e) {}
   };
 
@@ -609,10 +644,12 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
     jobs[idx].startWeek = parseInt(g('dpj-sw-'+idx)) || 0;
     jobs[idx].status  = g('dpj-stat-'+idx) || jobs[idx].status;
     jobs[idx].note    = g('dpj-note-'+idx) || '';
-    var tlEl = document.getElementById('dpj-tl-'+idx);
-    var conEl = document.getElementById('dpj-con-'+idx);
-    if (tlEl) jobs[idx].onTimeline = tlEl.checked;
-    if (conEl) jobs[idx].confirmed = conEl.checked;
+    var tlEl  = document.getElementById('dpj-tl-'+idx);
+    var pipEl = document.getElementById('dpj-pip-'+idx);
+    if (tlEl)  jobs[idx].onTimeline = tlEl.checked;
+    if (pipEl) jobs[idx].inPipeline = pipEl.checked;
+    // confirmed auto-derives from status
+    jobs[idx].confirmed = ['running','awarded','confirmed'].indexOf(jobs[idx].status) >= 0;
     saveJobs(jobs);
     try { dpRenderTimeline(); dpBuildMonthlySummary(); dpRenderJobCards(); } catch(e) {}
     // Toast
@@ -634,6 +671,7 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
     for (var i = 0; i < FUTURE_WKS; i++) { turnoverByWeek[i] = 0; profitWkArr[i] = 0; staffWkArr[i] = 0; }
 
     jobs.forEach(function(j) {
+      if (j.inPipeline === false) return; // excluded from financial projections
       var sw = j.startWeek || 0;   // weeks relative to today (negative = past)
       var wks = j.weeks || 1;
       var turnoverWk = (j.value || 0) / wks;
@@ -650,9 +688,10 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
       }
     });
 
-    // Re-do staff (sum, not max per job)
+    // Re-do staff (sum, not max per job) — only pipeline jobs
     for (var s = 0; s < FUTURE_WKS; s++) staffWkArr[s] = 0;
     jobs.forEach(function(j2) {
+      if (j2.inPipeline === false) return;
       var sw2 = j2.startWeek || 0;
       var wks2 = j2.weeks || 1;
       for (var w2 = 0; w2 < FUTURE_WKS; w2++) {
@@ -721,8 +760,21 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
       + '<td style="padding:8px 12px;text-align:right;font-weight:900;color:'+totCol+';">' + (totNet >= 0 ? '+£' : '-£') + Math.abs(Math.round(totNet)).toLocaleString('en-GB') + '</td>'
       + '</tr>';
 
+    // Annual pipeline summary (next 12 months only)
+    var annualJobs = loadJobs().filter(function(j){ return j.inPipeline !== false; });
+    var annualTurnover = annualJobs.reduce(function(s,j){ return s + (j.value||0); }, 0);
+    var annualProfit   = annualJobs.reduce(function(s,j){ return s + jobProfit(j); }, 0);
+    var excludedCount  = loadJobs().filter(function(j){ return j.inPipeline === false; }).length;
+
     html += '</tbody></table></div>'
-      + '<div style="font-size:10px;color:var(--muted);margin-top:8px;">Turnover = contract value spread evenly across job weeks. Profit = OH&P markup + £265/person/week wage margin. Net vs OH = profit minus £16,297/month overhead. Numbers are estimates — actual payment lags by AFP cycle.</div>';
+      + '<div style="margin-top:14px;padding:12px 14px;border-radius:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);display:flex;gap:20px;flex-wrap:wrap;">'
+      + '<div><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:#10b981;letter-spacing:.05em;">Annual pipeline turnover</div>'
+      + '<div style="font-size:22px;font-weight:900;color:var(--text);">£'+Math.round(annualTurnover).toLocaleString('en-GB')+'</div></div>'
+      + '<div><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:#10b981;letter-spacing:.05em;">Annual pipeline profit</div>'
+      + '<div style="font-size:22px;font-weight:900;color:#10b981;">£'+Math.round(annualProfit).toLocaleString('en-GB')+'</div></div>'
+      + (excludedCount > 0 ? '<div style="align-self:center;font-size:11px;color:var(--muted);">'+excludedCount+' job'+(excludedCount>1?'s':'')+' excluded (📊 off)</div>' : '')
+      + '</div>'
+      + '<div style="font-size:10px;color:var(--muted);margin-top:8px;">Pipeline figures include only jobs with 📊 In pipeline switched on. Monthly cashflow = contract value spread evenly across job weeks. Profit = OH&P markup + £265/person/week wage margin. Net vs OH = profit minus £16,297/month overhead. Numbers are estimates — actual payment lags by AFP cycle.</div>';
 
     el.innerHTML = html;
   };
@@ -806,15 +858,13 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
         + '</div>'
         + '<div id="dj-suggestions-'+idx+'" style="margin-top:8px;font-size:11px;color:var(--muted);"></div>'
         + '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--border);padding-top:10px;">'
-        // Show on planner — big toggle button
         + '<label style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;background:'+(job.onTimeline!==false?'rgba(245,158,11,0.12)':'var(--surface2)')+';border:1px solid '+(job.onTimeline!==false?'#f59e0b88':'var(--border)')+';transition:all 0.15s;">'
         + '<input type="checkbox" id="dj-job-tl-'+idx+'" '+(job.onTimeline!==false?'checked':'')+' onchange="djAutoSave('+idx+')" style="accent-color:#f59e0b;width:14px;height:14px;">'
         + '<span style="font-size:12px;font-weight:700;color:'+(job.onTimeline!==false?'#f59e0b':'var(--muted)')+';">📅 Show on planner</span>'
         + '</label>'
-        // Confirmed — big toggle button
-        + '<label style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;background:'+(job.confirmed?'rgba(34,197,94,0.12)':'var(--surface2)')+';border:1px solid '+(job.confirmed?'#22c55e88':'var(--border)')+';transition:all 0.15s;">'
-        + '<input type="checkbox" id="dj-job-con-'+idx+'" '+(job.confirmed?'checked':'')+' onchange="djAutoSave('+idx+')" style="accent-color:#22c55e;width:14px;height:14px;">'
-        + '<span style="font-size:12px;font-weight:700;color:'+(job.confirmed?'#22c55e':'var(--muted)')+';">✓ Confirmed</span>'
+        + '<label style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;background:'+(job.inPipeline!==false?'rgba(16,185,129,0.12)':'var(--surface2)')+';border:1px solid '+(job.inPipeline!==false?'#10b98188':'var(--border)')+';transition:all 0.15s;">'
+        + '<input type="checkbox" id="dj-job-pip-'+idx+'" '+(job.inPipeline!==false?'checked':'')+' onchange="djAutoSave('+idx+')" style="accent-color:#10b981;width:14px;height:14px;">'
+        + '<span style="font-size:12px;font-weight:700;color:'+(job.inPipeline!==false?'#10b981':'var(--muted)')+';">📊 Count in annual figures</span>'
         + '</label>'
         + '</div>'
         + '<div style="margin-top:10px;">'
@@ -841,8 +891,13 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
       if (sw >= 0) return j.weeks||1;
       return Math.max(0, ew);
     }
-    var totalProfit  = jobs.reduce(function(s,j){ return s + jobProfit(j); }, 0);
+    var pipJobs      = jobs.filter(function(j){ return j.inPipeline !== false; });
+    var totalProfit  = pipJobs.reduce(function(s,j){ return s + jobProfit(j); }, 0);
+    var annualTurnover = pipJobs.reduce(function(s,j){ return s + (j.value||0); }, 0);
     var totalPeople  = jobs.reduce(function(s,j){ return s + (j.people||0); }, 0);
+    var gangCeiling  = (function(){ var v=parseInt(localStorage.getItem('dgc_avail_staff')); return (v>0&&v<100)?v:10; })();
+    var ovhdStaff    = (function(){ var v=parseInt(localStorage.getItem('dgc_overhead_staff')); return (v>=0&&v<50)?v:2; })();
+    var totalHeadcount = gangCeiling + ovhdStaff;
     var monthlyOhp = jobs.reduce(function(s,j){
       var wr = weeksRemainingDj(j);
       if (wr <= 0) return s;
@@ -859,13 +914,14 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
     var avgPmpw = pmpwCount > 0 ? Math.round(totalPmpw / pmpwCount) : 0;
     var avgPmpwCol = avgPmpw >= 700 ? '#22c55e' : avgPmpw >= 500 ? '#f59e0b' : '#ef4444';
     var monthlyNet   = monthlyOhp - MONTHLY_OVERHEAD;
-    var peopleLeft   = CURRENT_STAFF - totalPeople;
+    var peopleLeft   = gangCeiling - totalPeople;
     var netCol       = monthlyNet > 5000 ? '#22c55e' : monthlyNet > 0 ? '#f59e0b' : '#ef4444';
     if (totalEl) totalEl.innerHTML =
     '<div style="border-top:2px solid var(--border);padding-top:14px;margin-top:4px;">'
     + '<div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Combined — all jobs right now</div>'
     + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px;">'
-    + dirNum('All-jobs profit', fmt(totalProfit), 'across every active contract')
+    + dirNum('Pipeline profit', fmt(totalProfit), 'in-pipeline jobs only')
+    + dirNum('Annual pipeline', '£'+Math.round(annualTurnover/1000)+'k', 'total contract value — in pipeline')
     + dirNum('Profit/month (avg)', fmt(monthlyOhp), 'spread over active weeks')
     + dirNum('Overhead/month', fmt(MONTHLY_OVERHEAD), 'fixed — always running')
     + dirNum('Avg £/person/week', '<span style="color:'+avgPmpwCol+'">£'+avgPmpw+'</span>', 'across all jobs — benchmark is £700–900')
@@ -874,9 +930,15 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
     + '<div style="font-size:10px;color:'+netCol+';font-weight:700;">'+(monthlyNet>=0?'✓ Profitable':'⚠ Losing money')+'</div>'
     + '</div>'
     + '</div>'
-    + '<div style="font-size:12px;color:var(--muted);margin-bottom:5px;">People on jobs: <strong style="color:'+(totalPeople>CURRENT_STAFF?'#ef4444':'var(--text)')+';">'+totalPeople+' of '+CURRENT_STAFF+'</strong>'+(peopleLeft>0?' · <span style="color:#22c55e;">'+peopleLeft+' free</span>':peopleLeft<0?' · <span style="color:#ef4444;">Need '+Math.abs(peopleLeft)+' more</span>':'')+'</div>'
+    + '<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center;margin-bottom:8px;padding:10px 12px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);">'
+    + '<div style="font-size:12px;color:var(--muted);">Gang: <strong style="color:var(--text);">'+gangCeiling+'</strong></div>'
+    + '<div style="font-size:12px;color:var(--muted);">+ Office: <strong style="color:var(--text);">'+ovhdStaff+'</strong></div>'
+    + '<div style="font-size:13px;font-weight:900;color:var(--text);">= Total headcount: '+totalHeadcount+'</div>'
+    + '<div style="font-size:11px;color:var(--muted);">(Edit gang &amp; office in Planner header)</div>'
+    + '</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:5px;">People on jobs: <strong style="color:'+(totalPeople>gangCeiling?'#ef4444':'var(--text)')+';">'+totalPeople+' of '+gangCeiling+'</strong>'+(peopleLeft>0?' · <span style="color:#22c55e;">'+peopleLeft+' free</span>':peopleLeft<0?' · <span style="color:#ef4444;">Need '+Math.abs(peopleLeft)+' more</span>':'')+'</div>'
     + '<div style="background:var(--border);border-radius:4px;height:8px;overflow:hidden;">'
-    + '<div style="width:'+Math.min(100,Math.round(totalPeople/CURRENT_STAFF*100))+'%;background:'+(totalPeople>CURRENT_STAFF?'#ef4444':'#22c55e')+';height:100%;border-radius:4px;"></div>'
+    + '<div style="width:'+Math.min(100,Math.round(totalPeople/gangCeiling*100))+'%;background:'+(totalPeople>gangCeiling?'#ef4444':'#22c55e')+';height:100%;border-radius:4px;"></div>'
     + '</div>'
     + (function(){
         var msPerWeek2 = 7*24*60*60*1000;
@@ -914,16 +976,17 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
     var g = function(id){ var el=document.getElementById(id); return el?el.value:''; };
     var pft = parseFloat(g('dj-job-pft-'+idx));
     var tlEl = document.getElementById('dj-job-tl-'+idx);
-    var conEl = document.getElementById('dj-job-con-'+idx);
     jobs[idx].name    = g('dj-job-name-'+idx) || jobs[idx].name;
     jobs[idx].value   = parseFloat(g('dj-job-val-'+idx)) || jobs[idx].value;
     jobs[idx].weeks   = parseFloat(g('dj-job-wks-'+idx)) || jobs[idx].weeks;
     jobs[idx].people  = parseInt(g('dj-job-ppl-'+idx))   || jobs[idx].people;
     jobs[idx].ohp     = parseFloat(g('dj-job-ohp-'+idx)) || jobs[idx].ohp || 15;
-    jobs[idx].profit  = pft > 0 ? pft : 0;
-    jobs[idx].onTimeline = tlEl ? tlEl.checked : true;
-    jobs[idx].confirmed  = conEl ? conEl.checked : false;
-    jobs[idx].note    = g('dj-job-note-'+idx) || '';
+    var pipEl = document.getElementById('dj-job-pip-'+idx);
+    jobs[idx].profit     = pft > 0 ? pft : 0;
+    jobs[idx].onTimeline = tlEl  ? tlEl.checked  : true;
+    jobs[idx].inPipeline = pipEl ? pipEl.checked : true;
+    jobs[idx].note       = g('dj-job-note-'+idx) || '';
+    jobs[idx].confirmed  = ['running','awarded','confirmed'].indexOf(jobs[idx].status||'') >= 0;
     saveJobs(jobs); djRenderJobs();
     // Always sync planner if it has been built
     try {
@@ -949,12 +1012,11 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
   window.djAutoSave = function(idx) {
     var jobs = loadJobs();
     if (!jobs[idx]) return;
-    var tlEl  = document.getElementById('dj-job-tl-' + idx);
-    var conEl = document.getElementById('dj-job-con-' + idx);
+    var tlEl  = document.getElementById('dj-job-tl-'  + idx);
+    var pipEl = document.getElementById('dj-job-pip-' + idx);
     if (tlEl)  jobs[idx].onTimeline = tlEl.checked;
-    if (conEl) jobs[idx].confirmed  = conEl.checked;
-    // Also update status from confirmed flag
-    if (jobs[idx].confirmed && jobs[idx].status === 'bidding') jobs[idx].status = 'running';
+    if (pipEl) jobs[idx].inPipeline = pipEl.checked;
+    jobs[idx].confirmed = ['running','awarded','confirmed'].indexOf(jobs[idx].status) >= 0;
     saveJobs(jobs);
     // Refresh planner timeline if already open
     try {
@@ -967,7 +1029,7 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
     } catch(e2) {}
     // Visual flash on the checkbox label to confirm save
     try {
-      var lbl = tlEl ? tlEl.closest('label') : (conEl ? conEl.closest('label') : null);
+      var lbl = tlEl ? tlEl.closest('label') : (pipEl ? pipEl.closest('label') : null);
       if (lbl) { lbl.style.color='#22c55e'; setTimeout(function(){ lbl.style.color=''; }, 600); }
     } catch(e3) {}
   };
@@ -975,7 +1037,7 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
   // ── Add a job from the new Jobs tab (fixes focus to correct element) ───────
   window.djAddJob = function() {
     var jobs = loadJobs();
-    jobs.push({ id: Date.now(), name:'New job', value:0, weeks:8, people:3, ohp:15, profit:0, startWeek:0, onTimeline:true, confirmed:false, status:'bidding', note:'' });
+    jobs.push({ id: Date.now(), name:'New job', value:0, weeks:8, people:3, ohp:15, profit:0, startWeek:0, onTimeline:true, confirmed:false, inPipeline:true, status:'tendering', note:'' });
     saveJobs(jobs);
     // Rebuild whichever view is active
     try {
@@ -1402,8 +1464,9 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
     + '<div id="dir-timeline-legend" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--muted);">'
     + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#22c55e;border-radius:2px;display:inline-block;"></span>Running</span>'
     + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#3b82f6;border-radius:2px;display:inline-block;"></span>Awarded</span>'
-    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#f59e0b;border-radius:2px;display:inline-block;"></span>Bidding</span>'
-    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#fb923c;border-radius:2px;display:inline-block;opacity:0.8;"></span>Estimate</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#10b981;border-radius:2px;display:inline-block;"></span>Confirmed</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#f97316;border-radius:2px;display:inline-block;"></span>Tendering — Likely</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#f59e0b;border-radius:2px;display:inline-block;opacity:0.85;"></span>Tendering</span>'
     + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#ef4444;border-radius:2px;display:inline-block;opacity:0.5;"></span>Gap (no revenue)</span>'
     + '</div>'
     + '</div>'
@@ -1530,8 +1593,9 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
     + '<div id="dir-timeline-legend" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--muted);">'
     + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#22c55e;border-radius:2px;display:inline-block;"></span>Running</span>'
     + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#3b82f6;border-radius:2px;display:inline-block;"></span>Awarded</span>'
-    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#f59e0b;border-radius:2px;display:inline-block;"></span>Bidding</span>'
-    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#fb923c;border-radius:2px;display:inline-block;opacity:0.8;"></span>Estimate</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#10b981;border-radius:2px;display:inline-block;"></span>Confirmed</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#f97316;border-radius:2px;display:inline-block;"></span>Tendering — Likely</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#f59e0b;border-radius:2px;display:inline-block;opacity:0.85;"></span>Tendering</span>'
     + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#ef4444;border-radius:2px;display:inline-block;opacity:0.5;"></span>Gap (no revenue)</span>'
     + '</div>'
     + '</div>'
@@ -1674,6 +1738,8 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
       if (sw >= 0) return j.weeks||1;
       return Math.max(0, ew);
     }
+    var _dirGangCeil = (function(){ var v=parseInt(localStorage.getItem('dgc_avail_staff')); return (v>0&&v<100)?v:10; })();
+    var _dirOvhd     = (function(){ var v=parseInt(localStorage.getItem('dgc_overhead_staff')); return (v>=0&&v<50)?v:2; })();
     var totalProfit  = jobs.reduce(function(s,j){ return s + jobProfit(j); }, 0);
     // People on site RIGHT NOW — only count jobs running this week
     var _msW3 = 7*24*60*60*1000, _now3 = new Date();
@@ -1696,8 +1762,8 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
       return s + jobProfit(j) / Math.max(1, j.weeks) * Math.min(4.333, wr * 4.333 / (j.weeks||1));
     }, 0);
     var monthlyNet   = monthlyOhp - MONTHLY_OVERHEAD;
-    var peopleLeft   = CURRENT_STAFF - totalPeople;
-    var peakHire     = Math.max(0, peakPeopleDir - CURRENT_STAFF);
+    var peopleLeft   = _dirGangCeil - totalPeople;
+    var peakHire     = Math.max(0, peakPeopleDir - _dirGangCeil);
     var netCol       = monthlyNet > 5000 ? '#22c55e' : monthlyNet > 0 ? '#f59e0b' : '#ef4444';
 
     if (totalEl) totalEl.innerHTML =
@@ -1717,7 +1783,7 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">'
     + '<div style="padding:12px 14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);">'
     + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:6px;">On site right now</div>'
-    + '<div style="font-size:28px;font-weight:900;color:'+(totalPeople>CURRENT_STAFF?'#ef4444':'var(--text)')+';">'+totalPeople+' <span style="font-size:14px;color:var(--muted);font-weight:400;">of '+CURRENT_STAFF+'</span></div>'
+    + '<div style="font-size:28px;font-weight:900;color:'+(totalPeople>_dirGangCeil?'#ef4444':'var(--text)')+';">'+totalPeople+' <span style="font-size:14px;color:var(--muted);font-weight:400;">of '+_dirGangCeil+' gang · '+(_dirGangCeil+_dirOvhd)+' total</span></div>'
     + (peopleLeft > 0 ? '<div style="font-size:11px;color:#22c55e;margin-top:3px;">'+peopleLeft+' people available for more work</div>' : '')
     + (peopleLeft < 0 ? '<div style="font-size:11px;color:#ef4444;margin-top:3px;">Already need '+Math.abs(peopleLeft)+' more people</div>' : '')
     + (peopleLeft === 0 ? '<div style="font-size:11px;color:#f59e0b;margin-top:3px;">Fully deployed right now</div>' : '')
@@ -2264,14 +2330,15 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
       var by = TL_PAD_TOP + i * TL_ROW_H;
       var bh = TL_ROW_H - 6;
       var statusColors = {
-        'running':     { fill:'#22c55e', opacity:'0.90' },
-        'awarded':     { fill:'#3b82f6', opacity:'0.85' },
-        'bidding':     { fill:'#f59e0b', opacity:'0.80' },
-        'estimate':    { fill:'#fb923c', opacity:'0.70' },
-        'placeholder': { fill:'#94a3b8', opacity:'0.45' }
+        'running':          { fill:'#22c55e', opacity:'0.90' },
+        'awarded':          { fill:'#3b82f6', opacity:'0.85' },
+        'confirmed':        { fill:'#10b981', opacity:'0.88' },
+        'tendering_likely': { fill:'#f97316', opacity:'0.82' },
+        'tendering':        { fill:'#f59e0b', opacity:'0.78' },
+        'placeholder':      { fill:'#94a3b8', opacity:'0.45' }
       };
-      var jobStatus = tl.job.status || (tl.job.confirmed ? 'running' : 'bidding');
-      var sc2 = statusColors[jobStatus] || statusColors['bidding'];
+      var jobStatus = tl.job.status || (tl.job.confirmed ? 'running' : 'tendering');
+      var sc2 = statusColors[jobStatus] || statusColors['tendering'];
       var fillColor = sc2.fill;
       var fillOpacity = sc2.opacity;
       var msPerWeek = 7*24*60*60*1000;
