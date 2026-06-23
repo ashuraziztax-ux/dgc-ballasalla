@@ -1471,8 +1471,12 @@ html, body {
 </div>
 <script>
 (function(){
-  // Check if already authenticated this session
-  try { if(sessionStorage.getItem('dgc_auth')==='1'){ document.getElementById('pw-gate').style.display='none'; } } catch(e){}
+  // DGC single sign-on: open only if logged into the hub, otherwise bounce to the hub to sign in
+  try {
+    var ha=JSON.parse(localStorage.getItem('dgc_auth')||'null');
+    if(ha && ha.refreshTok){ var g=document.getElementById('pw-gate'); if(g) g.style.display='none'; return; }
+  } catch(e){}
+  location.replace('https://ashuraziztax-ux.github.io/dgc-hub/');
 })();
 function checkPw(){
   var v=document.getElementById('pw-input').value;
