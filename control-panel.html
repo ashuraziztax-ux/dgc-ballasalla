@@ -1471,10 +1471,15 @@ html, body {
 </div>
 <script>
 (function(){
-  // DGC single sign-on: open only if logged into the hub, otherwise bounce to the hub to sign in
+  // DGC single sign-on: full-access users only; cashflow-only users bounce to the budget; not logged in → hub
+  var FULL=["ash@dgc.im","harry@dgc.im","ash@silverdale.im"];
+  function em(t){try{return (JSON.parse(atob((t.split('.')[1]||'').replace(/-/g,'+').replace(/_/g,'/'))).email||'').toLowerCase();}catch(e){return '';}}
   try {
     var ha=JSON.parse(localStorage.getItem('dgc_auth')||'null');
-    if(ha && ha.refreshTok){ var g=document.getElementById('pw-gate'); if(g) g.style.display='none'; return; }
+    if(ha && ha.refreshTok){
+      if(FULL.indexOf(em(ha.idToken))<0){ location.replace('https://ashuraziztax-ux.github.io/dgc-budget/'); return; }
+      var g=document.getElementById('pw-gate'); if(g) g.style.display='none'; return;
+    }
   } catch(e){}
   location.replace('https://ashuraziztax-ux.github.io/dgc-hub/');
 })();
