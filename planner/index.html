@@ -76,7 +76,7 @@ a { color: var(--accent); text-decoration: none; }
 // ── Standalone shell — DGC Job Planner ──────────────────────────────────────
 // Same localStorage keys as the master control panel (dgc_jobs etc.), so on
 // the same device/browser the standalone app and the master app share data.
-var PLANNER_VERSION = 'v1 — 10 Jun 2026';
+var PLANNER_VERSION = 'v1002 — 28 Jul 2026';
 
 function showTab(name, btn) {
   document.querySelectorAll('.tab-content').forEach(function(t){ t.classList.remove('active'); });
@@ -176,14 +176,11 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
   // ── Jobs localStorage ─────────────────────────────────────────────────────
   // ── All default/seeded jobs — single source of truth ──────────────────────
   var JOB_SEEDS = [
-    { id:1, name:'Ballasalla Phase 4',        value:500000,  weeks:17, people:6,  ohp:15, profit:80000, startWeek:-14, onTimeline:true,  confirmed:true,  status:'running',   note:'Main drainage — ~3/4 through, demob ~3 Jul. AFP4 to include tarmac. Cash critical.' },
-    { id:2, name:'Living Hope Church',         value:185551,  weeks:13, people:4,  ohp:15, profit:0,     startWeek:-2,  onTimeline:false, confirmed:true,  status:'running',   note:'ON STOP (Jun 2026) — off gang loading until restart. Slab & gabion.' },
-    { id:3, name:'Slab Works Plots 7-11',      value:209056,  weeks:10, people:3,  ohp:15, profit:0,     startWeek:-3,  onTimeline:true,  confirmed:true,  status:'running',   note:'RUNNING — plots 9+10 paid, 11 in payment, AFP02 submitted. To price: 5, 6, 12–15.' },
-    { id:4, name:'Peel Breakwater (DOI)',      value:122995,  weeks:8,  people:5,  ohp:15, profit:0,     startWeek:10,  onTimeline:true,  confirmed:true,  status:'awarded',   note:'AWARDED — August start. Sewage treatment works, Peel harbour. £122,994 brick option. DOI client (IoM Govt).' },
-    { id:5, name:'Utmost International (KEBH)',value:500000,  weeks:12, people:4,  ohp:15, profit:0,     startWeek:18,  onTimeline:true,  confirmed:false, status:'tendering',     inPipeline:false, note:'BIDDING — King Edward Bay House, Onchan. Car park waterproofing + structural repair. £500k Simon estimate.' },
-    { id:6, name:'Glenfaba Ring Road (GF2)',   value:1289157, weeks:26, people:10, ohp:15, profit:168151,startWeek:8,   onTimeline:true,  confirmed:false, status:'tendering_likely',inPipeline:true,  note:'SUBMITTED 10 Jun 2026 at £1,289,157.05 — awaiting Dandara response, negotiation expected. Internal plan 26 wks / 2 gangs. 97 houses, Peel.' },
-    { id:7, name:'MU Flow Monitoring Ph.2',   value:130000,  weeks:12, people:2,  ohp:15, profit:0,     startWeek:52,  onTimeline:false, confirmed:false, status:'placeholder',    inPipeline:false, note:'PLACEHOLDER — Manx Utilities, ~10 more sites. ~£130k estimated. Not imminent.' },
-    { id:8, name:'Dandara Industrial Units',   value:310000,  weeks:18, people:4,  ohp:15, profit:40000, startWeek:6,   onTimeline:true,  confirmed:false, status:'tendering_likely',inPipeline:true,  note:'BIDDING — tender received 10 Jun, internal estimate ~£310k (Simon rates). BT8 Balthane, Blocks P & Q, ~26 units / 2,126 m². 17–18 wks work (~22 cal). Gang of 4 — crossover with BA4-S. Start mid–late Jul per Ian. Return date TBC.' }
+    { id:1, name:'Peel Breakwater (DOI)',       value:118378,  weeks:10, people:5,  ohp:15, profit:0,      startWeek:2,  onTimeline:true,  confirmed:true,  inPipeline:true,  status:'awarded',          note:'AWARDED — DoI sewage treatment works, Peel harbour. Concrete build. Start 10 Aug 2026, completion target 19 Oct 2026.' },
+    { id:2, name:'Utmost KEBH (car park)',       value:390000,  weeks:10, people:4,  ohp:15, profit:0,      startWeek:5,  onTimeline:true,  confirmed:false, inPipeline:true,  status:'tendering_likely',  note:'Pre-works 29 Jul. Physical start 31 Aug 2026. Practical completion 5 Nov 2026. Car park waterproofing, King Edward Bay House, Onchan. Options £272k–£508k.' },
+    { id:3, name:'Gansey CSO (Manx Utilities)', value:82136,   weeks:6,  people:3,  ohp:15, profit:0,      startWeek:7,  onTimeline:true,  confirmed:true,  inPipeline:true,  status:'confirmed',         note:'CONFIRMED — CSO screen installation, Gansey. £82,136.17. Start 13–14 Sep 2026, finish 23–25 Oct 2026. DEFA/DoI approvals required before start.' },
+    { id:4, name:'Dandara Industrial Units',     value:895735,  weeks:21, people:4,  ohp:15, profit:0,      startWeek:0,  onTimeline:true,  confirmed:false, inPipeline:true,  status:'tendering_likely',  note:'Rev A SUBMITTED 29 Jun 2026 at £895,735.37. Awaiting award. BT8 Balthane, Blocks P & Q. Substructure 21 wks, externals 11 wks (Feb–May 2027). Start TBC.' },
+    { id:5, name:'Glenfaba Ring Road (GF2)',     value:1289157, weeks:26, people:10, ohp:15, profit:168151, startWeek:18, onTimeline:true,  confirmed:false, inPipeline:true,  status:'tendering_likely',  note:'SUBMITTED 10 Jun 2026 at £1,289,157.05 — awaiting Dandara response. 97 houses, Peel. 26 wks / 2 gangs. Start TBC — Dec 2026 placeholder.' }
   ];
 
   function loadJobs() {
@@ -264,6 +261,13 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
           if (j.inPipeline === undefined) j.inPipeline = true;
         });
         localStorage.setItem('dgc_v1001_status', '1');
+        changed = true;
+      }
+
+      // ONE-TIME v1002 reset: wipe BA4-era jobs, start fresh with Jul 2026 pipeline
+      if (!localStorage.getItem('dgc_v1002_reset')) {
+        jobs = []; tombstones = [];
+        try { localStorage.removeItem('dgc_jobs_deleted'); localStorage.removeItem('dgc_jobs_anchor'); localStorage.setItem('dgc_v1002_reset', '1'); } catch(e2) {}
         changed = true;
       }
 
