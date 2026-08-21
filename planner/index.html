@@ -176,11 +176,10 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
   // ── Jobs localStorage ─────────────────────────────────────────────────────
   // ── All default/seeded jobs — single source of truth ──────────────────────
   var JOB_SEEDS = [
-    { id:1, name:'Peel Breakwater (DOI)',       value:118378,  weeks:10, people:5,  ohp:15, profit:0,      startWeek:2,  onTimeline:true,  confirmed:true,  inPipeline:true,  status:'awarded',          note:'AWARDED — DoI sewage treatment works, Peel harbour. Concrete build. Start 10 Aug 2026, completion target 19 Oct 2026.' },
-    { id:2, name:'Utmost KEBH (car park)',       value:390000,  weeks:10, people:4,  ohp:15, profit:0,      startWeek:5,  onTimeline:true,  confirmed:false, inPipeline:true,  status:'tendering_likely',  note:'Pre-works 29 Jul. Physical start 31 Aug 2026. Practical completion 5 Nov 2026. Car park waterproofing, King Edward Bay House, Onchan. Options £272k–£508k.' },
-    { id:3, name:'Gansey CSO (Manx Utilities)', value:82136,   weeks:6,  people:3,  ohp:15, profit:0,      startWeek:7,  onTimeline:true,  confirmed:true,  inPipeline:true,  status:'confirmed',         note:'CONFIRMED — CSO screen installation, Gansey. £82,136.17. Start 13–14 Sep 2026, finish 23–25 Oct 2026. DEFA/DoI approvals required before start.' },
-    { id:4, name:'Dandara Industrial Units',     value:895735,  weeks:21, people:4,  ohp:15, profit:0,      startWeek:0,  onTimeline:true,  confirmed:false, inPipeline:true,  status:'tendering_likely',  note:'Rev A SUBMITTED 29 Jun 2026 at £895,735.37. Awaiting award. BT8 Balthane, Blocks P & Q. Substructure 21 wks, externals 11 wks (Feb–May 2027). Start TBC.' },
-    { id:5, name:'Glenfaba Ring Road (GF2)',     value:1289157, weeks:26, people:10, ohp:15, profit:168151, startWeek:18, onTimeline:true,  confirmed:false, inPipeline:true,  status:'tendering_likely',  note:'SUBMITTED 10 Jun 2026 at £1,289,157.05 — awaiting Dandara response. 97 houses, Peel. 26 wks / 2 gangs. Start TBC — Dec 2026 placeholder.' }
+    { id:1, name:'Peel Breakwater (DOI)',       value:118378,  weeks:10, people:5,  ohp:15, profit:0,      startWeek:2,  onTimeline:true, confirmed:true,  inPipeline:true, status:'awarded', note:'AWARDED — DoI sewage treatment works, Peel harbour. Concrete build. Start 10 Aug 2026, completion target 19 Oct 2026.' },
+    { id:2, name:'Utmost KEBH (car park)',       value:390000,  weeks:10, people:4,  ohp:15, profit:0,      startWeek:5,  onTimeline:true, confirmed:true,  inPipeline:true, status:'awarded', note:'AWARDED — Car park waterproofing, King Edward Bay House, Onchan. Pre-works 29 Jul. Physical start 31 Aug 2026. Practical completion 5 Nov 2026.' },
+    { id:3, name:'Gansey CSO (Manx Utilities)', value:82136,   weeks:6,  people:3,  ohp:15, profit:0,      startWeek:7,  onTimeline:true, confirmed:true,  inPipeline:true, status:'awarded', note:'AWARDED — CSO screen installation, Gansey. £82,136.17. Start 13–14 Sep 2026, finish 23–25 Oct 2026. DEFA/DoI approvals required before start.' },
+    { id:4, name:'Glenfaba Ring Road (GF2)',     value:1289157, weeks:26, people:10, ohp:15, profit:168151, startWeek:18, onTimeline:true, confirmed:false, inPipeline:true, status:'tendering_likely', note:'SUBMITTED 10 Jun 2026 at £1,289,157.05 — awaiting Dandara response. 97 houses, Peel. 26 wks / 2 gangs. Start TBC — Dec 2026 placeholder.' }
   ];
 
   function loadJobs() {
@@ -268,6 +267,19 @@ document.getElementById('today-badge').textContent = new Date().toLocaleDateStri
       if (!localStorage.getItem('dgc_v1002_reset')) {
         jobs = []; tombstones = [];
         try { localStorage.removeItem('dgc_jobs_deleted'); localStorage.removeItem('dgc_jobs_anchor'); localStorage.setItem('dgc_v1002_reset', '1'); } catch(e2) {}
+        changed = true;
+      }
+
+      // ONE-TIME v1003: remove IU, set Utmost + Gansey to awarded
+      if (!localStorage.getItem('dgc_v1003_status')) {
+        jobs = jobs.filter(function(j) { return !(j.name||'').toLowerCase().includes('industrial'); });
+        jobs.forEach(function(j) {
+          var nm = (j.name||'').toLowerCase();
+          if (nm.includes('utmost') || nm.includes('gansey')) {
+            j.status = 'awarded'; j.confirmed = true;
+          }
+        });
+        try { localStorage.setItem('dgc_v1003_status', '1'); } catch(e3) {}
         changed = true;
       }
 
