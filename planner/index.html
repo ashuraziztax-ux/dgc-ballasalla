@@ -352,6 +352,20 @@ function mondayOf(dateStr) {
 function daysBetween(a, b) {
   return Math.round((new Date(b+'T12:00:00') - new Date(a+'T12:00:00')) / 86400000);
 }
+function nextWorkingDay() {
+  const d = new Date();
+  do { d.setDate(d.getDate() + 1); } while (d.getDay() === 0 || d.getDay() === 6);
+  return toDateStr(d);
+}
+// For running jobs, end date anchors to next working day + revised weeks
+// For future jobs, end date anchors to start + revised weeks
+function jobEndDate(j) {
+  const today = toDateStr(new Date());
+  const rw = revisedWeeks(j);
+  const start = j.start_date || today;
+  const anchor = start <= today ? nextWorkingDay() : start;
+  return addDays(anchor, rw * 7);
+}
 
 // ── Local jobs ─────────────────────────────────────────────
 function loadLocal() {
@@ -437,6 +451,10 @@ function initRealtime() {
 }
 
 // ── Timeline (SVG Gantt) ───────────────────────────────────
+// ── Drag state ─────────────────────────────────────────────
+let _drag = null;
+let _wasDrag = false;
+
 function renderTimeline(jobs) {
   const W_PX  = 52;   // px per week
   const ROW_H = 46;
@@ -495,10 +513,13 @@ function renderTimeline(jobs) {
     const lbl = j.name.length > 16 ? j.name.substring(0,15)+'…' : j.name;
     s += `<text x="${LBL_W-8}" y="${by + bh/2 + 4}" font-size="12" text-anchor="end" fill="#e2e8f0" font-weight="600">${esc(lbl)}</text>`;
 
-    // Bar position
+    // Bar position — end anchors to next working day for running jobs
     const startOff = daysBetween(origin, j.start_date || today);
     const bx = LBL_W + (startOff / 7) * W_PX;
-    const bw = Math.max(rw * W_PX, 8);
+    const endDate = jobEndDate(j);
+    const endOff = daysBetween(origin, endDate);
+    const bEnd = LBL_W + (endOff / 7) * W_PX;
+    const bw = Math.max(bEnd - bx, 8);
 
     // Bar (clip to visible area)
     if (bx < LBL_W + WEEKS * W_PX && bx + bw > LBL_W) {
@@ -518,15 +539,38 @@ function renderTimeline(jobs) {
         const barLbl = j.name.length > maxChars ? j.name.substring(0, maxChars-1)+'…' : j.name;
         s += `<text x="${txtX}" y="${by+bh/2+4}" font-size="11" fill="white" font-weight="700" pointer-events="none">${esc(barLbl)}</text>`;
       }
+      // End date label to the right of bar
+      const endLblX = Math.min(bEnd + 4, LBL_W + WEEKS * W_PX - 2);
+      if (endLblX < LBL_W + WEEKS * W_PX - 10) {
+        s += `<text x="${endLblX}" y="${by+bh/2+4}" font-size="9" fill="${col}" font-weight="700" opacity="0.9" pointer-events="none">${fmtDate(endDate)}</text>`;
+      }
     }
   });
 
   s += '</svg>';
   document.getElementById('tl-svg').innerHTML = s;
 
-  // Click bar → open edit
+  // Bar: drag to move start date, or click to edit
   document.querySelectorAll('.tl-bar').forEach(el => {
-    el.addEventListener('click', () => { const j = _jobs.find(x => x.id == el.getAttribute('data-id')); if(j) openEdit(j); });
+    el.style.cursor = 'grab';
+    el.addEventListener('mousedown', e => {
+      const j = _jobs.find(x => x.id == el.getAttribute('data-id'));
+      if (!j) return;
+      _drag = { job: j, origX: e.clientX, origStart: j.start_date || toDateStr(new Date()) };
+      _wasDrag = false;
+      e.preventDefault();
+    });
+    el.addEventListener('touchstart', e => {
+      const j = _jobs.find(x => x.id == el.getAttribute('data-id'));
+      if (!j) return;
+      _drag = { job: j, origX: e.touches[0].clientX, origStart: j.start_date || toDateStr(new Date()) };
+      _wasDrag = false;
+    }, { passive: true });
+    el.addEventListener('click', () => {
+      if (_wasDrag) { _wasDrag = false; return; }
+      const j = _jobs.find(x => x.id == el.getAttribute('data-id'));
+      if (j) openEdit(j);
+    });
   });
   // Click badge → inline people editor
   document.querySelectorAll('.tl-badge').forEach(el => {
@@ -802,6 +846,78 @@ function esc(s) {
     if (event === 'SIGNED_OUT') location.reload();
   });
 })();
+
+// ── Drag tooltip ──────────────────────────────────────────
+function showDragTooltip(x, y, dateStr) {
+  let tt = document.getElementById('drag-tt');
+  if (!tt) {
+    tt = document.createElement('div');
+    tt.id = 'drag-tt';
+    tt.style.cssText = 'position:fixed;z-index:9999;background:#f59e0b;color:#1a1d27;font-size:12px;font-weight:800;padding:4px 9px;border-radius:7px;pointer-events:none;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.5)';
+    document.body.appendChild(tt);
+  }
+  tt.textContent = '→ ' + fmtDate(dateStr);
+  tt.style.left = (x + 14) + 'px';
+  tt.style.top  = (y - 32) + 'px';
+  tt.style.display = 'block';
+}
+function hideDragTooltip() {
+  const tt = document.getElementById('drag-tt');
+  if (tt) tt.style.display = 'none';
+}
+
+// ── Global drag handlers (mouse) ──────────────────────────
+const _W_PX = 52;
+window.addEventListener('mousemove', e => {
+  if (!_drag) return;
+  const deltaX = e.clientX - _drag.origX;
+  const deltaDays = Math.round((deltaX / _W_PX) * 7);
+  if (Math.abs(deltaDays) >= 1) {
+    _wasDrag = true;
+    showDragTooltip(e.clientX, e.clientY, addDays(_drag.origStart, deltaDays));
+    // Move bar visually during drag
+    const bars = document.querySelectorAll(`.tl-bar[data-id="${_drag.job.id}"]`);
+    bars.forEach(b => { b.style.opacity = '0.45'; b.style.cursor = 'grabbing'; });
+  }
+});
+window.addEventListener('mouseup', async e => {
+  hideDragTooltip();
+  if (!_drag) return;
+  const deltaX = e.clientX - _drag.origX;
+  const deltaDays = Math.round((deltaX / _W_PX) * 7);
+  const { job, origStart } = _drag;
+  _drag = null;
+  if (Math.abs(deltaDays) >= 1) {
+    _wasDrag = true;
+    const j = _jobs.find(x => x.id == job.id);
+    if (j) { j.start_date = addDays(origStart, deltaDays); await upsertJob(j); }
+  }
+});
+
+// ── Global drag handlers (touch) ──────────────────────────
+window.addEventListener('touchmove', e => {
+  if (!_drag) return;
+  const deltaX = e.touches[0].clientX - _drag.origX;
+  const deltaDays = Math.round((deltaX / _W_PX) * 7);
+  if (Math.abs(deltaDays) >= 1) {
+    _wasDrag = true;
+    showDragTooltip(e.touches[0].clientX, e.touches[0].clientY, addDays(_drag.origStart, deltaDays));
+  }
+}, { passive: true });
+window.addEventListener('touchend', async e => {
+  hideDragTooltip();
+  if (!_drag) return;
+  const touch = e.changedTouches[0];
+  const deltaX = touch.clientX - _drag.origX;
+  const deltaDays = Math.round((deltaX / _W_PX) * 7);
+  const { job, origStart } = _drag;
+  _drag = null;
+  if (Math.abs(deltaDays) >= 1) {
+    _wasDrag = true;
+    const j = _jobs.find(x => x.id == job.id);
+    if (j) { j.start_date = addDays(origStart, deltaDays); await upsertJob(j); }
+  }
+});
 </script>
 </body>
 </html>
