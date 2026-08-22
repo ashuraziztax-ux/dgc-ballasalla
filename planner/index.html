@@ -458,7 +458,8 @@ let _wasDrag = false;
 function renderTimeline(jobs) {
   const W_PX  = 52;   // px per week
   const ROW_H = 46;
-  const HEAD_H = 32;
+  const HEAD_H = 44;  // two-line header
+  const FOOT_H = 56;  // gang chart footer
   const LBL_W = 130;
   const WEEKS  = 26;
 
@@ -466,29 +467,29 @@ function renderTimeline(jobs) {
   const origin = mondayOf(today); // first Monday of current week
 
   const svgW = LBL_W + WEEKS * W_PX + 20;
-  const svgH = HEAD_H + Math.max(jobs.length,1) * ROW_H + 12;
+  const svgH = HEAD_H + Math.max(jobs.length,1) * ROW_H + FOOT_H;
 
   let s = `<svg width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg" style="display:block">`;
 
-  // Week column backgrounds + headers
+  // Week column backgrounds + full Mon/date headers every week
   for (let w = 0; w < WEEKS; w++) {
     const wDate = addDays(origin, w * 7);
     const x = LBL_W + w * W_PX;
     const isEven = w % 2 === 0;
     s += `<rect x="${x}" y="0" width="${W_PX}" height="${svgH}" fill="${isEven?'#1a1d27':'#1e2130'}" />`;
-    // Month label when month changes
     const d = new Date(wDate+'T12:00:00');
-    if (d.getDate() <= 7 || w === 0) {
-      const lbl = d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
-      s += `<text x="${x+4}" y="22" font-size="9" fill="#64748b" font-weight="600">${lbl}</text>`;
-    }
+    const dayName = d.toLocaleDateString('en-GB',{weekday:'short'});
+    const dateLbl = d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    const cx = x + W_PX / 2;
+    s += `<text x="${cx}" y="16" font-size="8" text-anchor="middle" fill="#475569" font-weight="600">${dayName}</text>`;
+    s += `<text x="${cx}" y="32" font-size="9" text-anchor="middle" fill="#94a3b8" font-weight="700">${dateLbl}</text>`;
   }
 
   // Today line
   const todayOff = daysBetween(origin, today);
   const todayX   = LBL_W + (todayOff / 7) * W_PX;
-  s += `<line x1="${todayX}" y1="${HEAD_H}" x2="${todayX}" y2="${svgH}" stroke="#f59e0b" stroke-width="1.5" opacity=".6" stroke-dasharray="4,3"/>`;
-  s += `<text x="${todayX+3}" y="${HEAD_H-6}" font-size="9" fill="#f59e0b" font-weight="700">Today</text>`;
+  s += `<line x1="${todayX}" y1="${HEAD_H}" x2="${todayX}" y2="${svgH - FOOT_H}" stroke="#f59e0b" stroke-width="1.5" opacity=".6" stroke-dasharray="4,3"/>`;
+  s += `<text x="${todayX+3}" y="${HEAD_H-8}" font-size="9" fill="#f59e0b" font-weight="700">Today</text>`;
 
   // Label column bg
   s += `<rect x="0" y="0" width="${LBL_W}" height="${svgH}" fill="#0f1117"/>`;
@@ -546,6 +547,40 @@ function renderTimeline(jobs) {
       }
     }
   });
+
+  // ── Gang footer — total people per week ──────────────────
+  const footY = HEAD_H + Math.max(jobs.length,1) * ROW_H;
+  s += `<rect x="0" y="${footY}" width="${svgW}" height="${FOOT_H}" fill="#0a0d14"/>`;
+  s += `<line x1="0" y1="${footY}" x2="${svgW}" y2="${footY}" stroke="#2e3347" stroke-width="1"/>`;
+  s += `<text x="${LBL_W-8}" y="${footY+FOOT_H/2+4}" font-size="11" text-anchor="end" fill="#64748b" font-weight="700">Gang</text>`;
+
+  // Tally people per week
+  const weekPpl = [];
+  for (let w = 0; w < WEEKS; w++) {
+    const wStart = addDays(origin, w * 7);
+    const wEnd   = addDays(origin, (w + 1) * 7);
+    let total = 0;
+    jobs.forEach(j => {
+      const jStart = j.start_date || today;
+      const jEnd   = jobEndDate(j);
+      if (jStart < wEnd && jEnd > wStart) total += (j.people_on_site || j.people_needed || 0);
+    });
+    weekPpl.push(total);
+  }
+  const maxPpl = Math.max(...weekPpl, 1);
+  const barZone = FOOT_H - 20; // px available for bars
+
+  for (let w = 0; w < WEEKS; w++) {
+    const ppl = weekPpl[w];
+    if (!ppl) continue;
+    const x = LBL_W + w * W_PX;
+    const barH = Math.max(Math.round((ppl / maxPpl) * barZone), 4);
+    const barY = footY + FOOT_H - barH - 12;
+    const ratio = ppl / maxPpl;
+    const barCol = ratio > 0.85 ? '#ef4444' : ratio > 0.5 ? '#f59e0b' : '#22c55e';
+    s += `<rect x="${x+3}" y="${barY}" width="${W_PX-6}" height="${barH}" rx="3" fill="${barCol}" opacity=".85"/>`;
+    s += `<text x="${x+W_PX/2}" y="${footY+FOOT_H-2}" font-size="9" text-anchor="middle" fill="${barCol}" font-weight="800">${ppl}</text>`;
+  }
 
   s += '</svg>';
   document.getElementById('tl-svg').innerHTML = s;
