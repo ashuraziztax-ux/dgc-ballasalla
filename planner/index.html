@@ -355,7 +355,7 @@ function daysBetween(a, b) {
 
 // ── Local jobs ─────────────────────────────────────────────
 function loadLocal() {
-  try { const d = JSON.parse(localStorage.getItem(L_JOBS_K)||'[]'); if (Array.isArray(d)) return d; } catch(e) {}
+  try { const d = JSON.parse(localStorage.getItem(L_JOBS_K)||'[]'); if (Array.isArray(d) && d.length) return d; } catch(e) {}
   // First time — seed
   const seeds = SEEDS.map((s,i) => Object.assign({ id: 'local-'+(i+1), created_at: new Date().toISOString() }, s));
   saveLocal(seeds);
