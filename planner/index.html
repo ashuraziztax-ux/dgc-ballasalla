@@ -454,6 +454,7 @@ function initRealtime() {
 // ── Drag state ─────────────────────────────────────────────
 let _drag = null;
 let _wasDrag = false;
+let _origin = null; // current timeline origin (Monday of this week), set by renderTimeline
 
 function renderTimeline(jobs) {
   const W_PX  = 52;   // px per week
@@ -465,6 +466,7 @@ function renderTimeline(jobs) {
 
   const today = toDateStr(new Date());
   const origin = mondayOf(today); // first Monday of current week
+  _origin = origin; // expose for drag handlers
 
   const svgW = LBL_W + WEEKS * W_PX + 20;
   const svgH = HEAD_H + Math.max(jobs.length,1) * ROW_H + FOOT_H;
@@ -591,14 +593,21 @@ function renderTimeline(jobs) {
     el.addEventListener('mousedown', e => {
       const j = _jobs.find(x => x.id == el.getAttribute('data-id'));
       if (!j) return;
-      _drag = { job: j, origX: e.clientX, origStart: j.start_date || toDateStr(new Date()) };
+      const actualStart = j.start_date || toDateStr(new Date());
+      // For bars starting before the visible timeline, anchor drag to origin so tooltip shows sensible dates
+      const startOff = _origin ? daysBetween(_origin, actualStart) : 0;
+      const dragAnchor = (startOff < 0 && _origin) ? _origin : actualStart;
+      _drag = { job: j, origX: e.clientX, origStart: actualStart, dragAnchor, lastDeltaDays: null };
       _wasDrag = false;
       e.preventDefault();
     });
     el.addEventListener('touchstart', e => {
       const j = _jobs.find(x => x.id == el.getAttribute('data-id'));
       if (!j) return;
-      _drag = { job: j, origX: e.touches[0].clientX, origStart: j.start_date || toDateStr(new Date()) };
+      const actualStart = j.start_date || toDateStr(new Date());
+      const startOff = _origin ? daysBetween(_origin, actualStart) : 0;
+      const dragAnchor = (startOff < 0 && _origin) ? _origin : actualStart;
+      _drag = { job: j, origX: e.touches[0].clientX, origStart: actualStart, dragAnchor, lastDeltaDays: null };
       _wasDrag = false;
     }, { passive: true });
     el.addEventListener('click', () => {
@@ -903,41 +912,49 @@ function hideDragTooltip() {
 
 // ── Global drag handlers (mouse) ──────────────────────────
 const _W_PX = 52;
-window.addEventListener('mousemove', e => {
+
+function _applyDragMove(clientX, clientY) {
   if (!_drag) return;
-  const deltaX = e.clientX - _drag.origX;
+  const deltaX = clientX - _drag.origX;
   const deltaDays = Math.round((deltaX / _W_PX) * 7);
-  if (Math.abs(deltaDays) >= 1) {
-    _wasDrag = true;
-    showDragTooltip(e.clientX, e.clientY, addDays(_drag.origStart, deltaDays));
-    // Move bar visually during drag
-    const bars = document.querySelectorAll(`.tl-bar[data-id="${_drag.job.id}"]`);
-    bars.forEach(b => { b.style.opacity = '0.45'; b.style.cursor = 'grabbing'; });
-  }
-});
+  if (Math.abs(deltaDays) >= 1) _wasDrag = true;
+  // Always update tooltip position
+  const previewDate = addDays(_drag.dragAnchor, deltaDays);
+  showDragTooltip(clientX, clientY, previewDate);
+  // Re-render SVG only when snapped week changes
+  if (deltaDays === _drag.lastDeltaDays) return;
+  _drag.lastDeltaDays = deltaDays;
+  const j = _jobs.find(x => x.id == _drag.job.id);
+  if (!j) return;
+  j.start_date = previewDate;
+  const tl = document.getElementById('tab-timeline');
+  if (tl && tl.classList.contains('active')) renderTimeline(_jobs.filter(x => x.on_timeline && !x.archived));
+}
+
+window.addEventListener('mousemove', e => { _applyDragMove(e.clientX, e.clientY); });
 window.addEventListener('mouseup', async e => {
   hideDragTooltip();
   if (!_drag) return;
   const deltaX = e.clientX - _drag.origX;
   const deltaDays = Math.round((deltaX / _W_PX) * 7);
-  const { job, origStart } = _drag;
+  const { job, origStart, dragAnchor } = _drag;
   _drag = null;
+  const j = _jobs.find(x => x.id == job.id);
+  if (!j) return;
   if (Math.abs(deltaDays) >= 1) {
     _wasDrag = true;
-    const j = _jobs.find(x => x.id == job.id);
-    if (j) { j.start_date = addDays(origStart, deltaDays); await upsertJob(j); }
+    j.start_date = addDays(dragAnchor, deltaDays);
+    await upsertJob(j);
+  } else {
+    j.start_date = origStart; // restore if no meaningful drag
+    renderTimeline(_jobs.filter(x => x.on_timeline && !x.archived));
   }
 });
 
 // ── Global drag handlers (touch) ──────────────────────────
 window.addEventListener('touchmove', e => {
   if (!_drag) return;
-  const deltaX = e.touches[0].clientX - _drag.origX;
-  const deltaDays = Math.round((deltaX / _W_PX) * 7);
-  if (Math.abs(deltaDays) >= 1) {
-    _wasDrag = true;
-    showDragTooltip(e.touches[0].clientX, e.touches[0].clientY, addDays(_drag.origStart, deltaDays));
-  }
+  _applyDragMove(e.touches[0].clientX, e.touches[0].clientY);
 }, { passive: true });
 window.addEventListener('touchend', async e => {
   hideDragTooltip();
@@ -945,12 +962,17 @@ window.addEventListener('touchend', async e => {
   const touch = e.changedTouches[0];
   const deltaX = touch.clientX - _drag.origX;
   const deltaDays = Math.round((deltaX / _W_PX) * 7);
-  const { job, origStart } = _drag;
+  const { job, origStart, dragAnchor } = _drag;
   _drag = null;
+  const j = _jobs.find(x => x.id == job.id);
+  if (!j) return;
   if (Math.abs(deltaDays) >= 1) {
     _wasDrag = true;
-    const j = _jobs.find(x => x.id == job.id);
-    if (j) { j.start_date = addDays(origStart, deltaDays); await upsertJob(j); }
+    j.start_date = addDays(dragAnchor, deltaDays);
+    await upsertJob(j);
+  } else {
+    j.start_date = origStart;
+    renderTimeline(_jobs.filter(x => x.on_timeline && !x.archived));
   }
 });
 </script>
