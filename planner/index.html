@@ -216,19 +216,23 @@ a{color:var(--accent);text-decoration:none}
     <div class="fgrid">
       <div class="fr">
         <label>Start date</label>
-        <input id="m-start" type="date">
+        <input id="m-start" type="date" oninput="calcPreview()">
       </div>
       <div class="fr">
-        <label>Status</label>
-        <select id="m-status">
-          <option value="running">Running</option>
-          <option value="awarded">Awarded</option>
-          <option value="confirmed">Confirmed</option>
-          <option value="tendering_likely">Tendering — Likely</option>
-          <option value="tendering">Tendering</option>
-          <option value="placeholder">Placeholder</option>
-        </select>
+        <label>Finish date <span style="font-size:10px;color:#64748b">(working days)</span></label>
+        <input id="m-finish" type="date" oninput="onFinishChange()">
       </div>
+    </div>
+    <div class="fr">
+      <label>Status</label>
+      <select id="m-status">
+        <option value="running">Running</option>
+        <option value="awarded">Awarded</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="tendering_likely">Tendering — Likely</option>
+        <option value="tendering">Tendering</option>
+        <option value="placeholder">Placeholder</option>
+      </select>
     </div>
     <div class="fr"><label>Note</label><textarea id="m-note" rows="2" placeholder="Any notes..."></textarea></div>
     <div class="mac">
@@ -328,6 +332,34 @@ function nextWorkingDay() {
   do { d.setDate(d.getDate() + 1); } while (d.getDay() === 0 || d.getDay() === 6);
   return toDateStr(d);
 }
+
+// ── Isle of Man bank holidays ──────────────────────────────
+const IOM_BH = new Set([
+  '2025-01-01','2025-04-18','2025-04-21','2025-05-05','2025-07-07','2025-08-25','2025-12-25','2025-12-26',
+  '2026-01-01','2026-04-03','2026-04-06','2026-05-04','2026-07-06','2026-08-31','2026-12-25','2026-12-28',
+  '2027-01-01','2027-03-26','2027-03-29','2027-05-03','2027-07-05','2027-08-30','2027-12-27','2027-12-28',
+  '2028-01-03','2028-04-14','2028-04-17','2028-05-01','2028-07-05','2028-08-26','2028-12-25','2028-12-26',
+]);
+function isWorkingDay(dateStr) {
+  const dow = new Date(dateStr + 'T12:00:00').getDay();
+  return dow !== 0 && dow !== 6 && !IOM_BH.has(dateStr);
+}
+function addWorkingDays(dateStr, days) {
+  const d = new Date(dateStr + 'T12:00:00');
+  let rem = Math.abs(Math.round(days));
+  const dir = days >= 0 ? 1 : -1;
+  while (rem > 0) { d.setDate(d.getDate() + dir); if (isWorkingDay(toDateStr(d))) rem--; }
+  return toDateStr(d);
+}
+function workingDaysBetween(startStr, endStr) {
+  const end = new Date(endStr + 'T12:00:00');
+  const d = new Date(startStr + 'T12:00:00');
+  if (end <= d) return 0;
+  let count = 0;
+  while (d < end) { d.setDate(d.getDate() + 1); if (isWorkingDay(toDateStr(d))) count++; }
+  return count;
+}
+
 // For running jobs, end date anchors to next working day + revised weeks
 // For future jobs, end date anchors to start + revised weeks
 function jobEndDate(j) {
@@ -335,7 +367,7 @@ function jobEndDate(j) {
   const rw = revisedWeeks(j);
   const start = j.start_date || today;
   const anchor = start <= today ? nextWorkingDay() : start;
-  return addDays(anchor, rw * 7);
+  return addWorkingDays(anchor, rw * 5);
 }
 
 // ── Local jobs ─────────────────────────────────────────────
@@ -696,7 +728,9 @@ function openEdit(j) {
   document.getElementById('m-weeks').value = j.base_weeks;
   document.getElementById('m-needed').value = j.people_needed;
   document.getElementById('m-onsite').value = j.people_on_site;
-  document.getElementById('m-start').value = j.start_date || toDateStr(new Date());
+  const sd = j.start_date || toDateStr(new Date());
+  document.getElementById('m-start').value = sd;
+  document.getElementById('m-finish').value = addWorkingDays(sd, (j.base_weeks || 1) * 5);
   document.getElementById('m-status').value = j.status;
   document.getElementById('m-note').value = j.note||'';
   const archBtn = document.getElementById('btn-archive-action');
@@ -709,16 +743,30 @@ function openEdit(j) {
 function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
 function modalBgClick(e) { if (e.target === document.getElementById('edit-modal')) closeModal(); }
 
+let _finishLock = false;
 function calcPreview() {
   const bw = parseInt(document.getElementById('m-weeks').value)||0;
   const np = parseInt(document.getElementById('m-needed').value)||0;
   const os = parseInt(document.getElementById('m-onsite').value)||0;
+  const start = document.getElementById('m-start').value;
   const prev = document.getElementById('wks-preview');
+  if (start && bw && !_finishLock) {
+    document.getElementById('m-finish').value = addWorkingDays(start, bw * 5);
+  }
   if (!bw || !np || !os) { prev.textContent = ''; return; }
   const rw = Math.ceil(bw * np / os);
-  if (os === np) { prev.textContent = `${rw} weeks at full staffing`; prev.className = 'wks-calc'; }
-  else if (os > np) { prev.textContent = `${rw} weeks ↓ (${bw}w base at ${np} people)`; prev.className = 'wks-calc fast'; }
-  else { prev.textContent = `${rw} weeks ↑ (${bw}w base at ${np} people)`; prev.className = 'wks-calc slow'; }
+  if (os === np) { prev.textContent = `${rw} working weeks at full staffing`; prev.className = 'wks-calc'; }
+  else if (os > np) { prev.textContent = `${rw} working weeks ↓ (${bw}w base at ${np} people)`; prev.className = 'wks-calc fast'; }
+  else { prev.textContent = `${rw} working weeks ↑ (${bw}w base at ${np} people)`; prev.className = 'wks-calc slow'; }
+}
+function onFinishChange() {
+  const start = document.getElementById('m-start').value;
+  const finish = document.getElementById('m-finish').value;
+  if (!start || !finish || finish <= start) return;
+  _finishLock = true;
+  document.getElementById('m-weeks').value = Math.max(1, Math.round(workingDaysBetween(start, finish) / 5));
+  calcPreview();
+  _finishLock = false;
 }
 
 async function saveModal() {
