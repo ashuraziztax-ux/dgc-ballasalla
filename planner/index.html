@@ -129,35 +129,8 @@ a{color:var(--accent);text-decoration:none}
 </head>
 <body>
 
-<!-- ── Setup screen (first run) ── -->
-<div class="screen" id="setup-screen" style="display:none">
-  <div class="auth-box">
-    <h2>DGC Job Planner</h2>
-    <div class="sub">Connect to the company database so everyone sees the same live view — or use locally on this device only.</div>
-    <div class="err" id="setup-err"></div>
-    <input class="ai" id="sb-url" type="url" placeholder="Supabase Project URL" autocomplete="off" spellcheck="false">
-    <input class="ai" id="sb-key" type="text" placeholder="Supabase Anon Key" autocomplete="off" spellcheck="false">
-    <button class="btn-p" onclick="doSetup()">Connect</button>
-    <div class="or-div">or</div>
-    <button class="btn-l" onclick="useLocal()">Use locally on this device</button>
-    <div class="setup-note">Need help setting up? Ask Ash for the setup link — it auto-configures in one tap.</div>
-  </div>
-</div>
-
-<!-- ── Login screen ── -->
-<div class="screen" id="login-screen" style="display:none">
-  <div class="auth-box">
-    <h2>DGC Job Planner</h2>
-    <div class="sub">Sign in with your company account.</div>
-    <div class="err" id="login-err"></div>
-    <input class="ai" id="login-email" type="email" placeholder="Email" autocomplete="email">
-    <input class="ai" id="login-pass" type="password" placeholder="Password" autocomplete="current-password">
-    <button class="btn-p" onclick="doLogin()">Sign in</button>
-  </div>
-</div>
-
 <!-- ── Main app ── -->
-<div id="app" style="display:none">
+<div id="app">
 
   <div id="upd-banner" onclick="applyUpdate()">New version available — tap to update</div>
 
@@ -166,7 +139,7 @@ a{color:var(--accent);text-decoration:none}
     <div class="hdr-r">
       <span class="ver" id="ver-badge"></span>
       <span class="sync-dot" id="sync-dot" title="Sync status"></span>
-      <span class="usr" id="usr-badge" onclick="signOut()" title="Tap to sign out"></span>
+      <span class="usr" id="usr-badge"></span>
     </div>
   </div>
 
@@ -268,11 +241,10 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.0';
-const BUILD   = 'Jul 2026';
-const SB_URL_K  = 'dgc_sb_url';
-const SB_KEY_K  = 'dgc_sb_key';
-const LOCAL_K   = 'dgc_local_mode';
+const VERSION = 'v2.1';
+const BUILD   = 'Aug 2026';
+const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
+const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
 const L_JOBS_K  = 'dgc_jobs_v2';
 const SW_PATH   = 'sw.js';
 
@@ -294,8 +266,6 @@ const SEEDS = [
 
 // ── State ──────────────────────────────────────────────────
 let _sb   = null;
-let _user = null;
-let _local = !!localStorage.getItem(LOCAL_K);
 let _swReg = null;
 let _editArchived = false;
 
@@ -569,7 +539,9 @@ function renderTimeline(jobs) {
     });
     weekPpl.push(total);
   }
-  const maxPpl = Math.max(...weekPpl, 1);
+  const maxPpl = Math.max(...weekPpl, 1); // for bar height scaling only
+  // Fixed capacity = sum of all jobs' people_needed (stable regardless of job positions)
+  const GANG_CAP = Math.max(jobs.reduce((s, j) => s + (j.people_needed || j.people_on_site || 0), 0), 1);
   const barZone = FOOT_H - 20; // px available for bars
 
   for (let w = 0; w < WEEKS; w++) {
@@ -578,7 +550,7 @@ function renderTimeline(jobs) {
     const x = LBL_W + w * W_PX;
     const barH = Math.max(Math.round((ppl / maxPpl) * barZone), 4);
     const barY = footY + FOOT_H - barH - 12;
-    const ratio = ppl / maxPpl;
+    const ratio = ppl / GANG_CAP; // colour based on fixed capacity — stable as jobs move
     const barCol = ratio > 0.85 ? '#ef4444' : ratio > 0.5 ? '#f59e0b' : '#22c55e';
     s += `<rect x="${x+3}" y="${barY}" width="${W_PX-6}" height="${barH}" rx="3" fill="${barCol}" opacity=".85"/>`;
     s += `<text x="${x+W_PX/2}" y="${footY+FOOT_H-2}" font-size="9" text-anchor="middle" fill="${barCol}" font-weight="800">${ppl}</text>`;
@@ -785,67 +757,11 @@ function showTab(name, btn) {
   btn.classList.add('active');
 }
 
-// ── Auth ──────────────────────────────────────────────────
-async function doSetup() {
-  const url = document.getElementById('sb-url').value.trim();
-  const key = document.getElementById('sb-key').value.trim();
-  const err = document.getElementById('setup-err');
-  if (!url || !key) { err.textContent = 'Enter both the project URL and anon key.'; return; }
-  localStorage.setItem(SB_URL_K, url);
-  localStorage.setItem(SB_KEY_K, key);
-  localStorage.removeItem(LOCAL_K);
-  location.reload();
-}
-function useLocal() {
-  localStorage.setItem(LOCAL_K, '1');
-  localStorage.removeItem(SB_URL_K);
-  localStorage.removeItem(SB_KEY_K);
-  location.reload();
-}
-
-async function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const pass  = document.getElementById('login-pass').value;
-  const err   = document.getElementById('login-err');
-  err.textContent = 'Signing in…';
-  const { data, error } = await _sb.auth.signInWithPassword({ email, password: pass });
-  if (error) { err.textContent = error.message; return; }
-  err.textContent = '';
-  await bootApp(data.user);
-}
-
-async function signOut() {
-  if (_sb) await _sb.auth.signOut();
-  location.reload();
-}
-
-async function bootApp(user) {
-  _user = user;
-  document.getElementById('setup-screen').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  if (_local) {
-    document.getElementById('sync-notice').classList.add('local');
-    document.getElementById('sync-dot').className = 'sync-dot local';
-    document.getElementById('usr-badge').textContent = 'Local mode';
-  } else {
-    document.getElementById('sync-dot').className = 'sync-dot live';
-    document.getElementById('usr-badge').textContent = (user && user.email) ? user.email : 'Signed in';
-    initRealtime();
-  }
+// ── Boot ──────────────────────────────────────────────────
+async function bootApp() {
+  document.getElementById('sync-dot').className = 'sync-dot live';
+  initRealtime();
   await refresh();
-}
-
-// ── Setup link (URL params) ───────────────────────────────
-function checkSetupLink() {
-  const p = new URLSearchParams(location.search);
-  if (p.get('sb_url') && p.get('sb_key')) {
-    localStorage.setItem(SB_URL_K, p.get('sb_url'));
-    localStorage.setItem(SB_KEY_K, p.get('sb_key'));
-    localStorage.removeItem(LOCAL_K);
-    history.replaceState(null,'',location.pathname);
-    location.reload();
-  }
 }
 
 // ── Escape helper ─────────────────────────────────────────
@@ -853,42 +769,10 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── Boot ──────────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────────
 (async function init() {
-  checkSetupLink();
-
-  const sbUrl = localStorage.getItem(SB_URL_K);
-  const sbKey = localStorage.getItem(SB_KEY_K);
-
-  if (_local) {
-    // Local mode
-    await bootApp(null);
-    return;
-  }
-
-  if (!sbUrl || !sbKey) {
-    // Show setup screen
-    document.getElementById('setup-screen').style.display = 'flex';
-    return;
-  }
-
-  // Init Supabase
-  _sb = window.supabase.createClient(sbUrl, sbKey);
-
-  // Check session
-  const { data: { session } } = await _sb.auth.getSession();
-  if (session) {
-    await bootApp(session.user);
-  } else {
-    document.getElementById('login-screen').style.display = 'flex';
-    setTimeout(() => document.getElementById('login-email').focus(), 100);
-  }
-
-  // Listen for auth changes
-  _sb.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session) await bootApp(session.user);
-    if (event === 'SIGNED_OUT') location.reload();
-  });
+  _sb = window.supabase.createClient(SB_URL, SB_KEY);
+  await bootApp();
 })();
 
 // ── Drag tooltip ──────────────────────────────────────────
