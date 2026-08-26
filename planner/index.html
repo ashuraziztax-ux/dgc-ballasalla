@@ -435,7 +435,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.4';
+const VERSION = 'v2.5';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -1235,10 +1235,9 @@ async function loadStaffData() {
       _sb.from('dgc_staff_leave').select('*').order('from_date', { ascending: false }),
     ]);
     if (sR.error) {
-      const missing = (sR.error.code === '42P01') ||
-                      (sR.error.message || '').includes('does not exist');
-      if (missing) { showStaffSetup(); return; }
-      console.error('Staff error:', sR.error); return;
+      console.error('Staff error:', sR.error);
+      showStaffSetup();
+      return;
     }
     _staff = sR.data || [];
     _stHours = {};
