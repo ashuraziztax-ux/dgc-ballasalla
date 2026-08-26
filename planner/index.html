@@ -127,6 +127,72 @@ a{color:var(--accent);text-decoration:none}
   .job-tbl th:nth-child(4),.job-tbl td:nth-child(4){display:none}
   .jnote{max-width:120px}
 }
+
+/* ── Staff Tab ───────────────────────────────────────────── */
+.snav{background:var(--surf);border-bottom:1px solid var(--bord);display:flex;overflow-x:auto;padding:0 8px}
+.snav button{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:12px;font-weight:700;padding:9px 14px;cursor:pointer;white-space:nowrap;font-family:inherit}
+.snav button:hover{color:var(--text)}
+.snav button.active{color:var(--accent);border-bottom-color:var(--accent)}
+.sv{display:none}.sv.active{display:block}
+
+.hrs-hdr{display:flex;align-items:center;gap:8px;padding:10px 12px;flex-wrap:wrap}
+.hrs-hdr span{font-size:13px;font-weight:700;color:var(--text);min-width:200px;text-align:center}
+.btn-today,.btn-fill{background:none;border:1px solid var(--bord);color:var(--muted);padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:700}
+.btn-today:hover{border-color:var(--text);color:var(--text)}
+.btn-fill{color:var(--accent);border-color:var(--accent)}
+.btn-fill:hover{background:var(--accent);color:#1a1d27}
+.nav-arrow{background:none;border:1px solid var(--bord);color:var(--text);font-size:18px;width:32px;height:32px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;font-family:inherit;flex-shrink:0}
+.nav-arrow:hover{border-color:var(--accent);color:var(--accent)}
+.hrs-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.hrs-tbl{border-collapse:collapse;font-size:12px;width:100%}
+.hrs-tbl th{background:var(--surf);padding:5px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--bord);border-right:1px solid var(--bord);white-space:nowrap;position:sticky;top:0;z-index:5}
+.hrs-tbl th.name-th{text-align:left;position:sticky;left:0;background:var(--surf);z-index:6;min-width:120px;padding:5px 10px}
+.hrs-tbl th.wk2{border-left:2px solid var(--accent)}
+.hrs-tbl td{padding:3px 4px;border-bottom:1px solid var(--bord);border-right:1px solid var(--bord);text-align:center;vertical-align:middle}
+.hrs-tbl td.name-td{text-align:left;padding:4px 10px;font-weight:700;font-size:13px;color:var(--text);position:sticky;left:0;background:var(--surf2);z-index:4;white-space:nowrap;min-width:120px}
+.hrs-tbl td.wk2{border-left:2px solid var(--accent)}
+.hrs-tbl td.tot-td{font-weight:800;font-size:13px;color:var(--accent);background:var(--surf);padding:4px 8px}
+.hrs-tbl td.bh-td{background:#0a0d14;color:var(--muted);font-size:10px}
+.hrs-inp{width:46px;background:var(--bg);border:1px solid var(--bord);color:var(--text);border-radius:5px;padding:4px 2px;font-size:13px;font-weight:700;text-align:center;font-family:inherit}
+.hrs-inp:focus{outline:1px solid var(--accent);border-color:var(--accent)}
+.hrs-inp.changed{border-color:#22c55e}
+.save-hrs-btn{background:var(--accent);color:#1a1d27;border:none;padding:7px 20px;border-radius:7px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit}
+.save-hrs-btn:hover{background:#fbbf24}
+.hrs-act{display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--bord)}
+.hrs-stat{font-size:12px;color:var(--muted);flex:1}
+
+.adv-section,.leave-section{padding:14px 12px;border-top:2px solid var(--bord)}
+.adv-section h3,.leave-section h3{font-size:13px;font-weight:700;margin-bottom:6px;color:var(--text)}
+.adv-hint{font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5}
+.adv-form{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;align-items:center}
+.adv-form select,.adv-form input{background:var(--surf2);border:1px solid var(--bord);color:var(--text);padding:7px 9px;border-radius:7px;font-size:13px;font-family:inherit}
+.adv-form select{min-width:120px}
+.adv-form input[type=number]{width:100px}
+.adv-form input[type=date]{width:140px}
+.adv-form input[type=text]{min-width:120px;flex:1}
+.adv-form button{background:var(--accent);color:#1a1d27;border:none;padding:7px 16px;border-radius:7px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit}
+.adv-list-wrap{display:flex;flex-direction:column;gap:4px}
+.adv-row{display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--surf2);border-radius:6px;font-size:12px;flex-wrap:wrap}
+.adv-row .ar-name{font-weight:700;min-width:80px;flex-shrink:0}
+.adv-row .ar-type{font-weight:700;min-width:60px;flex-shrink:0}
+.adv-row .ar-amt{font-weight:800;min-width:60px;flex-shrink:0}
+.adv-row .ar-date{color:var(--muted);flex-shrink:0}
+.adv-row .ar-note{color:var(--muted);flex:1}
+.adv-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;margin-left:auto;flex-shrink:0}
+.adv-del:hover{color:#ef4444}
+
+.roster-card{display:flex;align-items:center;gap:10px;padding:11px 12px;border-bottom:1px solid var(--bord)}
+.rc-name{font-weight:700;font-size:14px;flex:1}
+.rc-sub{font-size:12px;color:var(--muted)}
+.roster-btn{background:none;border:1px solid var(--bord);color:var(--muted);padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:700;white-space:nowrap}
+.roster-btn:hover{border-color:#ef4444;color:#ef4444}
+.roster-btn.restore:hover{border-color:var(--c-run);color:var(--c-run)}
+
+.st-setup-box{margin:20px 12px;background:var(--surf2);border:1px solid var(--bord);border-radius:12px;padding:16px}
+.st-setup-box h3{font-size:14px;font-weight:700;margin-bottom:8px;color:var(--accent)}
+.st-setup-box p{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:6px}
+.st-setup-box pre{background:var(--bg);border:1px solid var(--bord);border-radius:8px;padding:12px;font-size:10px;color:#94a3b8;overflow-x:auto;margin-top:8px;white-space:pre;line-height:1.5}
+.st-empty{padding:20px;text-align:center;color:var(--muted);font-size:13px}
 </style>
 </head>
 <body>
@@ -172,6 +238,7 @@ a{color:var(--accent);text-decoration:none}
   <div class="nav">
     <button class="active" onclick="showTab('timeline',this)">📅 Timeline</button>
     <button onclick="showTab('jobs',this)">💼 Jobs</button>
+    <button onclick="showTab('staff',this)">👷 Staff</button>
     <button onclick="showTab('archive',this)" id="arch-tab-btn">📦 Archive</button>
   </div>
 
@@ -194,6 +261,91 @@ a{color:var(--accent);text-decoration:none}
         </tr></thead>
         <tbody id="jobs-body"></tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- Staff tab -->
+  <div id="tab-staff" class="panel">
+    <div class="snav">
+      <button class="active" onclick="showSV('hours',this)">📋 Hours</button>
+      <button onclick="showSV('roster',this)">👷 Team</button>
+      <button onclick="showSV('inactive',this)">📁 Ex-Staff</button>
+    </div>
+
+    <!-- Hours sub-view -->
+    <div id="sv-hours" class="sv active">
+      <div class="hrs-hdr">
+        <button class="nav-arrow" onclick="shiftPeriod(-14)">‹</button>
+        <span id="st-period-lbl">Loading...</span>
+        <button class="nav-arrow" onclick="shiftPeriod(14)">›</button>
+        <button class="btn-today" onclick="goToPeriodNow()">Today</button>
+        <button class="btn-fill" id="btn-fill" onclick="fillEightHours()">Fill 8s</button>
+      </div>
+      <div class="hrs-scroll">
+        <table class="hrs-tbl" id="hrs-tbl"></table>
+      </div>
+      <div class="hrs-act">
+        <button class="save-hrs-btn" onclick="saveHours()">Save hours</button>
+        <span class="hrs-stat" id="hrs-stat"></span>
+      </div>
+
+      <!-- Advances / Bonuses / OT -->
+      <div class="adv-section">
+        <h3>Advances, Bonuses &amp; Overtime</h3>
+        <p class="adv-hint">Overtime = hours; Advance/Bonus = £. OT column in the grid shows the fortnight total.</p>
+        <form id="adv-form" class="adv-form" onsubmit="addAdvance(event)">
+          <select id="adv-staff" required><option value="">Staff member...</option></select>
+          <select id="adv-type">
+            <option value="Advance">Advance</option>
+            <option value="Bonus">Bonus</option>
+            <option value="Overtime">Overtime</option>
+          </select>
+          <input type="number" id="adv-amount" step="0.01" placeholder="Amount" required>
+          <input type="date" id="adv-date" required>
+          <input type="text" id="adv-notes" placeholder="Notes (optional)">
+          <button type="submit">Add</button>
+        </form>
+        <div id="adv-list"></div>
+      </div>
+
+      <!-- Holidays & Leave -->
+      <div class="leave-section">
+        <h3>Holidays &amp; Leave</h3>
+        <div id="leave-list"></div>
+        <form id="leave-form" class="adv-form" onsubmit="addLeave(event)" style="margin-top:10px">
+          <select id="hol-staff" required><option value="">Staff member...</option></select>
+          <select id="hol-type">
+            <option value="Holiday">Paid Holiday</option>
+            <option value="Unpaid Leave">Unpaid Leave</option>
+          </select>
+          <input type="date" id="hol-from" required title="Start date">
+          <input type="date" id="hol-to" required title="End date">
+          <input type="text" id="hol-notes" placeholder="Notes (optional)">
+          <button type="submit">Add</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Team sub-view -->
+    <div id="sv-roster" class="sv">
+      <div class="add-bar"><button class="btn-add" onclick="openAddStaff()">+ Add Person</button></div>
+      <div id="roster-list"></div>
+    </div>
+
+    <!-- Ex-Staff sub-view -->
+    <div id="sv-inactive" class="sv">
+      <div class="arch-hdr">No longer working here</div>
+      <div id="inactive-list"></div>
+    </div>
+
+    <!-- First-time setup notice -->
+    <div id="st-setup" style="display:none">
+      <div class="st-setup-box">
+        <h3>One-time Supabase setup</h3>
+        <p>The Staff Tracker needs four tables. Copy the SQL below and run it in your Supabase dashboard → SQL Editor, then refresh this page.</p>
+        <pre id="st-setup-sql"></pre>
+        <p style="color:var(--accent);margin-top:8px;font-weight:700">After running the SQL, tap refresh (or Cmd+R).</p>
+      </div>
     </div>
   </div>
 
@@ -267,9 +419,23 @@ a{color:var(--accent);text-decoration:none}
   </div>
 </div>
 
+<!-- Add Staff modal -->
+<div class="mbg" id="add-staff-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="mbox">
+    <h3>Add Person</h3>
+    <div class="fr"><label>Full name</label><input id="new-staff-name" type="text" placeholder="Name" onkeydown="if(event.key==='Enter')saveNewStaff()"></div>
+    <div class="fr"><label>Role / trade</label><input id="new-staff-role" type="text" placeholder="e.g. Groundworker"></div>
+    <div class="fr"><label>Start date</label><input id="new-staff-start" type="date"></div>
+    <div class="mac">
+      <button class="btn-sv" onclick="saveNewStaff()">Add</button>
+      <button class="btn-cx" onclick="document.getElementById('add-staff-modal').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.3';
+const VERSION = 'v2.4';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -474,6 +640,12 @@ function initRealtime() {
   if (!_sb) return;
   _sb.channel('plan-jobs')
     .on('postgres_changes', { event:'*', schema:'public', table:'dgc_planner_jobs' }, () => refresh())
+    .subscribe();
+  _sb.channel('plan-staff')
+    .on('postgres_changes', { event:'*', schema:'public', table:'dgc_staff' }, () => { if (_stLoaded) loadStaffData(); })
+    .on('postgres_changes', { event:'*', schema:'public', table:'dgc_staff_hours' }, () => { if (_stLoaded) loadStaffData(); })
+    .on('postgres_changes', { event:'*', schema:'public', table:'dgc_staff_advances' }, () => { if (_stLoaded) loadStaffData(); })
+    .on('postgres_changes', { event:'*', schema:'public', table:'dgc_staff_leave' }, () => { if (_stLoaded) loadStaffData(); })
     .subscribe();
 }
 
@@ -842,6 +1014,7 @@ function showTab(name, btn) {
   document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   btn.classList.add('active');
+  if (name === 'staff' && !_stLoaded) loadStaffData();
 }
 
 // ── Boot ──────────────────────────────────────────────────
@@ -962,6 +1135,401 @@ window.addEventListener('touchmove', e => {
   if (_drag) _applyDragMove(e.touches[0].clientX, e.touches[0].clientY);
   else if (_resize) _applyResizeMove(e.touches[0].clientX, e.touches[0].clientY);
 }, { passive: true });
+// ═══════════════════════════════════════════════════════════
+// ── STAFF TAB ──────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+
+const ST_SETUP_SQL = `-- Run once in Supabase → SQL Editor
+
+CREATE TABLE IF NOT EXISTS public.dgc_staff (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  name text NOT NULL,
+  role text DEFAULT '',
+  start_date date,
+  active boolean DEFAULT true,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE dgc_staff ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "st_anon" ON dgc_staff
+  FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS public.dgc_staff_hours (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  staff_id uuid REFERENCES dgc_staff(id) ON DELETE CASCADE,
+  work_date date NOT NULL,
+  hours numeric(4,2) DEFAULT 8,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(staff_id, work_date)
+);
+ALTER TABLE dgc_staff_hours ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "sh_anon" ON dgc_staff_hours
+  FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS public.dgc_staff_advances (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  staff_id uuid REFERENCES dgc_staff(id) ON DELETE CASCADE,
+  entry_type text NOT NULL,
+  amount numeric(10,2),
+  entry_date date NOT NULL,
+  notes text DEFAULT '',
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE dgc_staff_advances ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "sa_anon" ON dgc_staff_advances
+  FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS public.dgc_staff_leave (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  staff_id uuid REFERENCES dgc_staff(id) ON DELETE CASCADE,
+  leave_type text NOT NULL,
+  from_date date NOT NULL,
+  to_date date NOT NULL,
+  notes text DEFAULT '',
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE dgc_staff_leave ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "sl_anon" ON dgc_staff_leave
+  FOR ALL TO anon USING (true) WITH CHECK (true);`;
+
+// ── State ──────────────────────────────────────────────────
+let _stPeriod = null;   // Monday that starts the 2-week window (YYYY-MM-DD)
+let _staff    = [];     // all staff (active + inactive)
+let _stHours  = {};     // key = staffId+'|'+date → hours
+let _stAdv    = [];     // advances/bonuses/OT entries
+let _stLeave  = [];     // leave records
+let _stLoaded = false;
+let _stChangedCells = new Set();
+let _stFillActive = false;
+let _stPreFillData = {};
+
+// ── Period helpers ─────────────────────────────────────────
+function initStPeriod() {
+  if (!_stPeriod) _stPeriod = mondayOf(toDateStr(new Date()));
+}
+function stPeriodDates() {
+  initStPeriod();
+  const d = [];
+  for (let w = 0; w < 2; w++)
+    for (let day = 0; day < 5; day++)
+      d.push(addDays(_stPeriod, w * 7 + day));
+  return d;
+}
+function shiftPeriod(days) {
+  initStPeriod();
+  _stPeriod = addDays(_stPeriod, days);
+  renderHoursGrid();
+}
+function goToPeriodNow() {
+  _stPeriod = mondayOf(toDateStr(new Date()));
+  renderHoursGrid();
+}
+
+// ── Load from Supabase ─────────────────────────────────────
+async function loadStaffData() {
+  if (!_sb) return;
+  try {
+    const [sR, hR, aR, lR] = await Promise.all([
+      _sb.from('dgc_staff').select('*').order('name'),
+      _sb.from('dgc_staff_hours').select('*'),
+      _sb.from('dgc_staff_advances').select('*').order('entry_date', { ascending: false }),
+      _sb.from('dgc_staff_leave').select('*').order('from_date', { ascending: false }),
+    ]);
+    if (sR.error) {
+      const missing = (sR.error.code === '42P01') ||
+                      (sR.error.message || '').includes('does not exist');
+      if (missing) { showStaffSetup(); return; }
+      console.error('Staff error:', sR.error); return;
+    }
+    _staff = sR.data || [];
+    _stHours = {};
+    (hR.data || []).forEach(h => { _stHours[h.staff_id + '|' + h.work_date] = parseFloat(h.hours) || 0; });
+    _stAdv   = aR.data || [];
+    _stLeave = lR.data || [];
+    _stLoaded = true;
+    // Hide setup, show content
+    document.getElementById('st-setup').style.display = 'none';
+    document.getElementById('sv-hours').style.display = '';
+    document.getElementById('sv-roster').style.display = '';
+    document.getElementById('sv-inactive').style.display = '';
+    renderHoursGrid();
+    renderRoster();
+    renderAdvancesList();
+    renderLeaveList();
+  } catch(err) {
+    console.error('Staff load failed:', err);
+    showStaffSetup();
+  }
+}
+
+function showStaffSetup() {
+  document.getElementById('st-setup-sql').textContent = ST_SETUP_SQL;
+  document.getElementById('st-setup').style.display = 'block';
+  // Hide the sub-views so setup message is visible
+  ['sv-hours','sv-roster','sv-inactive'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+
+// ── Hours grid ────────────────────────────────────────────
+const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri'];
+
+function renderHoursGrid() {
+  initStPeriod();
+  const dates = stPeriodDates();
+  const active = _staff.filter(s => s.active !== false);
+
+  // Period label
+  const d0 = new Date(dates[0] + 'T12:00:00');
+  const d9 = new Date(dates[9] + 'T12:00:00');
+  document.getElementById('st-period-lbl').textContent =
+    d0.toLocaleDateString('en-GB',{day:'numeric',month:'short'}) + ' — ' +
+    d9.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'});
+
+  const tbl = document.getElementById('hrs-tbl');
+  let h = '<thead><tr><th class="name-th">Name</th>';
+  dates.forEach((d, i) => {
+    const dt = new Date(d + 'T12:00:00');
+    const bh = !isWorkingDay(d);
+    const sep = i === 5 ? ' wk2' : '';
+    const col = bh ? 'color:#ef4444' : '';
+    h += `<th class="${sep}" style="${col}">${DAY_NAMES[i%5]}<br><span style="font-size:8px;color:var(--muted)">${dt.getDate()} ${dt.toLocaleDateString('en-GB',{month:'short'})}</span></th>`;
+  });
+  h += '<th>OT</th><th>Total</th></tr></thead><tbody>';
+
+  if (!active.length) {
+    h += `<tr><td colspan="13" class="st-empty">No active staff — add people in the Team tab.</td></tr>`;
+  }
+
+  active.forEach(s => {
+    let total = 0;
+    h += `<tr><td class="name-td">${esc(s.name)}</td>`;
+    dates.forEach((d, i) => {
+      const bh = !isWorkingDay(d);
+      const sep = i === 5 ? ' wk2' : '';
+      if (bh) {
+        h += `<td class="bh-td${sep}">—</td>`;
+      } else {
+        const val = _stHours[s.id + '|' + d];
+        const disp = val !== undefined ? val : '';
+        total += val || 0;
+        h += `<td class="${sep}"><input class="hrs-inp" type="number" min="0" max="24" step="0.5" value="${disp}" placeholder="" data-sid="${s.id}" data-date="${d}" oninput="onHrsChange(this)"></td>`;
+      }
+    });
+    // OT hours this fortnight from advances
+    const ot = _stAdv
+      .filter(a => a.staff_id === s.id && a.entry_type === 'Overtime' && a.entry_date >= dates[0] && a.entry_date <= dates[9])
+      .reduce((sum, a) => sum + (parseFloat(a.amount) || 0), 0);
+    h += `<td class="tot-td">${ot > 0 ? ot.toFixed(1) : '—'}</td>`;
+    h += `<td class="tot-td">${(total + ot) > 0 ? (total + ot).toFixed(1) : '—'}</td></tr>`;
+  });
+
+  h += '</tbody>';
+  tbl.innerHTML = h;
+}
+
+function onHrsChange(inp) {
+  inp.classList.add('changed');
+  _stChangedCells.add(inp);
+}
+
+async function saveHours() {
+  if (!_stChangedCells.size) { stStat('Nothing to save.'); return; }
+  stStat('Saving...');
+  const rows = Array.from(_stChangedCells).map(inp => ({
+    staff_id: inp.dataset.sid,
+    work_date: inp.dataset.date,
+    hours: parseFloat(inp.value) || 0,
+  }));
+  const { error } = await _sb.from('dgc_staff_hours')
+    .upsert(rows, { onConflict: 'staff_id,work_date' });
+  if (error) { console.error(error); stStat('Save failed.'); return; }
+  rows.forEach(r => { _stHours[r.staff_id + '|' + r.work_date] = r.hours; });
+  _stChangedCells.forEach(inp => inp.classList.remove('changed'));
+  _stChangedCells.clear();
+  _stFillActive = false;
+  document.getElementById('btn-fill').textContent = 'Fill 8s';
+  stStat('Saved ✓');
+  setTimeout(() => stStat(''), 2500);
+}
+
+function stStat(msg) { document.getElementById('hrs-stat').textContent = msg; }
+
+function fillEightHours() {
+  if (_stFillActive) {
+    // Undo
+    document.querySelectorAll('.hrs-inp').forEach(inp => {
+      const k = inp.dataset.sid + '|' + inp.dataset.date;
+      inp.value = _stPreFillData[k] !== undefined ? _stPreFillData[k] : '';
+      inp.classList.remove('changed');
+    });
+    _stChangedCells.clear();
+    _stFillActive = false;
+    document.getElementById('btn-fill').textContent = 'Fill 8s';
+    return;
+  }
+  _stPreFillData = {};
+  document.querySelectorAll('.hrs-inp').forEach(inp => {
+    const k = inp.dataset.sid + '|' + inp.dataset.date;
+    _stPreFillData[k] = inp.value;
+    if (!inp.value || inp.value === '0') {
+      inp.value = '8';
+      inp.classList.add('changed');
+      _stChangedCells.add(inp);
+    }
+  });
+  _stFillActive = true;
+  document.getElementById('btn-fill').textContent = 'Undo fill';
+}
+
+// ── Sub-view switching ────────────────────────────────────
+function showSV(name, btn) {
+  document.querySelectorAll('.sv').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.snav button').forEach(b => b.classList.remove('active'));
+  const sv = document.getElementById('sv-' + name);
+  if (sv) sv.classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+// ── Roster ────────────────────────────────────────────────
+function renderRoster() {
+  const active = _staff.filter(s => s.active !== false);
+  const inactive = _staff.filter(s => s.active === false);
+
+  document.getElementById('roster-list').innerHTML = active.length
+    ? active.map(s => `
+      <div class="roster-card">
+        <div style="flex:1">
+          <div class="rc-name">${esc(s.name)}</div>
+          <div class="rc-sub">${esc(s.role || '')}${s.start_date ? ' · Started '+fmtDate(s.start_date) : ''}</div>
+        </div>
+        <button class="roster-btn" onclick="setStaffActive('${s.id}',false)">Mark as left</button>
+      </div>`).join('')
+    : '<div class="st-empty">No active staff yet.</div>';
+
+  const il = document.getElementById('inactive-list');
+  il.innerHTML = inactive.length
+    ? inactive.map(s => `
+      <div class="roster-card">
+        <div style="flex:1">
+          <div class="rc-name" style="color:var(--muted)">${esc(s.name)}</div>
+          <div class="rc-sub">${esc(s.role || '')}</div>
+        </div>
+        <button class="roster-btn restore" onclick="setStaffActive('${s.id}',true)" style="border-color:var(--c-run);color:var(--c-run)">Restore</button>
+      </div>`).join('')
+    : '<div class="st-empty">No ex-staff.</div>';
+}
+
+async function setStaffActive(id, active) {
+  await _sb.from('dgc_staff').update({ active }).eq('id', id);
+  await loadStaffData();
+}
+
+function openAddStaff() {
+  document.getElementById('add-staff-modal').classList.add('open');
+  setTimeout(() => document.getElementById('new-staff-name').focus(), 50);
+}
+
+async function saveNewStaff() {
+  const name  = document.getElementById('new-staff-name').value.trim();
+  const role  = document.getElementById('new-staff-role').value.trim();
+  const start = document.getElementById('new-staff-start').value;
+  if (!name) return;
+  await _sb.from('dgc_staff').insert({ name, role, start_date: start || null, active: true });
+  document.getElementById('add-staff-modal').classList.remove('open');
+  ['new-staff-name','new-staff-role','new-staff-start'].forEach(id => { document.getElementById(id).value = ''; });
+  await loadStaffData();
+}
+
+// ── Advances/Bonuses/OT ───────────────────────────────────
+function populateStaffDropdown(selectId) {
+  const sel = document.getElementById(selectId);
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Staff member...</option>' +
+    _staff.filter(s => s.active !== false)
+      .map(s => `<option value="${s.id}"${s.id === cur ? ' selected' : ''}>${esc(s.name)}</option>`)
+      .join('');
+}
+
+function renderAdvancesList() {
+  populateStaffDropdown('adv-staff');
+  const list = document.getElementById('adv-list');
+  if (!_stAdv.length) { list.innerHTML = '<div class="st-empty" style="padding:8px 0">None recorded.</div>'; return; }
+  list.innerHTML = '<div class="adv-list-wrap">' + _stAdv.slice(0, 30).map(a => {
+    const sn = (_staff.find(s => s.id === a.staff_id) || {}).name || '?';
+    const cols = { Advance:'#f97316', Bonus:'#22c55e', Overtime:'#3b82f6' };
+    const col  = cols[a.entry_type] || '#94a3b8';
+    const amt  = a.entry_type === 'Overtime' ? `${parseFloat(a.amount).toFixed(1)}h` : `£${parseFloat(a.amount).toFixed(2)}`;
+    return `<div class="adv-row">
+      <span class="ar-name">${esc(sn)}</span>
+      <span class="ar-type" style="color:${col}">${esc(a.entry_type)}</span>
+      <span class="ar-amt">${amt}</span>
+      <span class="ar-date">${fmtDate(a.entry_date)}</span>
+      <span class="ar-note">${esc(a.notes || '')}</span>
+      <button class="adv-del" onclick="deleteAdv('${a.id}')" title="Delete">✕</button>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+async function addAdvance(e) {
+  e.preventDefault();
+  const sid  = document.getElementById('adv-staff').value;
+  const type = document.getElementById('adv-type').value;
+  const amt  = parseFloat(document.getElementById('adv-amount').value);
+  const date = document.getElementById('adv-date').value;
+  const notes = document.getElementById('adv-notes').value.trim();
+  if (!sid || !amt || !date) return;
+  await _sb.from('dgc_staff_advances').insert({ staff_id: sid, entry_type: type, amount: amt, entry_date: date, notes });
+  document.getElementById('adv-amount').value = '';
+  document.getElementById('adv-notes').value = '';
+  await loadStaffData();
+}
+
+async function deleteAdv(id) {
+  await _sb.from('dgc_staff_advances').delete().eq('id', id);
+  await loadStaffData();
+}
+
+// ── Holidays & Leave ──────────────────────────────────────
+function renderLeaveList() {
+  populateStaffDropdown('hol-staff');
+  const list = document.getElementById('leave-list');
+  if (!_stLeave.length) { list.innerHTML = '<div class="st-empty" style="padding:8px 0">No leave recorded.</div>'; return; }
+  list.innerHTML = '<div class="adv-list-wrap">' + _stLeave.slice(0, 30).map(l => {
+    const sn  = (_staff.find(s => s.id === l.staff_id) || {}).name || '?';
+    const col = l.leave_type === 'Holiday' ? '#22c55e' : '#f59e0b';
+    return `<div class="adv-row">
+      <span class="ar-name">${esc(sn)}</span>
+      <span class="ar-type" style="color:${col}">${esc(l.leave_type)}</span>
+      <span class="ar-date">${fmtDate(l.from_date)} → ${fmtDate(l.to_date)}</span>
+      <span class="ar-note">${esc(l.notes || '')}</span>
+      <button class="adv-del" onclick="deleteLeave('${l.id}')" title="Delete">✕</button>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+async function addLeave(e) {
+  e.preventDefault();
+  const sid  = document.getElementById('hol-staff').value;
+  const type = document.getElementById('hol-type').value;
+  const from = document.getElementById('hol-from').value;
+  const to   = document.getElementById('hol-to').value;
+  const notes = document.getElementById('hol-notes').value.trim();
+  if (!sid || !from || !to) return;
+  await _sb.from('dgc_staff_leave').insert({ staff_id: sid, leave_type: type, from_date: from, to_date: to, notes });
+  document.getElementById('hol-from').value = '';
+  document.getElementById('hol-to').value   = '';
+  document.getElementById('hol-notes').value = '';
+  await loadStaffData();
+}
+
+async function deleteLeave(id) {
+  await _sb.from('dgc_staff_leave').delete().eq('id', id);
+  await loadStaffData();
+}
+
+// ── END STAFF TAB ──────────────────────────────────────────
+
 window.addEventListener('touchend', async e => {
   hideDragTooltip();
   const touch = e.changedTouches[0];
