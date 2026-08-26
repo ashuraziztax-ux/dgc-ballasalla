@@ -154,6 +154,8 @@ a{color:var(--accent);text-decoration:none}
 .hrs-tbl td.wk2{border-left:2px solid var(--accent)}
 .hrs-tbl td.tot-td{font-weight:800;font-size:13px;color:var(--accent);background:var(--surf);padding:4px 8px}
 .hrs-tbl td.bh-td{background:#0a0d14;color:var(--muted);font-size:10px}
+.hrs-tbl td.leave-td{background:#1e3a2f;color:#22c55e;font-weight:800;font-size:13px;text-align:center}
+.hrs-tbl td.leave-td.unpaid{background:#2a1f0a;color:#f59e0b}
 .hrs-inp{width:46px;background:var(--bg);border:1px solid var(--bord);color:var(--text);border-radius:5px;padding:4px 2px;font-size:13px;font-weight:700;text-align:center;font-family:inherit}
 .hrs-inp:focus{outline:1px solid var(--accent);border-color:var(--accent)}
 .hrs-inp.changed{border-color:#22c55e}
@@ -417,7 +419,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.12';
+const VERSION = 'v2.13';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -1296,6 +1298,20 @@ function renderHoursGrid() {
     fri.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'});
 
   const tbl = document.getElementById('hrs-tbl');
+
+  // Build leave map: staffId -> { date: 'H'|'U' } for days in this fortnight
+  const leaveDays = {};
+  _stLeave.forEach(l => {
+    if (l.from_date <= dates[9] && l.to_date >= _stPeriod) {
+      dates.forEach(d => {
+        if (d >= l.from_date && d <= l.to_date) {
+          if (!leaveDays[l.staff_id]) leaveDays[l.staff_id] = {};
+          leaveDays[l.staff_id][d] = l.leave_type === 'Holiday' ? 'H' : 'U';
+        }
+      });
+    }
+  });
+
   let h = '<thead><tr><th class="name-th">Name</th>';
   dates.forEach((d, i) => {
     const dt = new Date(d + 'T12:00:00');
@@ -1312,12 +1328,18 @@ function renderHoursGrid() {
 
   active.forEach(s => {
     let total = 0;
+    const myLeave = leaveDays[s.id] || {};
     h += `<tr><td class="name-td">${esc(s.name)}</td>`;
     dates.forEach((d, i) => {
       const bh = !isWorkingDay(d);
       const sep = i === 5 ? ' wk2' : '';
+      const marker = myLeave[d];
       if (bh) {
         h += `<td class="bh-td${sep}">—</td>`;
+      } else if (marker) {
+        total += marker === 'H' ? 8 : 0;
+        const unpaidCls = marker === 'U' ? ' unpaid' : '';
+        h += `<td class="leave-td${unpaidCls}${sep ? ' '+sep.trim() : ''}">${marker}</td>`;
       } else {
         const val = _stHours[s.id + '|' + d];
         const disp = val !== undefined ? val : '';
@@ -1325,11 +1347,11 @@ function renderHoursGrid() {
         h += `<td class="${sep}"><input class="hrs-inp" type="number" min="0" max="24" step="0.5" value="${disp}" placeholder="" data-sid="${s.id}" data-date="${d}" oninput="onHrsChange(this)"></td>`;
       }
     });
-    // OT hours this fortnight from advances
+    // OT hours this fortnight — use full fortnight (Sat→Fri) not just working days
     const ot = _stAdv
-      .filter(a => a.staff_id === s.id && a.entry_type === 'Overtime' && a.entry_date >= dates[0] && a.entry_date <= dates[9])
+      .filter(a => a.staff_id === s.id && a.entry_type === 'Overtime' && a.entry_date >= _stPeriod && a.entry_date <= dates[9])
       .reduce((sum, a) => sum + (parseFloat(a.amount) || 0), 0);
-    h += `<td class="tot-td">${ot > 0 ? ot.toFixed(1) : '—'}</td>`;
+    h += `<td class="tot-td">${ot > 0 ? ot.toFixed(1) + 'h' : '—'}</td>`;
     h += `<td class="tot-td">${(total + ot) > 0 ? (total + ot).toFixed(1) : '—'}</td></tr>`;
   });
 
