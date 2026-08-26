@@ -417,7 +417,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.9';
+const VERSION = 'v2.10';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -1013,7 +1013,7 @@ function esc(s) {
 
 // ── Init ──────────────────────────────────────────────────
 (async function init() {
-  _sb = window.supabase.createClient(SB_URL, SB_KEY);
+  _sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false } });
   await bootApp();
 })();
 
