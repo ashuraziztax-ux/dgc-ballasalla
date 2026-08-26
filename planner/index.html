@@ -417,7 +417,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.11';
+const VERSION = 'v2.12';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -478,6 +478,11 @@ function revisedWeeks(j) {
 function toDateStr(d) {
   // YYYY-MM-DD from Date object
   return d.toISOString().substring(0,10);
+}
+function weekdayCount(from, to) {
+  let count = 0, d = new Date(from + 'T12:00:00'), end = new Date(to + 'T12:00:00');
+  while (d <= end) { const day = d.getDay(); if (day !== 0 && day !== 6) count++; d.setDate(d.getDate() + 1); }
+  return count;
 }
 function addDays(dateStr, days) {
   const d = new Date(dateStr + 'T12:00:00');
@@ -1458,17 +1463,21 @@ function populateStaffDropdown(selectId) {
 function renderAdvancesList() {
   populateStaffDropdown('adv-staff');
   const list = document.getElementById('adv-list');
-  if (!_stAdv.length) { list.innerHTML = '<div class="st-empty" style="padding:8px 0">None recorded.</div>'; return; }
-  list.innerHTML = '<div class="adv-list-wrap">' + _stAdv.slice(0, 30).map(a => {
+  const dates = stPeriodDates();
+  const periodStart = _stPeriod;          // Saturday (YYYY-MM-DD)
+  const periodEnd   = dates[9];           // Friday wk2
+  const entries = _stAdv.filter(a => a.entry_date >= periodStart && a.entry_date <= periodEnd);
+  if (!entries.length) { list.innerHTML = '<div class="st-empty" style="padding:8px 0">No advances or bonuses this fortnight.</div>'; return; }
+  list.innerHTML = '<div class="adv-list-wrap">' + entries.map(a => {
     const sn = (_staff.find(s => s.id === a.staff_id) || {}).name || '?';
     const cols = { Advance:'#f97316', Bonus:'#22c55e', Overtime:'#3b82f6' };
     const col  = cols[a.entry_type] || '#94a3b8';
     const amt  = a.entry_type === 'Overtime' ? `${parseFloat(a.amount).toFixed(1)}h` : `£${parseFloat(a.amount).toFixed(2)}`;
     return `<div class="adv-row">
+      <span class="ar-date">${fmtDate(a.entry_date)}</span>
       <span class="ar-name">${esc(sn)}</span>
       <span class="ar-type" style="color:${col}">${esc(a.entry_type)}</span>
       <span class="ar-amt">${amt}</span>
-      <span class="ar-date">${fmtDate(a.entry_date)}</span>
       <span class="ar-note">${esc(a.notes || '')}</span>
       <button class="adv-del" onclick="deleteAdv('${a.id}')" title="Delete">✕</button>
     </div>`;
@@ -1498,14 +1507,28 @@ async function deleteAdv(id) {
 function renderLeaveList() {
   populateStaffDropdown('hol-staff');
   const list = document.getElementById('leave-list');
-  if (!_stLeave.length) { list.innerHTML = '<div class="st-empty" style="padding:8px 0">No leave recorded.</div>'; return; }
-  list.innerHTML = '<div class="adv-list-wrap">' + _stLeave.slice(0, 30).map(l => {
-    const sn  = (_staff.find(s => s.id === l.staff_id) || {}).name || '?';
-    const col = l.leave_type === 'Holiday' ? '#22c55e' : '#f59e0b';
+  const dates = stPeriodDates();
+  const periodStart = _stPeriod;          // Saturday
+  const periodEnd   = dates[9];           // Friday wk2
+  const relevant = _stLeave
+    .filter(l => l.from_date <= periodEnd && l.to_date >= periodStart)
+    .map(l => ({
+      ...l,
+      clippedFrom: l.from_date > periodStart ? l.from_date : periodStart,
+      clippedTo:   l.to_date   < periodEnd   ? l.to_date   : periodEnd,
+    }))
+    .sort((a, b) => a.clippedFrom.localeCompare(b.clippedFrom));
+  if (!relevant.length) { list.innerHTML = '<div class="st-empty" style="padding:8px 0">No leave this fortnight.</div>'; return; }
+  list.innerHTML = '<div class="adv-list-wrap">' + relevant.map(l => {
+    const sn    = (_staff.find(s => s.id === l.staff_id) || {}).name || '?';
+    const label = l.leave_type === 'Holiday' ? 'Paid' : 'Unpaid';
+    const col   = l.leave_type === 'Holiday' ? '#22c55e' : '#f59e0b';
+    const days  = weekdayCount(l.clippedFrom, l.clippedTo);
     return `<div class="adv-row">
+      <span class="ar-date">${fmtDate(l.clippedFrom)} → ${fmtDate(l.clippedTo)}</span>
       <span class="ar-name">${esc(sn)}</span>
-      <span class="ar-type" style="color:${col}">${esc(l.leave_type)}</span>
-      <span class="ar-date">${fmtDate(l.from_date)} → ${fmtDate(l.to_date)}</span>
+      <span class="ar-type" style="color:${col}">${label}</span>
+      <span class="ar-amt">${days}d</span>
       <span class="ar-note">${esc(l.notes || '')}</span>
       <button class="adv-del" onclick="deleteLeave('${l.id}')" title="Delete">✕</button>
     </div>`;
