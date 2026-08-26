@@ -417,7 +417,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.8';
+const VERSION = 'v2.9';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -1222,7 +1222,7 @@ async function loadStaffData() {
   try {
     const [sR, hR, aR, lR] = await Promise.all([
       _sb.from('dgc_staff').select('*').order('name'),
-      _sb.from('dgc_staff_hours').select('*'),
+      _sb.from('dgc_staff_hours').select('*').limit(10000),
       _sb.from('dgc_staff_advances').select('*').order('entry_date', { ascending: false }),
       _sb.from('dgc_staff_leave').select('*').order('from_date', { ascending: false }),
     ]);
