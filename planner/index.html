@@ -33,13 +33,14 @@ a{color:var(--accent);text-decoration:none}
 .sync-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0}
 .sync-dot.live{background:var(--c-run)}
 .sync-dot.local{background:var(--accent)}
-.ver{font-size:10px;color:var(--muted);font-weight:700}
+.ver{font-size:11px;color:var(--text);font-weight:700;opacity:.7}
 .usr{font-size:11px;color:var(--muted);cursor:pointer}
 .usr:hover{color:var(--text)}
 
 /* ── Update banner ── */
-#upd-banner{display:none;background:var(--accent);color:#1a1d27;padding:9px 14px;font-size:13px;font-weight:800;text-align:center;cursor:pointer;position:sticky;top:46px;z-index:49}
+#upd-banner{display:none;background:var(--accent);color:#1a1d27;padding:11px 14px;font-size:14px;font-weight:900;text-align:center;cursor:pointer;position:sticky;top:46px;z-index:49;letter-spacing:.3px;animation:pulse-banner 2s ease-in-out infinite}
 #upd-banner:hover{background:#fbbf24}
+@keyframes pulse-banner{0%,100%{opacity:1}50%{opacity:.75}}
 
 /* ── Sync notice ── */
 #sync-notice{display:none;background:#1e293b;border-bottom:1px solid var(--bord);padding:5px 14px;font-size:11px;color:var(--muted)}
@@ -260,6 +261,7 @@ a{color:var(--accent);text-decoration:none}
         <button class="nav-arrow" onclick="shiftPeriod(14)">›</button>
         <button class="btn-today" onclick="goToPeriodNow()">Today</button>
         <button class="btn-fill" id="btn-fill" onclick="fillEightHours()">Fill 8s</button>
+        <button class="btn-today" onclick="_stLoaded=false;loadStaffData()" title="Reload staff data from server" style="margin-left:auto">↻ Refresh</button>
       </div>
       <div class="hrs-scroll">
         <table class="hrs-tbl" id="hrs-tbl"></table>
@@ -415,7 +417,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.6';
+const VERSION = 'v2.7';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -994,7 +996,7 @@ function showTab(name, btn) {
   document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   btn.classList.add('active');
-  if (name === 'staff' && !_stLoaded) loadStaffData();
+  if (name === 'staff') { _stLoaded = false; loadStaffData(); }
 }
 
 // ── Boot ──────────────────────────────────────────────────
