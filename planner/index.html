@@ -417,7 +417,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.7';
+const VERSION = 'v2.8';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -1185,15 +1185,25 @@ let _stFillActive = false;
 let _stPreFillData = {};
 
 // ── Period helpers ─────────────────────────────────────────
+// DGC fortnights start on Saturdays. Anchor: Sat 11 Apr 2026.
+const DGC_FN_ANCHOR = '2026-04-11';
+function dgcFortnightSat(dateStr) {
+  const anchor = new Date(DGC_FN_ANCHOR + 'T12:00:00');
+  const d = new Date(dateStr + 'T12:00:00');
+  const diff = Math.round((d - anchor) / 86400000);
+  const n = Math.floor(diff / 14);
+  return toDateStr(new Date(anchor.getTime() + n * 14 * 86400000));
+}
 function initStPeriod() {
-  if (!_stPeriod) _stPeriod = mondayOf(toDateStr(new Date()));
+  if (!_stPeriod) _stPeriod = dgcFortnightSat(toDateStr(new Date()));
 }
 function stPeriodDates() {
   initStPeriod();
+  // _stPeriod is Saturday; Mon wk1 = Sat+2, Mon wk2 = Sat+9
   const d = [];
   for (let w = 0; w < 2; w++)
     for (let day = 0; day < 5; day++)
-      d.push(addDays(_stPeriod, w * 7 + day));
+      d.push(addDays(_stPeriod, 2 + w * 7 + day));
   return d;
 }
 function shiftPeriod(days) {
@@ -1202,7 +1212,7 @@ function shiftPeriod(days) {
   renderHoursGrid();
 }
 function goToPeriodNow() {
-  _stPeriod = mondayOf(toDateStr(new Date()));
+  _stPeriod = dgcFortnightSat(toDateStr(new Date()));
   renderHoursGrid();
 }
 
@@ -1260,12 +1270,12 @@ function renderHoursGrid() {
   const dates = stPeriodDates();
   const active = _staff.filter(s => s.active !== false);
 
-  // Period label
-  const d0 = new Date(dates[0] + 'T12:00:00');
-  const d9 = new Date(dates[9] + 'T12:00:00');
+  // Period label: show Sat start to Fri end (the full DGC fortnight)
+  const sat = new Date(_stPeriod + 'T12:00:00');
+  const fri = new Date(sat.getTime() + 13 * 86400000);
   document.getElementById('st-period-lbl').textContent =
-    d0.toLocaleDateString('en-GB',{day:'numeric',month:'short'}) + ' — ' +
-    d9.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'});
+    sat.toLocaleDateString('en-GB',{day:'numeric',month:'short'}) + ' — ' +
+    fri.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'});
 
   const tbl = document.getElementById('hrs-tbl');
   let h = '<thead><tr><th class="name-th">Name</th>';
