@@ -98,6 +98,7 @@ a{color:var(--accent);text-decoration:none}
 .wks-calc{font-size:11px;color:var(--muted);margin-top:3px;min-height:14px}
 .wks-calc.fast{color:var(--c-run)}
 .wks-calc.slow{color:#ef4444}
+.ov-row{display:flex;align-items:center;gap:10px;padding:3px 0;border-bottom:1px solid #1e2130;font-size:12px}
 .mac{display:flex;align-items:center;gap:8px;margin-top:14px}
 .btn-sv{background:var(--accent);color:#1a1d27;border:none;padding:8px 20px;border-radius:7px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit}
 .btn-sv:hover{background:#fbbf24}
@@ -275,8 +276,13 @@ a{color:var(--accent);text-decoration:none}
     <div class="fr"><label>Job name</label><input id="m-name" type="text" placeholder="Job name"></div>
     <div class="fgrid">
       <div class="fr">
-        <label>Weeks on site</label>
-        <input id="m-weeks" type="number" min="1" max="200" oninput="calcPreview()">
+        <label>Duration</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input id="m-weeks" type="number" min="0" max="200" oninput="calcPreview()" style="width:58px" placeholder="0">
+          <span style="color:var(--muted);font-size:12px">wks</span>
+          <input id="m-days" type="number" min="0" max="4" oninput="calcPreview()" style="width:46px" placeholder="0">
+          <span style="color:var(--muted);font-size:12px">days</span>
+        </div>
       </div>
       <div class="fr">
         <label>People needed</label>
@@ -310,6 +316,15 @@ a{color:var(--accent);text-decoration:none}
       </select>
     </div>
     <div class="fr"><label>Note</label><textarea id="m-note" rows="2" placeholder="Any notes..."></textarea></div>
+    <div class="fr" id="day-ov-section">
+      <label>Day overrides <span style="font-size:10px;color:var(--muted)">— different headcount on a specific day</span></label>
+      <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
+        <input id="ov-date" type="date" style="flex:1;min-width:0">
+        <input id="ov-people" type="number" min="0" max="99" placeholder="People" style="width:64px">
+        <button type="button" onclick="addDayOverride()" style="background:#3b82f6;color:white;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-weight:700;font-size:14px">+</button>
+      </div>
+      <div id="ov-list"></div>
+    </div>
     <div class="mac">
       <button class="btn-sv" onclick="saveModal()">Save</button>
       <button class="btn-cx" onclick="closeModal()">Cancel</button>
@@ -321,7 +336,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.15';
+const VERSION = 'v2.16';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -373,9 +388,25 @@ function applyUpdate() {
 document.getElementById('ver-badge').textContent = VERSION + ' · ' + BUILD;
 
 // ── Week calc ──────────────────────────────────────────────
+// ── localStorage extras (base_days + day overrides) ───────
+function getBaseDays(jobId) {
+  try { return parseInt(JSON.parse(localStorage.getItem('dgc-job-days')||'{}')[jobId]||0)||0; } catch(e) { return 0; }
+}
+function saveBaseDays(jobId, days) {
+  try { const s=JSON.parse(localStorage.getItem('dgc-job-days')||'{}'); s[jobId]=days; localStorage.setItem('dgc-job-days',JSON.stringify(s)); } catch(e) {}
+}
+function getJobOverrides(jobId) {
+  try { return JSON.parse(localStorage.getItem('dgc-job-overrides')||'{}')[jobId]||[]; } catch(e) { return []; }
+}
+function saveJobOverrides(jobId, ovs) {
+  try { const s=JSON.parse(localStorage.getItem('dgc-job-overrides')||'{}'); s[jobId]=ovs; localStorage.setItem('dgc-job-overrides',JSON.stringify(s)); } catch(e) {}
+}
+
 function revisedWeeks(j) {
-  if (!j.people_on_site || j.people_on_site <= 0) return j.base_weeks;
-  return Math.ceil(j.base_weeks * j.people_needed / j.people_on_site);
+  const bd = j.id ? getBaseDays(j.id) : 0;
+  const totalDays = (j.base_weeks || 0) * 5 + bd;
+  if (!j.people_on_site || j.people_on_site <= 0) return Math.ceil(totalDays / 5);
+  return Math.ceil(totalDays * j.people_needed / j.people_on_site) / 5;
 }
 
 // ── Date helpers ───────────────────────────────────────────
@@ -441,14 +472,17 @@ function workingDaysBetween(startStr, endStr) {
   return count;
 }
 
-// For running jobs, end date anchors to next working day + revised weeks
-// For future jobs, end date anchors to start + revised weeks
+// For running jobs, end date anchors to next working day + revised duration
+// For future jobs, end date anchors to start + revised duration
 function jobEndDate(j) {
   const today = toDateStr(new Date());
-  const rw = revisedWeeks(j);
+  const bd = j.id ? getBaseDays(j.id) : 0;
+  const totalDays = (j.base_weeks || 0) * 5 + bd;
+  const pos = j.people_on_site || 0, pn = j.people_needed || 0;
+  const revised = (pos > 0 && pn > 0) ? Math.ceil(totalDays * pn / pos) : totalDays;
   const start = j.start_date || today;
   const anchor = start <= today ? nextWorkingDay() : start;
-  return addWorkingDays(anchor, rw * 5);
+  return addWorkingDays(anchor, Math.max(revised, 1));
 }
 
 // ── Local jobs ─────────────────────────────────────────────
@@ -482,9 +516,11 @@ async function sbUpsert(job) {
     job.updated_at = new Date().toISOString();
     const { error } = await _sb.from('dgc_planner_jobs').upsert(job);
     if (error) console.error(error);
+    return job.id;
   } else {
-    const { error } = await _sb.from('dgc_planner_jobs').insert(job);
-    if (error) console.error(error);
+    const { data, error } = await _sb.from('dgc_planner_jobs').insert(job).select('id').single();
+    if (error) { console.error(error); return null; }
+    return data?.id;
   }
 }
 async function sbDelete(id) {
@@ -497,15 +533,18 @@ async function loadJobs() {
   return sbLoad();
 }
 async function upsertJob(job) {
+  let savedId;
   if (_local) {
     const jobs = loadLocal();
     const idx = jobs.findIndex(j => j.id === job.id);
     if (idx >= 0) jobs[idx] = job; else jobs.push(job);
     saveLocal(jobs);
+    savedId = job.id;
   } else {
-    await sbUpsert(job);
+    savedId = await sbUpsert(job);
   }
   await refresh();
+  return savedId;
 }
 async function removeJob(id) {
   if (_local) {
@@ -635,40 +674,66 @@ function renderTimeline(jobs) {
     }
   });
 
-  // ── Gang footer — total people per week ──────────────────
+  // ── Gang footer — day-aware bars ─────────────────────────
   const footY = HEAD_H + Math.max(jobs.length,1) * ROW_H;
   s += `<rect x="0" y="${footY}" width="${svgW}" height="${FOOT_H}" fill="#0a0d14"/>`;
   s += `<line x1="0" y1="${footY}" x2="${svgW}" y2="${footY}" stroke="#2e3347" stroke-width="1"/>`;
   s += `<text x="${LBL_W-8}" y="${footY+FOOT_H/2+4}" font-size="11" text-anchor="end" fill="#64748b" font-weight="700">Gang</text>`;
 
-  // Tally people per week
-  const weekPpl = [];
+  // Compute people per working day (Mon–Fri) for every visible week
+  // origin is a Monday; Mon=+0, Tue=+1, Wed=+2, Thu=+3, Fri=+4
+  const weekDayPpl = [];
   for (let w = 0; w < WEEKS; w++) {
-    const wStart = addDays(origin, w * 7);
-    const wEnd   = addDays(origin, (w + 1) * 7);
-    let total = 0;
-    jobs.forEach(j => {
-      const jStart = j.start_date || today;
-      const jEnd   = jobEndDate(j);
-      if (jStart < wEnd && jEnd > wStart) total += (j.people_on_site || j.people_needed || 0);
-    });
-    weekPpl.push(total);
+    const days = [];
+    for (let d = 0; d < 5; d++) {
+      const dateStr = addDays(origin, w * 7 + d);
+      let total = 0;
+      jobs.forEach(j => {
+        const jStart = j.start_date || today;
+        const jEnd = jobEndDate(j);
+        if (dateStr >= jStart && dateStr <= jEnd) {
+          const ov = getJobOverrides(j.id).find(o => o.date === dateStr);
+          total += ov ? ov.people : (j.people_on_site || j.people_needed || 0);
+        }
+      });
+      days.push(total);
+    }
+    weekDayPpl.push(days);
   }
-  const maxPpl = Math.max(...weekPpl, 1); // for bar height scaling only
-  // Fixed capacity = sum of all jobs' people_needed (stable regardless of job positions)
-  const GANG_CAP = Math.max(jobs.reduce((s, j) => s + (j.people_needed || j.people_on_site || 0), 0), 1);
-  const barZone = FOOT_H - 20; // px available for bars
+
+  const maxPpl = Math.max(...weekDayPpl.flat(), 1);
+  const GANG_CAP = Math.max(jobs.reduce((acc, j) => acc + (j.people_needed || j.people_on_site || 0), 0), 1);
+  const barZone = FOOT_H - 20;
+  const D_W = W_PX / 5; // pixel width per day slot
 
   for (let w = 0; w < WEEKS; w++) {
-    const ppl = weekPpl[w];
-    if (!ppl) continue;
+    const days = weekDayPpl[w];
+    if (!days.some(d => d > 0)) continue;
     const x = LBL_W + w * W_PX;
-    const barH = Math.max(Math.round((ppl / maxPpl) * barZone), 4);
-    const barY = footY + FOOT_H - barH - 12;
-    const ratio = ppl / GANG_CAP; // colour based on fixed capacity — stable as jobs move
-    const barCol = ratio > 0.85 ? '#ef4444' : ratio > 0.5 ? '#f59e0b' : '#22c55e';
-    s += `<rect x="${x+3}" y="${barY}" width="${W_PX-6}" height="${barH}" rx="3" fill="${barCol}" opacity=".85"/>`;
-    s += `<text x="${x+W_PX/2}" y="${footY+FOOT_H-2}" font-size="9" text-anchor="middle" fill="${barCol}" font-weight="800">${ppl}</text>`;
+    const allSame = days.every(d => d === days[0]);
+
+    if (!allSame) {
+      // Different headcount on different days → 5 daily bars
+      days.forEach((ppl, d) => {
+        if (!ppl) return;
+        const dx = x + d * D_W;
+        const barH = Math.max(Math.round((ppl / maxPpl) * barZone), 3);
+        const barY = footY + FOOT_H - barH - 12;
+        const ratio = ppl / GANG_CAP;
+        const barCol = ratio > 0.85 ? '#ef4444' : ratio > 0.5 ? '#f59e0b' : '#22c55e';
+        s += `<rect x="${(dx+0.5).toFixed(1)}" y="${barY}" width="${(D_W-1).toFixed(1)}" height="${barH}" rx="2" fill="${barCol}" opacity=".85"/>`;
+        s += `<text x="${(dx+D_W/2).toFixed(1)}" y="${footY+FOOT_H-2}" font-size="7" text-anchor="middle" fill="${barCol}" font-weight="800">${ppl}</text>`;
+      });
+    } else {
+      // Same headcount all week → single clean bar
+      const ppl = days[0];
+      const barH = Math.max(Math.round((ppl / maxPpl) * barZone), 4);
+      const barY = footY + FOOT_H - barH - 12;
+      const ratio = ppl / GANG_CAP;
+      const barCol = ratio > 0.85 ? '#ef4444' : ratio > 0.5 ? '#f59e0b' : '#22c55e';
+      s += `<rect x="${x+3}" y="${barY}" width="${W_PX-6}" height="${barH}" rx="3" fill="${barCol}" opacity=".85"/>`;
+      s += `<text x="${x+W_PX/2}" y="${footY+FOOT_H-2}" font-size="9" text-anchor="middle" fill="${barCol}" font-weight="800">${ppl}</text>`;
+    }
   }
 
   s += '</svg>';
@@ -804,12 +869,14 @@ function openAdd() {
   document.getElementById('m-id').value = '';
   document.getElementById('m-name').value = '';
   document.getElementById('m-weeks').value = 4;
+  document.getElementById('m-days').value = 0;
   document.getElementById('m-needed').value = 2;
   document.getElementById('m-onsite').value = 2;
   document.getElementById('m-start').value = toDateStr(new Date());
   document.getElementById('m-status').value = 'tendering';
   document.getElementById('m-note').value = '';
   document.getElementById('btn-archive-action').style.display = 'none';
+  renderOverrideList('');
   calcPreview();
   document.getElementById('edit-modal').classList.add('open');
   document.getElementById('m-name').focus();
@@ -821,17 +888,20 @@ function openEdit(j) {
   document.getElementById('m-id').value = j.id;
   document.getElementById('m-name').value = j.name;
   document.getElementById('m-weeks').value = j.base_weeks;
+  const bd = getBaseDays(j.id);
+  document.getElementById('m-days').value = bd;
   document.getElementById('m-needed').value = j.people_needed;
   document.getElementById('m-onsite').value = j.people_on_site;
   const sd = j.start_date || toDateStr(new Date());
   document.getElementById('m-start').value = sd;
-  document.getElementById('m-finish').value = addWorkingDays(sd, (j.base_weeks || 1) * 5);
+  document.getElementById('m-finish').value = addWorkingDays(sd, (j.base_weeks || 0) * 5 + bd);
   document.getElementById('m-status').value = j.status;
   document.getElementById('m-note').value = j.note||'';
   const archBtn = document.getElementById('btn-archive-action');
   archBtn.style.display = '';
   archBtn.textContent = j.archived ? 'Restore' : 'Archive';
   archBtn.className = j.archived ? 'btn-unarch' : 'btn-arch';
+  renderOverrideList(j.id);
   calcPreview();
   document.getElementById('edit-modal').classList.add('open');
 }
@@ -841,34 +911,42 @@ function modalBgClick(e) { if (e.target === document.getElementById('edit-modal'
 let _finishLock = false;
 function calcPreview() {
   const bw = parseInt(document.getElementById('m-weeks').value)||0;
+  const bd = Math.min(4, Math.max(0, parseInt(document.getElementById('m-days').value)||0));
+  const totalDays = bw * 5 + bd;
   const np = parseInt(document.getElementById('m-needed').value)||0;
   const os = parseInt(document.getElementById('m-onsite').value)||0;
   const start = document.getElementById('m-start').value;
   const prev = document.getElementById('wks-preview');
-  if (start && bw && !_finishLock) {
-    document.getElementById('m-finish').value = addWorkingDays(start, bw * 5);
+  if (start && (bw || bd) && !_finishLock) {
+    document.getElementById('m-finish').value = addWorkingDays(start, totalDays);
   }
-  if (!bw || !np || !os) { prev.textContent = ''; return; }
-  const rw = Math.ceil(bw * np / os);
-  if (os === np) { prev.textContent = `${rw} working weeks at full staffing`; prev.className = 'wks-calc'; }
-  else if (os > np) { prev.textContent = `${rw} working weeks ↓ (${bw}w base at ${np} people)`; prev.className = 'wks-calc fast'; }
-  else { prev.textContent = `${rw} working weeks ↑ (${bw}w base at ${np} people)`; prev.className = 'wks-calc slow'; }
+  if (!totalDays || !np || !os) { prev.textContent = ''; return; }
+  const revisedTotal = Math.ceil(totalDays * np / os);
+  const rw2 = Math.floor(revisedTotal / 5), rd2 = revisedTotal % 5;
+  const bLabel = bd ? `${bw}w ${bd}d` : `${bw}w`;
+  const rLabel = rd2 ? `${rw2}w ${rd2}d` : `${rw2}w`;
+  if (os === np) { prev.textContent = `${rLabel} at full staffing`; prev.className = 'wks-calc'; }
+  else if (os > np) { prev.textContent = `${rLabel} ↓ (${bLabel} base at ${np} people)`; prev.className = 'wks-calc fast'; }
+  else { prev.textContent = `${rLabel} ↑ (${bLabel} base at ${np} people)`; prev.className = 'wks-calc slow'; }
 }
 function onFinishChange() {
   const start = document.getElementById('m-start').value;
   const finish = document.getElementById('m-finish').value;
   if (!start || !finish || finish <= start) return;
   _finishLock = true;
-  document.getElementById('m-weeks').value = Math.max(1, Math.round(workingDaysBetween(start, finish) / 5));
+  const totalDays = workingDaysBetween(start, finish);
+  document.getElementById('m-weeks').value = Math.floor(totalDays / 5);
+  document.getElementById('m-days').value = totalDays % 5;
   calcPreview();
   _finishLock = false;
 }
 
 async function saveModal() {
   const id = document.getElementById('m-id').value;
+  const bd = Math.min(4, Math.max(0, parseInt(document.getElementById('m-days').value)||0));
   const job = {
     name: document.getElementById('m-name').value.trim() || 'New Job',
-    base_weeks: parseInt(document.getElementById('m-weeks').value)||4,
+    base_weeks: parseInt(document.getElementById('m-weeks').value)||0,
     people_needed: parseInt(document.getElementById('m-needed').value)||2,
     people_on_site: parseInt(document.getElementById('m-onsite').value)||2,
     start_date: document.getElementById('m-start').value || toDateStr(new Date()),
@@ -877,10 +955,55 @@ async function saveModal() {
     on_timeline: true,
     archived: _editArchived
   };
-  if (id) job.id = _local ? id : id;
-  else if (_local) job.id = 'local-' + Date.now();
+  if (id) { job.id = id; saveBaseDays(id, bd); }
+  else if (_local) { job.id = 'local-' + Date.now(); saveBaseDays(job.id, bd); }
   closeModal();
-  await upsertJob(job);
+  const savedId = await upsertJob(job);
+  if (!id && !_local && savedId && bd > 0) saveBaseDays(savedId, bd);
+}
+
+// ── Day override UI ───────────────────────────────────────
+function renderOverrideList(jobId) {
+  jobId = jobId !== undefined ? jobId : document.getElementById('m-id').value;
+  const listEl = document.getElementById('ov-list');
+  if (!listEl) return;
+  if (!jobId) {
+    listEl.innerHTML = '<span style="font-size:11px;color:var(--muted)">Save the job first to add day overrides.</span>';
+    return;
+  }
+  const ovs = getJobOverrides(jobId);
+  listEl.innerHTML = ovs.length ? ovs.map((o, i) =>
+    `<div class="ov-row">
+      <span style="flex:1">${fmtDate(o.date)}</span>
+      <span style="font-weight:700;color:#60a5fa;min-width:60px">${o.people} people</span>
+      <button type="button" onclick="removeDayOverride(${i})" style="background:none;border:1px solid #374151;color:#64748b;border-radius:4px;padding:1px 7px;cursor:pointer;font-size:12px">✕</button>
+    </div>`
+  ).join('') : '<span style="font-size:11px;color:var(--muted)">No day overrides yet.</span>';
+}
+function addDayOverride() {
+  const jobId = document.getElementById('m-id').value;
+  if (!jobId) return;
+  const date = document.getElementById('ov-date').value;
+  const people = parseInt(document.getElementById('ov-people').value);
+  if (!date || isNaN(people) || people < 0) return;
+  const ovs = getJobOverrides(jobId);
+  const idx = ovs.findIndex(o => o.date === date);
+  if (idx >= 0) ovs[idx].people = people; else ovs.push({date, people});
+  ovs.sort((a, b) => a.date.localeCompare(b.date));
+  saveJobOverrides(jobId, ovs);
+  document.getElementById('ov-date').value = '';
+  document.getElementById('ov-people').value = '';
+  renderOverrideList(jobId);
+  renderTimeline(_jobs.filter(x => x.on_timeline && !x.archived));
+}
+function removeDayOverride(idx) {
+  const jobId = document.getElementById('m-id').value;
+  if (!jobId) return;
+  const ovs = getJobOverrides(jobId);
+  ovs.splice(idx, 1);
+  saveJobOverrides(jobId, ovs);
+  renderOverrideList(jobId);
+  renderTimeline(_jobs.filter(x => x.on_timeline && !x.archived));
 }
 
 async function archiveJob() {
