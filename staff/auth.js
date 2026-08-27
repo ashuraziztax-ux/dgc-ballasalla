@@ -36,6 +36,33 @@ async function login(email, password) {
   return data;
 }
 
+// Emails a one-click login link — no password. Comes back to this exact
+// page (redirect_to), which then picks the token up out of the URL itself.
+async function sendMagicLink(email) {
+  const redirectTo = location.href.split('#')[0];
+  const r = await fetch(SUPABASE_URL + '/auth/v1/otp', {
+    method: 'POST', headers: authHeaders(),
+    body: JSON.stringify({ email, create_user: false, redirect_to: redirectTo, options: { email_redirect_to: redirectTo } }),
+  });
+  if (!r.ok) { const data = await r.json().catch(() => ({})); throw new Error(data.error_description || data.msg || 'Could not send the link'); }
+}
+
+// Clicking the emailed link lands back here with the session in the URL's
+// #fragment (never sent to any server, just readable by this page's own JS).
+// Pick it up once, save it the same way a password login would, then strip
+// it from the address bar so it isn't sitting there or re-usable from history.
+function consumeMagicLinkFromUrl() {
+  if (!location.hash.includes('access_token=')) return false;
+  const params = new URLSearchParams(location.hash.slice(1));
+  const access_token = params.get('access_token');
+  const refresh_token = params.get('refresh_token');
+  const expires_in = Number(params.get('expires_in') || 3600);
+  if (!access_token || !refresh_token) return false;
+  storeSession({ access_token, refresh_token, expires_at: Date.now() + (expires_in - 60) * 1000, email: null });
+  history.replaceState(null, '', location.pathname + location.search);
+  return true;
+}
+
 async function refreshSession(session) {
   const r = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
     method: 'POST', headers: authHeaders(), body: JSON.stringify({ refresh_token: session.refresh_token }),
@@ -56,6 +83,7 @@ async function refreshSession(session) {
 // there's no session / it can't be refreshed (refresh token itself expired
 // or was revoked) — caller should show the login form in that case.
 async function ensureLoggedIn() {
+  consumeMagicLinkFromUrl();
   let session = getStoredSession();
   if (!session) return null;
   if (Date.now() >= session.expires_at) session = await refreshSession(session);
@@ -85,13 +113,38 @@ function showLoginForm(container, appName) {
       <div style="max-width:340px;margin:60px auto;padding:24px;background:var(--panel);border:1px solid var(--border);border-radius:12px">
         <h2 style="margin:0 0 4px;font-size:1.1rem">${appName} — Login required</h2>
         <p class="hours-hint" style="margin-bottom:16px">This section holds sensitive records, so it's locked to logged-in accounts only.</p>
-        <form id="loginForm" style="display:flex;flex-direction:column;gap:10px">
-          <input type="email" id="loginEmail" placeholder="Email" required autocomplete="username">
-          <input type="password" id="loginPassword" placeholder="Password" required autocomplete="current-password">
-          <button type="submit" class="primary-btn">Log in</button>
-          <p id="loginStatus" class="form-status error"></p>
+        <form id="linkForm" style="display:flex;flex-direction:column;gap:10px">
+          <input type="email" id="linkEmail" placeholder="Email" required autocomplete="username">
+          <button type="submit" class="primary-btn">Email me a login link</button>
+          <p id="linkStatus" class="form-status"></p>
         </form>
+        <p class="hours-hint" style="margin:14px 0 6px">Click the link on this device once — after that it stays logged in here, no password, until you log out. A new device just needs its own fresh link.</p>
+        <details style="margin-top:8px">
+          <summary style="cursor:pointer;color:var(--muted);font-size:0.85rem">Log in with a password instead</summary>
+          <form id="loginForm" style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+            <input type="email" id="loginEmail" placeholder="Email" required autocomplete="username">
+            <input type="password" id="loginPassword" placeholder="Password" required autocomplete="current-password">
+            <button type="submit" class="secondary-btn">Log in</button>
+            <p id="loginStatus" class="form-status error"></p>
+          </form>
+        </details>
       </div>`;
+
+    container.querySelector('#linkForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const status = container.querySelector('#linkStatus');
+      status.textContent = 'Sending…';
+      status.className = 'form-status';
+      try {
+        await sendMagicLink(container.querySelector('#linkEmail').value);
+        status.textContent = 'Check your email and click the link — this page will log in on its own once you do.';
+        status.className = 'form-status success';
+      } catch (err) {
+        status.textContent = err.message;
+        status.className = 'form-status error';
+      }
+    });
+
     container.querySelector('#loginForm').addEventListener('submit', async e => {
       e.preventDefault();
       const status = container.querySelector('#loginStatus');
