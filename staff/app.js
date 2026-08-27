@@ -281,34 +281,6 @@ async function toggleFillOnePerson(staffId) {
   renderHours();
 }
 
-document.getElementById('fillWeekBtn').addEventListener('click', async () => {
-  fillActive = !fillActive;
-  document.getElementById('fillWeekBtn').classList.toggle('active', fillActive);
-  const inputs = document.querySelectorAll('#hoursTable .hours-cell');
-  if (fillActive) {
-    fillSnapshot = {};
-    for (const input of inputs) {
-      if (!isWeekday(input.dataset.date)) continue;
-      const tr = input.closest('tr');
-      fillSnapshot[tr.dataset.staff + '_' + input.dataset.date] = input.value;
-      if (input.value.trim() === '') {
-        input.value = '8';
-        await flushCell(tr.dataset.staff, input.dataset.date, input);
-      }
-    }
-  } else if (fillSnapshot) {
-    for (const input of inputs) {
-      const tr = input.closest('tr');
-      const key = tr.dataset.staff + '_' + input.dataset.date;
-      if (key in fillSnapshot) {
-        input.value = fillSnapshot[key];
-        await flushCell(tr.dataset.staff, input.dataset.date, input);
-      }
-    }
-    fillSnapshot = null;
-  }
-  renderHours();
-});
 
 document.getElementById('saveHoursBtn').addEventListener('click', async () => {
   const inputs = document.querySelectorAll('#hoursTable .hours-cell');
@@ -516,12 +488,16 @@ async function buildWorkbook() {
   try {
     const resp = await fetch('dgc_logo_white.png');
     if (resp.ok) {
-      const buf   = await resp.arrayBuffer();
-      const bytes = new Uint8Array(buf);
-      let bin = ''; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-      logoId = wb.addImage({ base64: btoa(bin), extension: 'png' });
+      const blob = await resp.blob();
+      const b64  = await new Promise((res, rej) => {
+        const reader = new FileReader();
+        reader.onload  = () => res(reader.result.replace(/^data:[^;]+;base64,/, ''));
+        reader.onerror = rej;
+        reader.readAsDataURL(blob);
+      });
+      logoId = wb.addImage({ base64: b64, extension: 'png' });
     }
-  } catch(e) { /* logo optional */ }
+  } catch(e) { logoId = null; }
 
   const payDayStr = toDt.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
 
@@ -534,7 +510,7 @@ async function buildWorkbook() {
   hdrRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
   for (let ci = 2; ci <= LAST_COL; ci++) hdrRow.getCell(ci).fill = fl(BG);
   if (logoId !== null) {
-    ws.addImage(logoId, { tl: { col: 0, row: 0 }, br: { col: 2.9, row: 3.2 }, editAs: 'oneCell' });
+    ws.addImage(logoId, { tl: { col: 0, row: 0 }, br: { col: 2.9, row: 3.2 } });
   }
 
   // ── ROW 2: stat labels ───────────────────────────────────────────────────────
