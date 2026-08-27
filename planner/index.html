@@ -336,7 +336,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.19';
+const VERSION = 'v2.20';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -471,8 +471,7 @@ function workingDaysBetween(startStr, endStr) {
   while (d < end) { d.setDate(d.getDate() + 1); if (isWorkingDay(toDateStr(d))) count++; }
   return count;
 }
-// Mon-Fri count, start_date = day 1 (inclusive). Bank holidays count as weekdays — a 2-week
-// job Mon→Mon always ends Fri of wk 2 regardless of any BH in between.
+// Mon-Fri count, start_date = day 1 (inclusive). Bank holidays count as weekdays.
 function addWeekdays(dateStr, n) {
   const d = new Date(dateStr + 'T12:00:00');
   let rem = Math.max(Math.round(n), 1) - 1;
@@ -486,15 +485,13 @@ function weekdaysBetween(a, b) {
   while (d <= db) { const wd = d.getDay(); if (wd !== 0 && wd !== 6) n++; d.setDate(d.getDate() + 1); }
   return n;
 }
-
 function jobEndDate(j) {
   const today = toDateStr(new Date());
   const bd = j.id ? getBaseDays(j.id) : 0;
   const totalDays = (j.base_weeks || 0) * 5 + bd;
   const pos = j.people_on_site || 0, pn = j.people_needed || 0;
   const revised = (pos > 0 && pn > 0) ? Math.ceil(totalDays * pn / pos) : totalDays;
-  const start = j.start_date || today;
-  return addWeekdays(start, Math.max(revised, 1));
+  return addWeekdays(j.start_date || today, Math.max(revised, 1));
 }
 
 // ── Local jobs ─────────────────────────────────────────────
@@ -762,7 +759,7 @@ function renderTimeline(jobs) {
       if (!j) return;
       const rect = el.getBoundingClientRect();
       if ((rect.right - e.clientX) < 14) {
-        _resize = { job: j, origX: e.clientX, origWeeks: j.base_weeks, lastDeltaWeeks: null };
+        _resize = { job: j, origX: e.clientX, origWeeks: j.base_weeks, origDays: getBaseDays(j.id), lastDeltaDays: null };
       } else {
         const actualStart = j.start_date || toDateStr(new Date());
         const startOff = _origin ? daysBetween(_origin, actualStart) : 0;
@@ -778,7 +775,7 @@ function renderTimeline(jobs) {
       const rect = el.getBoundingClientRect();
       const tx = e.touches[0].clientX;
       if ((rect.right - tx) < rect.width * 0.22) {
-        _resize = { job: j, origX: tx, origWeeks: j.base_weeks, lastDeltaWeeks: null };
+        _resize = { job: j, origX: tx, origWeeks: j.base_weeks, origDays: getBaseDays(j.id), lastDeltaDays: null };
       } else {
         const actualStart = j.start_date || toDateStr(new Date());
         const startOff = _origin ? daysBetween(_origin, actualStart) : 0;
@@ -906,7 +903,7 @@ function openEdit(j) {
   document.getElementById('m-onsite').value = j.people_on_site;
   const sd = j.start_date || toDateStr(new Date());
   document.getElementById('m-start').value = sd;
-  document.getElementById('m-finish').value = addWeekdays(sd, (j.base_weeks || 0) * 5 + bd);
+  document.getElementById('m-finish').value = addWeekdays(sd, Math.max((j.base_weeks || 0) * 5 + bd, 1));
   document.getElementById('m-status').value = j.status;
   document.getElementById('m-note').value = j.note||'';
   const archBtn = document.getElementById('btn-archive-action');
@@ -1094,18 +1091,24 @@ function _applyDragMove(clientX, clientY) {
 
 function _applyResizeMove(clientX, clientY) {
   if (!_resize) return;
+  const D_PX = _W_PX / 5; // px per weekday — enables day-level drag precision
   const deltaX = clientX - _resize.origX;
-  const deltaWeeks = Math.round(deltaX / _W_PX);
-  if (deltaWeeks !== 0) _wasDrag = true;
-  const newWeeks = Math.max(1, _resize.origWeeks + deltaWeeks);
+  const deltaDays = Math.round(deltaX / D_PX);
+  if (deltaDays !== 0) _wasDrag = true;
+  const origTotal = (_resize.origWeeks || 0) * 5 + (_resize.origDays || 0);
+  const newTotal = Math.max(1, origTotal + deltaDays);
+  const newWeeks = Math.floor(newTotal / 5);
+  const newRem = newTotal % 5;
   const start = _resize.job.start_date || toDateStr(new Date());
-  const finish = addWeekdays(start, newWeeks * 5);
-  showDragTooltip(clientX, clientY, '↔ ' + newWeeks + 'w / ends ' + fmtDate(finish));
-  if (deltaWeeks === _resize.lastDeltaWeeks) return;
-  _resize.lastDeltaWeeks = deltaWeeks;
+  const finish = addWeekdays(start, newTotal);
+  const lbl = newRem ? `${newWeeks}w ${newRem}d / ends ${fmtDate(finish)}` : `${newWeeks}w / ends ${fmtDate(finish)}`;
+  showDragTooltip(clientX, clientY, '↔ ' + lbl);
+  if (deltaDays === _resize.lastDeltaDays) return;
+  _resize.lastDeltaDays = deltaDays;
   const j = _jobs.find(x => x.id == _resize.job.id);
   if (!j) return;
   j.base_weeks = newWeeks;
+  saveBaseDays(j.id, newRem);
   const tl = document.getElementById('tab-timeline');
   if (tl && tl.classList.contains('active')) renderTimeline(_jobs.filter(x => x.on_timeline && !x.archived));
 }
@@ -1133,17 +1136,22 @@ window.addEventListener('mouseup', async e => {
     }
   } else if (_resize) {
     const deltaX = e.clientX - _resize.origX;
-    const deltaWeeks = Math.round(deltaX / _W_PX);
-    const { job, origWeeks } = _resize;
+    const D_PX = _W_PX / 5;
+    const deltaDays = Math.round(deltaX / D_PX);
+    const { job, origWeeks, origDays } = _resize;
     _resize = null;
     const j = _jobs.find(x => x.id == job.id);
     if (!j) return;
-    if (deltaWeeks !== 0) {
+    if (deltaDays !== 0) {
       _wasDrag = true;
-      j.base_weeks = Math.max(1, origWeeks + deltaWeeks);
+      const origTotal = (origWeeks || 0) * 5 + (origDays || 0);
+      const newTotal = Math.max(1, origTotal + deltaDays);
+      j.base_weeks = Math.floor(newTotal / 5);
+      saveBaseDays(j.id, newTotal % 5);
       await upsertJob(j);
     } else {
       j.base_weeks = origWeeks;
+      saveBaseDays(j.id, origDays || 0);
       renderTimeline(_jobs.filter(x => x.on_timeline && !x.archived));
     }
   }
@@ -1646,17 +1654,22 @@ window.addEventListener('touchend', async e => {
     }
   } else if (_resize) {
     const deltaX = touch.clientX - _resize.origX;
-    const deltaWeeks = Math.round(deltaX / _W_PX);
-    const { job, origWeeks } = _resize;
+    const D_PX = _W_PX / 5;
+    const deltaDays = Math.round(deltaX / D_PX);
+    const { job, origWeeks, origDays } = _resize;
     _resize = null;
     const j = _jobs.find(x => x.id == job.id);
     if (!j) return;
-    if (deltaWeeks !== 0) {
+    if (deltaDays !== 0) {
       _wasDrag = true;
-      j.base_weeks = Math.max(1, origWeeks + deltaWeeks);
+      const origTotal = (origWeeks || 0) * 5 + (origDays || 0);
+      const newTotal = Math.max(1, origTotal + deltaDays);
+      j.base_weeks = Math.floor(newTotal / 5);
+      saveBaseDays(j.id, newTotal % 5);
       await upsertJob(j);
     } else {
       j.base_weeks = origWeeks;
+      saveBaseDays(j.id, origDays || 0);
       renderTimeline(_jobs.filter(x => x.on_timeline && !x.archived));
     }
   }
