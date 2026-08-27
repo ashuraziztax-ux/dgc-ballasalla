@@ -477,7 +477,7 @@ async function buildWorkbook() {
   const sheetLabel = `${fromDt.getDate()} ${fromDt.toLocaleString('en-GB',{month:'short'})} - ${toDt.getDate()} ${toDt.toLocaleString('en-GB',{month:'short'})}`;
 
   const ws = wb.addWorksheet(sheetLabel);
-  ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 6 }]; // freeze first 6 header rows only
+  ws.views = [{}];
 
   // helper: fill a whole row with background
   const fillRow = (row, bg) => { row.eachCell({ includeEmpty: true }, cell => { cell.fill = fl(bg); }); };
@@ -525,39 +525,39 @@ async function buildWorkbook() {
 
   const labRow = ws.addRow([]);
   labRow.height = 16;
-  let sc2 = 1;
-  statDefs.forEach(({ label, fg, bg, span }) => {
-    const ec = sc2 + span - 1;
-    const cell = labRow.getCell(sc2);
-    cell.value = `  ${label}`; cell.fill = fl(bg);
-    cell.font = { color: { argb: fg }, size: 8, name: 'Calibri' };
-    cell.alignment = { horizontal: 'left', vertical: 'bottom', indent: 1 };
-    if (ec > sc2) { ws.mergeCells(2, sc2, 2, ec); for (let ci = sc2+1; ci <= ec; ci++) labRow.getCell(ci).fill = fl(bg); }
-    sc2 = ec + 1;
-  });
+  { let sc = 1;
+    statDefs.forEach(({ label, fg, bg, span }) => {
+      for (let ci = sc; ci < sc + span; ci++) {
+        const cell = labRow.getCell(ci);
+        cell.fill = fl(bg);
+        if (ci === sc) { cell.value = `  ${label}`; cell.font = { color: { argb: fg }, size: 8, name: 'Calibri' }; cell.alignment = { horizontal: 'left', vertical: 'bottom', indent: 1 }; }
+      }
+      sc += span;
+    });
+  }
 
   // ── ROW 3: stat values ───────────────────────────────────────────────────────
   const valRow = ws.addRow([]);
   valRow.height = 36;
-  let sc3 = 1;
-  statDefs.forEach(({ val, fg, bg, span }) => {
-    const ec = sc3 + span - 1;
-    const cell = valRow.getCell(sc3);
-    cell.value = `  ${val}`; cell.fill = fl(bg);
-    cell.font = { color: { argb: fg }, bold: true, size: 18, name: 'Calibri' };
-    cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-    if (ec > sc3) { ws.mergeCells(3, sc3, 3, ec); for (let ci = sc3+1; ci <= ec; ci++) valRow.getCell(ci).fill = fl(bg); }
-    sc3 = ec + 1;
-  });
+  { let sc = 1;
+    statDefs.forEach(({ val, fg, bg, span }) => {
+      for (let ci = sc; ci < sc + span; ci++) {
+        const cell = valRow.getCell(ci);
+        cell.fill = fl(bg);
+        if (ci === sc) { cell.value = `  ${val}`; cell.font = { color: { argb: fg }, bold: true, size: 18, name: 'Calibri' }; cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }; }
+      }
+      sc += span;
+    });
+  }
 
   // ── ROW 4: legend ────────────────────────────────────────────────────────────
-  const legRow = ws.addRow(['    H = Paid Holiday (8h)    ·    BH = Bank Holiday (8h)    ·    U = Unavailable    ·    [8] = Hours worked']);
+  const legRow = ws.addRow([]);
   legRow.height = 16;
-  ws.mergeCells(4, 1, 4, LAST_COL);
-  legRow.getCell(1).fill      = fl(SURF);
-  legRow.getCell(1).font      = { color: { argb: MUTED }, size: 8, name: 'Calibri' };
-  legRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', indent: 2 };
-  for (let ci = 2; ci <= LAST_COL; ci++) legRow.getCell(ci).fill = fl(SURF);
+  for (let ci = 1; ci <= LAST_COL; ci++) {
+    const cell = legRow.getCell(ci);
+    cell.fill = fl(SURF);
+    if (ci === 1) { cell.value = '    H = Paid Holiday (8h)    ·    BH = Bank Holiday (8h)    ·    U = Unavailable    ·    [8] = Hours worked'; cell.font = { color: { argb: MUTED }, size: 8, name: 'Calibri' }; cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 2 }; }
+  }
 
   // ── ROW 5: thin separator ─────────────────────────────────────────────────────
   const sepRow = ws.addRow([]);
@@ -699,13 +699,13 @@ async function buildWorkbook() {
   advSecRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
   for (let ci = 2; ci <= LAST_COL; ci++) advSecRow.getCell(ci).fill = fl(SURF2);
 
-  const advHdrRow = ws.addRow(['Date', '', 'Name', '', '', '', 'Type', '', '', '', 'Amount', '', '', 'Notes']);
+  const advHdrPad = ['Date', '', 'Name', '', '', '', 'Type', '', '', '', 'Amount', '', '', 'Notes'];
+  while (advHdrPad.length < LAST_COL) advHdrPad.push('');
+  const advHdrRow = ws.addRow(advHdrPad);
   advHdrRow.height = 20;
-  advHdrRow.eachCell({ includeEmpty: true }, (cell, ci) => {
-    cell.fill = fl(BG); cell.border = thinBot;
-    cell.alignment = { horizontal: 'left', vertical: 'middle' };
-    cell.font = fo(MUTED, true, false, 9);
-  });
+  for (let ci = 1; ci <= LAST_COL; ci++) { const c = advHdrRow.getCell(ci); c.fill = fl(BG); c.border = thinBot; c.alignment = { horizontal: 'left', vertical: 'middle' }; c.font = fo(MUTED, true, false, 9); }
+  ws.mergeCells(advHdrRow.number, 3, advHdrRow.number, 6);
+  ws.mergeCells(advHdrRow.number, 14, advHdrRow.number, LAST_COL);
 
   if (!advancesCache.length) {
     const nr = ws.addRow(['No advances or overtime logged this fortnight']);
@@ -721,16 +721,19 @@ async function buildWorkbook() {
       const rbg   = idx % 2 === 0 ? SURF2 : SURF;
       const isOT  = a.entry_type === 'Overtime';
       const isAdv = a.entry_type === 'Advance';
-      const row2  = ws.addRow([a.entry_date, '', s ? s.name : '(unknown)', '', '', '', a.entry_type, '', '', '', Number(a.amount), '', '', a.notes || '']);
+      const advPad = new Array(Math.max(0, LAST_COL - 14)).fill('');
+      const row2  = ws.addRow([a.entry_date, '', s ? s.name : '(unknown)', '', '', '', a.entry_type, '', '', '', Number(a.amount), '', '', a.notes || '', ...advPad]);
       row2.height = 18;
-      row2.eachCell({ includeEmpty: true }, (cell, ci) => {
-        cell.fill = fl(rbg); cell.border = thinBot;
+      for (let ci = 1; ci <= LAST_COL; ci++) {
+        const cell = row2.getCell(ci); cell.fill = fl(rbg); cell.border = thinBot;
         if (ci === 1) { cell.font = fo(MUTED, false, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle' }; if (a.entry_date) cell.numFmt = 'DD MMM'; }
         else if (ci === 3) { cell.font = fo(TEXT_C, false, false, 10); cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }; }
         else if (ci === 7) { cell.font = fo(isOT ? OT_FG : ADV_FG, true, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle' }; }
         else if (ci === 11) { cell.font = fo(isOT ? OT_FG : ADV_FG, true, false, 10); cell.numFmt = isAdv ? '"£"#,##0' : '0.##'; cell.alignment = { horizontal: 'right', vertical: 'middle' }; }
-        else if (ci === 14) { cell.font = fo(FAINT, false, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle' }; }
-      });
+        else if (ci === 14) { cell.font = fo(FAINT, false, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }; }
+      }
+      ws.mergeCells(row2.number, 3, row2.number, 6);
+      ws.mergeCells(row2.number, 14, row2.number, LAST_COL);
     });
   }
 
@@ -752,11 +755,9 @@ async function buildWorkbook() {
   while (holHdrPad.length < LAST_COL) holHdrPad.push('');
   const holHdrRow = ws.addRow(holHdrPad);
   holHdrRow.height = 20;
-  holHdrRow.eachCell({ includeEmpty: true }, (cell, ci) => {
-    cell.fill = fl(BG); cell.border = thinBot;
-    cell.alignment = { horizontal: 'left', vertical: 'middle' };
-    cell.font = fo(MUTED, true, false, 9);
-  });
+  for (let ci = 1; ci <= LAST_COL; ci++) { const c = holHdrRow.getCell(ci); c.fill = fl(BG); c.border = thinBot; c.alignment = { horizontal: 'left', vertical: 'middle' }; c.font = fo(MUTED, true, false, 9); }
+  ws.mergeCells(holHdrRow.number, 3, holHdrRow.number, 6);
+  ws.mergeCells(holHdrRow.number, 14, holHdrRow.number, LAST_COL);
 
   if (!leaveCache.length) {
     const nr = ws.addRow(['No holiday bookings touching this fortnight']);
@@ -776,14 +777,16 @@ async function buildWorkbook() {
       const pad   = new Array(Math.max(0, LAST_COL - 14)).fill('');
       const row3  = ws.addRow([b.from_date, b.to_date, s ? s.name : '(unknown)', '', '', '', b.leave_type, '', '', '', days, '', '', b.notes || '', ...pad]);
       row3.height = 20;
-      row3.eachCell({ includeEmpty: true }, (cell, ci) => {
-        cell.fill = fl(rbg); cell.border = thinBot;
+      for (let ci = 1; ci <= LAST_COL; ci++) {
+        const cell = row3.getCell(ci); cell.fill = fl(rbg); cell.border = thinBot;
         if (ci <= 2) { cell.font = fo(MUTED, false, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }; cell.numFmt = 'DD MMM'; }
         else if (ci === 3) { cell.font = fo(TEXT_C, false, false, 10); cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }; }
         else if (ci === 7) { cell.fill = fl(isHol ? H_BG : isUnp ? U_BG : rbg); cell.font = fo(isHol ? H_FG : isUnp ? U_FG : MUTED, true, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle' }; }
         else if (ci === 11) { cell.font = fo(NUM_FG, true, false, 10); cell.alignment = { horizontal: 'center', vertical: 'middle' }; }
         else if (ci === 14) { cell.font = fo(FAINT, false, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }; }
-      });
+      }
+      ws.mergeCells(row3.number, 3, row3.number, 6);
+      ws.mergeCells(row3.number, 14, row3.number, LAST_COL);
     });
   }
 
