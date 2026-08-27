@@ -441,7 +441,8 @@ document.addEventListener('click', async e => {
 
 // ---- Export to Excel ----
 async function buildWorkbook() {
-  // ExcelJS replaces SheetJS here — SheetJS community has zero styling support.
+  // Single dark-themed sheet per export containing:
+  // DGC header → stats bar → hours grid (with Rate + Wages cols) → Advances & OT log → Holidays
   const wb = new ExcelJS.Workbook();
   wb.creator = 'DGC Staff Tracker';
 
@@ -451,55 +452,134 @@ async function buildWorkbook() {
   const H_BG     = 'FF0D2B1D', H_FG  = 'FF3FB950';
   const U_BG     = 'FF2D1F00', U_FG  = 'FFD29922';
   const NUM_FG   = 'FF58A6FF';
-  const TOT_FG   = 'FFE6883C', OT_FG = 'FFBC8CFF', ADV_FG = 'FFD29922';
+  const TOT_FG   = 'FFE6883C', OT_FG  = 'FFBC8CFF', ADV_FG  = 'FFD29922';
+  const WAGES_FG = 'FFD4A72C';   // gold — actual net wages
   const TEAM_BG  = 'FF21262D', TEAM_FG = 'FFCDD9E5';
   const WKND_BG  = 'FF0A0F15', WKND_FG = 'FF3D444C';
 
   const fl = c => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: c } });
   const fo = (c, bold=false, italic=false, sz=10) => ({ color: { argb: c }, bold, italic, size: sz, name: 'Calibri' });
-  const medBot = { bottom: { style: 'medium', color: { argb: 'FF30363D' } } };
-  const medTop = { top:    { style: 'medium', color: { argb: 'FF30363D' } } };
+  const medBot  = { bottom: { style: 'medium', color: { argb: 'FF30363D' } } };
+  const medTop  = { top:    { style: 'medium', color: { argb: 'FF30363D' } } };
   const thinBot = { bottom: { style: 'thin',   color: { argb: 'FF1C2128' } } };
 
-  // ── Hours sheet ─────────────────────────────────────────────────────────────
-  const ws = wb.addWorksheet('Hours');
-
+  // ── column layout ───────────────────────────────────────────────────────────
   const dateLabels = periodDates.map(d => {
     const dt = new Date(d + 'T00:00:00');
     return `${dt.getDate()} ${dt.toLocaleString('en-GB', { month: 'short' })}`;
   });
   const isWknd = periodDates.map(d => { const day = new Date(d + 'T00:00:00').getDay(); return day === 0 || day === 6; });
-  const OT_COL  = periodDates.length + 2;
-  const TOT_COL = periodDates.length + 3;
+  const N_DAYS   = periodDates.length;  // 14
+  const OT_COL   = N_DAYS + 2;         // 16
+  const TOT_COL  = N_DAYS + 3;         // 17
+  const RATE_COL = N_DAYS + 4;         // 18
+  const WAGE_COL = N_DAYS + 5;         // 19
+  const LAST_COL = WAGE_COL;           // 19
 
-  // Header row
-  const hdr = ws.addRow(['Name', ...dateLabels, 'OT (h)', 'Total']);
-  hdr.height = 24;
-  hdr.eachCell({ includeEmpty: true }, (cell, ci) => {
-    const wk = ci >= 2 && ci < OT_COL && isWknd[ci - 2];
-    cell.fill = fl(BG); cell.border = medBot;
-    cell.alignment = { horizontal: ci === 1 ? 'left' : 'center', vertical: 'middle' };
-    cell.font = ci === 1       ? fo(TEXT_C, true, false, 9)
-              : ci === OT_COL  ? fo(OT_FG,  true, false, 9)
-              : ci === TOT_COL ? fo(TOT_FG,  true, false, 9)
-              : wk             ? fo(FAINT, false, false, 8)
-              :                  fo(MUTED, false, false, 9);
+  // ── per-person wages ────────────────────────────────────────────────────────
+  const advancesFor = id => advancesCache
+    .filter(a => a.staff_id === id && a.entry_type === 'Advance')
+    .reduce((s, a) => s + Number(a.amount), 0);
+  const wagesFor = id => {
+    const s = staffById[id];
+    const rate = s ? (Number(s.rate) || 0) : 0;
+    return rowTotal(id) * rate - advancesFor(id);
+  };
+
+  // ── summary stats ───────────────────────────────────────────────────────────
+  const totalWages = staff.reduce((s, m) => s + wagesFor(m.id), 0);
+  const totalAdv   = staff.reduce((s, m) => s + advancesFor(m.id), 0);
+  const otEntries  = advancesCache.filter(a => a.entry_type === 'Overtime').length;
+  const onHoliday  = staff.filter(m => periodDates.some(d => { const c = cellFor(m.id, d); return c.kind === 'H' || c.kind === 'BH'; })).length;
+  const unavail    = staff.filter(m => periodDates.some(d => cellFor(m.id, d).kind === 'U')).length;
+
+  // ── sheet name ──────────────────────────────────────────────────────────────
+  const from = periodDates[0], to = periodDates[N_DAYS - 1];
+  const fromDt = new Date(from + 'T00:00:00');
+  const toDt   = new Date(to   + 'T00:00:00');
+  const sheetLabel = `${fromDt.getDate()} ${fromDt.toLocaleString('en-GB',{month:'short'})} - ${toDt.getDate()} ${toDt.toLocaleString('en-GB',{month:'short'})}`;
+
+  const ws = wb.addWorksheet(sheetLabel);
+  ws.views = [{ state: 'frozen', xSplit: 1, ySplit: 4 }]; // freeze Name col + first 3 header rows
+
+  // helper: fill a whole row with background
+  const fillRow = (row, bg) => { row.eachCell({ includeEmpty: true }, cell => { cell.fill = fl(bg); }); };
+
+  // ── ROW 1: DGC header ───────────────────────────────────────────────────────
+  const payDayStr = toDt.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+  const hdrRow = ws.addRow([`DGC GROUNDWORKS   ·   ${sheetLabel} ${toDt.getFullYear()}   ·   Pay Day: ${payDayStr}`]);
+  hdrRow.height = 32;
+  ws.mergeCells(1, 1, 1, LAST_COL);
+  hdrRow.getCell(1).fill      = fl(BG);
+  hdrRow.getCell(1).font      = { color: { argb: TEXT_C }, bold: true, size: 13, name: 'Calibri' };
+  hdrRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', indent: 2 };
+  for (let ci = 2; ci <= LAST_COL; ci++) { const c = hdrRow.getCell(ci); c.fill = fl(BG); }
+
+  // ── ROW 2: stats bar ────────────────────────────────────────────────────────
+  const statsRow = ws.addRow([]);
+  statsRow.height = 26;
+  const statsData = [
+    { text: `  ${staff.length} Staff`,                              fg: TEXT_C,   bg: BG,    span: 3 },
+    { text: `  £${totalWages.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',')}  Wages`,   fg: WAGES_FG, bg: SURF2, span: 3 },
+    { text: `  £${Math.round(totalAdv).toLocaleString()}  Advances`, fg: ADV_FG,   bg: SURF2, span: 3 },
+    { text: `  ${otEntries}  OT Entries`,                           fg: OT_FG,    bg: SURF2, span: 3 },
+    { text: `  ${onHoliday}  On Holiday`,                           fg: H_FG,     bg: SURF2, span: 3 },
+    { text: `  ${unavail}  Unavailable`,                            fg: U_FG,     bg: SURF2, span: 4 },
+  ];
+  let sc = 1;
+  statsData.forEach(({ text, fg, bg, span }) => {
+    const ec = sc + span - 1;
+    const cell = statsRow.getCell(sc);
+    cell.value     = text;
+    cell.fill      = fl(bg);
+    cell.font      = { color: { argb: fg }, bold: true, size: 10, name: 'Calibri' };
+    cell.alignment = { horizontal: 'left', vertical: 'middle' };
+    if (ec > sc) {
+      ws.mergeCells(2, sc, 2, ec);
+      for (let ci = sc + 1; ci <= ec; ci++) statsRow.getCell(ci).fill = fl(bg);
+    }
+    sc = ec + 1;
   });
 
-  // Staff rows
+  // ── ROW 3: thin separator ────────────────────────────────────────────────────
+  const sepRow = ws.addRow([]);
+  sepRow.height = 6;
+  for (let ci = 1; ci <= LAST_COL; ci++) sepRow.getCell(ci).fill = fl(BG);
+
+  // ── ROW 4: column headers ───────────────────────────────────────────────────
+  const hdr = ws.addRow(['Name', ...dateLabels, 'OT (h)', 'Total Hrs', 'Rate', 'Wages']);
+  hdr.height = 22;
+  hdr.eachCell({ includeEmpty: true }, (cell, ci) => {
+    const wk = ci >= 2 && ci < OT_COL && isWknd[ci - 2];
+    cell.fill   = fl(BG);
+    cell.border = medBot;
+    cell.alignment = { horizontal: ci === 1 ? 'left' : 'center', vertical: 'middle' };
+    cell.font =
+      ci === 1        ? fo(TEXT_C,   true,  false, 9)
+    : ci === OT_COL   ? fo(OT_FG,   true,  false, 9)
+    : ci === TOT_COL  ? fo(TOT_FG,  true,  false, 9)
+    : ci === RATE_COL ? fo(MUTED,   false, false, 9)
+    : ci === WAGE_COL ? fo(WAGES_FG, true, false, 9)
+    : wk              ? fo(FAINT,   false, false, 8)
+    :                   fo(MUTED,   false, false, 9);
+  });
+
+  // ── staff rows ──────────────────────────────────────────────────────────────
   staff.forEach((s, idx) => {
     const dayVals = periodDates.map(date => {
       const c = cellFor(s.id, date);
       return c.kind === 'hours' ? Number(c.value) : (c.kind === 'weekend' || c.kind === 'blank') ? null : c.kind;
     });
-    const ot  = overtimeFor(s.id);
-    const tot = rowTotal(s.id);
-    const row = ws.addRow([s.name, ...dayVals, ot || null, tot || null]);
-    row.height = 21;
-    const rbg = (idx + 2) % 2 === 0 ? SURF2 : SURF;
+    const ot    = overtimeFor(s.id);
+    const tot   = rowTotal(s.id);
+    const rate  = Number(s.rate) || 0;
+    const wages = wagesFor(s.id);
+    const row   = ws.addRow([s.name, ...dayVals, ot || null, tot || null, rate || null, wages]);
+    row.height  = 21;
+    const rbg   = (idx % 2 === 0) ? SURF2 : SURF;
 
     row.eachCell({ includeEmpty: true }, (cell, ci) => {
-      const di = ci - 2;
+      const di  = ci - 2;
       const isDay = ci >= 2 && ci < OT_COL;
       const wk    = isDay && isWknd[di];
       const v     = cell.value;
@@ -509,6 +589,14 @@ async function buildWorkbook() {
       if (ci === 1) {
         cell.fill = fl(rbg); cell.font = fo(TEXT_C, false, false, 10);
         cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+      } else if (ci === WAGE_COL) {
+        cell.fill      = fl(rbg);
+        cell.font      = wages ? fo(WAGES_FG, true, false, 11) : fo(FAINT, false, false, 9);
+        cell.numFmt    = wages ? '"£"#,##0.00' : '';
+        cell.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
+      } else if (ci === RATE_COL) {
+        cell.fill   = fl(rbg); cell.font = fo(MUTED, false, false, 9);
+        if (v) cell.numFmt = '"£"0.##';
       } else if (ci === TOT_COL) {
         cell.fill = fl(rbg); cell.font = fo(TOT_FG, true, false, 11);
         if (v) cell.numFmt = '0.##';
@@ -529,91 +617,145 @@ async function buildWorkbook() {
     });
   });
 
-  // TEAM TOTALS row
+  // ── TEAM TOTALS ─────────────────────────────────────────────────────────────
   const teamVals = ['TEAM TOTALS'];
   periodDates.forEach((date, di) => {
     let t = 0;
-    staff.forEach(s => {
-      const c = cellFor(s.id, date);
-      if (c.kind === 'hours') t += Number(c.value) || 0;
-      else if (c.kind === 'BH' || c.kind === 'H') t += 8;
-    });
+    staff.forEach(s => { const c = cellFor(s.id, date); if (c.kind === 'hours') t += Number(c.value)||0; else if (c.kind === 'BH'||c.kind === 'H') t += 8; });
     teamVals.push(t || null);
   });
-  teamVals.push(staff.reduce((sum, s) => sum + overtimeFor(s.id), 0) || null);
-  teamVals.push(staff.reduce((sum, s) => sum + rowTotal(s.id), 0) || null);
+  teamVals.push(staff.reduce((s, m) => s + overtimeFor(m.id), 0) || null);
+  teamVals.push(staff.reduce((s, m) => s + rowTotal(m.id), 0) || null);
+  teamVals.push(null);   // Rate col — no team rate
+  teamVals.push(totalWages);
 
   const tr = ws.addRow(teamVals);
-  tr.height = 26;
+  tr.height = 28;
   tr.eachCell({ includeEmpty: true }, (cell, ci) => {
     const wk = ci >= 2 && ci < OT_COL && isWknd[ci - 2];
     const v  = cell.value;
     cell.fill = fl(TEAM_BG); cell.border = medTop;
     cell.alignment = { horizontal: ci === 1 ? 'left' : 'center', vertical: 'middle' };
-    cell.font = ci === 1       ? fo(TEXT_C, true, false, 10)
-              : ci === TOT_COL ? fo(TOT_FG, true, false, 12)
-              : ci === OT_COL  ? fo(OT_FG,  true, false, 11)
-              : wk             ? fo(FAINT, false, false, 9)
-              : v              ? fo(TEAM_FG, true, false, 10)
-              :                  fo(FAINT, false, false, 9);
-    if (v && ci > 1) cell.numFmt = '0.##';
+    cell.font =
+      ci === 1        ? fo(TEXT_C,   true,  false, 10)
+    : ci === WAGE_COL ? fo(WAGES_FG, true,  false, 12)
+    : ci === TOT_COL  ? fo(TOT_FG,  true,  false, 12)
+    : ci === OT_COL   ? fo(OT_FG,   true,  false, 11)
+    : wk              ? fo(FAINT,   false, false, 9)
+    : v               ? fo(TEAM_FG, true,  false, 10)
+    :                   fo(FAINT,   false, false, 9);
+    if (v && ci > 1) {
+      if (ci === WAGE_COL) cell.numFmt = '"£"#,##0.00';
+      else cell.numFmt = '0.##';
+    }
+    if (ci === WAGE_COL) cell.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
   });
 
-  // Column widths + freeze
+  // ── separator ────────────────────────────────────────────────────────────────
+  const sep1 = ws.addRow([]);
+  sep1.height = 10;
+  for (let ci = 1; ci <= LAST_COL; ci++) sep1.getCell(ci).fill = fl(BG);
+
+  // ── ADVANCES & OT section ────────────────────────────────────────────────────
+  const advSecRow = ws.addRow(['ADVANCES & OVERTIME']);
+  advSecRow.height = 20;
+  ws.mergeCells(advSecRow.number, 1, advSecRow.number, LAST_COL);
+  advSecRow.getCell(1).fill      = fl(SURF2);
+  advSecRow.getCell(1).font      = { color: { argb: OT_FG }, bold: true, size: 9, name: 'Calibri' };
+  advSecRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+  for (let ci = 2; ci <= LAST_COL; ci++) advSecRow.getCell(ci).fill = fl(SURF2);
+
+  const advHdrRow = ws.addRow(['Date', '', 'Name', '', '', '', 'Type', '', '', '', 'Amount', '', '', 'Notes']);
+  advHdrRow.height = 20;
+  advHdrRow.eachCell({ includeEmpty: true }, (cell, ci) => {
+    cell.fill = fl(BG); cell.border = thinBot;
+    cell.alignment = { horizontal: 'left', vertical: 'middle' };
+    cell.font = fo(MUTED, true, false, 9);
+  });
+
+  if (!advancesCache.length) {
+    const nr = ws.addRow(['No advances or overtime logged this fortnight']);
+    nr.height = 18;
+    ws.mergeCells(nr.number, 1, nr.number, LAST_COL);
+    nr.getCell(1).fill      = fl(SURF);
+    nr.getCell(1).font      = fo(FAINT, false, true, 9);
+    nr.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+    for (let ci = 2; ci <= LAST_COL; ci++) nr.getCell(ci).fill = fl(SURF);
+  } else {
+    advancesCache.forEach((a, idx) => {
+      const s     = staffById[a.staff_id];
+      const rbg   = idx % 2 === 0 ? SURF2 : SURF;
+      const isOT  = a.entry_type === 'Overtime';
+      const isAdv = a.entry_type === 'Advance';
+      const row2  = ws.addRow([a.entry_date, '', s ? s.name : '(unknown)', '', '', '', a.entry_type, '', '', '', Number(a.amount), '', '', a.notes || '']);
+      row2.height = 18;
+      row2.eachCell({ includeEmpty: true }, (cell, ci) => {
+        cell.fill = fl(rbg); cell.border = thinBot;
+        if (ci === 1) { cell.font = fo(MUTED, false, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle' }; if (a.entry_date) cell.numFmt = 'DD MMM'; }
+        else if (ci === 3) { cell.font = fo(TEXT_C, false, false, 10); cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }; }
+        else if (ci === 7) { cell.font = fo(isOT ? OT_FG : ADV_FG, true, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle' }; }
+        else if (ci === 11) { cell.font = fo(isOT ? OT_FG : ADV_FG, true, false, 10); cell.numFmt = isAdv ? '"£"#,##0' : '0.##'; cell.alignment = { horizontal: 'right', vertical: 'middle' }; }
+        else if (ci === 14) { cell.font = fo(FAINT, false, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle' }; }
+      });
+    });
+  }
+
+  // ── HOLIDAYS section ─────────────────────────────────────────────────────────
+  const sep2 = ws.addRow([]);
+  sep2.height = 8;
+  for (let ci = 1; ci <= LAST_COL; ci++) sep2.getCell(ci).fill = fl(BG);
+
+  const holSecRow = ws.addRow(['HOLIDAYS & LEAVE']);
+  holSecRow.height = 20;
+  ws.mergeCells(holSecRow.number, 1, holSecRow.number, LAST_COL);
+  holSecRow.getCell(1).fill      = fl(SURF2);
+  holSecRow.getCell(1).font      = { color: { argb: H_FG }, bold: true, size: 9, name: 'Calibri' };
+  holSecRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+  for (let ci = 2; ci <= LAST_COL; ci++) holSecRow.getCell(ci).fill = fl(SURF2);
+
+  const holHdrRow = ws.addRow(['From', 'To', 'Name', '', '', '', 'Type', '', '', '', 'Days', '', '', 'Notes']);
+  holHdrRow.height = 20;
+  holHdrRow.eachCell({ includeEmpty: true }, (cell, ci) => {
+    cell.fill = fl(BG); cell.border = thinBot;
+    cell.alignment = { horizontal: 'left', vertical: 'middle' };
+    cell.font = fo(MUTED, true, false, 9);
+  });
+
+  if (!leaveCache.length) {
+    const nr = ws.addRow(['No holiday bookings touching this fortnight']);
+    nr.height = 18;
+    ws.mergeCells(nr.number, 1, nr.number, LAST_COL);
+    nr.getCell(1).fill      = fl(SURF);
+    nr.getCell(1).font      = fo(FAINT, false, true, 9);
+    nr.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+    for (let ci = 2; ci <= LAST_COL; ci++) nr.getCell(ci).fill = fl(SURF);
+  } else {
+    leaveCache.forEach((b, idx) => {
+      const s     = staffById[b.staff_id];
+      const rbg   = idx % 2 === 0 ? SURF2 : SURF;
+      const isHol = b.leave_type === 'Holiday';
+      const isUnp = (b.leave_type || '').includes('Unpaid');
+      const days  = weekdayCountClipped(b.from_date, b.to_date);
+      const row3  = ws.addRow([b.from_date, b.to_date, s ? s.name : '(unknown)', '', '', '', b.leave_type, '', '', '', days, '', '', b.notes || '']);
+      row3.height = 20;
+      row3.eachCell({ includeEmpty: true }, (cell, ci) => {
+        cell.fill = fl(rbg); cell.border = thinBot;
+        if (ci <= 2) { cell.font = fo(MUTED, false, false, 9); cell.alignment = { horizontal: 'center', vertical: 'middle' }; cell.numFmt = 'DD MMM'; }
+        else if (ci === 3) { cell.font = fo(TEXT_C, false, false, 10); cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }; }
+        else if (ci === 7) { cell.fill = fl(isHol ? H_BG : isUnp ? U_BG : rbg); cell.font = fo(isHol ? H_FG : isUnp ? U_FG : MUTED, true, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle' }; }
+        else if (ci === 11) { cell.font = fo(NUM_FG, true, false, 10); cell.alignment = { horizontal: 'center', vertical: 'middle' }; }
+        else if (ci === 14) { cell.font = fo(FAINT, false, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }; }
+      });
+    });
+  }
+
+  // ── column widths ────────────────────────────────────────────────────────────
   ws.getColumn(1).width = 25;
-  for (let i = 2; i <= TOT_COL; i++) ws.getColumn(i).width = i >= OT_COL ? 8 : 6.2;
-  ws.views = [{ state: 'frozen', xSplit: 1, ySplit: 1 }];
-
-  // ── Advances Bonuses Overtime sheet ─────────────────────────────────────────
-  const ws2 = wb.addWorksheet('Advances Bonuses Overtime');
-  [14, 25, 12, 12, 30].forEach((w, i) => { ws2.getColumn(i + 1).width = w; });
-
-  const ah = ws2.addRow(['Date', 'Name', 'Type', 'Amount', 'Notes']);
-  ah.height = 22;
-  ah.eachCell(cell => { cell.fill = fl(BG); cell.font = fo(MUTED, true, false, 9); cell.border = medBot; cell.alignment = { horizontal: 'left', vertical: 'middle' }; });
-
-  advancesCache.forEach((a, idx) => {
-    const s   = staffById[a.staff_id];
-    const rbg = (idx + 2) % 2 === 0 ? SURF2 : SURF;
-    const isOT  = a.entry_type === 'Overtime';
-    const isAdv = a.entry_type === 'Advance';
-    const row2 = ws2.addRow([a.entry_date, s ? s.name : '(unknown)', a.entry_type, Number(a.amount), a.notes || '']);
-    row2.height = 20;
-    row2.eachCell({ includeEmpty: true }, (cell, ci) => {
-      cell.fill = fl(rbg); cell.border = thinBot;
-      if (ci === 1) { cell.font = fo(MUTED, false, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle' }; if (a.entry_date) cell.numFmt = 'DD MMM'; }
-      else if (ci === 2) { cell.font = fo(TEXT_C, false, false, 10); cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }; }
-      else if (ci === 3) { cell.font = fo(isOT ? OT_FG : ADV_FG, true, false, 9); cell.alignment = { horizontal: 'center', vertical: 'middle' }; }
-      else if (ci === 4) { cell.font = fo(isOT ? OT_FG : ADV_FG, true, false, 10); cell.numFmt = isAdv ? '"£"#,##0' : '0.##'; cell.alignment = { horizontal: 'right', vertical: 'middle' }; }
-      else { cell.font = fo(FAINT, false, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle' }; }
-    });
-  });
-
-  // ── Holidays Leave sheet ─────────────────────────────────────────────────────
-  const ws3 = wb.addWorksheet('Holidays Leave');
-  [12, 12, 25, 14, 10, 35].forEach((w, i) => { ws3.getColumn(i + 1).width = w; });
-
-  const hh = ws3.addRow(['From', 'To', 'Name', 'Type', 'Days this fortnight', 'Notes']);
-  hh.height = 22;
-  hh.eachCell(cell => { cell.fill = fl(BG); cell.font = fo(MUTED, true, false, 9); cell.border = medBot; cell.alignment = { horizontal: 'left', vertical: 'middle' }; });
-
-  leaveCache.forEach((b, idx) => {
-    const s      = staffById[b.staff_id];
-    const rbg    = (idx + 2) % 2 === 0 ? SURF2 : SURF;
-    const isHol  = b.leave_type === 'Holiday';
-    const isUnpd = (b.leave_type || '').includes('Unpaid');
-    const days   = weekdayCountClipped(b.from_date, b.to_date);
-    const row3   = ws3.addRow([b.from_date, b.to_date, s ? s.name : '(unknown)', b.leave_type, days, b.notes || '']);
-    row3.height  = 22;
-    row3.eachCell({ includeEmpty: true }, (cell, ci) => {
-      cell.border = thinBot;
-      if (ci <= 2) { cell.fill = fl(rbg); cell.font = fo(MUTED, false, false, 9); cell.alignment = { horizontal: 'center', vertical: 'middle' }; cell.numFmt = 'DD MMM'; }
-      else if (ci === 3) { cell.fill = fl(rbg); cell.font = fo(TEXT_C, false, false, 10); cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }; }
-      else if (ci === 4) { cell.fill = fl(isHol ? H_BG : isUnpd ? U_BG : rbg); cell.font = fo(isHol ? H_FG : isUnpd ? U_FG : MUTED, true, false, 9); cell.alignment = { horizontal: 'center', vertical: 'middle' }; }
-      else if (ci === 5) { cell.fill = fl(rbg); cell.font = fo(NUM_FG, true, false, 10); cell.alignment = { horizontal: 'center', vertical: 'middle' }; }
-      else { cell.fill = fl(rbg); cell.font = fo(FAINT, false, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }; }
-    });
-  });
+  for (let i = 2; i <= N_DAYS + 1; i++) ws.getColumn(i).width = 6.2;
+  ws.getColumn(OT_COL).width   = 7;
+  ws.getColumn(TOT_COL).width  = 9;
+  ws.getColumn(RATE_COL).width = 7;
+  ws.getColumn(WAGE_COL).width = 13;
 
   return await wb.xlsx.writeBuffer();
 }
