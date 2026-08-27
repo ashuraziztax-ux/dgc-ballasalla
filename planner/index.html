@@ -336,7 +336,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.23';
+const VERSION = 'v2.24';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -1128,8 +1128,10 @@ function _applyResizeMove(clientX, clientY) {
   if (!j) return;
   j.base_weeks = newWeeks;
   saveBaseDays(j.id, newRem);
-  const tl = document.getElementById('tab-timeline');
-  if (tl && tl.classList.contains('active')) renderTimeline(_jobs.filter(x => x.on_timeline && !x.archived));
+  // Direct DOM update — smooth per-day feedback without the week-snap jumping
+  // (full re-render with week-snap happens on mouse/touch up)
+  const barEl = document.querySelector(`.tl-bar[data-id="${j.id}"]`);
+  if (barEl) barEl.setAttribute('width', Math.max((newTotal / 5) * _W_PX, 8));
 }
 
 window.addEventListener('mousemove', e => {
