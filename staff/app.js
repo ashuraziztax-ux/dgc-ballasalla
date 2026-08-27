@@ -440,50 +440,182 @@ document.addEventListener('click', async e => {
 });
 
 // ---- Export to Excel ----
-function buildWorkbook() {
-  const hoursRows = [['Name', ...periodDates.map(fmtShort), 'OT (h)', 'Total']];
-  staff.forEach(s => {
-    const row = [s.name];
-    periodDates.forEach(date => {
-      const c = cellFor(s.id, date);
-      row.push(c.kind === 'hours' ? Number(c.value) : (c.kind === 'weekend' || c.kind === 'blank') ? '' : c.kind);
-    });
-    row.push(overtimeFor(s.id));
-    row.push(rowTotal(s.id));
-    hoursRows.push(row);
+async function buildWorkbook() {
+  // ExcelJS replaces SheetJS here — SheetJS community has zero styling support.
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'DGC Staff Tracker';
+
+  // ── colour palette ──────────────────────────────────────────────────────────
+  const BG       = 'FF0D1117', SURF  = 'FF161B22', SURF2  = 'FF1C2128';
+  const TEXT_C   = 'FFE6EDF3', MUTED = 'FF8B949E', FAINT  = 'FF484F58';
+  const H_BG     = 'FF0D2B1D', H_FG  = 'FF3FB950';
+  const U_BG     = 'FF2D1F00', U_FG  = 'FFD29922';
+  const NUM_FG   = 'FF58A6FF';
+  const TOT_FG   = 'FFE6883C', OT_FG = 'FFBC8CFF', ADV_FG = 'FFD29922';
+  const TEAM_BG  = 'FF21262D', TEAM_FG = 'FFCDD9E5';
+  const WKND_BG  = 'FF0A0F15', WKND_FG = 'FF3D444C';
+
+  const fl = c => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: c } });
+  const fo = (c, bold=false, italic=false, sz=10) => ({ color: { argb: c }, bold, italic, size: sz, name: 'Calibri' });
+  const medBot = { bottom: { style: 'medium', color: { argb: 'FF30363D' } } };
+  const medTop = { top:    { style: 'medium', color: { argb: 'FF30363D' } } };
+  const thinBot = { bottom: { style: 'thin',   color: { argb: 'FF1C2128' } } };
+
+  // ── Hours sheet ─────────────────────────────────────────────────────────────
+  const ws = wb.addWorksheet('Hours');
+
+  const dateLabels = periodDates.map(d => {
+    const dt = new Date(d + 'T00:00:00');
+    return `${dt.getDate()} ${dt.toLocaleString('en-GB', { month: 'short' })}`;
   });
-  const teamRow = ['TEAM TOTALS'];
-  periodDates.forEach(date => {
+  const isWknd = periodDates.map(d => { const day = new Date(d + 'T00:00:00').getDay(); return day === 0 || day === 6; });
+  const OT_COL  = periodDates.length + 2;
+  const TOT_COL = periodDates.length + 3;
+
+  // Header row
+  const hdr = ws.addRow(['Name', ...dateLabels, 'OT (h)', 'Total']);
+  hdr.height = 24;
+  hdr.eachCell({ includeEmpty: true }, (cell, ci) => {
+    const wk = ci >= 2 && ci < OT_COL && isWknd[ci - 2];
+    cell.fill = fl(BG); cell.border = medBot;
+    cell.alignment = { horizontal: ci === 1 ? 'left' : 'center', vertical: 'middle' };
+    cell.font = ci === 1       ? fo(TEXT_C, true, false, 9)
+              : ci === OT_COL  ? fo(OT_FG,  true, false, 9)
+              : ci === TOT_COL ? fo(TOT_FG,  true, false, 9)
+              : wk             ? fo(FAINT, false, false, 8)
+              :                  fo(MUTED, false, false, 9);
+  });
+
+  // Staff rows
+  staff.forEach((s, idx) => {
+    const dayVals = periodDates.map(date => {
+      const c = cellFor(s.id, date);
+      return c.kind === 'hours' ? Number(c.value) : (c.kind === 'weekend' || c.kind === 'blank') ? null : c.kind;
+    });
+    const ot  = overtimeFor(s.id);
+    const tot = rowTotal(s.id);
+    const row = ws.addRow([s.name, ...dayVals, ot || null, tot || null]);
+    row.height = 21;
+    const rbg = (idx + 2) % 2 === 0 ? SURF2 : SURF;
+
+    row.eachCell({ includeEmpty: true }, (cell, ci) => {
+      const di = ci - 2;
+      const isDay = ci >= 2 && ci < OT_COL;
+      const wk    = isDay && isWknd[di];
+      const v     = cell.value;
+      cell.border = thinBot;
+      cell.alignment = { horizontal: ci === 1 ? 'left' : 'center', vertical: 'middle' };
+
+      if (ci === 1) {
+        cell.fill = fl(rbg); cell.font = fo(TEXT_C, false, false, 10);
+        cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+      } else if (ci === TOT_COL) {
+        cell.fill = fl(rbg); cell.font = fo(TOT_FG, true, false, 11);
+        if (v) cell.numFmt = '0.##';
+      } else if (ci === OT_COL) {
+        cell.fill = fl(rbg); cell.font = ot ? fo(OT_FG, true, false, 10) : fo(FAINT, false, false, 9);
+        if (ot) cell.numFmt = '0.##';
+      } else if (v === 'H' || v === 'BH') {
+        cell.fill = fl(H_BG); cell.font = fo(H_FG, true, false, 10);
+      } else if (v === 'U') {
+        cell.fill = fl(U_BG); cell.font = fo(U_FG, false, true, 10);
+      } else if (typeof v === 'number' && v > 0) {
+        cell.fill = fl(wk ? WKND_BG : rbg); cell.font = fo(NUM_FG, true, false, 10);
+        cell.numFmt = '0.##';
+      } else {
+        cell.fill = fl(wk ? WKND_BG : rbg); cell.font = fo(wk ? WKND_FG : FAINT, false, false, 9);
+        cell.value = null;
+      }
+    });
+  });
+
+  // TEAM TOTALS row
+  const teamVals = ['TEAM TOTALS'];
+  periodDates.forEach((date, di) => {
     let t = 0;
     staff.forEach(s => {
       const c = cellFor(s.id, date);
       if (c.kind === 'hours') t += Number(c.value) || 0;
       else if (c.kind === 'BH' || c.kind === 'H') t += 8;
     });
-    teamRow.push(t);
+    teamVals.push(t || null);
   });
-  teamRow.push(staff.reduce((sum, s) => sum + overtimeFor(s.id), 0));
-  teamRow.push(staff.reduce((sum, s) => sum + rowTotal(s.id), 0));
-  hoursRows.push(teamRow);
+  teamVals.push(staff.reduce((sum, s) => sum + overtimeFor(s.id), 0) || null);
+  teamVals.push(staff.reduce((sum, s) => sum + rowTotal(s.id), 0) || null);
 
-  const advRows = [['Date', 'Name', 'Type', 'Amount', 'Notes']];
-  advancesCache.forEach(a => {
-    const s = staffById[a.staff_id];
-    advRows.push([a.entry_date, s ? s.name : '(unknown)', a.entry_type, Number(a.amount), a.notes || '']);
+  const tr = ws.addRow(teamVals);
+  tr.height = 26;
+  tr.eachCell({ includeEmpty: true }, (cell, ci) => {
+    const wk = ci >= 2 && ci < OT_COL && isWknd[ci - 2];
+    const v  = cell.value;
+    cell.fill = fl(TEAM_BG); cell.border = medTop;
+    cell.alignment = { horizontal: ci === 1 ? 'left' : 'center', vertical: 'middle' };
+    cell.font = ci === 1       ? fo(TEXT_C, true, false, 10)
+              : ci === TOT_COL ? fo(TOT_FG, true, false, 12)
+              : ci === OT_COL  ? fo(OT_FG,  true, false, 11)
+              : wk             ? fo(FAINT, false, false, 9)
+              : v              ? fo(TEAM_FG, true, false, 10)
+              :                  fo(FAINT, false, false, 9);
+    if (v && ci > 1) cell.numFmt = '0.##';
   });
 
-  const holRows = [['From', 'To', 'Name', 'Type', 'Days this fortnight', 'Notes']];
-  leaveCache.forEach(b => {
-    const s = staffById[b.staff_id];
-    holRows.push([b.from_date, b.to_date, s ? s.name : '(unknown)', b.leave_type,
-      weekdayCountClipped(b.from_date, b.to_date), b.notes || '']);
+  // Column widths + freeze
+  ws.getColumn(1).width = 25;
+  for (let i = 2; i <= TOT_COL; i++) ws.getColumn(i).width = i >= OT_COL ? 8 : 6.2;
+  ws.views = [{ state: 'frozen', xSplit: 1, ySplit: 1 }];
+
+  // ── Advances Bonuses Overtime sheet ─────────────────────────────────────────
+  const ws2 = wb.addWorksheet('Advances Bonuses Overtime');
+  [14, 25, 12, 12, 30].forEach((w, i) => { ws2.getColumn(i + 1).width = w; });
+
+  const ah = ws2.addRow(['Date', 'Name', 'Type', 'Amount', 'Notes']);
+  ah.height = 22;
+  ah.eachCell(cell => { cell.fill = fl(BG); cell.font = fo(MUTED, true, false, 9); cell.border = medBot; cell.alignment = { horizontal: 'left', vertical: 'middle' }; });
+
+  advancesCache.forEach((a, idx) => {
+    const s   = staffById[a.staff_id];
+    const rbg = (idx + 2) % 2 === 0 ? SURF2 : SURF;
+    const isOT  = a.entry_type === 'Overtime';
+    const isAdv = a.entry_type === 'Advance';
+    const row2 = ws2.addRow([a.entry_date, s ? s.name : '(unknown)', a.entry_type, Number(a.amount), a.notes || '']);
+    row2.height = 20;
+    row2.eachCell({ includeEmpty: true }, (cell, ci) => {
+      cell.fill = fl(rbg); cell.border = thinBot;
+      if (ci === 1) { cell.font = fo(MUTED, false, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle' }; if (a.entry_date) cell.numFmt = 'DD MMM'; }
+      else if (ci === 2) { cell.font = fo(TEXT_C, false, false, 10); cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }; }
+      else if (ci === 3) { cell.font = fo(isOT ? OT_FG : ADV_FG, true, false, 9); cell.alignment = { horizontal: 'center', vertical: 'middle' }; }
+      else if (ci === 4) { cell.font = fo(isOT ? OT_FG : ADV_FG, true, false, 10); cell.numFmt = isAdv ? '"£"#,##0' : '0.##'; cell.alignment = { horizontal: 'right', vertical: 'middle' }; }
+      else { cell.font = fo(FAINT, false, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle' }; }
+    });
   });
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(hoursRows), 'Hours');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(advRows), 'Advances Bonuses Overtime');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(holRows), 'Holidays Leave');
-  return wb;
+  // ── Holidays Leave sheet ─────────────────────────────────────────────────────
+  const ws3 = wb.addWorksheet('Holidays Leave');
+  [12, 12, 25, 14, 10, 35].forEach((w, i) => { ws3.getColumn(i + 1).width = w; });
+
+  const hh = ws3.addRow(['From', 'To', 'Name', 'Type', 'Days this fortnight', 'Notes']);
+  hh.height = 22;
+  hh.eachCell(cell => { cell.fill = fl(BG); cell.font = fo(MUTED, true, false, 9); cell.border = medBot; cell.alignment = { horizontal: 'left', vertical: 'middle' }; });
+
+  leaveCache.forEach((b, idx) => {
+    const s      = staffById[b.staff_id];
+    const rbg    = (idx + 2) % 2 === 0 ? SURF2 : SURF;
+    const isHol  = b.leave_type === 'Holiday';
+    const isUnpd = (b.leave_type || '').includes('Unpaid');
+    const days   = weekdayCountClipped(b.from_date, b.to_date);
+    const row3   = ws3.addRow([b.from_date, b.to_date, s ? s.name : '(unknown)', b.leave_type, days, b.notes || '']);
+    row3.height  = 22;
+    row3.eachCell({ includeEmpty: true }, (cell, ci) => {
+      cell.border = thinBot;
+      if (ci <= 2) { cell.fill = fl(rbg); cell.font = fo(MUTED, false, false, 9); cell.alignment = { horizontal: 'center', vertical: 'middle' }; cell.numFmt = 'DD MMM'; }
+      else if (ci === 3) { cell.fill = fl(rbg); cell.font = fo(TEXT_C, false, false, 10); cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }; }
+      else if (ci === 4) { cell.fill = fl(isHol ? H_BG : isUnpd ? U_BG : rbg); cell.font = fo(isHol ? H_FG : isUnpd ? U_FG : MUTED, true, false, 9); cell.alignment = { horizontal: 'center', vertical: 'middle' }; }
+      else if (ci === 5) { cell.fill = fl(rbg); cell.font = fo(NUM_FG, true, false, 10); cell.alignment = { horizontal: 'center', vertical: 'middle' }; }
+      else { cell.fill = fl(rbg); cell.font = fo(FAINT, false, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }; }
+    });
+  });
+
+  return await wb.xlsx.writeBuffer();
 }
 
 // Remembers the exact file the user picked (Chrome/Edge only, via the File
@@ -541,18 +673,22 @@ document.getElementById('exportBtn').addEventListener('click', async () => {
   const prevLabel = btn.textContent;
   btn.disabled = true;
 
-  const wb = buildWorkbook();
   const from = periodDates[0], to = periodDates[PERIOD_DAYS - 1];
   const suggestedName = `Staff Hours ${from} to ${to}.xlsx`;
   const status = document.getElementById('hoursStatus');
-  // Wrapped in a Blob (rather than handing the raw ArrayBuffer straight to
-  // write()) so the bytes are passed unambiguously on every browser.
-  const blob = new Blob([XLSX.write(wb, { type: 'array', bookType: 'xlsx' })],
-    { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  status.textContent = 'Building styled Excel…';
+  status.className = 'form-status';
+  const buffer = await buildWorkbook();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
   try {
     if (!FS_SUPPORTED) {
-      XLSX.writeFile(wb, suggestedName);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = suggestedName; a.click();
+      URL.revokeObjectURL(url);
+      status.textContent = 'Downloaded — ' + new Date().toLocaleTimeString('en-GB');
+      status.className = 'form-status success';
       return;
     }
 
