@@ -336,7 +336,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.17';
+const VERSION = 'v2.18';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -472,8 +472,6 @@ function workingDaysBetween(startStr, endStr) {
   return count;
 }
 
-// For running jobs, end date anchors to next working day + revised duration
-// For future jobs, end date anchors to start + revised duration
 function jobEndDate(j) {
   const today = toDateStr(new Date());
   const bd = j.id ? getBaseDays(j.id) : 0;
@@ -481,8 +479,7 @@ function jobEndDate(j) {
   const pos = j.people_on_site || 0, pn = j.people_needed || 0;
   const revised = (pos > 0 && pn > 0) ? Math.ceil(totalDays * pn / pos) : totalDays;
   const start = j.start_date || today;
-  const anchor = start <= today ? nextWorkingDay() : start;
-  return addWorkingDays(anchor, Math.max(revised, 1));
+  return addWorkingDays(start, Math.max(revised, 1));
 }
 
 // ── Local jobs ─────────────────────────────────────────────
@@ -675,8 +672,9 @@ function renderTimeline(jobs) {
   });
 
   // ── Gang footer ───────────────────────────────────────────
-  // Single weekly bar always — EXCEPT when an explicit day override exists for
-  // a job in that week, in which case that week breaks into 5 daily bars.
+  // Single weekly bar when all active days have the same headcount.
+  // Breaks into 5 daily bars when any day differs (mid-week overlaps, starts/ends, or explicit overrides).
+  // Bank holiday days (isWorkingDay = false) are skipped and never cause a split.
   const footY = HEAD_H + Math.max(jobs.length,1) * ROW_H;
   s += `<rect x="0" y="${footY}" width="${svgW}" height="${FOOT_H}" fill="#0a0d14"/>`;
   s += `<line x1="0" y1="${footY}" x2="${svgW}" y2="${footY}" stroke="#2e3347" stroke-width="1"/>`;
@@ -684,43 +682,35 @@ function renderTimeline(jobs) {
 
   const weekData = [];
   for (let w = 0; w < WEEKS; w++) {
-    const wStart = addDays(origin, w * 7);
-    const wEnd   = addDays(origin, (w + 1) * 7);
-    // Weekly total — old overlap approach: any job active this week contributes
-    let weekTotal = 0;
-    jobs.forEach(j => {
-      const jStart = j.start_date || today;
-      const jEnd   = jobEndDate(j);
-      if (jStart < wEnd && jEnd >= wStart) weekTotal += (j.people_on_site || j.people_needed || 0);
-    });
-    // Per-day totals + override flag (only set by explicit day overrides, NOT mid-week starts)
-    let weekHasOverride = false;
     const dayTotals = [0, 0, 0, 0, 0];
     for (let d = 0; d < 5; d++) {
       const dateStr = addDays(origin, w * 7 + d);
+      if (!isWorkingDay(dateStr)) continue; // bank holidays stay 0, excluded from split check
       jobs.forEach(j => {
         const jStart = j.start_date || today;
         const jEnd   = jobEndDate(j);
         if (jStart <= dateStr && dateStr <= jEnd) {
           const ov = getJobOverrides(j.id).find(o => o.date === dateStr);
-          if (ov) { weekHasOverride = true; dayTotals[d] += ov.people; }
-          else dayTotals[d] += (j.people_on_site || j.people_needed || 0);
+          dayTotals[d] += ov ? ov.people : (j.people_on_site || j.people_needed || 0);
         }
       });
     }
-    weekData.push({ weekTotal, weekHasOverride, dayTotals });
+    weekData.push(dayTotals);
   }
 
-  const maxPpl = Math.max(...weekData.flatMap(w => w.weekHasOverride ? w.dayTotals : [w.weekTotal]), 1);
+  const maxPpl = Math.max(...weekData.flat(), 1);
   const GANG_CAP = Math.max(jobs.reduce((acc, j) => acc + (j.people_needed || j.people_on_site || 0), 0), 1);
   const barZone = FOOT_H - 20;
   const D_W = W_PX / 5;
 
   for (let w = 0; w < WEEKS; w++) {
-    const { weekTotal, weekHasOverride, dayTotals } = weekData[w];
+    const dayTotals = weekData[w];
     const x = LBL_W + w * W_PX;
-    if (weekHasOverride) {
-      // Break into 5 daily bars — only triggered by an explicit override
+    const nonZero = dayTotals.filter(v => v > 0);
+    if (!nonZero.length) continue;
+    const allSame = nonZero.every(v => v === nonZero[0]);
+    if (!allSame) {
+      // Different headcounts within the week — break into daily bars
       dayTotals.forEach((ppl, d) => {
         if (!ppl) return;
         const dx = x + d * D_W;
@@ -732,14 +722,14 @@ function renderTimeline(jobs) {
         s += `<text x="${(dx+D_W/2).toFixed(1)}" y="${footY+FOOT_H-2}" font-size="7" text-anchor="middle" fill="${barCol}" font-weight="800">${ppl}</text>`;
       });
     } else {
-      // Single clean weekly bar
-      if (!weekTotal) continue;
-      const barH = Math.max(Math.round((weekTotal / maxPpl) * barZone), 4);
+      // Same headcount all active days — single clean weekly bar
+      const ppl = nonZero[0];
+      const barH = Math.max(Math.round((ppl / maxPpl) * barZone), 4);
       const barY = footY + FOOT_H - barH - 12;
-      const ratio = weekTotal / GANG_CAP;
+      const ratio = ppl / GANG_CAP;
       const barCol = ratio > 0.85 ? '#ef4444' : ratio > 0.5 ? '#f59e0b' : '#22c55e';
       s += `<rect x="${x+3}" y="${barY}" width="${W_PX-6}" height="${barH}" rx="3" fill="${barCol}" opacity=".85"/>`;
-      s += `<text x="${x+W_PX/2}" y="${footY+FOOT_H-2}" font-size="9" text-anchor="middle" fill="${barCol}" font-weight="800">${weekTotal}</text>`;
+      s += `<text x="${x+W_PX/2}" y="${footY+FOOT_H-2}" font-size="9" text-anchor="middle" fill="${barCol}" font-weight="800">${ppl}</text>`;
     }
   }
 
