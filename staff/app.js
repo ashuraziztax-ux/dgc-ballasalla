@@ -501,30 +501,42 @@ async function buildWorkbook() {
 
   const payDayStr = toDt.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
 
-  // ── ROW 1: title bar (logo floats over rows 1–3, left side) ─────────────────
-  const hdrRow = ws.addRow([`STAFF HOURS  ·  ${sheetLabel} ${toDt.getFullYear()}  ·  Pay Day: ${payDayStr}`]);
-  hdrRow.height = 48;
+  // ── ROWS 1-4: dark header block (each merged full-width so fill serialises) ───
+  // Row 1: logo bar only (logo image floats over rows 1-4)
+  const logoRow = ws.addRow([' ']);
+  logoRow.height = 49;
   ws.mergeCells(1, 1, 1, LAST_COL);
-  hdrRow.getCell(1).fill      = fl(BG);
-  hdrRow.getCell(1).font      = { color: { argb: MUTED }, size: 10, name: 'Calibri' };
-  hdrRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
-  for (let ci = 2; ci <= LAST_COL; ci++) hdrRow.getCell(ci).fill = fl(BG);
+  logoRow.getCell(1).fill = fl(BG);
   if (logoId !== null) {
-    ws.addImage(logoId, { tl: { col: 0, row: 0 }, br: { col: 2.9, row: 3.2 } });
+    ws.addImage(logoId, { tl: { col: 0, row: 0 }, br: { col: 2.9, row: 4.0 } });
   }
 
-  // ── ROW 2: stat labels ───────────────────────────────────────────────────────
+  // Row 2: title text (right-aligned)
+  const titleRow = ws.addRow([`STAFF HOURS  ·  ${sheetLabel} ${toDt.getFullYear()}  ·  Pay Day: ${payDayStr}`]);
+  titleRow.height = 20;
+  ws.mergeCells(2, 1, 2, LAST_COL);
+  titleRow.getCell(1).fill      = fl(BG);
+  titleRow.getCell(1).font      = { color: { argb: MUTED }, size: 16, name: 'Calibri' };
+  titleRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
+
+  // Row 3: dark filler
+  const fill3Row = ws.addRow([' ']);
+  fill3Row.height = 20;
+  ws.mergeCells(3, 1, 3, LAST_COL);
+  fill3Row.getCell(1).fill = fl(BG);
+
+  // Row 4: dark filler
+  const fill4Row = ws.addRow([' ']);
+  ws.mergeCells(4, 1, 4, LAST_COL);
+  fill4Row.getCell(1).fill = fl(BG);
+
+  // ── ROWS 5-6: stat labels + values (3 blocks; cols 12-21 dark fill) ──────────
   const statDefs = [
-    { label: 'STAFF',       val: String(staff.length),       fg: TEXT_C, bg: BG,    span: 3 },
-    { label: 'NET WAGES',   val: fmt(totalNet),               fg: NET_FG, bg: SURF2, span: 4 },
-    { label: 'ADVANCES',    val: fmt(totalAdv),               fg: ADV_FG, bg: SURF2, span: 4 },
-    { label: 'OT ENTRIES',  val: String(otEntries),           fg: OT_FG,  bg: SURF2, span: 4 },
-    { label: 'ON HOLIDAY',  val: String(onHoliday),           fg: H_FG,   bg: SURF2, span: 3 },
-    { label: 'UNAVAILABLE', val: String(unavail),             fg: U_FG,   bg: SURF2, span: 3 },
+    { label: 'STAFF',     val: String(staff.length), fg: TEXT_C, bg: BG,    span: 3 },
+    { label: 'NET WAGES', val: fmt(totalNet),          fg: NET_FG, bg: SURF2, span: 4 },
+    { label: 'ADVANCES',  val: fmt(totalAdv),          fg: ADV_FG, bg: SURF2, span: 4 },
   ];
 
-  // Build label and value arrays with actual text in each stat-block's first cell
-  // (non-empty string values guarantee ExcelJS serialises every cell to the XLSX)
   const labArr = new Array(LAST_COL).fill(' ');
   const valArr = new Array(LAST_COL).fill(' ');
   { let sc = 1;
@@ -534,33 +546,32 @@ async function buildWorkbook() {
   const labRow = ws.addRow(labArr);
   labRow.height = 16;
   { let sc = 1;
-    statDefs.forEach(({ label, fg, bg, span }) => {
+    statDefs.forEach(({ fg, bg, span }) => {
       for (let ci = sc; ci < sc + span; ci++) {
         const cell = labRow.getCell(ci);
         cell.fill = fl(bg);
         if (ci === sc) { cell.font = { color: { argb: fg }, size: 8, name: 'Calibri' }; cell.alignment = { horizontal: 'left', vertical: 'bottom', indent: 1 }; }
-        else { cell.value = null; }
       }
       sc += span;
     });
+    for (let ci = 12; ci <= LAST_COL; ci++) { labRow.getCell(ci).fill = fl(SURF2); }
   }
 
-  // ── ROW 3: stat values ───────────────────────────────────────────────────────
   const valRow = ws.addRow(valArr);
   valRow.height = 36;
   { let sc = 1;
-    statDefs.forEach(({ val, fg, bg, span }) => {
+    statDefs.forEach(({ fg, bg, span }) => {
       for (let ci = sc; ci < sc + span; ci++) {
         const cell = valRow.getCell(ci);
         cell.fill = fl(bg);
         if (ci === sc) { cell.font = { color: { argb: fg }, bold: true, size: 18, name: 'Calibri' }; cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }; }
-        else { cell.value = null; }
       }
       sc += span;
     });
+    for (let ci = 12; ci <= LAST_COL; ci++) { valRow.getCell(ci).fill = fl(SURF2); }
   }
 
-  // ── ROW 4: legend ────────────────────────────────────────────────────────────
+  // ── ROW 7: legend ─────────────────────────────────────────────────────────────
   const legArr = new Array(LAST_COL).fill(' ');
   legArr[0] = '    H = Paid Holiday (8h)    ·    BH = Bank Holiday (8h)    ·    U = Unavailable    ·    [8] = Hours worked';
   const legRow = ws.addRow(legArr);
@@ -569,16 +580,14 @@ async function buildWorkbook() {
     const cell = legRow.getCell(ci);
     cell.fill = fl(SURF);
     if (ci === 1) { cell.font = { color: { argb: MUTED }, size: 8, name: 'Calibri' }; cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 2 }; }
-    else { cell.value = null; }
   }
 
-  // ── ROW 5: thin separator ─────────────────────────────────────────────────────
-  const sepArr = new Array(LAST_COL).fill(' ');
-  const sepRow = ws.addRow(sepArr);
+  // ── ROW 8: thin separator ─────────────────────────────────────────────────────
+  const sepRow = ws.addRow(new Array(LAST_COL).fill(' '));
   sepRow.height = 6;
-  for (let ci = 1; ci <= LAST_COL; ci++) { sepRow.getCell(ci).fill = fl(BG); sepRow.getCell(ci).value = null; }
+  for (let ci = 1; ci <= LAST_COL; ci++) { sepRow.getCell(ci).fill = fl(BG); }
 
-  // ── ROW 6: column headers ───────────────────────────────────────────────────
+  // ── ROW 9: column headers ───────────────────────────────────────────────────
   const hdr = ws.addRow(['Name', ...dateLabels, 'OT (h)', 'Total Hrs', 'Rate', 'Gross', 'Advances', 'Net Pay']);
   hdr.height = 22;
   hdr.eachCell({ includeEmpty: true }, (cell, ci) => {
