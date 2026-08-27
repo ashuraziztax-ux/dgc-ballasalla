@@ -705,6 +705,7 @@ async function buildWorkbook() {
   advHdrRow.height = 20;
   for (let ci = 1; ci <= LAST_COL; ci++) { const c = advHdrRow.getCell(ci); c.fill = fl(BG); c.border = thinBot; c.alignment = { horizontal: 'left', vertical: 'middle' }; c.font = fo(MUTED, true, false, 9); }
   ws.mergeCells(advHdrRow.number, 3, advHdrRow.number, 6);
+  ws.mergeCells(advHdrRow.number, 7, advHdrRow.number, 10);
   ws.mergeCells(advHdrRow.number, 14, advHdrRow.number, LAST_COL);
 
   if (!advancesCache.length) {
@@ -733,6 +734,7 @@ async function buildWorkbook() {
         else if (ci === 14) { cell.font = fo(FAINT, false, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }; }
       }
       ws.mergeCells(row2.number, 3, row2.number, 6);
+      ws.mergeCells(row2.number, 7, row2.number, 10);
       ws.mergeCells(row2.number, 14, row2.number, LAST_COL);
     });
   }
@@ -757,6 +759,7 @@ async function buildWorkbook() {
   holHdrRow.height = 20;
   for (let ci = 1; ci <= LAST_COL; ci++) { const c = holHdrRow.getCell(ci); c.fill = fl(BG); c.border = thinBot; c.alignment = { horizontal: 'left', vertical: 'middle' }; c.font = fo(MUTED, true, false, 9); }
   ws.mergeCells(holHdrRow.number, 3, holHdrRow.number, 6);
+  ws.mergeCells(holHdrRow.number, 7, holHdrRow.number, 10);
   ws.mergeCells(holHdrRow.number, 14, holHdrRow.number, LAST_COL);
 
   if (!leaveCache.length) {
@@ -781,11 +784,12 @@ async function buildWorkbook() {
         const cell = row3.getCell(ci); cell.fill = fl(rbg); cell.border = thinBot;
         if (ci <= 2) { cell.font = fo(MUTED, false, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }; cell.numFmt = 'DD MMM'; }
         else if (ci === 3) { cell.font = fo(TEXT_C, false, false, 10); cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }; }
-        else if (ci === 7) { cell.fill = fl(isHol ? H_BG : isUnp ? U_BG : rbg); cell.font = fo(isHol ? H_FG : isUnp ? U_FG : MUTED, true, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle' }; }
+        else if (ci >= 7 && ci <= 10) { const typeBg = isHol ? H_BG : isUnp ? U_BG : rbg; cell.fill = fl(typeBg); if (ci === 7) { cell.font = fo(isHol ? H_FG : isUnp ? U_FG : MUTED, true, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle' }; } }
         else if (ci === 11) { cell.font = fo(NUM_FG, true, false, 10); cell.alignment = { horizontal: 'center', vertical: 'middle' }; }
         else if (ci === 14) { cell.font = fo(FAINT, false, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }; }
       }
       ws.mergeCells(row3.number, 3, row3.number, 6);
+      ws.mergeCells(row3.number, 7, row3.number, 10);
       ws.mergeCells(row3.number, 14, row3.number, LAST_COL);
     });
   }
