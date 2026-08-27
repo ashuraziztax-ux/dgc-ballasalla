@@ -225,7 +225,7 @@ a{color:var(--accent);text-decoration:none}
     <button class="active" onclick="showTab('timeline',this)">📅 Timeline</button>
     <button onclick="showTab('jobs',this)">💼 Jobs</button>
     <button onclick="showTab('archive',this)" id="arch-tab-btn">📦 Archive</button>
-    <button onclick="showTab('staffhours',this)">🧑‍🔧 Staff Hours</button>
+    <button onclick="showTab('staffhours',this)">🧑‍🔧 Staff</button>
   </div>
 
   <!-- Timeline tab -->
@@ -250,9 +250,22 @@ a{color:var(--accent);text-decoration:none}
     </div>
   </div>
 
-  <!-- Staff Hours tab -->
+  <!-- Staff tab -->
   <div id="tab-staffhours" class="panel">
-    <iframe src="../staff/" style="width:100%;height:calc(100vh - 110px);border:none;display:block" title="Staff Hours"></iframe>
+    <div class="snav">
+      <button class="active" onclick="showSV('sthours',this)">Hours</button>
+      <button onclick="showSV('staddstaff',this)">Add Staff</button>
+      <button onclick="showSV('stfuel',this)">Fuel Usage</button>
+    </div>
+    <div id="sv-sthours" class="sv active">
+      <iframe src="../staff/" style="width:100%;height:calc(100vh - 150px);border:none;display:block" title="Staff Hours"></iframe>
+    </div>
+    <div id="sv-staddstaff" class="sv" style="padding:20px;color:var(--muted)">
+      Coming soon — needs a decision from Ash on how staff records (bank details, NI numbers, next of kin, medical info) get stored safely. See chat.
+    </div>
+    <div id="sv-stfuel" class="sv" style="padding:20px;color:var(--muted)">
+      Coming soon — Fuel Usage isn’t in the live database yet. See chat.
+    </div>
   </div>
 
   <!-- Archive tab -->
