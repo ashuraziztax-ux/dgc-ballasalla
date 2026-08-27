@@ -501,34 +501,56 @@ async function buildWorkbook() {
 
   const payDayStr = toDt.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
 
-  // ── ROWS 1-4: dark header block (each merged full-width so fill serialises) ───
-  // Row 1: logo bar only (logo image floats over rows 1-4)
-  const logoRow = ws.addRow([' ']);
+  // ── header helper ─────────────────────────────────────────────────────────────
+  // ExcelJS silently skips cells whose value is '' or ' ' (whitespace = empty).
+  // Fix: use numeric 0 as the filler value with numFmt=';;;' (hides all display).
+  // A number is NEVER treated as empty, so all 21 cells are guaranteed serialised.
+  const HIDE = ';;;';  // Excel format that hides any value
+  const hiddenCell = (cell, fillArgb) => {
+    cell.value  = 0;
+    cell.numFmt = HIDE;
+    cell.fill   = fl(fillArgb);
+    cell.font   = { color: { argb: fillArgb }, size: 1, name: 'Calibri' };
+  };
+  // Build a 21-element array of 0s (for addRow — forces all cells into sheetData)
+  const zeros = () => new Array(LAST_COL).fill(0);
+
+  // ── ROWS 1-4: dark header block ───────────────────────────────────────────────
+  // Row 1: logo bar — all 21 cells explicitly created and filled dark
+  const logoRow = ws.addRow(zeros());
   logoRow.height = 49;
-  ws.mergeCells(1, 1, 1, LAST_COL);
-  logoRow.getCell(1).fill = fl(BG);
+  for (let ci = 1; ci <= LAST_COL; ci++) hiddenCell(logoRow.getCell(ci), BG);
   if (logoId !== null) {
     ws.addImage(logoId, { tl: { col: 0, row: 0 }, br: { col: 2.9, row: 4.0 } });
   }
 
-  // Row 2: title text (right-aligned)
-  const titleRow = ws.addRow([`STAFF HOURS  ·  ${sheetLabel} ${toDt.getFullYear()}  ·  Pay Day: ${payDayStr}`]);
+  // Row 2: title left + pay-day right; no merge (merge kills the master cell in sheetData)
+  const r2arr = zeros();
+  const titleRow = ws.addRow(r2arr);
   titleRow.height = 20;
-  ws.mergeCells(2, 1, 2, LAST_COL);
-  titleRow.getCell(1).fill      = fl(BG);
-  titleRow.getCell(1).font      = { color: { argb: MUTED }, size: 16, name: 'Calibri' };
-  titleRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
+  for (let ci = 1; ci <= LAST_COL; ci++) {
+    const cell = titleRow.getCell(ci);
+    if (ci === 1) {
+      cell.value     = `STAFF HOURS  ·  ${sheetLabel} ${toDt.getFullYear()}`;
+      cell.fill      = fl(BG);
+      cell.font      = { color: { argb: MUTED }, size: 10, name: 'Calibri' };
+      cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+    } else if (ci === LAST_COL) {
+      cell.value     = `Pay Day: ${payDayStr}`;
+      cell.fill      = fl(BG);
+      cell.font      = { color: { argb: MUTED }, size: 10, name: 'Calibri' };
+      cell.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
+    } else {
+      hiddenCell(cell, BG);
+    }
+  }
 
-  // Row 3: dark filler
-  const fill3Row = ws.addRow([' ']);
-  fill3Row.height = 20;
-  ws.mergeCells(3, 1, 3, LAST_COL);
-  fill3Row.getCell(1).fill = fl(BG);
-
-  // Row 4: dark filler
-  const fill4Row = ws.addRow([' ']);
-  ws.mergeCells(4, 1, 4, LAST_COL);
-  fill4Row.getCell(1).fill = fl(BG);
+  // Rows 3-4: pure dark filler
+  for (let ri = 3; ri <= 4; ri++) {
+    const fRow = ws.addRow(zeros());
+    if (ri === 3) fRow.height = 20;
+    for (let ci = 1; ci <= LAST_COL; ci++) hiddenCell(fRow.getCell(ci), BG);
+  }
 
   // ── ROWS 5-6: stat labels + values (3 blocks; cols 12-21 dark fill) ──────────
   const statDefs = [
@@ -537,55 +559,65 @@ async function buildWorkbook() {
     { label: 'ADVANCES',  val: fmt(totalAdv),          fg: ADV_FG, bg: SURF2, span: 4 },
   ];
 
-  const labArr = new Array(LAST_COL).fill(' ');
-  const valArr = new Array(LAST_COL).fill(' ');
-  { let sc = 1;
-    statDefs.forEach(({ label, val, span }) => { labArr[sc-1] = `  ${label}`; valArr[sc-1] = `  ${val}`; sc += span; });
-  }
-
-  const labRow = ws.addRow(labArr);
+  const labRow = ws.addRow(zeros());
   labRow.height = 16;
   { let sc = 1;
-    statDefs.forEach(({ fg, bg, span }) => {
+    statDefs.forEach(({ label, fg, bg, span }) => {
       for (let ci = sc; ci < sc + span; ci++) {
         const cell = labRow.getCell(ci);
-        cell.fill = fl(bg);
-        if (ci === sc) { cell.font = { color: { argb: fg }, size: 8, name: 'Calibri' }; cell.alignment = { horizontal: 'left', vertical: 'bottom', indent: 1 }; }
+        if (ci === sc) {
+          cell.value     = `  ${label}`;
+          cell.fill      = fl(bg);
+          cell.font      = { color: { argb: fg }, size: 8, name: 'Calibri' };
+          cell.alignment = { horizontal: 'left', vertical: 'bottom', indent: 1 };
+        } else {
+          hiddenCell(cell, bg);
+        }
       }
       sc += span;
     });
-    for (let ci = 12; ci <= LAST_COL; ci++) { labRow.getCell(ci).fill = fl(SURF2); }
+    for (let ci = 12; ci <= LAST_COL; ci++) hiddenCell(labRow.getCell(ci), SURF2);
   }
 
-  const valRow = ws.addRow(valArr);
+  const valRow = ws.addRow(zeros());
   valRow.height = 36;
   { let sc = 1;
-    statDefs.forEach(({ fg, bg, span }) => {
+    statDefs.forEach(({ val, fg, bg, span }) => {
       for (let ci = sc; ci < sc + span; ci++) {
         const cell = valRow.getCell(ci);
-        cell.fill = fl(bg);
-        if (ci === sc) { cell.font = { color: { argb: fg }, bold: true, size: 18, name: 'Calibri' }; cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }; }
+        if (ci === sc) {
+          cell.value     = `  ${val}`;
+          cell.fill      = fl(bg);
+          cell.font      = { color: { argb: fg }, bold: true, size: 18, name: 'Calibri' };
+          cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+        } else {
+          hiddenCell(cell, bg);
+        }
       }
       sc += span;
     });
-    for (let ci = 12; ci <= LAST_COL; ci++) { valRow.getCell(ci).fill = fl(SURF2); }
+    for (let ci = 12; ci <= LAST_COL; ci++) hiddenCell(valRow.getCell(ci), SURF2);
   }
 
   // ── ROW 7: legend ─────────────────────────────────────────────────────────────
-  const legArr = new Array(LAST_COL).fill(' ');
-  legArr[0] = '    H = Paid Holiday (8h)    ·    BH = Bank Holiday (8h)    ·    U = Unavailable    ·    [8] = Hours worked';
-  const legRow = ws.addRow(legArr);
+  const legRow = ws.addRow(zeros());
   legRow.height = 16;
   for (let ci = 1; ci <= LAST_COL; ci++) {
     const cell = legRow.getCell(ci);
-    cell.fill = fl(SURF);
-    if (ci === 1) { cell.font = { color: { argb: MUTED }, size: 8, name: 'Calibri' }; cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 2 }; }
+    if (ci === 1) {
+      cell.value     = '    H = Paid Holiday (8h)    ·    BH = Bank Holiday (8h)    ·    U = Unavailable    ·    [8] = Hours worked';
+      cell.fill      = fl(SURF);
+      cell.font      = { color: { argb: MUTED }, size: 8, name: 'Calibri' };
+      cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 2 };
+    } else {
+      hiddenCell(cell, SURF);
+    }
   }
 
   // ── ROW 8: thin separator ─────────────────────────────────────────────────────
-  const sepRow = ws.addRow(new Array(LAST_COL).fill(' '));
+  const sepRow = ws.addRow(zeros());
   sepRow.height = 6;
-  for (let ci = 1; ci <= LAST_COL; ci++) { sepRow.getCell(ci).fill = fl(BG); }
+  for (let ci = 1; ci <= LAST_COL; ci++) hiddenCell(sepRow.getCell(ci), BG);
 
   // ── ROW 9: column headers ───────────────────────────────────────────────────
   const hdr = ws.addRow(['Name', ...dateLabels, 'OT (h)', 'Total Hrs', 'Rate', 'Gross', 'Advances', 'Net Pay']);
