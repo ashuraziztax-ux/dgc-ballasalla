@@ -505,54 +505,90 @@ async function buildWorkbook() {
   const sheetLabel = `${fromDt.getDate()} ${fromDt.toLocaleString('en-GB',{month:'short'})} - ${toDt.getDate()} ${toDt.toLocaleString('en-GB',{month:'short'})}`;
 
   const ws = wb.addWorksheet(sheetLabel);
-  ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 4 }]; // freeze first 4 header rows only
+  ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 6 }]; // freeze first 6 header rows only
 
   // helper: fill a whole row with background
   const fillRow = (row, bg) => { row.eachCell({ includeEmpty: true }, cell => { cell.fill = fl(bg); }); };
+  const fmt = v => '£' + v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
-  // ── ROW 1: DGC header ───────────────────────────────────────────────────────
+  // ── Try to load the DGC logo ─────────────────────────────────────────────────
+  let logoId = null;
+  try {
+    const resp = await fetch('dgc_logo_white.png');
+    if (resp.ok) {
+      const buf   = await resp.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let bin = ''; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      logoId = wb.addImage({ base64: btoa(bin), extension: 'png' });
+    }
+  } catch(e) { /* logo optional */ }
+
   const payDayStr = toDt.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
-  const hdrRow = ws.addRow([`DGC GROUNDWORKS   ·   ${sheetLabel} ${toDt.getFullYear()}   ·   Pay Day: ${payDayStr}`]);
-  hdrRow.height = 32;
+
+  // ── ROW 1: title bar (logo floats over rows 1–3, left side) ─────────────────
+  const hdrRow = ws.addRow([`STAFF HOURS  ·  ${sheetLabel} ${toDt.getFullYear()}  ·  Pay Day: ${payDayStr}`]);
+  hdrRow.height = 48;
   ws.mergeCells(1, 1, 1, LAST_COL);
   hdrRow.getCell(1).fill      = fl(BG);
-  hdrRow.getCell(1).font      = { color: { argb: TEXT_C }, bold: true, size: 13, name: 'Calibri' };
-  hdrRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', indent: 2 };
-  for (let ci = 2; ci <= LAST_COL; ci++) { const c = hdrRow.getCell(ci); c.fill = fl(BG); }
+  hdrRow.getCell(1).font      = { color: { argb: MUTED }, size: 10, name: 'Calibri' };
+  hdrRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
+  for (let ci = 2; ci <= LAST_COL; ci++) hdrRow.getCell(ci).fill = fl(BG);
+  if (logoId !== null) {
+    ws.addImage(logoId, { tl: { col: 0, row: 0 }, br: { col: 2.9, row: 3.2 }, editAs: 'oneCell' });
+  }
 
-  // ── ROW 2: stats bar ────────────────────────────────────────────────────────
-  const statsRow = ws.addRow([]);
-  statsRow.height = 26;
-  const fmt = v => '£' + v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  const statsData = [
-    { text: `  ${staff.length} Staff`,                  fg: TEXT_C, bg: BG,    span: 3 },
-    { text: `  ${fmt(totalNet)}  Net Pay`,              fg: NET_FG, bg: SURF2, span: 4 },
-    { text: `  ${fmt(totalAdv)}  Advances`,             fg: ADV_FG, bg: SURF2, span: 4 },
-    { text: `  ${otEntries}  OT Entries`,               fg: OT_FG,  bg: SURF2, span: 4 },
-    { text: `  ${onHoliday}  On Holiday`,               fg: H_FG,   bg: SURF2, span: 3 },
-    { text: `  ${unavail}  Unavailable`,                fg: U_FG,   bg: SURF2, span: 3 },
+  // ── ROW 2: stat labels ───────────────────────────────────────────────────────
+  const statDefs = [
+    { label: 'STAFF',       val: String(staff.length),       fg: TEXT_C, bg: BG,    span: 3 },
+    { label: 'NET WAGES',   val: fmt(totalNet),               fg: NET_FG, bg: SURF2, span: 4 },
+    { label: 'ADVANCES',    val: fmt(totalAdv),               fg: ADV_FG, bg: SURF2, span: 4 },
+    { label: 'OT ENTRIES',  val: String(otEntries),           fg: OT_FG,  bg: SURF2, span: 4 },
+    { label: 'ON HOLIDAY',  val: String(onHoliday),           fg: H_FG,   bg: SURF2, span: 3 },
+    { label: 'UNAVAILABLE', val: String(unavail),             fg: U_FG,   bg: SURF2, span: 3 },
   ];
-  let sc = 1;
-  statsData.forEach(({ text, fg, bg, span }) => {
-    const ec = sc + span - 1;
-    const cell = statsRow.getCell(sc);
-    cell.value     = text;
-    cell.fill      = fl(bg);
-    cell.font      = { color: { argb: fg }, bold: true, size: 10, name: 'Calibri' };
-    cell.alignment = { horizontal: 'left', vertical: 'middle' };
-    if (ec > sc) {
-      ws.mergeCells(2, sc, 2, ec);
-      for (let ci = sc + 1; ci <= ec; ci++) statsRow.getCell(ci).fill = fl(bg);
-    }
-    sc = ec + 1;
+
+  const labRow = ws.addRow([]);
+  labRow.height = 16;
+  let sc2 = 1;
+  statDefs.forEach(({ label, fg, bg, span }) => {
+    const ec = sc2 + span - 1;
+    const cell = labRow.getCell(sc2);
+    cell.value = `  ${label}`; cell.fill = fl(bg);
+    cell.font = { color: { argb: fg }, size: 8, name: 'Calibri' };
+    cell.alignment = { horizontal: 'left', vertical: 'bottom', indent: 1 };
+    if (ec > sc2) { ws.mergeCells(2, sc2, 2, ec); for (let ci = sc2+1; ci <= ec; ci++) labRow.getCell(ci).fill = fl(bg); }
+    sc2 = ec + 1;
   });
 
-  // ── ROW 3: thin separator ────────────────────────────────────────────────────
+  // ── ROW 3: stat values ───────────────────────────────────────────────────────
+  const valRow = ws.addRow([]);
+  valRow.height = 36;
+  let sc3 = 1;
+  statDefs.forEach(({ val, fg, bg, span }) => {
+    const ec = sc3 + span - 1;
+    const cell = valRow.getCell(sc3);
+    cell.value = `  ${val}`; cell.fill = fl(bg);
+    cell.font = { color: { argb: fg }, bold: true, size: 18, name: 'Calibri' };
+    cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+    if (ec > sc3) { ws.mergeCells(3, sc3, 3, ec); for (let ci = sc3+1; ci <= ec; ci++) valRow.getCell(ci).fill = fl(bg); }
+    sc3 = ec + 1;
+  });
+
+  // ── ROW 4: legend ────────────────────────────────────────────────────────────
+  const legRow = ws.addRow(['    H = Paid Holiday (8h)    ·    BH = Bank Holiday (8h)    ·    U = Unavailable    ·    [8] = Hours worked']);
+  legRow.height = 16;
+  ws.mergeCells(4, 1, 4, LAST_COL);
+  legRow.getCell(1).fill      = fl(SURF);
+  legRow.getCell(1).font      = { color: { argb: MUTED }, size: 8, name: 'Calibri' };
+  legRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', indent: 2 };
+  for (let ci = 2; ci <= LAST_COL; ci++) legRow.getCell(ci).fill = fl(SURF);
+
+  // ── ROW 5: thin separator ─────────────────────────────────────────────────────
   const sepRow = ws.addRow([]);
   sepRow.height = 6;
   for (let ci = 1; ci <= LAST_COL; ci++) sepRow.getCell(ci).fill = fl(BG);
 
-  // ── ROW 4: column headers ───────────────────────────────────────────────────
+  // ── ROW 6: column headers ───────────────────────────────────────────────────
   const hdr = ws.addRow(['Name', ...dateLabels, 'OT (h)', 'Total Hrs', 'Rate', 'Gross', 'Advances', 'Net Pay']);
   hdr.height = 22;
   hdr.eachCell({ includeEmpty: true }, (cell, ci) => {
