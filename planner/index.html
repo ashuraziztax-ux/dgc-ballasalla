@@ -337,7 +337,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.26';
+const VERSION = 'v2.27';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -437,14 +437,13 @@ function mondayOf(dateStr) {
   d.setDate(d.getDate() + diff);
   return toDateStr(d);
 }
-// Snap any date to a Monday: Mon-Fri → same week's Monday, Sat/Sun → next Monday
-function snapToMonday(dateStr) {
+// Snap any date to the nearest Mon-Fri non-BH working day (forward only)
+function snapToWorkingDay(dateStr) {
   const d = new Date(dateStr + 'T12:00:00');
   const wd = d.getDay();
-  if (wd === 1) return dateStr;
-  if (wd === 0) d.setDate(d.getDate() + 1);       // Sun → next Mon
-  else if (wd === 6) d.setDate(d.getDate() + 2);  // Sat → next Mon
-  else d.setDate(d.getDate() - (wd - 1));          // Tue-Fri → this Mon
+  if (wd === 6) d.setDate(d.getDate() + 2); // Sat → Mon
+  else if (wd === 0) d.setDate(d.getDate() + 1); // Sun → Mon
+  for (let i = 0; i < 20; i++) { const ds = toDateStr(d), w = d.getDay(); if (w !== 0 && w !== 6 && !IOM_BH.has(ds)) break; d.setDate(d.getDate() + 1); }
   return toDateStr(d);
 }
 function daysBetween(a, b) {
@@ -486,14 +485,15 @@ function workingDaysBetween(startStr, endStr) {
 function addWeekdays(dateStr, n) {
   const d = new Date(dateStr + 'T12:00:00');
   let rem = Math.max(Math.round(n), 1) - 1;
-  while (rem > 0) { d.setDate(d.getDate() + 1); const wd = d.getDay(); if (wd !== 0 && wd !== 6) rem--; }
+  // BH are non-working — skip them (job extends by 1 day per BH in the period)
+  while (rem > 0) { d.setDate(d.getDate() + 1); const wd = d.getDay(); const ds = toDateStr(d); if (wd !== 0 && wd !== 6 && !IOM_BH.has(ds)) rem--; }
   return toDateStr(d);
 }
-// Count Mon-Fri days from a to b inclusive (BH counted).
+// Count Mon-Fri non-BH days from a to b inclusive.
 function weekdaysBetween(a, b) {
   const da = new Date(a + 'T12:00:00'), db = new Date(b + 'T12:00:00');
   let n = 0, d = new Date(da);
-  while (d <= db) { const wd = d.getDay(); if (wd !== 0 && wd !== 6) n++; d.setDate(d.getDate() + 1); }
+  while (d <= db) { const wd = d.getDay(); const ds = toDateStr(d); if (wd !== 0 && wd !== 6 && !IOM_BH.has(ds)) n++; d.setDate(d.getDate() + 1); }
   return n;
 }
 function jobEndDate(j) {
@@ -666,8 +666,8 @@ function renderTimeline(jobs) {
     const bx = LBL_W + (startOff / 7) * W_PX;
     const endDate = jobEndDate(j);
     const endOff = daysBetween(origin, endDate);
-    // Visual width = ceil(revised weeks) full calendar weeks — stable during drag regardless of start day
-    const bEnd = bx + Math.ceil(revisedWeeks(j)) * W_PX;
+    // Bar ends at actual last working day — weekend gap shows between jobs
+    const bEnd = LBL_W + ((endOff + 1) / 7) * W_PX;
     const bw = Math.max(bEnd - bx, 8);
 
     // Bar (clip to visible area)
@@ -720,8 +720,8 @@ function renderTimeline(jobs) {
       if (!isWorkingDay(dateStr)) continue; // bank holidays stay 0, excluded from split check
       jobs.forEach(j => {
         const jStart = j.start_date || today;
-        // Visual boundary = ceil(revised weeks) calendar weeks from start — matches bar
-        const jVisualEnd = addDays(jStart, Math.ceil(revisedWeeks(j)) * 7);
+        // Visual boundary = day after last working day — matches bar
+        const jVisualEnd = addDays(jobEndDate(j), 1);
         if (jStart <= dateStr && dateStr < jVisualEnd) {
           const ov = getJobOverrides(j.id).find(o => o.date === dateStr);
           dayTotals[d] += ov ? ov.people : (j.people_on_site || j.people_needed || 0);
@@ -1121,10 +1121,15 @@ function _applyResizeMove(clientX, clientY) {
   if (!j) return;
   j.base_weeks = newWeeks;
   saveBaseDays(j.id, newRem);
-  // Direct DOM update — smooth per-day feedback without the week-snap jumping
-  // (full re-render with week-snap happens on mouse/touch up)
+  // Direct DOM update — smooth per-day feedback (full re-render on release)
   const barEl = document.querySelector(`.tl-bar[data-id="${j.id}"]`);
-  if (barEl) barEl.setAttribute('width', Math.max((newTotal / 5) * _W_PX, 8));
+  if (barEl && _origin) {
+    const liveEnd = addWeekdays(start, newTotal);
+    const liveEndOff = daysBetween(_origin, liveEnd);
+    const liveStartOff = daysBetween(_origin, start);
+    const liveW = Math.max(((liveEndOff - liveStartOff + 1) / 7) * _W_PX, 8);
+    barEl.setAttribute('width', liveW);
+  }
 }
 
 window.addEventListener('mousemove', e => {
@@ -1142,8 +1147,8 @@ window.addEventListener('mouseup', async e => {
     if (!j) return;
     if (Math.abs(deltaDays) >= 1) {
       _wasDrag = true;
-      // Snap to nearest Monday so all bars align to week boundaries
-      j.start_date = snapToMonday(addDays(dragAnchor, deltaDays));
+      // Snap to nearest working day (Mon-Fri, skip BH) — no Monday forcing
+      j.start_date = snapToWorkingDay(addDays(dragAnchor, deltaDays));
       await upsertJob(j);
     } else {
       j.start_date = origStart;
@@ -1160,11 +1165,9 @@ window.addEventListener('mouseup', async e => {
     if (deltaDays !== 0) {
       _wasDrag = true;
       const origTotal = (origWeeks || 0) * 5 + (origDays || 0);
-      const rawTotal = Math.max(1, origTotal + deltaDays);
-      // Snap to nearest whole week so bars always fill complete calendar weeks
-      const newTotal = Math.max(5, Math.round(rawTotal / 5) * 5);
-      j.base_weeks = newTotal / 5;
-      saveBaseDays(j.id, 0);
+      const newTotal = Math.max(1, origTotal + deltaDays);
+      j.base_weeks = Math.floor(newTotal / 5);
+      saveBaseDays(j.id, newTotal % 5);
       await upsertJob(j);
     } else {
       j.base_weeks = origWeeks;
@@ -1663,8 +1666,8 @@ window.addEventListener('touchend', async e => {
     if (!j) return;
     if (Math.abs(deltaDays) >= 1) {
       _wasDrag = true;
-      // Snap to nearest Monday so all bars align to week boundaries
-      j.start_date = snapToMonday(addDays(dragAnchor, deltaDays));
+      // Snap to nearest working day (Mon-Fri, skip BH) — no Monday forcing
+      j.start_date = snapToWorkingDay(addDays(dragAnchor, deltaDays));
       await upsertJob(j);
     } else {
       j.start_date = origStart;
@@ -1681,11 +1684,9 @@ window.addEventListener('touchend', async e => {
     if (deltaDays !== 0) {
       _wasDrag = true;
       const origTotal = (origWeeks || 0) * 5 + (origDays || 0);
-      const rawTotal = Math.max(1, origTotal + deltaDays);
-      // Snap to nearest whole week so bars always fill complete calendar weeks
-      const newTotal = Math.max(5, Math.round(rawTotal / 5) * 5);
-      j.base_weeks = newTotal / 5;
-      saveBaseDays(j.id, 0);
+      const newTotal = Math.max(1, origTotal + deltaDays);
+      j.base_weeks = Math.floor(newTotal / 5);
+      saveBaseDays(j.id, newTotal % 5);
       await upsertJob(j);
     } else {
       j.base_weeks = origWeeks;
