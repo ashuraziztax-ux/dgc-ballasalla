@@ -337,7 +337,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.25';
+const VERSION = 'v2.26';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -435,6 +435,16 @@ function mondayOf(dateStr) {
   const dow = d.getDay(); // 0=Sun
   const diff = (dow === 0 ? -6 : 1 - dow);
   d.setDate(d.getDate() + diff);
+  return toDateStr(d);
+}
+// Snap any date to a Monday: Mon-Fri → same week's Monday, Sat/Sun → next Monday
+function snapToMonday(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const wd = d.getDay();
+  if (wd === 1) return dateStr;
+  if (wd === 0) d.setDate(d.getDate() + 1);       // Sun → next Mon
+  else if (wd === 6) d.setDate(d.getDate() + 2);  // Sat → next Mon
+  else d.setDate(d.getDate() - (wd - 1));          // Tue-Fri → this Mon
   return toDateStr(d);
 }
 function daysBetween(a, b) {
@@ -1132,7 +1142,8 @@ window.addEventListener('mouseup', async e => {
     if (!j) return;
     if (Math.abs(deltaDays) >= 1) {
       _wasDrag = true;
-      j.start_date = addDays(dragAnchor, deltaDays);
+      // Snap to nearest Monday so all bars align to week boundaries
+      j.start_date = snapToMonday(addDays(dragAnchor, deltaDays));
       await upsertJob(j);
     } else {
       j.start_date = origStart;
@@ -1149,9 +1160,11 @@ window.addEventListener('mouseup', async e => {
     if (deltaDays !== 0) {
       _wasDrag = true;
       const origTotal = (origWeeks || 0) * 5 + (origDays || 0);
-      const newTotal = Math.max(1, origTotal + deltaDays);
-      j.base_weeks = Math.floor(newTotal / 5);
-      saveBaseDays(j.id, newTotal % 5);
+      const rawTotal = Math.max(1, origTotal + deltaDays);
+      // Snap to nearest whole week so bars always fill complete calendar weeks
+      const newTotal = Math.max(5, Math.round(rawTotal / 5) * 5);
+      j.base_weeks = newTotal / 5;
+      saveBaseDays(j.id, 0);
       await upsertJob(j);
     } else {
       j.base_weeks = origWeeks;
@@ -1650,7 +1663,8 @@ window.addEventListener('touchend', async e => {
     if (!j) return;
     if (Math.abs(deltaDays) >= 1) {
       _wasDrag = true;
-      j.start_date = addDays(dragAnchor, deltaDays);
+      // Snap to nearest Monday so all bars align to week boundaries
+      j.start_date = snapToMonday(addDays(dragAnchor, deltaDays));
       await upsertJob(j);
     } else {
       j.start_date = origStart;
@@ -1667,9 +1681,11 @@ window.addEventListener('touchend', async e => {
     if (deltaDays !== 0) {
       _wasDrag = true;
       const origTotal = (origWeeks || 0) * 5 + (origDays || 0);
-      const newTotal = Math.max(1, origTotal + deltaDays);
-      j.base_weeks = Math.floor(newTotal / 5);
-      saveBaseDays(j.id, newTotal % 5);
+      const rawTotal = Math.max(1, origTotal + deltaDays);
+      // Snap to nearest whole week so bars always fill complete calendar weeks
+      const newTotal = Math.max(5, Math.round(rawTotal / 5) * 5);
+      j.base_weeks = newTotal / 5;
+      saveBaseDays(j.id, 0);
       await upsertJob(j);
     } else {
       j.base_weeks = origWeeks;
