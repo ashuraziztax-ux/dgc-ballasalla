@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DGC Staff Tracker</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <h1>Staff Tracker — Hours</h1>
+  </div>
+</header>
+
+<main>
+  <div id="hoursView">
+    <div class="hours-header">
+      <div class="period-nav">
+        <button id="prevPeriodBtn" class="icon-btn nav-arrow" title="Previous fortnight">&#8249;</button>
+        <div>
+          <h2 id="hoursPeriodLabel"></h2>
+        </div>
+        <button id="nextPeriodBtn" class="icon-btn nav-arrow" title="Next fortnight">&#8250;</button>
+        <button id="todayBtn" class="secondary-btn">Today</button>
+        <button id="fillWeekBtn" class="secondary-btn" title="Fills every blank Mon–Fri cell to 8 hours for everyone shown. Click again to undo.">Full week → 8s</button>
+      </div>
+      <button id="saveHoursBtn" class="primary-btn">Save hours</button>
+    </div>
+    <p id="hoursStatus" class="form-status"></p>
+    <div class="hours-scroll">
+      <table id="hoursTable" class="hours-table"></table>
+    </div>
+
+    <section class="advances-section">
+      <h3>Advances, Bonuses &amp; Overtime</h3>
+      <p class="hours-hint">Overtime = hours; Advance/Bonus = £. OT column in the grid shows the fortnight total.</p>
+      <form id="advanceForm" class="advance-form">
+        <select id="advStaff" required>
+          <option value="">Staff member…</option>
+        </select>
+        <select id="advType">
+          <option value="Advance">Advance</option>
+          <option value="Bonus">Bonus</option>
+          <option value="Overtime">Overtime</option>
+        </select>
+        <input type="number" step="0.01" id="advAmount" placeholder="Amount £" required>
+        <input type="date" id="advDate" required>
+        <input type="text" id="advNotes" placeholder="Notes (optional)">
+        <button type="submit" class="primary-btn">Add</button>
+      </form>
+      <p id="advanceStatus" class="form-status"></p>
+      <div id="advancesList" class="advances-list"></div>
+    </section>
+
+    <section class="holiday-section">
+      <h3>Holidays &amp; Leave</h3>
+      <p class="hours-hint">Bookings that touch this fortnight — add a new one at the bottom.</p>
+      <div id="holidayList" class="advances-list"></div>
+      <form id="holidayForm" class="advance-form">
+        <select id="holStaff" required>
+          <option value="">Staff member…</option>
+        </select>
+        <select id="holType">
+          <option value="Holiday">Paid (Holiday)</option>
+          <option value="Unpaid Leave">Unpaid Leave</option>
+        </select>
+        <input type="date" id="holFrom" required title="Start date">
+        <input type="date" id="holTo" required title="End date">
+        <input type="text" id="holNotes" placeholder="Notes (optional)">
+        <button type="submit" class="primary-btn">Add</button>
+      </form>
+      <p id="holidayStatus" class="form-status"></p>
+    </section>
+
+    <p class="sync-note">Live copy backed by Supabase — hours, advances/bonuses/overtime and holiday bookings save straight to the shared database. Staff records and Fuel Usage are still managed in the local DGC Staff Tracker app.</p>
+  </div>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
