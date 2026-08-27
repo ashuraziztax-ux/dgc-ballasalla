@@ -349,14 +349,16 @@ label.checkbox input { width: auto; padding: 0; }
 .hours-footer-row td:first-child { text-align: left; }
 
 .hours-cell {
-  width: 24px;
+  width: 26px;
   text-align: center;
-  padding: 3px 1px;
+  padding: 5px 1px;
   background: var(--panel2);
   border: 1px solid var(--border);
   color: var(--text);
   border-radius: 5px;
-  font-size: 0.72rem;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  font-family: inherit;
 }
 .hours-cell.invalid-cell { border-color: var(--danger); background: rgba(217,83,79,0.12); }
 /* off-work weekends: same H/U shown as a placeholder only — never real data */
