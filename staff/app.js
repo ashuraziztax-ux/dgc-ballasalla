@@ -76,15 +76,23 @@ async function loadAll() {
     fmtShort(from) + ' — ' + fmtShort(to) + ' ' + String(new Date(valFromIso(to)).getUTCFullYear()).slice(2);
 
   const [staffRows, hourRows, leaveRows, advRows] = await Promise.all([
-    sbGet('/dgc_staff?select=id,name,role,rate,active&active=eq.true&order=name'),
+    sbGet('/dgc_staff?select=id,name,role,rate,active&order=name'),
     sbGet('/dgc_staff_hours?select=id,staff_id,work_date,hours&work_date=gte.' + from + '&work_date=lte.' + to),
     sbGet('/dgc_staff_leave?select=*&from_date=lte.' + to + '&to_date=gte.' + from),
     sbGet('/dgc_staff_advances?select=*&entry_date=gte.' + from + '&entry_date=lte.' + to + '&order=entry_date.desc'),
   ]);
 
-  staff = staffRows;
   staffById = {};
-  staff.forEach(s => staffById[s.id] = s);
+  staffRows.forEach(s => staffById[s.id] = s);
+
+  // Show everyone active, plus anyone inactive who still has activity logged
+  // in this specific fortnight (e.g. left partway through it) — a leaver's
+  // final pay period must still show their real hours.
+  const activeIds = new Set();
+  hourRows.forEach(h => activeIds.add(h.staff_id));
+  leaveRows.forEach(b => activeIds.add(b.staff_id));
+  advRows.forEach(a => activeIds.add(a.staff_id));
+  staff = staffRows.filter(s => s.active || activeIds.has(s.id));
 
   hoursCache = {};
   hourRows.forEach(h => hoursCache[h.staff_id + '_' + h.work_date] = { id: h.id, hours: h.hours });
@@ -152,19 +160,16 @@ function renderHours() {
     const isToday = date === todayIso;
     head += `<th class="${isToday ? 'today-col' : ''}"><div class="day-head"><span class="day-name">${d.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' })}</span><span class="day-num">${d.getUTCDate()} ${d.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' })}</span></div></th>`;
   });
-  head += '<th>Fill</th><th>OT</th><th>Total</th><th>Est. Wages</th></tr>';
+  head += '<th>Fill</th><th>OT</th><th>Total</th></tr>';
 
   let body = '';
   const dayTotals = periodDates.map(() => 0);
-  let footOT = 0, footTotal = 0, footAdv = 0, footBonus = 0, footWages = 0;
+  let footOT = 0, footTotal = 0, footAdv = 0, footBonus = 0;
 
   staff.forEach(s => {
     const ot = overtimeFor(s.id);
     const total = rowTotal(s.id);
-    const rate = s.rate ? Number(s.rate) : null;
-    const wages = rate ? total * rate : null;
     footOT += ot; footTotal += total; footAdv += moneyFor(s.id, 'Advance'); footBonus += moneyFor(s.id, 'Bonus');
-    if (wages) footWages += wages;
 
     body += `<tr data-staff="${s.id}"><td class="hours-name">${s.name}</td>`;
     periodDates.forEach((date, i) => {
@@ -185,14 +190,13 @@ function renderHours() {
     body += `<td><button class="row-fill-btn" data-staff="${s.id}">→8</button></td>`;
     body += `<td class="hours-readonly clickable" data-jump="${s.id}" data-jump-type="Overtime">${ot || 0}h</td>`;
     body += `<td class="hours-readonly">${total}</td>`;
-    body += `<td class="hours-readonly">${wages ? '£' + wages.toFixed(2) : '—'}</td>`;
     body += '</tr>';
   });
 
   let foot = '<tr class="hours-footer-row"><td>TEAM TOTALS</td>';
   dayTotals.forEach(t => foot += `<td>${t || ''}</td>`);
-  foot += `<td></td><td>${footOT}h</td><td>${footTotal}</td><td>£${footWages.toFixed(2)}</td></tr>`;
-  foot += `<tr class="hours-footer-row"><td colspan="${PERIOD_DAYS + 1}" style="text-align:right">Advances £${footAdv.toFixed(2)} · Bonuses £${footBonus.toFixed(2)}</td><td colspan="3"></td></tr>`;
+  foot += `<td></td><td>${footOT}h</td><td>${footTotal}</td></tr>`;
+  foot += `<tr class="hours-footer-row"><td colspan="${PERIOD_DAYS + 1}" style="text-align:right">Advances £${footAdv.toFixed(2)} · Bonuses £${footBonus.toFixed(2)}</td><td colspan="2"></td></tr>`;
 
   table.innerHTML = head + body + foot;
 }
