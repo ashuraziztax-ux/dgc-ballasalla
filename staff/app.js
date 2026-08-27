@@ -514,24 +514,38 @@ function updateExportUI(handle) {
   document.getElementById('exportChangeBtn').hidden = !handle;
 }
 
+let exportInFlight = false;
 document.getElementById('exportBtn').addEventListener('click', async () => {
+  // Guard against a double-click or a second click before the first write's
+  // close() resolves — two concurrent writes to the same handle is exactly
+  // how you get a corrupted .xlsx that Excel refuses to open.
+  if (exportInFlight) return;
+  exportInFlight = true;
+  const btn = document.getElementById('exportBtn');
+  const prevLabel = btn.textContent;
+  btn.disabled = true;
+
   const wb = buildWorkbook();
   const from = periodDates[0], to = periodDates[PERIOD_DAYS - 1];
   const suggestedName = `Staff Hours ${from} to ${to}.xlsx`;
   const status = document.getElementById('hoursStatus');
+  // Wrapped in a Blob (rather than handing the raw ArrayBuffer straight to
+  // write()) so the bytes are passed unambiguously on every browser.
+  const blob = new Blob([XLSX.write(wb, { type: 'array', bookType: 'xlsx' })],
+    { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
-  if (!FS_SUPPORTED) {
-    XLSX.writeFile(wb, suggestedName);
-    return;
-  }
-
-  let handle = await getSavedHandle();
-  if (handle) {
-    let perm = await handle.queryPermission({ mode: 'readwrite' });
-    if (perm !== 'granted') perm = await handle.requestPermission({ mode: 'readwrite' });
-    if (perm !== 'granted') handle = null;
-  }
   try {
+    if (!FS_SUPPORTED) {
+      XLSX.writeFile(wb, suggestedName);
+      return;
+    }
+
+    let handle = await getSavedHandle();
+    if (handle) {
+      let perm = await handle.queryPermission({ mode: 'readwrite' });
+      if (perm !== 'granted') perm = await handle.requestPermission({ mode: 'readwrite' });
+      if (perm !== 'granted') handle = null;
+    }
     if (!handle) {
       handle = await window.showSaveFilePicker({
         suggestedName,
@@ -541,7 +555,7 @@ document.getElementById('exportBtn').addEventListener('click', async () => {
       updateExportUI(handle);
     }
     const writable = await handle.createWritable();
-    await writable.write(XLSX.write(wb, { type: 'array', bookType: 'xlsx' }));
+    await writable.write(blob);
     await writable.close();
     status.textContent = 'Saved to ' + handle.name + ' — ' + new Date().toLocaleTimeString('en-GB');
     status.className = 'form-status success';
@@ -550,6 +564,10 @@ document.getElementById('exportBtn').addEventListener('click', async () => {
       status.textContent = 'Export failed — try again';
       console.error(e);
     }
+  } finally {
+    exportInFlight = false;
+    btn.disabled = false;
+    btn.textContent = prevLabel;
   }
 });
 
