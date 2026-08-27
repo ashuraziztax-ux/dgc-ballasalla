@@ -423,4 +423,58 @@ document.addEventListener('click', async e => {
   await loadAll();
 });
 
+// ---- Export to Excel ----
+// Downloads a real .xlsx snapshot of the current fortnight. A web page can't
+// force Excel to open automatically — the browser downloads the file and the
+// user opens it same as any download — but most browsers show a one-click
+// "open" prompt as soon as it lands, and double-clicking it opens straight
+// into Excel like any other spreadsheet.
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const hoursRows = [['Name', ...periodDates.map(fmtShort), 'OT (h)', 'Total']];
+  staff.forEach(s => {
+    const row = [s.name];
+    periodDates.forEach(date => {
+      const c = cellFor(s.id, date);
+      row.push(c.kind === 'hours' ? Number(c.value) : (c.kind === 'weekend' || c.kind === 'blank') ? '' : c.kind);
+    });
+    row.push(overtimeFor(s.id));
+    row.push(rowTotal(s.id));
+    hoursRows.push(row);
+  });
+  const teamRow = ['TEAM TOTALS'];
+  periodDates.forEach(date => {
+    let t = 0;
+    staff.forEach(s => {
+      const c = cellFor(s.id, date);
+      if (c.kind === 'hours') t += Number(c.value) || 0;
+      else if (c.kind === 'BH' || c.kind === 'H') t += 8;
+    });
+    teamRow.push(t);
+  });
+  teamRow.push(staff.reduce((sum, s) => sum + overtimeFor(s.id), 0));
+  teamRow.push(staff.reduce((sum, s) => sum + rowTotal(s.id), 0));
+  hoursRows.push(teamRow);
+
+  const advRows = [['Date', 'Name', 'Type', 'Amount', 'Notes']];
+  advancesCache.forEach(a => {
+    const s = staffById[a.staff_id];
+    advRows.push([a.entry_date, s ? s.name : '(unknown)', a.entry_type, Number(a.amount), a.notes || '']);
+  });
+
+  const holRows = [['From', 'To', 'Name', 'Type', 'Days this fortnight', 'Notes']];
+  leaveCache.forEach(b => {
+    const s = staffById[b.staff_id];
+    holRows.push([b.from_date, b.to_date, s ? s.name : '(unknown)', b.leave_type,
+      weekdayCountClipped(b.from_date, b.to_date), b.notes || '']);
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(hoursRows), 'Hours');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(advRows), 'Advances Bonuses Overtime');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(holRows), 'Holidays Leave');
+
+  const from = periodDates[0], to = periodDates[PERIOD_DAYS - 1];
+  XLSX.writeFile(wb, `Staff Hours ${from} to ${to}.xlsx`);
+});
+
 loadAll();
