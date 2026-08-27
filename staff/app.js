@@ -505,7 +505,7 @@ async function buildWorkbook() {
   const sheetLabel = `${fromDt.getDate()} ${fromDt.toLocaleString('en-GB',{month:'short'})} - ${toDt.getDate()} ${toDt.toLocaleString('en-GB',{month:'short'})}`;
 
   const ws = wb.addWorksheet(sheetLabel);
-  ws.views = [{ state: 'frozen', xSplit: 1, ySplit: 4 }]; // freeze Name col + first 3 header rows
+  ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 4 }]; // freeze first 4 header rows only
 
   // helper: fill a whole row with background
   const fillRow = (row, bg) => { row.eachCell({ includeEmpty: true }, cell => { cell.fill = fl(bg); }); };
@@ -735,7 +735,10 @@ async function buildWorkbook() {
   holSecRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
   for (let ci = 2; ci <= LAST_COL; ci++) holSecRow.getCell(ci).fill = fl(SURF2);
 
-  const holHdrRow = ws.addRow(['From', 'To', 'Name', '', '', '', 'Type', '', '', '', 'Days', '', '', 'Notes']);
+  // build a LAST_COL-wide blank row padded with empty strings
+  const holHdrPad = ['From', 'To', 'Name', '', '', '', 'Type', '', '', '', 'Days', '', '', 'Notes'];
+  while (holHdrPad.length < LAST_COL) holHdrPad.push('');
+  const holHdrRow = ws.addRow(holHdrPad);
   holHdrRow.height = 20;
   holHdrRow.eachCell({ includeEmpty: true }, (cell, ci) => {
     cell.fill = fl(BG); cell.border = thinBot;
@@ -758,11 +761,12 @@ async function buildWorkbook() {
       const isHol = b.leave_type === 'Holiday';
       const isUnp = (b.leave_type || '').includes('Unpaid');
       const days  = weekdayCountClipped(b.from_date, b.to_date);
-      const row3  = ws.addRow([b.from_date, b.to_date, s ? s.name : '(unknown)', '', '', '', b.leave_type, '', '', '', days, '', '', b.notes || '']);
+      const pad   = new Array(Math.max(0, LAST_COL - 14)).fill('');
+      const row3  = ws.addRow([b.from_date, b.to_date, s ? s.name : '(unknown)', '', '', '', b.leave_type, '', '', '', days, '', '', b.notes || '', ...pad]);
       row3.height = 20;
       row3.eachCell({ includeEmpty: true }, (cell, ci) => {
         cell.fill = fl(rbg); cell.border = thinBot;
-        if (ci <= 2) { cell.font = fo(MUTED, false, false, 9); cell.alignment = { horizontal: 'center', vertical: 'middle' }; cell.numFmt = 'DD MMM'; }
+        if (ci <= 2) { cell.font = fo(MUTED, false, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }; cell.numFmt = 'DD MMM'; }
         else if (ci === 3) { cell.font = fo(TEXT_C, false, false, 10); cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }; }
         else if (ci === 7) { cell.fill = fl(isHol ? H_BG : isUnp ? U_BG : rbg); cell.font = fo(isHol ? H_FG : isUnp ? U_FG : MUTED, true, false, 9); cell.alignment = { horizontal: 'left', vertical: 'middle' }; }
         else if (ci === 11) { cell.font = fo(NUM_FG, true, false, 10); cell.alignment = { horizontal: 'center', vertical: 'middle' }; }
