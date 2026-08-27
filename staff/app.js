@@ -62,6 +62,7 @@ let leaveCache = [];
 let advancesCache = [];
 let fillActive = false;
 let fillSnapshot = null;
+let rowFillSnapshots = {}; // staffId -> {date: originalValue}, per-row fill undo
 const saveTimers = {};
 
 function computePeriodDates() {
@@ -102,6 +103,7 @@ async function loadAll() {
 
   fillActive = false;
   fillSnapshot = null;
+  rowFillSnapshots = {};
 
   renderStaffSelects();
   renderHours();
@@ -187,7 +189,7 @@ function renderHours() {
         body += `<td class="hours-readonly ${todayCls}">${c.kind}</td>`;
       }
     });
-    body += `<td><button class="row-fill-btn" data-staff="${s.id}">→8</button></td>`;
+    body += `<td><button class="row-fill-btn${s.id in rowFillSnapshots ? ' active' : ''}" data-staff="${s.id}">→8</button></td>`;
     body += `<td class="hours-readonly clickable" data-jump="${s.id}" data-jump-type="Overtime">${ot || 0}h</td>`;
     body += `<td class="hours-readonly">${total}</td>`;
     body += '</tr>';
@@ -242,7 +244,7 @@ document.getElementById('hoursTable').addEventListener('input', e => {
 
 document.getElementById('hoursTable').addEventListener('click', e => {
   if (e.target.classList.contains('row-fill-btn')) {
-    fillOnePerson(e.target.dataset.staff);
+    toggleFillOnePerson(e.target.dataset.staff);
   }
   if (e.target.dataset.jump) {
     document.getElementById('advStaff').value = e.target.dataset.jump;
@@ -252,15 +254,30 @@ document.getElementById('hoursTable').addEventListener('click', e => {
   }
 });
 
-async function fillOnePerson(staffId) {
+async function toggleFillOnePerson(staffId) {
   const tr = document.querySelector(`tr[data-staff="${staffId}"]`);
   const inputs = tr.querySelectorAll('.hours-cell');
-  for (const input of inputs) {
-    if (!isWeekday(input.dataset.date)) continue;
-    if (input.value.trim() === '') {
-      input.value = '8';
-      await flushCell(staffId, input.dataset.date, input);
+  if (staffId in rowFillSnapshots) {
+    const snap = rowFillSnapshots[staffId];
+    for (const input of inputs) {
+      const date = input.dataset.date;
+      if (date in snap) {
+        input.value = snap[date];
+        await flushCell(staffId, date, input);
+      }
     }
+    delete rowFillSnapshots[staffId];
+  } else {
+    const snap = {};
+    for (const input of inputs) {
+      if (!isWeekday(input.dataset.date)) continue;
+      snap[input.dataset.date] = input.value;
+      if (input.value.trim() === '') {
+        input.value = '8';
+        await flushCell(staffId, input.dataset.date, input);
+      }
+    }
+    rowFillSnapshots[staffId] = snap;
   }
   renderHours();
 }
