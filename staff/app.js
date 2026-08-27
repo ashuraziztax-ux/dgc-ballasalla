@@ -1,8 +1,7 @@
 // DGC Staff Tracker — Hours (Supabase-backed live version)
 // Reads/writes dgc_staff, dgc_staff_hours, dgc_staff_advances, dgc_staff_leave directly.
+// SUPABASE_URL / SUPABASE_KEY come from config.js.
 
-const SUPABASE_URL = 'https://vigdtpcgeqenznuakdwz.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_nUG65QtsU2p1-hWpdUuaSQ_bF4G1EGQ';
 const REST = SUPABASE_URL + '/rest/v1';
 
 const BANK_HOLIDAYS = new Set([
