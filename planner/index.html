@@ -225,7 +225,7 @@ a{color:var(--accent);text-decoration:none}
     <button class="active" onclick="showTab('timeline',this)">📅 Timeline</button>
     <button onclick="showTab('jobs',this)">💼 Jobs</button>
     <button onclick="showTab('archive',this)" id="arch-tab-btn">📦 Archive</button>
-    <button onclick="location.href='../staff/'">🧑‍🔧 Staff Hours</button>
+    <button onclick="showTab('staffhours',this)">🧑‍🔧 Staff Hours</button>
   </div>
 
   <!-- Timeline tab -->
@@ -248,6 +248,11 @@ a{color:var(--accent);text-decoration:none}
         <tbody id="jobs-body"></tbody>
       </table>
     </div>
+  </div>
+
+  <!-- Staff Hours tab -->
+  <div id="tab-staffhours" class="panel">
+    <iframe src="../staff/" style="width:100%;height:calc(100vh - 110px);border:none;display:block" title="Staff Hours"></iframe>
   </div>
 
   <!-- Archive tab -->
