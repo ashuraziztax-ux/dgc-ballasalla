@@ -523,46 +523,60 @@ async function buildWorkbook() {
     { label: 'UNAVAILABLE', val: String(unavail),             fg: U_FG,   bg: SURF2, span: 3 },
   ];
 
-  const labRow = ws.addRow(new Array(LAST_COL).fill(''));
+  // Build label and value arrays with actual text in each stat-block's first cell
+  // (non-empty string values guarantee ExcelJS serialises every cell to the XLSX)
+  const labArr = new Array(LAST_COL).fill(' ');
+  const valArr = new Array(LAST_COL).fill(' ');
+  { let sc = 1;
+    statDefs.forEach(({ label, val, span }) => { labArr[sc-1] = `  ${label}`; valArr[sc-1] = `  ${val}`; sc += span; });
+  }
+
+  const labRow = ws.addRow(labArr);
   labRow.height = 16;
   { let sc = 1;
     statDefs.forEach(({ label, fg, bg, span }) => {
       for (let ci = sc; ci < sc + span; ci++) {
         const cell = labRow.getCell(ci);
         cell.fill = fl(bg);
-        if (ci === sc) { cell.value = `  ${label}`; cell.font = { color: { argb: fg }, size: 8, name: 'Calibri' }; cell.alignment = { horizontal: 'left', vertical: 'bottom', indent: 1 }; }
+        if (ci === sc) { cell.font = { color: { argb: fg }, size: 8, name: 'Calibri' }; cell.alignment = { horizontal: 'left', vertical: 'bottom', indent: 1 }; }
+        else { cell.value = null; }
       }
       sc += span;
     });
   }
 
   // ── ROW 3: stat values ───────────────────────────────────────────────────────
-  const valRow = ws.addRow(new Array(LAST_COL).fill(''));
+  const valRow = ws.addRow(valArr);
   valRow.height = 36;
   { let sc = 1;
     statDefs.forEach(({ val, fg, bg, span }) => {
       for (let ci = sc; ci < sc + span; ci++) {
         const cell = valRow.getCell(ci);
         cell.fill = fl(bg);
-        if (ci === sc) { cell.value = `  ${val}`; cell.font = { color: { argb: fg }, bold: true, size: 18, name: 'Calibri' }; cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }; }
+        if (ci === sc) { cell.font = { color: { argb: fg }, bold: true, size: 18, name: 'Calibri' }; cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }; }
+        else { cell.value = null; }
       }
       sc += span;
     });
   }
 
   // ── ROW 4: legend ────────────────────────────────────────────────────────────
-  const legRow = ws.addRow(new Array(LAST_COL).fill(''));
+  const legArr = new Array(LAST_COL).fill(' ');
+  legArr[0] = '    H = Paid Holiday (8h)    ·    BH = Bank Holiday (8h)    ·    U = Unavailable    ·    [8] = Hours worked';
+  const legRow = ws.addRow(legArr);
   legRow.height = 16;
   for (let ci = 1; ci <= LAST_COL; ci++) {
     const cell = legRow.getCell(ci);
     cell.fill = fl(SURF);
-    if (ci === 1) { cell.value = '    H = Paid Holiday (8h)    ·    BH = Bank Holiday (8h)    ·    U = Unavailable    ·    [8] = Hours worked'; cell.font = { color: { argb: MUTED }, size: 8, name: 'Calibri' }; cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 2 }; }
+    if (ci === 1) { cell.font = { color: { argb: MUTED }, size: 8, name: 'Calibri' }; cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 2 }; }
+    else { cell.value = null; }
   }
 
   // ── ROW 5: thin separator ─────────────────────────────────────────────────────
-  const sepRow = ws.addRow(new Array(LAST_COL).fill(''));
+  const sepArr = new Array(LAST_COL).fill(' ');
+  const sepRow = ws.addRow(sepArr);
   sepRow.height = 6;
-  for (let ci = 1; ci <= LAST_COL; ci++) sepRow.getCell(ci).fill = fl(BG);
+  for (let ci = 1; ci <= LAST_COL; ci++) { sepRow.getCell(ci).fill = fl(BG); sepRow.getCell(ci).value = null; }
 
   // ── ROW 6: column headers ───────────────────────────────────────────────────
   const hdr = ws.addRow(['Name', ...dateLabels, 'OT (h)', 'Total Hrs', 'Rate', 'Gross', 'Advances', 'Net Pay']);
