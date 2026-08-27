@@ -523,7 +523,7 @@ async function buildWorkbook() {
     { label: 'UNAVAILABLE', val: String(unavail),             fg: U_FG,   bg: SURF2, span: 3 },
   ];
 
-  const labRow = ws.addRow([]);
+  const labRow = ws.addRow(new Array(LAST_COL).fill(''));
   labRow.height = 16;
   { let sc = 1;
     statDefs.forEach(({ label, fg, bg, span }) => {
@@ -537,7 +537,7 @@ async function buildWorkbook() {
   }
 
   // ── ROW 3: stat values ───────────────────────────────────────────────────────
-  const valRow = ws.addRow([]);
+  const valRow = ws.addRow(new Array(LAST_COL).fill(''));
   valRow.height = 36;
   { let sc = 1;
     statDefs.forEach(({ val, fg, bg, span }) => {
@@ -551,7 +551,7 @@ async function buildWorkbook() {
   }
 
   // ── ROW 4: legend ────────────────────────────────────────────────────────────
-  const legRow = ws.addRow([]);
+  const legRow = ws.addRow(new Array(LAST_COL).fill(''));
   legRow.height = 16;
   for (let ci = 1; ci <= LAST_COL; ci++) {
     const cell = legRow.getCell(ci);
@@ -560,7 +560,7 @@ async function buildWorkbook() {
   }
 
   // ── ROW 5: thin separator ─────────────────────────────────────────────────────
-  const sepRow = ws.addRow([]);
+  const sepRow = ws.addRow(new Array(LAST_COL).fill(''));
   sepRow.height = 6;
   for (let ci = 1; ci <= LAST_COL; ci++) sepRow.getCell(ci).fill = fl(BG);
 
