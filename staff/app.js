@@ -453,7 +453,8 @@ async function buildWorkbook() {
   const U_BG     = 'FF2D1F00', U_FG  = 'FFD29922';
   const NUM_FG   = 'FF58A6FF';
   const TOT_FG   = 'FFE6883C', OT_FG  = 'FFBC8CFF', ADV_FG  = 'FFD29922';
-  const WAGES_FG = 'FFD4A72C';   // gold — actual net wages
+  const GROSS_FG = 'FFD4A72C';   // gold — gross (hours × rate)
+  const NET_FG   = 'FF4AC26B';   // green — net pay (gross − advances)
   const TEAM_BG  = 'FF21262D', TEAM_FG = 'FFCDD9E5';
   const WKND_BG  = 'FF0A0F15', WKND_FG = 'FF3D444C';
 
@@ -470,25 +471,29 @@ async function buildWorkbook() {
   });
   const isWknd = periodDates.map(d => { const day = new Date(d + 'T00:00:00').getDay(); return day === 0 || day === 6; });
   const N_DAYS   = periodDates.length;  // 14
-  const OT_COL   = N_DAYS + 2;         // 16
-  const TOT_COL  = N_DAYS + 3;         // 17
-  const RATE_COL = N_DAYS + 4;         // 18
-  const WAGE_COL = N_DAYS + 5;         // 19
-  const LAST_COL = WAGE_COL;           // 19
+  const OT_COL    = N_DAYS + 2;        // 16
+  const TOT_COL   = N_DAYS + 3;        // 17
+  const RATE_COL  = N_DAYS + 4;        // 18
+  const GROSS_COL = N_DAYS + 5;        // 19 — hours × rate
+  const ADV_COL   = N_DAYS + 6;        // 20 — advances taken
+  const NET_COL   = N_DAYS + 7;        // 21 — gross − advances
+  const LAST_COL  = NET_COL;           // 21
 
   // ── per-person wages ────────────────────────────────────────────────────────
   const advancesFor = id => advancesCache
     .filter(a => a.staff_id === id && a.entry_type === 'Advance')
     .reduce((s, a) => s + Number(a.amount), 0);
-  const wagesFor = id => {
+  const grossFor = id => {
     const s = staffById[id];
     const rate = s ? (Number(s.rate) || 0) : 0;
-    return rowTotal(id) * rate - advancesFor(id);
+    return rowTotal(id) * rate;
   };
+  const netFor = id => grossFor(id) - advancesFor(id);
 
   // ── summary stats ───────────────────────────────────────────────────────────
-  const totalWages = staff.reduce((s, m) => s + wagesFor(m.id), 0);
+  const totalGross = staff.reduce((s, m) => s + grossFor(m.id), 0);
   const totalAdv   = staff.reduce((s, m) => s + advancesFor(m.id), 0);
+  const totalNet   = staff.reduce((s, m) => s + netFor(m.id), 0);
   const otEntries  = advancesCache.filter(a => a.entry_type === 'Overtime').length;
   const onHoliday  = staff.filter(m => periodDates.some(d => { const c = cellFor(m.id, d); return c.kind === 'H' || c.kind === 'BH'; })).length;
   const unavail    = staff.filter(m => periodDates.some(d => cellFor(m.id, d).kind === 'U')).length;
@@ -518,13 +523,14 @@ async function buildWorkbook() {
   // ── ROW 2: stats bar ────────────────────────────────────────────────────────
   const statsRow = ws.addRow([]);
   statsRow.height = 26;
+  const fmt = v => '£' + v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   const statsData = [
-    { text: `  ${staff.length} Staff`,                              fg: TEXT_C,   bg: BG,    span: 3 },
-    { text: `  £${totalWages.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',')}  Wages`,   fg: WAGES_FG, bg: SURF2, span: 3 },
-    { text: `  £${Math.round(totalAdv).toLocaleString()}  Advances`, fg: ADV_FG,   bg: SURF2, span: 3 },
-    { text: `  ${otEntries}  OT Entries`,                           fg: OT_FG,    bg: SURF2, span: 3 },
-    { text: `  ${onHoliday}  On Holiday`,                           fg: H_FG,     bg: SURF2, span: 3 },
-    { text: `  ${unavail}  Unavailable`,                            fg: U_FG,     bg: SURF2, span: 4 },
+    { text: `  ${staff.length} Staff`,                  fg: TEXT_C, bg: BG,    span: 3 },
+    { text: `  ${fmt(totalNet)}  Net Pay`,              fg: NET_FG, bg: SURF2, span: 4 },
+    { text: `  ${fmt(totalAdv)}  Advances`,             fg: ADV_FG, bg: SURF2, span: 4 },
+    { text: `  ${otEntries}  OT Entries`,               fg: OT_FG,  bg: SURF2, span: 4 },
+    { text: `  ${onHoliday}  On Holiday`,               fg: H_FG,   bg: SURF2, span: 3 },
+    { text: `  ${unavail}  Unavailable`,                fg: U_FG,   bg: SURF2, span: 3 },
   ];
   let sc = 1;
   statsData.forEach(({ text, fg, bg, span }) => {
@@ -547,7 +553,7 @@ async function buildWorkbook() {
   for (let ci = 1; ci <= LAST_COL; ci++) sepRow.getCell(ci).fill = fl(BG);
 
   // ── ROW 4: column headers ───────────────────────────────────────────────────
-  const hdr = ws.addRow(['Name', ...dateLabels, 'OT (h)', 'Total Hrs', 'Rate', 'Wages']);
+  const hdr = ws.addRow(['Name', ...dateLabels, 'OT (h)', 'Total Hrs', 'Rate', 'Gross', 'Advances', 'Net Pay']);
   hdr.height = 22;
   hdr.eachCell({ includeEmpty: true }, (cell, ci) => {
     const wk = ci >= 2 && ci < OT_COL && isWknd[ci - 2];
@@ -555,13 +561,15 @@ async function buildWorkbook() {
     cell.border = medBot;
     cell.alignment = { horizontal: ci === 1 ? 'left' : 'center', vertical: 'middle' };
     cell.font =
-      ci === 1        ? fo(TEXT_C,   true,  false, 9)
-    : ci === OT_COL   ? fo(OT_FG,   true,  false, 9)
-    : ci === TOT_COL  ? fo(TOT_FG,  true,  false, 9)
-    : ci === RATE_COL ? fo(MUTED,   false, false, 9)
-    : ci === WAGE_COL ? fo(WAGES_FG, true, false, 9)
-    : wk              ? fo(FAINT,   false, false, 8)
-    :                   fo(MUTED,   false, false, 9);
+      ci === 1         ? fo(TEXT_C,  true,  false, 9)
+    : ci === OT_COL    ? fo(OT_FG,  true,  false, 9)
+    : ci === TOT_COL   ? fo(TOT_FG, true,  false, 9)
+    : ci === RATE_COL  ? fo(MUTED,  false, false, 9)
+    : ci === GROSS_COL ? fo(GROSS_FG, true, false, 9)
+    : ci === ADV_COL   ? fo(ADV_FG, true,  false, 9)
+    : ci === NET_COL   ? fo(NET_FG, true,  false, 9)
+    : wk               ? fo(FAINT,  false, false, 8)
+    :                    fo(MUTED,  false, false, 9);
   });
 
   // ── staff rows ──────────────────────────────────────────────────────────────
@@ -573,8 +581,10 @@ async function buildWorkbook() {
     const ot    = overtimeFor(s.id);
     const tot   = rowTotal(s.id);
     const rate  = Number(s.rate) || 0;
-    const wages = wagesFor(s.id);
-    const row   = ws.addRow([s.name, ...dayVals, ot || null, tot || null, rate || null, wages]);
+    const gross = grossFor(s.id);
+    const adv   = advancesFor(s.id);
+    const net   = netFor(s.id);
+    const row   = ws.addRow([s.name, ...dayVals, ot || null, tot || null, rate || null, gross || null, adv || null, net || null]);
     row.height  = 21;
     const rbg   = (idx % 2 === 0) ? SURF2 : SURF;
 
@@ -589,10 +599,17 @@ async function buildWorkbook() {
       if (ci === 1) {
         cell.fill = fl(rbg); cell.font = fo(TEXT_C, false, false, 10);
         cell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-      } else if (ci === WAGE_COL) {
-        cell.fill      = fl(rbg);
-        cell.font      = wages ? fo(WAGES_FG, true, false, 11) : fo(FAINT, false, false, 9);
-        cell.numFmt    = wages ? '"£"#,##0.00' : '';
+      } else if (ci === GROSS_COL) {
+        cell.fill = fl(rbg); cell.font = gross ? fo(GROSS_FG, true, false, 11) : fo(FAINT, false, false, 9);
+        if (gross) cell.numFmt = '"£"#,##0.00';
+        cell.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
+      } else if (ci === ADV_COL) {
+        cell.fill = fl(rbg); cell.font = adv ? fo(ADV_FG, true, false, 11) : fo(FAINT, false, false, 9);
+        if (adv) cell.numFmt = '"£"#,##0.00';
+        cell.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
+      } else if (ci === NET_COL) {
+        cell.fill = fl(rbg); cell.font = net ? fo(NET_FG, true, false, 11) : fo(FAINT, false, false, 9);
+        if (net) cell.numFmt = '"£"#,##0.00';
         cell.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
       } else if (ci === RATE_COL) {
         cell.fill   = fl(rbg); cell.font = fo(MUTED, false, false, 9);
@@ -626,8 +643,10 @@ async function buildWorkbook() {
   });
   teamVals.push(staff.reduce((s, m) => s + overtimeFor(m.id), 0) || null);
   teamVals.push(staff.reduce((s, m) => s + rowTotal(m.id), 0) || null);
-  teamVals.push(null);   // Rate col — no team rate
-  teamVals.push(totalWages);
+  teamVals.push(null);          // Rate col — no team rate
+  teamVals.push(totalGross);    // Gross
+  teamVals.push(totalAdv);      // Advances
+  teamVals.push(totalNet);      // Net Pay
 
   const tr = ws.addRow(teamVals);
   tr.height = 28;
@@ -637,18 +656,21 @@ async function buildWorkbook() {
     cell.fill = fl(TEAM_BG); cell.border = medTop;
     cell.alignment = { horizontal: ci === 1 ? 'left' : 'center', vertical: 'middle' };
     cell.font =
-      ci === 1        ? fo(TEXT_C,   true,  false, 10)
-    : ci === WAGE_COL ? fo(WAGES_FG, true,  false, 12)
-    : ci === TOT_COL  ? fo(TOT_FG,  true,  false, 12)
-    : ci === OT_COL   ? fo(OT_FG,   true,  false, 11)
-    : wk              ? fo(FAINT,   false, false, 9)
-    : v               ? fo(TEAM_FG, true,  false, 10)
-    :                   fo(FAINT,   false, false, 9);
+      ci === 1         ? fo(TEXT_C,   true,  false, 10)
+    : ci === GROSS_COL ? fo(GROSS_FG, true,  false, 12)
+    : ci === ADV_COL   ? fo(ADV_FG,  true,  false, 12)
+    : ci === NET_COL   ? fo(NET_FG,  true,  false, 12)
+    : ci === TOT_COL   ? fo(TOT_FG,  true,  false, 12)
+    : ci === OT_COL    ? fo(OT_FG,   true,  false, 11)
+    : wk               ? fo(FAINT,   false, false, 9)
+    : v                ? fo(TEAM_FG, true,  false, 10)
+    :                    fo(FAINT,   false, false, 9);
     if (v && ci > 1) {
-      if (ci === WAGE_COL) cell.numFmt = '"£"#,##0.00';
+      if (ci === GROSS_COL || ci === ADV_COL || ci === NET_COL) cell.numFmt = '"£"#,##0.00';
       else cell.numFmt = '0.##';
     }
-    if (ci === WAGE_COL) cell.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
+    if (ci === GROSS_COL || ci === ADV_COL || ci === NET_COL)
+      cell.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
   });
 
   // ── separator ────────────────────────────────────────────────────────────────
@@ -752,10 +774,12 @@ async function buildWorkbook() {
   // ── column widths ────────────────────────────────────────────────────────────
   ws.getColumn(1).width = 25;
   for (let i = 2; i <= N_DAYS + 1; i++) ws.getColumn(i).width = 6.2;
-  ws.getColumn(OT_COL).width   = 7;
-  ws.getColumn(TOT_COL).width  = 9;
-  ws.getColumn(RATE_COL).width = 7;
-  ws.getColumn(WAGE_COL).width = 13;
+  ws.getColumn(OT_COL).width    = 7;
+  ws.getColumn(TOT_COL).width   = 9;
+  ws.getColumn(RATE_COL).width  = 7;
+  ws.getColumn(GROSS_COL).width = 11;
+  ws.getColumn(ADV_COL).width   = 11;
+  ws.getColumn(NET_COL).width   = 12;
 
   return await wb.xlsx.writeBuffer();
 }
