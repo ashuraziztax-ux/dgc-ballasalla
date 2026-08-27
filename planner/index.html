@@ -223,7 +223,6 @@ a{color:var(--accent);text-decoration:none}
   <div class="nav">
     <button class="active" onclick="showTab('timeline',this)">📅 Timeline</button>
     <button onclick="showTab('jobs',this)">💼 Jobs</button>
-    <button onclick="showTab('staff',this)">👷 Staff</button>
     <button onclick="showTab('archive',this)" id="arch-tab-btn">📦 Archive</button>
   </div>
 
@@ -246,92 +245,6 @@ a{color:var(--accent);text-decoration:none}
         </tr></thead>
         <tbody id="jobs-body"></tbody>
       </table>
-    </div>
-  </div>
-
-  <!-- Staff tab -->
-  <div id="tab-staff" class="panel">
-    <div class="snav">
-      <button class="active" onclick="showSV('hours',this)">📋 Hours</button>
-      <button onclick="showSV('roster',this)">👷 Team</button>
-      <button onclick="showSV('inactive',this)">📁 Ex-Staff</button>
-    </div>
-
-    <!-- Hours sub-view -->
-    <div id="sv-hours" class="sv active">
-      <div class="hrs-hdr">
-        <button class="nav-arrow" onclick="shiftPeriod(-14)">‹</button>
-        <span id="st-period-lbl">Loading...</span>
-        <button class="nav-arrow" onclick="shiftPeriod(14)">›</button>
-        <button class="btn-today" onclick="goToPeriodNow()">Today</button>
-        <button class="btn-fill" id="btn-fill" onclick="fillEightHours()">Fill 8s</button>
-        <button class="btn-today" onclick="_stLoaded=false;loadStaffData()" title="Reload staff data from server" style="margin-left:auto">↻ Refresh</button>
-      </div>
-      <div class="hrs-scroll">
-        <table class="hrs-tbl" id="hrs-tbl"></table>
-      </div>
-      <div class="hrs-act">
-        <button class="save-hrs-btn" onclick="saveHours()">Save hours</button>
-        <span class="hrs-stat" id="hrs-stat"></span>
-      </div>
-
-      <!-- Advances / Bonuses / OT -->
-      <div class="adv-section">
-        <h3>Advances, Bonuses &amp; Overtime</h3>
-        <p class="adv-hint">Overtime = hours; Advance/Bonus = £. OT column in the grid shows the fortnight total.</p>
-        <form id="adv-form" class="adv-form" onsubmit="addAdvance(event)">
-          <select id="adv-staff" required><option value="">Staff member...</option></select>
-          <select id="adv-type">
-            <option value="Advance">Advance</option>
-            <option value="Bonus">Bonus</option>
-            <option value="Overtime">Overtime</option>
-          </select>
-          <input type="number" id="adv-amount" step="0.01" placeholder="Amount" required>
-          <input type="date" id="adv-date" required>
-          <input type="text" id="adv-notes" placeholder="Notes (optional)">
-          <button type="submit">Add</button>
-        </form>
-        <div id="adv-list"></div>
-      </div>
-
-      <!-- Holidays & Leave -->
-      <div class="leave-section">
-        <h3>Holidays &amp; Leave</h3>
-        <div id="leave-list"></div>
-        <form id="leave-form" class="adv-form" onsubmit="addLeave(event)" style="margin-top:10px">
-          <select id="hol-staff" required><option value="">Staff member...</option></select>
-          <select id="hol-type">
-            <option value="Holiday">Paid Holiday</option>
-            <option value="Unpaid Leave">Unpaid Leave</option>
-          </select>
-          <input type="date" id="hol-from" required title="Start date">
-          <input type="date" id="hol-to" required title="End date">
-          <input type="text" id="hol-notes" placeholder="Notes (optional)">
-          <button type="submit">Add</button>
-        </form>
-      </div>
-    </div>
-
-    <!-- Team sub-view -->
-    <div id="sv-roster" class="sv">
-      <div class="add-bar"><button class="btn-add" onclick="openAddStaff()">+ Add Person</button></div>
-      <div id="roster-list"></div>
-    </div>
-
-    <!-- Ex-Staff sub-view -->
-    <div id="sv-inactive" class="sv">
-      <div class="arch-hdr">No longer working here</div>
-      <div id="inactive-list"></div>
-    </div>
-
-    <!-- First-time setup notice -->
-    <div id="st-setup" style="display:none">
-      <div class="st-setup-box">
-        <h3>One-time Supabase setup</h3>
-        <p>The Staff Tracker needs four tables. Copy the SQL below and run it in your Supabase dashboard → SQL Editor, then refresh this page.</p>
-        <pre id="st-setup-sql"></pre>
-        <p style="color:var(--accent);margin-top:8px;font-weight:700">After running the SQL, tap refresh (or Cmd+R).</p>
-      </div>
     </div>
   </div>
 
@@ -405,23 +318,10 @@ a{color:var(--accent);text-decoration:none}
   </div>
 </div>
 
-<!-- Add Staff modal -->
-<div class="mbg" id="add-staff-modal" onclick="if(event.target===this)this.classList.remove('open')">
-  <div class="mbox">
-    <h3>Add Person</h3>
-    <div class="fr"><label>Full name</label><input id="new-staff-name" type="text" placeholder="Name" onkeydown="if(event.key==='Enter')saveNewStaff()"></div>
-    <div class="fr"><label>Role / trade</label><input id="new-staff-role" type="text" placeholder="e.g. Groundworker"></div>
-    <div class="fr"><label>Start date</label><input id="new-staff-start" type="date"></div>
-    <div class="mac">
-      <button class="btn-sv" onclick="saveNewStaff()">Add</button>
-      <button class="btn-cx" onclick="document.getElementById('add-staff-modal').classList.remove('open')">Cancel</button>
-    </div>
-  </div>
-</div>
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.14';
+const VERSION = 'v2.15';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -631,12 +531,6 @@ function initRealtime() {
   if (!_sb) return;
   _sb.channel('plan-jobs')
     .on('postgres_changes', { event:'*', schema:'public', table:'dgc_planner_jobs' }, () => refresh())
-    .subscribe();
-  _sb.channel('plan-staff')
-    .on('postgres_changes', { event:'*', schema:'public', table:'dgc_staff' }, () => { if (_stLoaded) loadStaffData(); })
-    .on('postgres_changes', { event:'*', schema:'public', table:'dgc_staff_hours' }, () => { if (_stLoaded) loadStaffData(); })
-    .on('postgres_changes', { event:'*', schema:'public', table:'dgc_staff_advances' }, () => { if (_stLoaded) loadStaffData(); })
-    .on('postgres_changes', { event:'*', schema:'public', table:'dgc_staff_leave' }, () => { if (_stLoaded) loadStaffData(); })
     .subscribe();
 }
 
@@ -1005,7 +899,6 @@ function showTab(name, btn) {
   document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   btn.classList.add('active');
-  if (name === 'staff') { _stLoaded = false; loadStaffData(); }
 }
 
 // ── Boot ──────────────────────────────────────────────────
