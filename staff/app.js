@@ -424,12 +424,7 @@ document.addEventListener('click', async e => {
 });
 
 // ---- Export to Excel ----
-// Downloads a real .xlsx snapshot of the current fortnight. A web page can't
-// force Excel to open automatically — the browser downloads the file and the
-// user opens it same as any download — but most browsers show a one-click
-// "open" prompt as soon as it lands, and double-clicking it opens straight
-// into Excel like any other spreadsheet.
-document.getElementById('exportBtn').addEventListener('click', () => {
+function buildWorkbook() {
   const hoursRows = [['Name', ...periodDates.map(fmtShort), 'OT (h)', 'Total']];
   staff.forEach(s => {
     const row = [s.name];
@@ -472,9 +467,104 @@ document.getElementById('exportBtn').addEventListener('click', () => {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(hoursRows), 'Hours');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(advRows), 'Advances Bonuses Overtime');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(holRows), 'Holidays Leave');
+  return wb;
+}
 
+// Remembers the exact file the user picked (Chrome/Edge only, via the File
+// System Access API) so every later click overwrites that same file with no
+// dialog — point it at a OneDrive-synced folder once and Microsoft's own
+// sync does the "everyone else sees it" part, nothing extra needed here.
+// Safari/Firefox don't support this API — they fall back to a plain download.
+const FS_SUPPORTED = 'showSaveFilePicker' in window;
+const HANDLE_DB = 'dgc-staff-tracker', HANDLE_STORE = 'handles', HANDLE_KEY = 'exportFile';
+
+function openHandleDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(HANDLE_DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(HANDLE_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function getSavedHandle() {
+  try {
+    const db = await openHandleDB();
+    return await new Promise((resolve, reject) => {
+      const req = db.transaction(HANDLE_STORE, 'readonly').objectStore(HANDLE_STORE).get(HANDLE_KEY);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (e) { return null; }
+}
+async function saveHandle(handle) {
+  try {
+    const db = await openHandleDB();
+    const tx = db.transaction(HANDLE_STORE, 'readwrite');
+    tx.objectStore(HANDLE_STORE).put(handle, HANDLE_KEY);
+  } catch (e) { /* ignore — worst case it just asks again next time */ }
+}
+async function clearSavedHandle() {
+  try {
+    const db = await openHandleDB();
+    db.transaction(HANDLE_STORE, 'readwrite').objectStore(HANDLE_STORE).delete(HANDLE_KEY);
+  } catch (e) { /* ignore */ }
+}
+function updateExportUI(handle) {
+  document.getElementById('exportBtn').textContent = handle ? `Save to ${handle.name}` : 'Export to Excel';
+  document.getElementById('exportChangeBtn').hidden = !handle;
+}
+
+document.getElementById('exportBtn').addEventListener('click', async () => {
+  const wb = buildWorkbook();
   const from = periodDates[0], to = periodDates[PERIOD_DAYS - 1];
-  XLSX.writeFile(wb, `Staff Hours ${from} to ${to}.xlsx`);
+  const suggestedName = `Staff Hours ${from} to ${to}.xlsx`;
+  const status = document.getElementById('hoursStatus');
+
+  if (!FS_SUPPORTED) {
+    XLSX.writeFile(wb, suggestedName);
+    return;
+  }
+
+  let handle = await getSavedHandle();
+  if (handle) {
+    let perm = await handle.queryPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') perm = await handle.requestPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') handle = null;
+  }
+  try {
+    if (!handle) {
+      handle = await window.showSaveFilePicker({
+        suggestedName,
+        types: [{ description: 'Excel Workbook', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }],
+      });
+      await saveHandle(handle);
+      updateExportUI(handle);
+    }
+    const writable = await handle.createWritable();
+    await writable.write(XLSX.write(wb, { type: 'array', bookType: 'xlsx' }));
+    await writable.close();
+    status.textContent = 'Saved to ' + handle.name + ' — ' + new Date().toLocaleTimeString('en-GB');
+    status.className = 'form-status success';
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      status.textContent = 'Export failed — try again';
+      console.error(e);
+    }
+  }
 });
+
+document.getElementById('exportChangeBtn').addEventListener('click', async () => {
+  await clearSavedHandle();
+  updateExportUI(null);
+});
+
+(async () => {
+  if (FS_SUPPORTED) {
+    const h = await getSavedHandle();
+    if (h) updateExportUI(h);
+  } else {
+    document.getElementById('exportChangeBtn').hidden = true;
+  }
+})();
 
 loadAll();
