@@ -336,7 +336,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.18';
+const VERSION = 'v2.19';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -471,6 +471,21 @@ function workingDaysBetween(startStr, endStr) {
   while (d < end) { d.setDate(d.getDate() + 1); if (isWorkingDay(toDateStr(d))) count++; }
   return count;
 }
+// Mon-Fri count, start_date = day 1 (inclusive). Bank holidays count as weekdays — a 2-week
+// job Mon→Mon always ends Fri of wk 2 regardless of any BH in between.
+function addWeekdays(dateStr, n) {
+  const d = new Date(dateStr + 'T12:00:00');
+  let rem = Math.max(Math.round(n), 1) - 1;
+  while (rem > 0) { d.setDate(d.getDate() + 1); const wd = d.getDay(); if (wd !== 0 && wd !== 6) rem--; }
+  return toDateStr(d);
+}
+// Count Mon-Fri days from a to b inclusive (BH counted).
+function weekdaysBetween(a, b) {
+  const da = new Date(a + 'T12:00:00'), db = new Date(b + 'T12:00:00');
+  let n = 0, d = new Date(da);
+  while (d <= db) { const wd = d.getDay(); if (wd !== 0 && wd !== 6) n++; d.setDate(d.getDate() + 1); }
+  return n;
+}
 
 function jobEndDate(j) {
   const today = toDateStr(new Date());
@@ -479,7 +494,7 @@ function jobEndDate(j) {
   const pos = j.people_on_site || 0, pn = j.people_needed || 0;
   const revised = (pos > 0 && pn > 0) ? Math.ceil(totalDays * pn / pos) : totalDays;
   const start = j.start_date || today;
-  return addWorkingDays(start, Math.max(revised, 1));
+  return addWeekdays(start, Math.max(revised, 1));
 }
 
 // ── Local jobs ─────────────────────────────────────────────
@@ -891,7 +906,7 @@ function openEdit(j) {
   document.getElementById('m-onsite').value = j.people_on_site;
   const sd = j.start_date || toDateStr(new Date());
   document.getElementById('m-start').value = sd;
-  document.getElementById('m-finish').value = addWorkingDays(sd, (j.base_weeks || 0) * 5 + bd);
+  document.getElementById('m-finish').value = addWeekdays(sd, (j.base_weeks || 0) * 5 + bd);
   document.getElementById('m-status').value = j.status;
   document.getElementById('m-note').value = j.note||'';
   const archBtn = document.getElementById('btn-archive-action');
@@ -915,7 +930,7 @@ function calcPreview() {
   const start = document.getElementById('m-start').value;
   const prev = document.getElementById('wks-preview');
   if (start && (bw || bd) && !_finishLock) {
-    document.getElementById('m-finish').value = addWorkingDays(start, totalDays);
+    document.getElementById('m-finish').value = addWeekdays(start, totalDays);
   }
   if (!totalDays || !np || !os) { prev.textContent = ''; return; }
   const revisedTotal = Math.ceil(totalDays * np / os);
@@ -931,7 +946,7 @@ function onFinishChange() {
   const finish = document.getElementById('m-finish').value;
   if (!start || !finish || finish <= start) return;
   _finishLock = true;
-  const totalDays = workingDaysBetween(start, finish);
+  const totalDays = weekdaysBetween(start, finish);
   document.getElementById('m-weeks').value = Math.floor(totalDays / 5);
   document.getElementById('m-days').value = totalDays % 5;
   calcPreview();
@@ -1084,7 +1099,7 @@ function _applyResizeMove(clientX, clientY) {
   if (deltaWeeks !== 0) _wasDrag = true;
   const newWeeks = Math.max(1, _resize.origWeeks + deltaWeeks);
   const start = _resize.job.start_date || toDateStr(new Date());
-  const finish = addWorkingDays(start, newWeeks * 5);
+  const finish = addWeekdays(start, newWeeks * 5);
   showDragTooltip(clientX, clientY, '↔ ' + newWeeks + 'w / ends ' + fmtDate(finish));
   if (deltaWeeks === _resize.lastDeltaWeeks) return;
   _resize.lastDeltaWeeks = deltaWeeks;
