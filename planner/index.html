@@ -336,7 +336,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.16';
+const VERSION = 'v2.17';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -674,47 +674,54 @@ function renderTimeline(jobs) {
     }
   });
 
-  // ── Gang footer — day-aware bars ─────────────────────────
+  // ── Gang footer ───────────────────────────────────────────
+  // Single weekly bar always — EXCEPT when an explicit day override exists for
+  // a job in that week, in which case that week breaks into 5 daily bars.
   const footY = HEAD_H + Math.max(jobs.length,1) * ROW_H;
   s += `<rect x="0" y="${footY}" width="${svgW}" height="${FOOT_H}" fill="#0a0d14"/>`;
   s += `<line x1="0" y1="${footY}" x2="${svgW}" y2="${footY}" stroke="#2e3347" stroke-width="1"/>`;
   s += `<text x="${LBL_W-8}" y="${footY+FOOT_H/2+4}" font-size="11" text-anchor="end" fill="#64748b" font-weight="700">Gang</text>`;
 
-  // Compute people per working day (Mon–Fri) for every visible week
-  // origin is a Monday; Mon=+0, Tue=+1, Wed=+2, Thu=+3, Fri=+4
-  const weekDayPpl = [];
+  const weekData = [];
   for (let w = 0; w < WEEKS; w++) {
-    const days = [];
+    const wStart = addDays(origin, w * 7);
+    const wEnd   = addDays(origin, (w + 1) * 7);
+    // Weekly total — old overlap approach: any job active this week contributes
+    let weekTotal = 0;
+    jobs.forEach(j => {
+      const jStart = j.start_date || today;
+      const jEnd   = jobEndDate(j);
+      if (jStart < wEnd && jEnd >= wStart) weekTotal += (j.people_on_site || j.people_needed || 0);
+    });
+    // Per-day totals + override flag (only set by explicit day overrides, NOT mid-week starts)
+    let weekHasOverride = false;
+    const dayTotals = [0, 0, 0, 0, 0];
     for (let d = 0; d < 5; d++) {
       const dateStr = addDays(origin, w * 7 + d);
-      let total = 0;
       jobs.forEach(j => {
         const jStart = j.start_date || today;
-        const jEnd = jobEndDate(j);
-        if (dateStr >= jStart && dateStr <= jEnd) {
+        const jEnd   = jobEndDate(j);
+        if (jStart <= dateStr && dateStr <= jEnd) {
           const ov = getJobOverrides(j.id).find(o => o.date === dateStr);
-          total += ov ? ov.people : (j.people_on_site || j.people_needed || 0);
+          if (ov) { weekHasOverride = true; dayTotals[d] += ov.people; }
+          else dayTotals[d] += (j.people_on_site || j.people_needed || 0);
         }
       });
-      days.push(total);
     }
-    weekDayPpl.push(days);
+    weekData.push({ weekTotal, weekHasOverride, dayTotals });
   }
 
-  const maxPpl = Math.max(...weekDayPpl.flat(), 1);
+  const maxPpl = Math.max(...weekData.flatMap(w => w.weekHasOverride ? w.dayTotals : [w.weekTotal]), 1);
   const GANG_CAP = Math.max(jobs.reduce((acc, j) => acc + (j.people_needed || j.people_on_site || 0), 0), 1);
   const barZone = FOOT_H - 20;
-  const D_W = W_PX / 5; // pixel width per day slot
+  const D_W = W_PX / 5;
 
   for (let w = 0; w < WEEKS; w++) {
-    const days = weekDayPpl[w];
-    if (!days.some(d => d > 0)) continue;
+    const { weekTotal, weekHasOverride, dayTotals } = weekData[w];
     const x = LBL_W + w * W_PX;
-    const allSame = days.every(d => d === days[0]);
-
-    if (!allSame) {
-      // Different headcount on different days → 5 daily bars
-      days.forEach((ppl, d) => {
+    if (weekHasOverride) {
+      // Break into 5 daily bars — only triggered by an explicit override
+      dayTotals.forEach((ppl, d) => {
         if (!ppl) return;
         const dx = x + d * D_W;
         const barH = Math.max(Math.round((ppl / maxPpl) * barZone), 3);
@@ -725,14 +732,14 @@ function renderTimeline(jobs) {
         s += `<text x="${(dx+D_W/2).toFixed(1)}" y="${footY+FOOT_H-2}" font-size="7" text-anchor="middle" fill="${barCol}" font-weight="800">${ppl}</text>`;
       });
     } else {
-      // Same headcount all week → single clean bar
-      const ppl = days[0];
-      const barH = Math.max(Math.round((ppl / maxPpl) * barZone), 4);
+      // Single clean weekly bar
+      if (!weekTotal) continue;
+      const barH = Math.max(Math.round((weekTotal / maxPpl) * barZone), 4);
       const barY = footY + FOOT_H - barH - 12;
-      const ratio = ppl / GANG_CAP;
+      const ratio = weekTotal / GANG_CAP;
       const barCol = ratio > 0.85 ? '#ef4444' : ratio > 0.5 ? '#f59e0b' : '#22c55e';
       s += `<rect x="${x+3}" y="${barY}" width="${W_PX-6}" height="${barH}" rx="3" fill="${barCol}" opacity=".85"/>`;
-      s += `<text x="${x+W_PX/2}" y="${footY+FOOT_H-2}" font-size="9" text-anchor="middle" fill="${barCol}" font-weight="800">${ppl}</text>`;
+      s += `<text x="${x+W_PX/2}" y="${footY+FOOT_H-2}" font-size="9" text-anchor="middle" fill="${barCol}" font-weight="800">${weekTotal}</text>`;
     }
   }
 
