@@ -336,7 +336,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.20';
+const VERSION = 'v2.21';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -649,12 +649,15 @@ function renderTimeline(jobs) {
     const lbl = j.name.length > 16 ? j.name.substring(0,15)+'…' : j.name;
     s += `<text x="${LBL_W-8}" y="${by + bh/2 + 4}" font-size="12" text-anchor="end" fill="#e2e8f0" font-weight="600">${esc(lbl)}</text>`;
 
-    // Bar position — end anchors to next working day for running jobs
+    // Bar position
     const startOff = daysBetween(origin, j.start_date || today);
     const bx = LBL_W + (startOff / 7) * W_PX;
     const endDate = jobEndDate(j);
     const endOff = daysBetween(origin, endDate);
-    const bEnd = LBL_W + (endOff / 7) * W_PX;
+    // Visual right edge snaps to the following Monday so bar fills the full calendar week
+    const endDow = new Date(endDate + 'T12:00:00').getDay();
+    const daysToNextMon = ((8 - endDow) % 7) || 7;
+    const bEnd = LBL_W + (daysBetween(origin, addDays(endDate, daysToNextMon)) / 7) * W_PX;
     const bw = Math.max(bEnd - bx, 8);
 
     // Bar (clip to visible area)
@@ -675,10 +678,10 @@ function renderTimeline(jobs) {
         const barLbl = j.name.length > maxChars ? j.name.substring(0, maxChars-1)+'…' : j.name;
         s += `<text x="${txtX}" y="${by+bh/2+4}" font-size="11" fill="white" font-weight="700" pointer-events="none">${esc(barLbl)}</text>`;
       }
-      // End date label to the right of bar
-      const endLblX = Math.min(bEnd + 4, LBL_W + WEEKS * W_PX - 2);
-      if (endLblX < LBL_W + WEEKS * W_PX - 10) {
-        s += `<text x="${endLblX}" y="${by+bh/2+4}" font-size="9" fill="${col}" font-weight="700" opacity="0.9" pointer-events="none">${fmtDate(endDate)}</text>`;
+      // End date label — inside bar, right-aligned at the actual last working day
+      if (bw > 55) {
+        const endActX = Math.min(LBL_W + (endOff / 7) * W_PX - 3, LBL_W + WEEKS * W_PX - 4);
+        s += `<text x="${endActX}" y="${by + 10}" font-size="7.5" text-anchor="end" fill="rgba(255,255,255,0.78)" font-weight="700" pointer-events="none">${fmtDate(endDate)}</text>`;
       }
     }
   });
