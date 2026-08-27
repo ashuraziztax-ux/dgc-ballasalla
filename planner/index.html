@@ -336,7 +336,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.22';
+const VERSION = 'v2.23';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -588,6 +588,7 @@ let _drag = null;
 let _resize = null;
 let _wasDrag = false;
 let _origin = null; // current timeline origin (Monday of this week), set by renderTimeline
+let _lastTap = { id: null, time: 0 }; // touch double-tap tracking
 
 function renderTimeline(jobs) {
   const W_PX  = 52;   // px per week
@@ -654,10 +655,8 @@ function renderTimeline(jobs) {
     const bx = LBL_W + (startOff / 7) * W_PX;
     const endDate = jobEndDate(j);
     const endOff = daysBetween(origin, endDate);
-    // Visual right edge snaps to the following Monday so bar fills the full calendar week
-    const endDow = new Date(endDate + 'T12:00:00').getDay();
-    const daysToNextMon = ((8 - endDow) % 7) || 7;
-    const bEnd = LBL_W + (daysBetween(origin, addDays(endDate, daysToNextMon)) / 7) * W_PX;
+    // Visual width = ceil(revised weeks) full calendar weeks — stable during drag regardless of start day
+    const bEnd = bx + Math.ceil(revisedWeeks(j)) * W_PX;
     const bw = Math.max(bEnd - bx, 8);
 
     // Bar (clip to visible area)
@@ -683,6 +682,13 @@ function renderTimeline(jobs) {
         const endActX = Math.min(LBL_W + (endOff / 7) * W_PX - 3, LBL_W + WEEKS * W_PX - 4);
         s += `<text x="${endActX}" y="${by + 10}" font-size="7.5" text-anchor="end" fill="rgba(255,255,255,0.78)" font-weight="700" pointer-events="none">${fmtDate(endDate)}</text>`;
       }
+      // Resize grip — three vertical lines at right edge (visual cue to drag here)
+      if (bw > 30) {
+        const gx = Math.min(bx + bw - 11, LBL_W + WEEKS * W_PX - 5);
+        if (gx > cx) {
+          for (let l = 0; l < 3; l++) s += `<line x1="${gx+l*3}" y1="${by+5}" x2="${gx+l*3}" y2="${by+bh-5}" stroke="rgba(255,255,255,0.38)" stroke-width="1.5" stroke-linecap="round" pointer-events="none"/>`;
+        }
+      }
     }
   });
 
@@ -703,10 +709,8 @@ function renderTimeline(jobs) {
       if (!isWorkingDay(dateStr)) continue; // bank holidays stay 0, excluded from split check
       jobs.forEach(j => {
         const jStart = j.start_date || today;
-        const jEnd   = jobEndDate(j);
-        // Use same visual boundary as bar: count up to (not including) next Monday after end
-        const jEndDow = new Date(jEnd + 'T12:00:00').getDay();
-        const jVisualEnd = addDays(jEnd, ((8 - jEndDow) % 7) || 7);
+        // Visual boundary = ceil(revised weeks) calendar weeks from start — matches bar
+        const jVisualEnd = addDays(jStart, Math.ceil(revisedWeeks(j)) * 7);
         if (jStart <= dateStr && dateStr < jVisualEnd) {
           const ov = getJobOverrides(j.id).find(o => o.date === dateStr);
           dayTotals[d] += ov ? ov.people : (j.people_on_site || j.people_needed || 0);
@@ -778,6 +782,15 @@ function renderTimeline(jobs) {
     el.addEventListener('touchstart', e => {
       const j = _jobs.find(x => x.id == el.getAttribute('data-id'));
       if (!j) return;
+      // Double-tap → open edit modal
+      const now = Date.now();
+      if (_lastTap.id === j.id && (now - _lastTap.time) < 350) {
+        _lastTap = { id: null, time: 0 };
+        e.preventDefault();
+        openEdit(j);
+        return;
+      }
+      _lastTap = { id: j.id, time: now };
       const rect = el.getBoundingClientRect();
       const tx = e.touches[0].clientX;
       if ((rect.right - tx) < rect.width * 0.22) {
@@ -789,7 +802,7 @@ function renderTimeline(jobs) {
         _drag = { job: j, origX: tx, origStart: actualStart, dragAnchor, lastDeltaDays: null };
       }
       _wasDrag = false;
-    }, { passive: true });
+    }, { passive: false });
     el.addEventListener('dblclick', e => {
       e.stopPropagation();
       const j = _jobs.find(x => x.id == el.getAttribute('data-id'));
