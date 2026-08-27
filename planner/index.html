@@ -337,7 +337,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.24';
+const VERSION = 'v2.25';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -768,6 +768,15 @@ function renderTimeline(jobs) {
     el.addEventListener('mousedown', e => {
       const j = _jobs.find(x => x.id == el.getAttribute('data-id'));
       if (!j) return;
+      // Double-click detection via mousedown — e.preventDefault() below suppresses dblclick,
+      // so we detect two rapid mousedowns on the same job instead.
+      const now = Date.now();
+      if (_lastTap.id === j.id && (now - _lastTap.time) < 350) {
+        _lastTap = { id: null, time: 0 };
+        openEdit(j);
+        return;
+      }
+      _lastTap = { id: j.id, time: now };
       const rect = el.getBoundingClientRect();
       if ((rect.right - e.clientX) < 14) {
         _resize = { job: j, origX: e.clientX, origWeeks: j.base_weeks, origDays: getBaseDays(j.id), lastDeltaDays: null };
@@ -810,43 +819,16 @@ function renderTimeline(jobs) {
       if (j) openEdit(j);
     });
   });
-  // Click badge → inline people editor
+  // Click badge → open edit modal
   document.querySelectorAll('.tl-badge').forEach(el => {
     el.addEventListener('click', ev => {
       ev.stopPropagation();
       const j = _jobs.find(x => x.id == el.getAttribute('data-id'));
-      if (!j) return;
-      showPeopleEditor(el, j);
+      if (j) openEdit(j);
     });
   });
 }
 
-function showPeopleEditor(badgeEl, job) {
-  const old = document.getElementById('ppl-editor');
-  if (old) old.remove();
-  const br = badgeEl.getBoundingClientRect();
-  const wrap = document.createElement('div');
-  wrap.id = 'ppl-editor';
-  wrap.style.cssText = 'position:fixed;z-index:9999;left:'+(br.left-28)+'px;top:'+(br.top-38)+'px;background:#1a1d27;border:2px solid #f59e0b;border-radius:10px;padding:5px 6px 4px;box-shadow:0 4px 24px rgba(0,0,0,.6);text-align:center';
-  const lbl = document.createElement('div');
-  lbl.style.cssText = 'font-size:9px;color:#94a3b8;font-weight:700;margin-bottom:3px;text-transform:uppercase';
-  lbl.textContent = 'On site';
-  const inp = document.createElement('input');
-  inp.type = 'number'; inp.min = '0'; inp.max = '50';
-  inp.value = job.people_on_site;
-  inp.style.cssText = 'width:52px;background:#222636;border:1px solid #2e3347;color:#e2e8f0;border-radius:6px;padding:3px 6px;font-size:15px;font-weight:800;text-align:center;font-family:inherit';
-  wrap.appendChild(lbl); wrap.appendChild(inp);
-  document.body.appendChild(wrap);
-  inp.focus(); inp.select();
-  function save() {
-    const v = parseInt(inp.value) || 0;
-    if (v !== job.people_on_site) { job.people_on_site = v; upsertJob(job); }
-    wrap.remove();
-  }
-  inp.addEventListener('keydown', e => { if (e.key==='Enter') save(); if (e.key==='Escape') wrap.remove(); });
-  inp.addEventListener('blur', () => setTimeout(() => wrap.remove(), 150));
-  document.addEventListener('click', () => wrap.remove(), { once:true });
-}
 
 // ── Jobs table ────────────────────────────────────────────
 function renderTable(jobs, bodyId, isArchive) {
