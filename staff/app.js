@@ -981,4 +981,4 @@ document.getElementById('exportChangeBtn').addEventListener('click', async () =>
   }
 })();
 
-loadAll();
+// auth.js calls loadAll() after successful login.
