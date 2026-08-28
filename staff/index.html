@@ -5,22 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DGC Staff Tracker</title>
 <link rel="stylesheet" href="style.css?v=2">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 </head>
 <body>
-<!-- Login overlay — hidden once authenticated -->
+<!-- Login overlay — shown when no session exists -->
 <div id="loginOverlay" style="display:none;position:fixed;inset:0;background:#0d1117;z-index:9999;align-items:center;justify-content:center;font-family:Calibri,sans-serif;">
   <div style="background:#161b22;border:1px solid #30363d;border-radius:10px;padding:36px 32px;width:320px;text-align:center;">
     <div style="font-size:22px;font-weight:700;color:#e6edf3;margin-bottom:4px;letter-spacing:1px;">DGC</div>
     <div style="font-size:12px;color:#8b949e;margin-bottom:28px;">Staff Tracker — Sign in</div>
-    <form id="loginForm" style="display:flex;flex-direction:column;gap:12px;">
-      <input type="email" id="loginEmail" placeholder="Email address" required
+    <form id="hoursLoginForm" style="display:flex;flex-direction:column;gap:12px;">
+      <input type="email" id="hoursLoginEmail" placeholder="Email address" required autocomplete="username"
         style="background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:10px 12px;color:#e6edf3;font-size:14px;outline:none;">
-      <input type="password" id="loginPassword" placeholder="Password" required
+      <input type="password" id="hoursLoginPassword" placeholder="Password" required autocomplete="current-password"
         style="background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:10px 12px;color:#e6edf3;font-size:14px;outline:none;">
-      <p id="loginError" style="color:#f85149;font-size:12px;margin:0;min-height:16px;"></p>
-      <button type="submit" id="loginSubmitBtn"
+      <p id="hoursLoginError" style="color:#f85149;font-size:12px;margin:0;min-height:16px;"></p>
+      <button type="submit" id="hoursLoginBtn"
         style="background:#238636;border:none;border-radius:6px;padding:10px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">Sign in</button>
     </form>
   </div>
@@ -99,7 +98,36 @@
 </main>
 
 <script src="config.js"></script>
+<script src="auth.js"></script>
 <script src="app.js?v=20"></script>
-<script src="auth.js?v=1"></script>
+<script>
+// Hours page login gate — uses the shared auth.js session helper.
+// Session is stored in localStorage, shared across all pages on this origin.
+(async () => {
+  const session = await ensureLoggedIn();
+  if (session) { loadAll(); return; }
+  document.getElementById('loginOverlay').style.display = 'flex';
+})();
+
+document.getElementById('hoursLoginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn   = document.getElementById('hoursLoginBtn');
+  const errEl = document.getElementById('hoursLoginError');
+  btn.disabled = true; btn.textContent = 'Signing in…'; errEl.textContent = '';
+  try {
+    await login(
+      document.getElementById('hoursLoginEmail').value.trim(),
+      document.getElementById('hoursLoginPassword').value
+    );
+    document.getElementById('loginOverlay').style.display = 'none';
+    loadAll();
+  } catch (err) {
+    errEl.textContent = err.message;
+    btn.disabled = false; btn.textContent = 'Sign in';
+  }
+});
+
+document.getElementById('signOutBtn').addEventListener('click', () => { logout(); });
+</script>
 </body>
 </html>
