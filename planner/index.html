@@ -203,6 +203,23 @@ a{color:var(--accent);text-decoration:none}
 </head>
 <body>
 
+<!-- Login overlay — shown before app loads if no session -->
+<div id="plannerLoginOverlay" style="display:none;position:fixed;inset:0;background:#0f1117;z-index:9999;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <div style="background:#1a1d27;border:1px solid #2e3347;border-radius:12px;padding:40px 36px;width:340px;text-align:center;">
+    <div style="font-size:24px;font-weight:800;color:#e2e8f0;margin-bottom:4px;letter-spacing:2px;">DGC</div>
+    <div style="font-size:13px;color:#64748b;margin-bottom:32px;">Job Planner — Sign in</div>
+    <form id="plannerLoginForm" style="display:flex;flex-direction:column;gap:12px;">
+      <input type="email" id="plannerLoginEmail" placeholder="Email address" required autocomplete="username"
+        style="background:#0f1117;border:1px solid #2e3347;border-radius:8px;padding:11px 14px;color:#e2e8f0;font-size:14px;outline:none;width:100%;">
+      <input type="password" id="plannerLoginPassword" placeholder="Password" required autocomplete="current-password"
+        style="background:#0f1117;border:1px solid #2e3347;border-radius:8px;padding:11px 14px;color:#e2e8f0;font-size:14px;outline:none;width:100%;">
+      <p id="plannerLoginError" style="color:#ef4444;font-size:12px;margin:0;min-height:16px;text-align:left;"></p>
+      <button type="submit" id="plannerLoginBtn"
+        style="background:#f59e0b;border:none;border-radius:8px;padding:11px;color:#1a1d27;font-size:14px;font-weight:700;cursor:pointer;width:100%;">Sign in</button>
+    </form>
+  </div>
+</div>
+
 <!-- ── Main app ── -->
 <div id="app">
 
@@ -1075,11 +1092,11 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── Init ──────────────────────────────────────────────────
-(async function init() {
+// ── Init — called by login gate after authentication ──────
+async function initPlanner() {
   _sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false } });
   await bootApp();
-})();
+}
 
 // ── Drag tooltip ──────────────────────────────────────────
 function showDragTooltip(x, y, label) {
@@ -1711,6 +1728,37 @@ window.addEventListener('touchend', async e => {
       saveBaseDays(j.id, origDays || 0);
       renderTimeline(_jobs.filter(x => x.on_timeline && !x.archived));
     }
+  }
+});
+</script>
+<!-- Auth gate — shared session with /staff/ pages via localStorage -->
+<script>
+const SUPABASE_URL = SB_URL;
+const SUPABASE_KEY = SB_KEY;
+</script>
+<script src="../staff/auth.js"></script>
+<script>
+(async () => {
+  const session = await ensureLoggedIn();
+  if (session) { initPlanner(); return; }
+  document.getElementById('plannerLoginOverlay').style.display = 'flex';
+})();
+
+document.getElementById('plannerLoginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn   = document.getElementById('plannerLoginBtn');
+  const errEl = document.getElementById('plannerLoginError');
+  btn.disabled = true; btn.textContent = 'Signing in…'; errEl.textContent = '';
+  try {
+    await login(
+      document.getElementById('plannerLoginEmail').value.trim(),
+      document.getElementById('plannerLoginPassword').value
+    );
+    document.getElementById('plannerLoginOverlay').style.display = 'none';
+    initPlanner();
+  } catch (err) {
+    errEl.textContent = err.message;
+    btn.disabled = false; btn.textContent = 'Sign in';
   }
 });
 </script>
