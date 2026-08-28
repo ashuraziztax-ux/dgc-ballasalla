@@ -4,16 +4,8 @@
 
 const _sbAuth = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let _userToken = SUPABASE_KEY;
-
-// Override app.js sbHeaders to use the live user JWT instead of anon key
-window.sbHeaders = function(extra) {
-  return Object.assign({
-    apikey: SUPABASE_KEY,
-    Authorization: 'Bearer ' + _userToken,
-    'Content-Type': 'application/json'
-  }, extra || {});
-};
+// Data queries keep using the anon key (existing RLS policies stay unchanged).
+// Auth is a login gate only — you must be signed in to see the app.
 
 function _showLogin() {
   document.getElementById('loginOverlay').style.display = 'flex';
@@ -23,8 +15,7 @@ function _hideLogin() {
   document.getElementById('loginOverlay').style.display = 'none';
 }
 
-async function _startApp(token) {
-  _userToken = token;
+async function _startApp() {
   _hideLogin();
   await loadAll();
 }
@@ -33,7 +24,7 @@ async function _startApp(token) {
 (async () => {
   const { data: { session } } = await _sbAuth.auth.getSession();
   if (session) {
-    await _startApp(session.access_token);
+    await _startApp();
     return;
   }
   _showLogin();
@@ -58,7 +49,7 @@ document.getElementById('loginForm').addEventListener('submit', async e => {
     btn.textContent = 'Sign in';
     return;
   }
-  await _startApp(data.session.access_token);
+  await _startApp();
 });
 
 // Sign-out button (shown in app header)
