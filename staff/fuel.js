@@ -25,9 +25,15 @@ async function sbDelete(table, filter) {
 function monthKey(iso) { return iso.slice(0, 7); }
 
 async function loadAll() {
-  vehicles = await sbGet('/dgc_vehicles?select=*&order=nickname');
-  fillups = await sbGet('/dgc_fuel_fillups?select=*&order=fill_date.desc');
-  render();
+  const app = document.getElementById('app');
+  try {
+    vehicles = await sbGet('/dgc_vehicles?select=*&order=nickname');
+    fillups = await sbGet('/dgc_fuel_fillups?select=*&order=fill_date.desc');
+    render();
+  } catch (err) {
+    app.innerHTML = `<div style="padding:24px;color:#f85149">Error loading fuel data: ${err.message}</div>`;
+    console.error(err);
+  }
 }
 
 function render() {
@@ -134,5 +140,5 @@ function render() {
   const app = document.getElementById('app');
   session = await ensureLoggedIn();
   if (!session) session = await showLoginForm(app, 'Fuel Usage');
-  loadAll();
+  await loadAll();
 })();

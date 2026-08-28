@@ -89,7 +89,18 @@ function readForm(form) {
 
 async function renderApp() {
   const app = document.getElementById('app');
-  const staff = await sbGet('/dgc_staff?select=*,dgc_staff_profile(*)&order=name', true);
+  // Try with profile join first; fall back to just staff list if profile table doesn't exist yet
+  let staff;
+  try {
+    staff = await sbGet('/dgc_staff?select=*,dgc_staff_profile(*)&order=name', true);
+  } catch (e) {
+    try {
+      staff = (await sbGet('/dgc_staff?select=*&order=name', false)).map(s => ({ ...s, dgc_staff_profile: null }));
+    } catch (e2) {
+      app.innerHTML = `<div style="padding:24px;color:#f85149">Error loading staff: ${e2.message}</div>`;
+      return;
+    }
+  }
 
   app.innerHTML = `
     <header class="topbar" style="position:static">
@@ -187,5 +198,8 @@ function openForm(existingStaff) {
   const app = document.getElementById('app');
   session = await ensureLoggedIn();
   if (!session) session = await showLoginForm(app, 'Add Staff');
-  renderApp();
+  try { await renderApp(); } catch (err) {
+    app.innerHTML = `<div style="padding:24px;color:#f85149">Error: ${err.message}</div>`;
+    console.error(err);
+  }
 })();
