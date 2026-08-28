@@ -1,4 +1,6 @@
-// DGC Staff Tracker — Fuel Usage (logged-in users only)
+// DGC Staff Tracker — Fuel Usage
+// Invoice upload parses Ellan Vannin Fuels PDFs in-browser via PDF.js,
+// matches card numbers to vehicles, and saves fill-ups to Supabase.
 
 const REST = SUPABASE_URL + '/rest/v1';
 let session = null;
@@ -6,39 +8,141 @@ let vehicles = [];
 let fillups = [];
 let selectedMonth = null;
 
+// ── Supabase helpers ──────────────────────────────────────────────────────────
 async function sbGet(path) {
   const r = await fetch(REST + path, { headers: authedHeaders(session) });
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
 async function sbPost(table, body) {
-  const r = await fetch(REST + '/' + table, { method: 'POST', headers: authedHeaders(session, { Prefer: 'return=representation' }), body: JSON.stringify(body) });
+  const r = await fetch(REST + '/' + table, {
+    method: 'POST',
+    headers: authedHeaders(session, { Prefer: 'return=representation' }),
+    body: JSON.stringify(body),
+  });
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
 async function sbPatch(table, filter, body) {
-  const r = await fetch(REST + '/' + table + '?' + filter, { method: 'PATCH', headers: authedHeaders(session, { Prefer: 'return=representation' }), body: JSON.stringify(body) });
+  const r = await fetch(REST + '/' + table + '?' + filter, {
+    method: 'PATCH',
+    headers: authedHeaders(session, { Prefer: 'return=representation' }),
+    body: JSON.stringify(body),
+  });
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
 async function sbDelete(table, filter) {
-  const r = await fetch(REST + '/' + table + '?' + filter, { method: 'DELETE', headers: authedHeaders(session) });
+  const r = await fetch(REST + '/' + table + '?' + filter, {
+    method: 'DELETE', headers: authedHeaders(session),
+  });
   if (!r.ok) throw new Error(await r.text());
 }
 
-function mk(iso) { return (iso || '').slice(0, 7); }
+// ── Invoice parser (ported from invoice_parser.py) ───────────────────────────
+const CARD_RE   = /Card-number\s*:\s*(\d+)\s+Registr\.\s*:\s*(.+)/;
+const TXN_RE    = /^\s*(\d{1,2}\.\d{2})\s+(\d{1,2}:\d{2})\s+(.*)$/;
+const NUMERIC_RE = /^-?[\d.,]+$/;
+const PERIOD_RE  = /Sales period\s+(\d{1,2}\.\d{1,2}\.\d{4})\s*-\s*(\d{1,2}\.\d{1,2}\.\d{4})/;
+const INV_NO_RE  = /Number Invoice:\s*(\S+)/;
+
+function parseNum(s) {
+  s = (s || '').trim();
+  if (!s) return null;
+  if (s.includes('.') && s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  else s = s.replace(',', '.');
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+function reformatDDMMYYYY(s) {
+  const [d, m, y] = s.split('.');
+  return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+}
+
+function splitCols(rest) {
+  return rest.trim().split(/\s{2,}/).map(c => c.trim()).filter(Boolean);
+}
+
+function parseInvoiceText(text) {
+  const lines = text.split('\n');
+  let year = null, periodStart = null, periodEnd = null, invoiceNumber = null;
+
+  const pm = PERIOD_RE.exec(text);
+  if (pm) {
+    periodStart = reformatDDMMYYYY(pm[1]);
+    periodEnd   = reformatDDMMYYYY(pm[2]);
+    year = parseInt(pm[2].split('.')[2], 10);
+  }
+  const im = INV_NO_RE.exec(text);
+  if (im) invoiceNumber = im[1];
+
+  const transactions = [];
+  let currentCard = null;
+
+  for (const line of lines) {
+    const cm = CARD_RE.exec(line);
+    if (cm) { currentCard = cm[1].trim(); continue; }
+    if (!currentCard || line.trim().startsWith('Subtotals')) continue;
+    const tm = TXN_RE.exec(line);
+    if (!tm) continue;
+    const [, dayMonth, , rest] = tm;
+    const cols     = splitCols(rest);
+    const numerics = cols.filter(c => NUMERIC_RE.test(c));
+    if (numerics.length < 5) continue;
+    const textCols = cols.slice(0, cols.length - numerics.length);
+    if (textCols.length < 2) continue;
+    const article = textCols[0];
+    const site    = textCols.slice(1).join(' ');
+    const litres  = parseNum(numerics[1]);
+    const amount  = parseNum(numerics[numerics.length - 1]);
+    const [dd, mm] = dayMonth.split('.');
+    const date = year ? `${year}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}` : dayMonth;
+    transactions.push({ card_number: currentCard, date, article, site, litres, amount });
+  }
+
+  return { invoiceNumber, periodStart, periodEnd, transactions };
+}
+
+// Extract text from PDF using PDF.js (loaded on demand)
+async function extractPdfText(arrayBuffer) {
+  // PDF.js 4.x ESM — dynamic import
+  const pdfjsLib = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let text = '';
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page  = await pdf.getPage(p);
+    const items = (await page.getTextContent()).items;
+    // Reconstruct lines — group items by their y position
+    const byY = {};
+    items.forEach(item => {
+      const y = Math.round(item.transform[5]);
+      (byY[y] = byY[y] || []).push(item);
+    });
+    Object.keys(byY).sort((a, b) => b - a).forEach(y => {
+      byY[y].sort((a, b) => a.transform[4] - b.transform[4]);
+      text += byY[y].map(i => i.str).join(' ') + '\n';
+    });
+  }
+  return text;
+}
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+function mk(iso)       { return (iso || '').slice(0, 7); }
 function fmtMonth(ym) {
   if (!ym) return '';
   const [y, m] = ym.split('-');
   return new Date(+y, +m - 1, 1).toLocaleString('en-GB', { month: 'long', year: 'numeric' });
 }
 
+// ── Data load ─────────────────────────────────────────────────────────────────
 async function loadAll() {
   const app = document.getElementById('app');
   try {
     vehicles = await sbGet('/dgc_vehicles?select=*&order=nickname');
-    fillups = await sbGet('/dgc_fuel_fillups?select=*&order=fill_date.desc');
-    // Default to most recent month with data
+    fillups  = await sbGet('/dgc_fuel_fillups?select=*&order=fill_date.desc');
     if (!selectedMonth) {
       const months = [...new Set(fillups.map(f => mk(f.fill_date)))].sort().reverse();
       selectedMonth = months[0] || mk(new Date().toISOString());
@@ -50,31 +154,25 @@ async function loadAll() {
   }
 }
 
+// ── Main render ───────────────────────────────────────────────────────────────
 function render() {
   const app = document.getElementById('app');
   const vehicleById = {};
   vehicles.forEach(v => vehicleById[v.id] = v);
 
-  // All months with data, sorted newest first
   const allMonths = [...new Set(fillups.map(f => mk(f.fill_date)))].sort().reverse();
-
-  // Fillups for the selected month
   const monthFillups = fillups.filter(f => mk(f.fill_date) === selectedMonth);
 
-  // Aggregate by vehicle
   const byVehicle = {};
   monthFillups.forEach(f => {
     if (!byVehicle[f.vehicle_id]) byVehicle[f.vehicle_id] = { cost: 0, litres: 0, count: 0 };
-    byVehicle[f.vehicle_id].cost += Number(f.cost || 0);
+    byVehicle[f.vehicle_id].cost   += Number(f.cost   || 0);
     byVehicle[f.vehicle_id].litres += Number(f.litres || 0);
     byVehicle[f.vehicle_id].count++;
   });
 
-  const totalCost = monthFillups.reduce((s, f) => s + Number(f.cost || 0), 0);
+  const totalCost   = monthFillups.reduce((s, f) => s + Number(f.cost   || 0), 0);
   const totalLitres = monthFillups.reduce((s, f) => s + Number(f.litres || 0), 0);
-  const activeVehicleCount = Object.keys(byVehicle).length;
-
-  // Vehicle rows sorted by cost desc
   const vehicleRows = Object.entries(byVehicle)
     .map(([vid, stats]) => ({ v: vehicleById[vid], ...stats }))
     .filter(r => r.v)
@@ -87,16 +185,24 @@ function render() {
     </header>
     <div style="padding:16px;max-width:860px">
 
+      <div style="margin-bottom:18px">
+        <button id="uploadInvoiceBtn" class="secondary-btn">Upload most recent invoice</button>
+        <input type="file" id="invoiceFilePicker" accept=".pdf" style="display:none">
+        <p id="uploadStatus" class="form-status" style="margin-top:6px"></p>
+      </div>
+
+      <div id="invoicePreview"></div>
+
       <section style="margin-bottom:24px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
           <h3 style="margin:0;text-transform:uppercase;font-size:0.75rem;letter-spacing:0.08em;color:var(--accent)">Monthly Fuel Spend</h3>
           <select id="monthPicker" style="background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 8px;font-size:0.85rem">
-            ${allMonths.length ? allMonths.map(m => `<option value="${m}" ${m === selectedMonth ? 'selected' : ''}>${fmtMonth(m)}</option>`).join('') : `<option value="${selectedMonth}">${fmtMonth(selectedMonth)}</option>`}
+            ${allMonths.length
+              ? allMonths.map(m => `<option value="${m}" ${m === selectedMonth ? 'selected' : ''}>${fmtMonth(m)}</option>`).join('')
+              : `<option value="${selectedMonth}">${fmtMonth(selectedMonth)}</option>`}
           </select>
         </div>
-
-        ${totalCost > 0 ? `<p style="color:var(--muted);font-size:0.85rem;margin:0 0 12px">£${totalCost.toFixed(2)} total, ${totalLitres.toFixed(1)} litres across ${activeVehicleCount} vehicle(s)</p>` : ''}
-
+        ${totalCost > 0 ? `<p style="color:var(--muted);font-size:0.85rem;margin:0 0 12px">£${totalCost.toFixed(2)} total, ${totalLitres.toFixed(1)} litres across ${vehicleRows.length} vehicle(s)</p>` : ''}
         <div class="staff-list">
           ${vehicleRows.length ? vehicleRows.map(row => `
             <div class="list-row" style="cursor:default">
@@ -135,7 +241,7 @@ function render() {
       </section>
 
       <section>
-        <h3 style="text-transform:uppercase;font-size:0.75rem;letter-spacing:0.08em;color:var(--accent);margin-bottom:10px">Log a Fill-up</h3>
+        <h3 style="text-transform:uppercase;font-size:0.75rem;letter-spacing:0.08em;color:var(--accent);margin-bottom:10px">Log a Fill-up Manually</h3>
         <form id="fillupForm" class="advance-form">
           <select name="vehicle_id" required>
             <option value="">Vehicle…</option>
@@ -151,18 +257,32 @@ function render() {
       </section>
     </div>`;
 
-  document.getElementById('logoutBtn').addEventListener('click', logout);
+  bindEvents();
+}
 
+function bindEvents() {
+  document.getElementById('logoutBtn').addEventListener('click', logout);
   document.getElementById('monthPicker').addEventListener('change', e => {
     selectedMonth = e.target.value;
     render();
   });
 
-  // Vehicle edit on click
-  app.querySelectorAll('[data-edit-vehicle]').forEach(row => {
+  // Invoice upload
+  document.getElementById('uploadInvoiceBtn').addEventListener('click', () => {
+    document.getElementById('invoiceFilePicker').click();
+  });
+  document.getElementById('invoiceFilePicker').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    await handleInvoiceUpload(file);
+  });
+
+  // Vehicle edit
+  document.querySelectorAll('[data-edit-vehicle]').forEach(row => {
     row.addEventListener('click', () => {
       const vid = row.dataset.editVehicle;
-      const v = vehicles.find(x => x.id === vid);
+      const v   = vehicles.find(x => x.id === vid);
       if (!v) return;
       const host = document.getElementById('vehicleEditHost');
       if (host.dataset.open === vid) { host.innerHTML = ''; host.dataset.open = ''; return; }
@@ -184,7 +304,9 @@ function render() {
       host.querySelector('#veForm').addEventListener('submit', async e => {
         e.preventDefault();
         const fd = new FormData(e.target);
-        await sbPatch('dgc_vehicles', 'id=eq.' + vid, { nickname: fd.get('nickname'), registration: fd.get('registration') || null, card_number: fd.get('card_number') || null });
+        await sbPatch('dgc_vehicles', 'id=eq.' + vid, {
+          nickname: fd.get('nickname'), registration: fd.get('registration') || null, card_number: fd.get('card_number') || null,
+        });
         await loadAll();
       });
     });
@@ -207,18 +329,119 @@ function render() {
         litres: fd.get('litres') ? Number(fd.get('litres')) : null,
         cost: Number(fd.get('cost')), garage: fd.get('garage') || null,
       });
-      // Switch to the month of the new fill-up
       selectedMonth = mk(fd.get('fill_date'));
-      status.textContent = 'Saved ✓';
-      status.className = 'form-status success';
+      status.textContent = 'Saved ✓'; status.className = 'form-status success';
       await loadAll();
     } catch (err) {
-      status.textContent = 'Error: ' + err.message;
-      status.className = 'form-status error';
+      status.textContent = 'Error: ' + err.message; status.className = 'form-status error';
     }
   });
 }
 
+// ── Invoice upload flow ───────────────────────────────────────────────────────
+async function handleInvoiceUpload(file) {
+  const statusEl = document.getElementById('uploadStatus');
+  const preview  = document.getElementById('invoicePreview');
+  statusEl.textContent = 'Reading PDF…'; statusEl.className = 'form-status';
+  preview.innerHTML = '';
+
+  let text;
+  try {
+    const buf = await file.arrayBuffer();
+    statusEl.textContent = 'Parsing invoice…';
+    text = await extractPdfText(buf);
+  } catch (err) {
+    statusEl.textContent = 'Could not read PDF: ' + err.message; statusEl.className = 'form-status error';
+    return;
+  }
+
+  const parsed = parseInvoiceText(text);
+  if (!parsed.transactions.length) {
+    statusEl.textContent = 'No transactions found — is this an Ellan Vannin Fuels invoice?'; statusEl.className = 'form-status error';
+    return;
+  }
+
+  // Match transactions to vehicles by card number
+  const cardToVehicle = {};
+  vehicles.forEach(v => { if (v.card_number) cardToVehicle[v.card_number.trim()] = v; });
+
+  const matched   = [];
+  const unmatched = [];
+  parsed.transactions.forEach(t => {
+    const v = cardToVehicle[t.card_number];
+    if (v) matched.push({ ...t, vehicle_id: v.id, vehicle_name: v.nickname });
+    else   unmatched.push(t);
+  });
+
+  // Check for duplicate fill-ups already in DB (same vehicle + date + amount)
+  const existingKeys = new Set(fillups.map(f => `${f.vehicle_id}|${f.fill_date}|${Number(f.cost).toFixed(2)}`));
+  const toImport  = matched.filter(t => !existingKeys.has(`${t.vehicle_id}|${t.date}|${Number(t.amount).toFixed(2)}`));
+  const duplicate = matched.filter(t =>  existingKeys.has(`${t.vehicle_id}|${t.date}|${Number(t.amount).toFixed(2)}`));
+
+  statusEl.textContent = '';
+
+  // Build preview
+  const unmatchedHtml = unmatched.length ? `
+    <div style="margin-top:10px;padding:10px;background:#2d1e00;border:1px solid #7d4e17;border-radius:6px;font-size:0.8rem;color:#e3b341">
+      ${unmatched.length} fill-up(s) couldn't be matched to a vehicle (cards: ${[...new Set(unmatched.map(u => u.card_number))].join(', ')}).
+      Add those card numbers to the Vehicles list below, then re-upload.
+    </div>` : '';
+
+  preview.innerHTML = `
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px">
+      <h3 style="margin:0 0 6px;font-size:0.95rem">Invoice: ${parsed.invoiceNumber || file.name}</h3>
+      <p style="color:var(--muted);font-size:0.82rem;margin:0 0 12px">
+        Period: ${parsed.periodStart || '?'} → ${parsed.periodEnd || '?'} &nbsp;·&nbsp;
+        ${parsed.transactions.length} fill-up(s) found &nbsp;·&nbsp;
+        ${toImport.length} new &nbsp;·&nbsp;
+        ${duplicate.length} already imported
+      </p>
+      <div class="staff-list" style="margin-bottom:12px;max-height:260px;overflow-y:auto">
+        ${toImport.map(t => `
+          <div class="list-row" style="cursor:default;font-size:0.82rem">
+            <div class="row-main"><div class="row-name" style="font-size:0.85rem">${t.vehicle_name}</div></div>
+            <div class="row-role">${t.date} · ${t.site}</div>
+            <div class="row-spacer"></div>
+            <span style="color:var(--text);font-weight:600;margin-right:12px">£${Number(t.amount).toFixed(2)}</span>
+            <span style="color:var(--muted)">${t.litres ?? '?'}L</span>
+          </div>`).join('') || '<p class="empty-msg">All fill-ups from this invoice are already imported.</p>'}
+      </div>
+      ${unmatchedHtml}
+      ${toImport.length ? `
+        <div style="display:flex;gap:10px;align-items:center">
+          <button id="confirmImportBtn" class="primary-btn">Import ${toImport.length} fill-up${toImport.length !== 1 ? 's' : ''}</button>
+          <button id="cancelImportBtn" class="secondary-btn">Cancel</button>
+          <p id="importStatus" class="form-status" style="margin:0"></p>
+        </div>` : `<button id="cancelImportBtn" class="secondary-btn">Close</button>`}
+    </div>`;
+
+  document.getElementById('cancelImportBtn').addEventListener('click', () => { preview.innerHTML = ''; });
+
+  if (toImport.length) {
+    document.getElementById('confirmImportBtn').addEventListener('click', async () => {
+      const impStatus = document.getElementById('importStatus');
+      const btn = document.getElementById('confirmImportBtn');
+      btn.disabled = true; btn.textContent = 'Importing…';
+      impStatus.textContent = '';
+      try {
+        for (const t of toImport) {
+          await sbPost('dgc_fuel_fillups', {
+            vehicle_id: t.vehicle_id, fill_date: t.date, garage: t.site || null,
+            litres: t.litres ?? null, cost: t.amount,
+          });
+        }
+        preview.innerHTML = '';
+        selectedMonth = parsed.periodEnd ? mk(parsed.periodEnd) : selectedMonth;
+        await loadAll();
+      } catch (err) {
+        impStatus.textContent = 'Error: ' + err.message; impStatus.className = 'form-status error';
+        btn.disabled = false; btn.textContent = 'Retry';
+      }
+    });
+  }
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
 (async () => {
   const app = document.getElementById('app');
   session = await ensureLoggedIn();
