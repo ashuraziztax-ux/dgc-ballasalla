@@ -70,8 +70,9 @@ function escHtml(s) {
 async function loadStaff() {
   try {
     // Try with profile join; fall back to staff-only if profile table missing
+    // dgc_staff RLS allows anon reads only — always use anon key
     try {
-      staffList = await sbGet('/dgc_staff?select=*,dgc_staff_profile(*)&order=name', false);
+      staffList = await sbGet('/dgc_staff?select=*,dgc_staff_profile(*)&order=name', true);
     } catch {
       staffList = (await sbGet('/dgc_staff?select=*&order=name', true))
         .map(s => ({ ...s, dgc_staff_profile: null }));
