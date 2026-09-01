@@ -243,7 +243,6 @@ a{color:var(--accent);text-decoration:none}
     <button onclick="showTab('jobs',this)">💼 Jobs</button>
     <button onclick="showTab('archive',this)" id="arch-tab-btn">📦 Archive</button>
     <button onclick="showTab('staffhours',this)">🧑‍🔧 Staff</button>
-    <a href="../staff/timesheets.html" style="background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:13px;font-weight:700;padding:10px 16px;cursor:pointer;white-space:nowrap;text-decoration:none;display:flex;align-items:center">🕐 Timesheets</a>
   </div>
 
   <!-- Timeline tab -->
@@ -272,11 +271,15 @@ a{color:var(--accent);text-decoration:none}
   <div id="tab-staffhours" class="panel">
     <div class="snav">
       <button class="active" onclick="showSV('sthours',this)">Hours</button>
+      <button onclick="showSV('sttimesheets',this)">🕐 Timesheets</button>
       <button onclick="showSV('staddstaff',this)">Add Staff</button>
       <button onclick="showSV('stfuel',this)">Fuel Usage</button>
     </div>
     <div id="sv-sthours" class="sv active">
       <iframe src="../staff/" style="width:100%;height:calc(100vh - 150px);border:none;display:block" title="Staff Hours"></iframe>
+    </div>
+    <div id="sv-sttimesheets" class="sv">
+      <iframe src="../staff/timesheets.html" style="width:100%;height:calc(100vh - 150px);border:none;display:block" title="Timesheets"></iframe>
     </div>
     <div id="sv-staddstaff" class="sv">
       <iframe src="../staff/add-staff.html" style="width:100%;height:calc(100vh - 150px);border:none;display:block" title="Add Staff"></iframe>
