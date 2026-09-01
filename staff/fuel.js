@@ -206,7 +206,7 @@ function render() {
         <div class="staff-list">
           ${vehicleRows.length ? vehicleRows.map(row => `
             <div class="list-row" style="cursor:default">
-              <div class="row-main" style="min-width:160px"><div class="row-name">${row.v.nickname}</div></div>
+              <div class="row-main" style="min-width:160px"><div class="row-name">${row.v.nickname}</div>${row.v.current_driver ? `<div class="row-role" style="font-size:0.78rem;color:var(--muted)">${row.v.current_driver}</div>` : ''}</div>
               <div class="row-role" style="min-width:100px">${row.v.registration || ''}</div>
               <div class="row-spacer"></div>
               <span style="font-variant-numeric:tabular-nums;color:var(--text);font-weight:600;margin-right:16px">£${row.cost.toFixed(2)}</span>
@@ -222,7 +222,7 @@ function render() {
         <div id="vehiclesList" class="staff-list">
           ${vehicles.map(v => `
             <div class="list-row ${v.status === 'Retired' ? 'off-work' : ''}" data-edit-vehicle="${v.id}" style="cursor:pointer">
-              <div class="row-main"><div class="row-name">${v.nickname || '(unnamed)'}</div></div>
+              <div class="row-main"><div class="row-name">${v.nickname || '(unnamed)'}</div>${v.current_driver ? `<div class="row-role" style="font-size:0.78rem;color:var(--accent)">${v.current_driver}</div>` : ''}</div>
               <div class="row-role">${v.registration || ''}${v.card_number ? ' · Card ' + v.card_number : ''}</div>
               <div class="row-spacer"></div>
               ${v.status === 'Retired' ? '<span class="badge-offwork">RETIRED</span>' : ''}
@@ -232,7 +232,8 @@ function render() {
         <details style="margin-top:12px">
           <summary style="cursor:pointer;color:var(--muted);font-size:0.85rem">+ Add Vehicle (registration, fuel card &amp; driver/name)</summary>
           <form id="vehicleForm" class="advance-form" style="margin-top:10px">
-            <input type="text" name="nickname" placeholder="Nickname / driver" required>
+            <input type="text" name="nickname" placeholder="Nickname" required>
+            <input type="text" name="current_driver" placeholder="Current driver">
             <input type="text" name="registration" placeholder="Registration">
             <input type="text" name="card_number" placeholder="Fuel card number">
             <button type="submit" class="primary-btn">Add Vehicle</button>
@@ -289,7 +290,8 @@ function bindEvents() {
       host.dataset.open = vid;
       host.innerHTML = `
         <form id="veForm" class="advance-form" style="margin-top:8px;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px">
-          <input type="text" name="nickname" value="${v.nickname || ''}" placeholder="Nickname / driver" required>
+          <input type="text" name="nickname" value="${v.nickname || ''}" placeholder="Nickname" required>
+          <input type="text" name="current_driver" value="${v.current_driver || ''}" placeholder="Current driver">
           <input type="text" name="registration" value="${v.registration || ''}" placeholder="Registration">
           <input type="text" name="card_number" value="${v.card_number || ''}" placeholder="Fuel card number">
           <button type="submit" class="primary-btn">Save</button>
@@ -305,7 +307,8 @@ function bindEvents() {
         e.preventDefault();
         const fd = new FormData(e.target);
         await sbPatch('dgc_vehicles', 'id=eq.' + vid, {
-          nickname: fd.get('nickname'), registration: fd.get('registration') || null, card_number: fd.get('card_number') || null,
+          nickname: fd.get('nickname'), current_driver: fd.get('current_driver') || null,
+          registration: fd.get('registration') || null, card_number: fd.get('card_number') || null,
         });
         await loadAll();
       });
@@ -315,7 +318,7 @@ function bindEvents() {
   document.getElementById('vehicleForm').addEventListener('submit', async e => {
     e.preventDefault();
     const fd = new FormData(e.target);
-    await sbPost('dgc_vehicles', { nickname: fd.get('nickname'), registration: fd.get('registration') || null, card_number: fd.get('card_number') || null, status: 'Active' });
+    await sbPost('dgc_vehicles', { nickname: fd.get('nickname'), current_driver: fd.get('current_driver') || null, registration: fd.get('registration') || null, card_number: fd.get('card_number') || null, status: 'Active' });
     await loadAll();
   });
 
