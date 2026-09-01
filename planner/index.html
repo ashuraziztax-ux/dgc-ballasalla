@@ -279,13 +279,13 @@ a{color:var(--accent);text-decoration:none}
       <iframe src="../staff/" style="width:100%;height:calc(100vh - 150px);border:none;display:block" title="Staff Hours"></iframe>
     </div>
     <div id="sv-sttimesheets" class="sv">
-      <iframe src="../staff/timesheets.html" style="width:100%;height:calc(100vh - 150px);border:none;display:block" title="Timesheets"></iframe>
+      <iframe data-src="../staff/timesheets.html" style="width:100%;height:calc(100vh - 150px);border:none;display:block" title="Timesheets"></iframe>
     </div>
     <div id="sv-staddstaff" class="sv">
-      <iframe src="../staff/add-staff.html" style="width:100%;height:calc(100vh - 150px);border:none;display:block" title="Add Staff"></iframe>
+      <iframe data-src="../staff/add-staff.html" style="width:100%;height:calc(100vh - 150px);border:none;display:block" title="Add Staff"></iframe>
     </div>
     <div id="sv-stfuel" class="sv">
-      <iframe src="../staff/fuel.html" style="width:100%;height:calc(100vh - 150px);border:none;display:block" title="Fuel Usage"></iframe>
+      <iframe data-src="../staff/fuel.html" style="width:100%;height:calc(100vh - 150px);border:none;display:block" title="Fuel Usage"></iframe>
     </div>
   </div>
 
@@ -1532,7 +1532,16 @@ function showSV(name, btn) {
   document.querySelectorAll('.sv').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.snav button').forEach(b => b.classList.remove('active'));
   const sv = document.getElementById('sv-' + name);
-  if (sv) sv.classList.add('active');
+  if (sv) {
+    sv.classList.add('active');
+    // Lazy-load: an iframe only fetches its page the first time its tab is
+    // opened, not the moment the Staff tab loads — otherwise every locked
+    // sub-page (Add Staff, Fuel, Timesheets) starts up at once and each
+    // shows its own login box before you have a session, instead of just
+    // logging in once and the rest picking up the same session.
+    const iframe = sv.querySelector('iframe[data-src]');
+    if (iframe) { iframe.src = iframe.dataset.src; iframe.removeAttribute('data-src'); }
+  }
   if (btn) btn.classList.add('active');
 }
 
