@@ -448,6 +448,6 @@ function buildFormSections() {
 (async () => {
   const app = document.getElementById('app');
   session = await ensureLoggedIn();
-  if (!session) session = await showLoginForm(app, 'Add Staff');
+  if (!session) { window.location.replace('index.html'); return; }
   await loadStaff();
 })();

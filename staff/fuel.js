@@ -445,6 +445,6 @@ async function handleInvoiceUpload(file) {
 (async () => {
   const app = document.getElementById('app');
   session = await ensureLoggedIn();
-  if (!session) session = await showLoginForm(app, 'Fuel Usage');
+  if (!session) { window.location.replace('index.html'); return; }
   await loadAll();
 })();
