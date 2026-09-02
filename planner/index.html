@@ -309,7 +309,7 @@ a{color:var(--accent);text-decoration:none}
 </div>
 
 <!-- ── Edit modal ── -->
-<div class="mbg" id="edit-modal" onclick="modalBgClick(event)">
+<div class="mbg" id="edit-modal">
   <div class="mbox">
     <h3 id="modal-title">Edit Job</h3>
     <input type="hidden" id="m-id">
@@ -966,7 +966,6 @@ function openEdit(j) {
   document.getElementById('edit-modal').classList.add('open');
 }
 function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
-function modalBgClick(e) { if (e.target === document.getElementById('edit-modal')) closeModal(); }
 
 let _finishLock = false;
 function calcPreview() {

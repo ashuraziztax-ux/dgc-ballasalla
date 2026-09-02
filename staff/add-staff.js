@@ -152,9 +152,6 @@ function renderList() {
   document.getElementById('addPersonBtn').addEventListener('click', () => openModal(null));
   document.getElementById('closeModal').addEventListener('click', closeModal);
   document.getElementById('closeModal2').addEventListener('click', closeModal);
-  document.getElementById('modalOverlay').addEventListener('click', e => {
-    if (e.target.id === 'modalOverlay') closeModal();
-  });
   document.getElementById('addForm').addEventListener('submit', saveForm);
 
   // Staff rows
