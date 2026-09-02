@@ -127,7 +127,7 @@ function renderList() {
   app.innerHTML = `
     <header class="topbar" style="position:static">
       <h1 style="margin:0">Add Staff</h1>
-      <button id="toggleLeftBtn" class="secondary-btn" style="font-size:12px">${showLeft ? 'Show Working' : 'No Longer Working Here'}</button>
+      <button id="toggleLeftBtn" class="secondary-btn" style="font-size:12px">${showLeft ? 'Active Staff' : 'Ex-Staff'}</button>
       <button id="logoutBtn" class="secondary-btn" style="margin-left:8px;font-size:12px">Sign out</button>
     </header>
     <div style="padding:16px;max-width:900px">
