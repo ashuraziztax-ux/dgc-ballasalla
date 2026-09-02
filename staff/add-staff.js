@@ -143,6 +143,11 @@ function renderList() {
       </div>
     </div>
 
+    <!-- Quick-view overlay -->
+    <div id="quickOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;align-items:center;justify-content:center;padding:20px">
+      <div id="quickBox" style="background:#161b22;border:1px solid #30363d;border-radius:12px;width:100%;max-width:420px;padding:24px"></div>
+    </div>
+
     <!-- Modal overlay -->
     <div id="modalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;overflow-y:auto;padding:24px 0">
       <div id="modalBox" style="background:#161b22;border:1px solid #30363d;border-radius:12px;max-width:680px;margin:0 auto;padding:28px 28px 24px">
@@ -197,11 +202,11 @@ function renderList() {
     input.value = '';
   });
 
-  // Staff rows
+  // Staff rows — click name opens quick-view card
   document.querySelectorAll('.staff-row-name').forEach(el => {
     el.addEventListener('click', () => {
       const p = staffList.find(x => x.id === el.closest('[data-id]').dataset.id);
-      if (p) openModal(p);
+      if (p) openQuickView(p);
     });
   });
   document.querySelectorAll('.menu-btn').forEach(btn => {
@@ -265,6 +270,87 @@ function renderRow(p) {
       <div class="row-spacer"></div>
       <button class="menu-btn" data-id="${p.id}" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:4px 8px;line-height:1">&#8942;</button>
     </div>`;
+}
+
+// ── Quick-view card ───────────────────────────────────────────────────────────
+function fmtDateDisplay(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso + 'T12:00:00');
+  return d.toLocaleDateString('en-GB');
+}
+
+function openQuickView(person) {
+  const pr      = person.dgc_staff_profile || {};
+  const status  = person.status || (person.active ? 'Working' : 'Left');
+  const isOff   = status === 'Off Work';
+  const offType = person.off_work_type || '';
+  const color   = avatarColor(person.name);
+  const ini     = initials(person.name);
+
+  const statusChip = isOff
+    ? `<span style="background:rgba(217,83,79,0.15);color:#f85149;border:1px solid rgba(217,83,79,0.4);border-radius:6px;padding:3px 10px;font-size:0.75rem;font-weight:700">OFF WORK${offType ? ' · ' + offType[0] : ''}</span>`
+    : `<span style="background:rgba(56,139,58,0.15);color:#3fb950;border:1px solid rgba(56,139,58,0.4);border-radius:6px;padding:3px 10px;font-size:0.75rem;font-weight:700">WORKING</span>`;
+
+  const stat = (label, val) => `
+    <div>
+      <div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px">${label}</div>
+      <div style="font-size:0.95rem">${val || '—'}</div>
+    </div>`;
+
+  document.getElementById('quickBox').innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+      <div style="width:52px;height:52px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:#fff;flex-shrink:0">${ini}</div>
+      <div style="min-width:0">
+        <div style="font-size:1.15rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(person.name)}</div>
+        <div style="color:var(--muted);font-size:0.85rem">${escHtml(person.role || '')}</div>
+      </div>
+      <div style="margin-left:auto;flex-shrink:0">${statusChip}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;padding:16px;background:var(--panel2);border-radius:8px">
+      ${stat('Date of Birth', fmtDateDisplay(pr.dob))}
+      ${stat('Phone', escHtml(pr.phone))}
+      <div>
+        <div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px">Pay Rate</div>
+        <div style="font-size:1.05rem;font-weight:700;color:var(--accent)">${person.rate ? '£' + person.rate + '/hr' : '—'}</div>
+      </div>
+      ${stat('Start Date', fmtDateDisplay(person.start_date))}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${isOff ? `<button id="backToWorkBtn" class="primary-btn" style="flex:1">Back to Work</button>` : ''}
+      <button id="editFullBtn" class="secondary-btn" style="flex:1">Edit Profile</button>
+      <button id="closeQuickBtn" class="secondary-btn">Close</button>
+    </div>
+    <p id="quickStatus" style="margin:8px 0 0;font-size:0.85rem;color:var(--muted);min-height:1em"></p>`;
+
+  document.getElementById('quickOverlay').style.display = 'flex';
+
+  document.getElementById('closeQuickBtn').addEventListener('click', closeQuickView);
+  document.getElementById('editFullBtn').addEventListener('click', () => {
+    closeQuickView();
+    openModal(person);
+  });
+  const btw = document.getElementById('backToWorkBtn');
+  if (btw) {
+    btw.addEventListener('click', async () => {
+      btw.disabled = true;
+      btw.textContent = 'Updating…';
+      try {
+        await sbPatch('dgc_staff', 'id=eq.' + person.id, {
+          status: 'Working', off_work_type: null, active: true,
+        });
+        closeQuickView();
+        await loadStaff();
+      } catch (err) {
+        document.getElementById('quickStatus').textContent = 'Error: ' + err.message;
+        btw.disabled = false;
+        btw.textContent = 'Back to Work';
+      }
+    });
+  }
+}
+
+function closeQuickView() {
+  document.getElementById('quickOverlay').style.display = 'none';
 }
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
