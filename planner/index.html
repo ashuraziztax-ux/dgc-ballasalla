@@ -241,12 +241,15 @@ a{color:var(--accent);text-decoration:none}
   <div class="nav">
     <button class="active" onclick="showTab('timeline',this)">📅 Timeline</button>
     <button onclick="showTab('jobs',this)">💼 Jobs</button>
-    <button onclick="showTab('archive',this)" id="arch-tab-btn">📦 Archive</button>
     <button onclick="showTab('staffhours',this)">🧑‍🔧 Staff</button>
+    <button onclick="showTab('archive',this)" id="arch-tab-btn" style="margin-left:auto">📦 Archive</button>
   </div>
 
   <!-- Timeline tab -->
   <div id="tab-timeline" class="panel active">
+    <div style="padding:8px 12px;border-bottom:1px solid var(--bord)">
+      <button class="btn-add" onclick="openAdd()">+ Add Job</button>
+    </div>
     <div id="tl-wrap"><div id="tl-svg"></div></div>
   </div>
 
