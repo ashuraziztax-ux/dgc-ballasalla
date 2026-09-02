@@ -245,11 +245,22 @@ function openModal(person) {
     setVal('rate', person.rate);
     // Fill from profile if available
     const pr = person.dgc_staff_profile || {};
-    ['first_name','surname','gender','marital_status','dob','phone','email','address',
+    ['gender','marital_status','dob','phone','email','address',
      'contracted_hours','pay_type','line_manager','contract_date','ni_number','tax_number',
      'work_permit_number','visa_required','bank_name','bank_branch','account_name',
      'sort_code','account_number','next_of_kin','medical_conditions','bio','notes','skills_other'
     ].forEach(f => setVal(f, pr[f]));
+    // First/last name: prefer the profile's split name, but most staff were bulk-imported
+    // with just a single "name" field and no profile row at all — fall back to splitting
+    // dgc_staff.name so the form never opens with the name fields blank.
+    if (pr.first_name || pr.surname) {
+      setVal('first_name', pr.first_name);
+      setVal('surname', pr.surname);
+    } else {
+      const parts = (person.name || '').trim().split(/\s+/);
+      setVal('first_name', parts[0] || '');
+      setVal('surname', parts.slice(1).join(' '));
+    }
     // Skills checkboxes
     const skillsVal = person.skills || pr.skills || '';
     const skillSet = skillsVal.split(',').map(s => s.trim()).filter(Boolean);
