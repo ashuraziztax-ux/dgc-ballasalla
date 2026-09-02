@@ -13,6 +13,31 @@ const SKILLS = [
   'Building Works', 'Concrete', 'Drainage', 'Management', 'NRV',
 ];
 
+const DEFAULT_MANAGERS = [
+  'John Mcloughlin',
+  'Andy Wynne-Smythe',
+  'Stephen Lamb',
+  'James Cosgrove',
+  'Bradley Mckevitt',
+];
+
+function getManagers() {
+  try {
+    const extra = JSON.parse(localStorage.getItem('dgc_line_managers_extra') || '[]');
+    return [...DEFAULT_MANAGERS, ...extra];
+  } catch { return [...DEFAULT_MANAGERS]; }
+}
+
+function addManager(name) {
+  try {
+    const extra = JSON.parse(localStorage.getItem('dgc_line_managers_extra') || '[]');
+    if (!extra.includes(name)) {
+      extra.push(name);
+      localStorage.setItem('dgc_line_managers_extra', JSON.stringify(extra));
+    }
+  } catch {}
+}
+
 const AVATAR_COLORS = [
   '#1a6b3a','#1a4d6b','#6b3a1a','#6b1a4d','#3a6b1a','#4d1a6b','#6b4d1a','#1a6b6b',
 ];
@@ -154,6 +179,24 @@ function renderList() {
   document.getElementById('closeModal2').addEventListener('click', closeModal);
   document.getElementById('addForm').addEventListener('submit', saveForm);
 
+  // Line manager dropdown — show text input when "Add someone new..." is chosen
+  const lmSel = document.querySelector('[name="line_manager"]');
+  const newMgrBox = document.getElementById('newManagerBox');
+  lmSel.addEventListener('change', () => {
+    newMgrBox.style.display = lmSel.value === '__new__' ? 'block' : 'none';
+  });
+  document.getElementById('addManagerBtn').addEventListener('click', () => {
+    const input = document.getElementById('newManagerInput');
+    const nm = input.value.trim();
+    if (!nm) return;
+    addManager(nm);
+    const opt = new Option(nm, nm);
+    lmSel.insertBefore(opt, lmSel.querySelector('[value="__new__"]'));
+    lmSel.value = nm;
+    newMgrBox.style.display = 'none';
+    input.value = '';
+  });
+
   // Staff rows
   document.querySelectorAll('.staff-row-name').forEach(el => {
     el.addEventListener('click', () => {
@@ -234,6 +277,7 @@ function openModal(person) {
   const overlay = document.getElementById('modalOverlay');
   const status  = document.getElementById('formStatus');
   form.reset();
+  document.getElementById('newManagerBox').style.display = 'none';
   status.textContent = ''; status.className = 'form-status';
 
   if (person) {
@@ -250,6 +294,15 @@ function openModal(person) {
      'work_permit_number','visa_required','bank_name','bank_branch','account_name',
      'sort_code','account_number','next_of_kin','medical_conditions','bio','notes','skills_other'
     ].forEach(f => setVal(f, pr[f]));
+    // If the saved line_manager isn't in the select options, add it and save it
+    const lmSel = document.querySelector('[name="line_manager"]');
+    const lmVal = pr['line_manager'];
+    if (lmVal && lmSel && !Array.from(lmSel.options).some(o => o.value === lmVal)) {
+      const opt = new Option(lmVal, lmVal);
+      lmSel.insertBefore(opt, lmSel.querySelector('[value="__new__"]'));
+      addManager(lmVal);
+    }
+    if (lmVal && lmSel) lmSel.value = lmVal;
     // First/last name: prefer the profile's split name, but most staff were bulk-imported
     // with just a single "name" field and no profile row at all — fall back to splitting
     // dgc_staff.name so the form never opens with the name fields blank.
@@ -406,7 +459,21 @@ function buildFormSections() {
         </label>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
-        ${field('Line manager', 'line_manager')}
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:0.82rem;color:var(--muted)">
+          Line manager
+          <select name="line_manager" style="background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px 10px;color:var(--text);font-size:0.9rem">
+            <option value=""></option>
+            ${getManagers().map(m => `<option value="${escHtml(m)}">${escHtml(m)}</option>`).join('')}
+            <option value="__new__">+ Add someone new...</option>
+          </select>
+          <div id="newManagerBox" style="display:none;margin-top:6px">
+            <div style="display:flex;gap:6px">
+              <input id="newManagerInput" type="text" placeholder="Full name"
+                style="flex:1;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:7px 10px;color:var(--text);font-size:0.9rem">
+              <button type="button" id="addManagerBtn" class="secondary-btn" style="font-size:0.85rem">Add</button>
+            </div>
+          </div>
+        </label>
         ${field('Contract date', 'contract_date', 'date')}
       </div>
     `)}
