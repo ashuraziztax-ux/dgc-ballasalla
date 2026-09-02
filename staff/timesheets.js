@@ -21,7 +21,7 @@ async function loadData() {
   since.setDate(since.getDate() - filterDays);
   const isoSince = since.toISOString().slice(0, 10);
   const r = await fetch(
-    REST + '/dgc_timesheets?work_date=gte.' + isoSince + '&order=staff_name.asc,work_date.desc',
+    REST + '/dgc_timesheets?select=id,staff_name,work_date,site,description,notes,hours,start_time,finish_time,lunch_mins&work_date=gte.' + isoSince + '&order=staff_name.asc,work_date.desc',
     { headers: ah() }
   );
   if (!r.ok) throw new Error(await r.text());
@@ -113,19 +113,23 @@ function render() {
 
     for (const e of entries) {
       const isThisWeek = e.work_date >= monday;
+      const timing = [e.start_time, e.finish_time].filter(Boolean).join(' – ');
       bodyHtml += `
-        <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:90px 1fr auto;gap:8px 16px;align-items:start">
-          <div style="font-size:0.85rem;color:var(--muted);padding-top:2px">${fmtDate(e.work_date)}${isThisWeek ? ' <span style="color:var(--accent);font-size:0.75rem">●</span>' : ''}</div>
-          <div>
-            <div style="font-weight:600;font-size:0.95rem;margin-bottom:2px">${e.site}</div>
-            ${e.description ? `<div style="font-size:0.85rem;color:var(--muted);margin-bottom:2px">${e.description}</div>` : ''}
-            ${e.notes ? `<div style="font-size:0.8rem;color:var(--muted);font-style:italic">Note: ${e.notes}</div>` : ''}
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:${e.description ? '8px' : '0'}">
+            <div style="min-width:0">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-size:0.8rem;color:var(--muted)">${fmtDate(e.work_date)}${isThisWeek ? ' <span style="color:var(--accent)">●</span>' : ''}</span>
+                <span style="font-weight:700;font-size:0.95rem">${e.site || '—'}</span>
+              </div>
+              ${timing ? `<div style="font-size:0.78rem;color:var(--muted);margin-top:2px">${timing}${e.lunch_mins ? ' · ' + e.lunch_mins + 'm lunch' : ''}</div>` : ''}
+            </div>
+            <div style="flex-shrink:0;text-align:right">
+              <div style="font-size:1.1rem;font-weight:700;color:var(--accent)">${fmtHours(e.hours)}</div>
+            </div>
           </div>
-          <div style="text-align:right;flex-shrink:0">
-            <div style="font-size:1.05rem;font-weight:700;color:var(--accent)">${fmtHours(e.hours)}</div>
-            <div style="font-size:0.78rem;color:var(--muted)">${e.start_time || ''} – ${e.finish_time || ''}</div>
-            ${e.lunch_mins ? `<div style="font-size:0.75rem;color:var(--muted)">${e.lunch_mins}m lunch</div>` : ''}
-          </div>
+          ${e.description ? `<div style="font-size:0.9rem;color:var(--text);background:var(--panel2);border-left:3px solid var(--accent);padding:8px 12px;border-radius:0 6px 6px 0;line-height:1.45">${e.description}</div>` : ''}
+          ${e.notes ? `<div style="font-size:0.8rem;color:var(--muted);font-style:italic;margin-top:6px;padding:0 2px">Note: ${e.notes}</div>` : ''}
         </div>`;
     }
 
