@@ -362,8 +362,9 @@ function weekdayCountClipped(fromIso, toIso) {
 
 function renderHolidays() {
   const list = document.getElementById('holidayList');
-  if (!leaveCache.length) { list.innerHTML = '<p class="hours-hint">No bookings touching this fortnight.</p>'; return; }
-  list.innerHTML = leaveCache.map(b => {
+  const visible = leaveCache.filter(b => weekdayCountClipped(b.from_date, b.to_date) > 0);
+  if (!visible.length) { list.innerHTML = '<p class="hours-hint">No bookings touching this fortnight.</p>'; return; }
+  list.innerHTML = visible.map(b => {
     const s = staffById[b.staff_id];
     const days = weekdayCountClipped(b.from_date, b.to_date);
     const typeCls = b.leave_type === 'Holiday' ? 'bonus' : 'leave-type';
