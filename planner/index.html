@@ -228,7 +228,7 @@ a{color:var(--accent);text-decoration:none}
   <div class="hdr">
     <div class="logo">
       <img src="dgc-icon.png" class="logo-svg" alt="DGC">
-      <span class="logo-txt"><span>DGC</span> · Job Planner</span>
+      <span class="logo-txt">Job Planner</span>
     </div>
     <div class="hdr-r">
       <span class="ver" id="ver-badge"></span>
@@ -240,15 +240,15 @@ a{color:var(--accent);text-decoration:none}
   <div id="sync-notice">Running in local mode — data is saved on this device only.</div>
 
   <div class="nav">
-    <button class="active" onclick="showTab('timeline',this)">📅 Timeline</button>
-    <button onclick="showTab('staffhours',this)">🧑‍🔧 Staff</button>
+    <button class="active" onclick="showTab('timeline',this)">Timeline</button>
+    <button onclick="showTab('staffhours',this)">Staff</button>
   </div>
 
   <!-- Timeline tab -->
   <div id="tab-timeline" class="panel active">
     <div style="padding:8px 12px;border-bottom:1px solid var(--bord);display:flex;align-items:center;gap:8px">
       <button class="btn-add" onclick="openAdd()">+ Add Job</button>
-      <button id="arch-tab-btn" onclick="showTab('archive',this)" style="background:none;border:1px solid var(--bord);color:var(--muted);padding:6px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-left:auto">📦 Archive</button>
+      <button id="arch-tab-btn" onclick="showTab('archive',this)" style="background:none;border:1px solid var(--bord);color:var(--muted);padding:6px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-left:auto">Archive</button>
     </div>
     <div id="tl-wrap"><div id="tl-svg"></div></div>
     <div style="overflow-x:auto;border-top:1px solid var(--bord);margin-top:20px">
@@ -269,7 +269,7 @@ a{color:var(--accent);text-decoration:none}
   <div id="tab-staffhours" class="panel">
     <div class="snav">
       <button class="active" onclick="showSV('sthours',this)">Hours</button>
-      <button onclick="showSV('sttimesheets',this)">🕐 Timesheets</button>
+      <button onclick="showSV('sttimesheets',this)">Timesheets</button>
       <button onclick="showSV('staddstaff',this)">Add Staff</button>
       <button onclick="showSV('stfuel',this)">Fuel Usage</button>
     </div>
