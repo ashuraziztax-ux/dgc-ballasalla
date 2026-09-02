@@ -59,6 +59,7 @@ function getMonday() {
 function render() {
   const app = document.getElementById('app');
 
+  const inIframe = window.self !== window.top;
   const filterHtml = `
     <header class="topbar" style="position:sticky;top:0">
       <h1 style="margin:0">Timesheets</h1>
@@ -70,7 +71,7 @@ function render() {
           <option value="90" ${filterDays===90?'selected':''}>Last 3 months</option>
         </select>
         <button id="refreshBtn" class="secondary-btn">Refresh</button>
-        <button id="logoutBtn" class="secondary-btn">Sign out</button>
+        ${inIframe ? '' : '<button id="logoutBtn" class="secondary-btn">Sign out</button>'}
       </div>
     </header>`;
 
@@ -137,7 +138,8 @@ function render() {
 }
 
 function bindControls() {
-  document.getElementById('logoutBtn').addEventListener('click', () => { logout(); });
+  const lb = document.getElementById('logoutBtn');
+  if (lb) lb.addEventListener('click', () => { logout(); });
   document.getElementById('refreshBtn').addEventListener('click', () => refresh());
   document.getElementById('filterSel').addEventListener('change', e => {
     filterDays = parseInt(e.target.value);
