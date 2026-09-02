@@ -258,12 +258,11 @@ function renderRow(p) {
     <div class="list-row ${isOff ? 'off-work' : ''}" data-id="${p.id}">
       <div class="avatar-sm avatar-placeholder-sm" style="background:${color};flex-shrink:0;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;color:#fff;margin-right:10px">${ini}</div>
       <div class="row-main staff-row-name" style="cursor:pointer">
-        <div class="row-name">${escHtml(p.name)} <span style="color:var(--muted);font-size:0.75rem">&#9998;</span></div>
+        <div class="row-name">${escHtml(p.name)}</div>
       </div>
       <div class="row-role">${escHtml(p.role || '')}</div>
       <div class="row-skills">${skillTags(skills)}</div>
       <div class="row-spacer"></div>
-      ${badge}
       <button class="menu-btn" data-id="${p.id}" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:4px 8px;line-height:1">&#8942;</button>
     </div>`;
 }
