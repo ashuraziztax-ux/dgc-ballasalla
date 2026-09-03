@@ -455,6 +455,128 @@ function openModal(person) {
 
   overlay.style.display = 'block';
   overlay.scrollTop = 0;
+
+  // Media upload section
+  const fileListArea  = document.getElementById('fileListArea');
+  const uploadInput   = document.getElementById('fileUploadInput');
+  const uploadStatus  = document.getElementById('uploadStatus');
+
+  if (editingId) {
+    loadStaffFiles(editingId);
+    uploadInput.onchange = async () => {
+      const files = Array.from(uploadInput.files);
+      if (!files.length) return;
+      uploadStatus.textContent = `Uploading ${files.length} file(s)…`;
+      let ok = 0, fail = 0;
+      for (const f of files) {
+        try {
+          await uploadStaffFile(editingId, f);
+          ok++;
+        } catch { fail++; }
+      }
+      uploadInput.value = '';
+      uploadStatus.textContent = fail ? `${ok} uploaded, ${fail} failed` : `${ok} uploaded ✓`;
+      setTimeout(() => { uploadStatus.textContent = ''; }, 3000);
+      loadStaffFiles(editingId);
+    };
+  } else {
+    fileListArea.innerHTML = '<p style="font-size:0.82rem;color:var(--muted);margin:0">Save this profile first, then open Edit to attach files.</p>';
+    uploadInput.onchange = null;
+  }
+}
+
+// ── Supabase Storage helpers ──────────────────────────────────────────────────
+const STORAGE = SUPABASE_URL + '/storage/v1';
+const BUCKET  = 'staff-media';
+
+async function uploadStaffFile(staffId, file) {
+  const path = `${staffId}/${Date.now()}_${file.name}`;
+  const r = await fetch(`${STORAGE}/object/${BUCKET}/${path}`, {
+    method: 'POST',
+    headers: {
+      apikey: authedHeaders(session).apikey || SUPABASE_KEY,
+      Authorization: authedHeaders(session).Authorization,
+      'Content-Type': file.type || 'application/octet-stream',
+      'x-upsert': 'true',
+    },
+    body: file,
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return path;
+}
+
+async function listStaffFiles(staffId) {
+  const r = await fetch(`${STORAGE}/object/list/${BUCKET}`, {
+    method: 'POST',
+    headers: { ...authedHeaders(session), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prefix: `${staffId}/`, limit: 100, sortBy: { column: 'created_at', order: 'desc' } }),
+  });
+  if (!r.ok) return [];
+  const items = await r.json();
+  return items.filter(f => f.name && !f.name.endsWith('/'));
+}
+
+async function getSignedUrl(path) {
+  const r = await fetch(`${STORAGE}/object/sign/${BUCKET}/${path}`, {
+    method: 'POST',
+    headers: { ...authedHeaders(session), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ expiresIn: 3600 }),
+  });
+  if (!r.ok) return null;
+  const data = await r.json();
+  return data.signedURL ? (STORAGE + data.signedURL) : null;
+}
+
+async function deleteStaffFile(path) {
+  const r = await fetch(`${STORAGE}/object/${BUCKET}/${encodeURIComponent(path)}`, {
+    method: 'DELETE',
+    headers: authedHeaders(session),
+  });
+  return r.ok;
+}
+
+async function loadStaffFiles(staffId) {
+  const area = document.getElementById('fileListArea');
+  if (!area) return;
+  area.innerHTML = '<p style="font-size:0.82rem;color:var(--muted);margin:0">Loading files…</p>';
+  try {
+    const files = await listStaffFiles(staffId);
+    if (!files.length) {
+      area.innerHTML = '<p style="font-size:0.82rem;color:var(--muted);margin:0">No files attached yet.</p>';
+      return;
+    }
+    area.innerHTML = files.map(f => {
+      const displayName = f.name.replace(/^\d+_/, '');
+      const fullPath    = `${staffId}/${f.name}`;
+      const isImage     = /\.(jpe?g|png|gif|webp|heic|heif)$/i.test(f.name);
+      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:6px">
+        <span style="font-size:1rem">${isImage ? '🖼' : '📄'}</span>
+        <span style="flex:1;font-size:0.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(displayName)}">${escHtml(displayName)}</span>
+        <button class="file-view-btn secondary-btn" data-path="${escHtml(fullPath)}" style="font-size:0.78rem;padding:4px 10px">View</button>
+        <button class="file-del-btn secondary-btn" data-path="${escHtml(fullPath)}" style="font-size:0.78rem;padding:4px 10px;color:#f85149;border-color:rgba(217,83,79,0.4)">✕</button>
+      </div>`;
+    }).join('');
+
+    area.querySelectorAll('.file-view-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        btn.textContent = '…';
+        const url = await getSignedUrl(btn.dataset.path);
+        btn.textContent = 'View';
+        if (url) window.open(url, '_blank');
+        else alert('Could not open file. Try again.');
+      });
+    });
+    area.querySelectorAll('.file-del-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Delete this file?')) return;
+        btn.disabled = true;
+        await deleteStaffFile(btn.dataset.path);
+        loadStaffFiles(staffId);
+      });
+    });
+  } catch (err) {
+    area.innerHTML = `<p style="font-size:0.82rem;color:#f85149;margin:0">Error loading files: ${err.message}</p>`;
+  }
 }
 
 function closeModal() {
@@ -638,6 +760,18 @@ function buildFormSections() {
         <textarea name="notes" rows="2"
           style="background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px 10px;color:var(--text);font-size:0.9rem;resize:vertical"></textarea>
       </label>
+    `)}
+
+    ${section('Documents &amp; Photos', `
+      <div id="fileListArea" style="margin-bottom:10px;display:flex;flex-direction:column;gap:6px"></div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <label id="fileUploadLabel" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:8px 16px;font-size:0.85rem;color:var(--text)">
+          + Attach Files
+          <input id="fileUploadInput" type="file" multiple accept="image/*,.pdf,.doc,.docx,.heic,.heif" style="display:none">
+        </label>
+        <span id="uploadStatus" style="font-size:0.82rem;color:var(--muted)"></span>
+      </div>
+      <p style="margin:8px 0 0;font-size:0.78rem;color:var(--muted)">Photos, trade cards, certificates, documents (JPG, PNG, PDF, HEIC)</p>
     `)}`;
 }
 
