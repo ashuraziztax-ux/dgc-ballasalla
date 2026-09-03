@@ -287,9 +287,10 @@ function openQuickView(person) {
   const color   = avatarColor(person.name);
   const ini     = initials(person.name);
 
-  const statusChip = isOff
-    ? `<span style="background:rgba(217,83,79,0.15);color:#f85149;border:1px solid rgba(217,83,79,0.4);border-radius:6px;padding:3px 10px;font-size:0.75rem;font-weight:700">OFF WORK${offType ? ' · ' + offType[0] : ''}</span>`
-    : `<span style="background:rgba(56,139,58,0.15);color:#3fb950;border:1px solid rgba(56,139,58,0.4);border-radius:6px;padding:3px 10px;font-size:0.75rem;font-weight:700">WORKING</span>`;
+  const statusLabel  = isOff ? `OFF WORK${offType ? ' · ' + offType[0].toUpperCase() : ''}` : 'WORKING';
+  const statusColor  = isOff ? '#f85149' : '#3fb950';
+  const statusBg     = isOff ? 'rgba(217,83,79,0.15)' : 'rgba(56,139,58,0.15)';
+  const statusBorder = isOff ? 'rgba(217,83,79,0.4)' : 'rgba(56,139,58,0.4)';
 
   const stat = (label, val) => `
     <div>
@@ -304,7 +305,16 @@ function openQuickView(person) {
         <div style="font-size:1.15rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(person.name)}</div>
         <div style="color:var(--muted);font-size:0.85rem">${escHtml(person.role || '')}</div>
       </div>
-      <div style="margin-left:auto;flex-shrink:0">${statusChip}</div>
+      <div style="margin-left:auto;flex-shrink:0;position:relative" id="statusWrap">
+        <button id="statusChipBtn" style="background:${statusBg};color:${statusColor};border:1px solid ${statusBorder};border-radius:6px;padding:3px 10px;font-size:0.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:inherit">
+          ${statusLabel} <span style="font-size:0.6rem;opacity:0.7">&#9660;</span>
+        </button>
+        <div id="statusDropdown" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--panel2);border:1px solid var(--border);border-radius:8px;overflow:hidden;z-index:200;min-width:150px;box-shadow:0 6px 20px rgba(0,0,0,0.35)">
+          <button class="sdrop-opt" data-s="Working" style="display:block;width:100%;text-align:left;padding:10px 16px;background:none;border:none;color:#3fb950;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit">Working</button>
+          <button class="sdrop-opt" data-s="Holiday" style="display:block;width:100%;text-align:left;padding:10px 16px;background:none;border:none;color:var(--text);font-size:0.88rem;cursor:pointer;font-family:inherit">Holiday</button>
+          <button class="sdrop-opt" data-s="Extended Leave" style="display:block;width:100%;text-align:left;padding:10px 16px;background:none;border:none;color:var(--text);font-size:0.88rem;cursor:pointer;font-family:inherit">Extended Leave</button>
+        </div>
+      </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;padding:16px;background:var(--panel2);border-radius:8px">
       ${stat('Date of Birth', fmtDateDisplay(pr.dob))}
@@ -316,7 +326,6 @@ function openQuickView(person) {
       ${stat('Start Date', fmtDateDisplay(person.start_date))}
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      ${isOff ? `<button id="backToWorkBtn" class="primary-btn" style="flex:1">Back to Work</button>` : ''}
       <button id="editFullBtn" class="secondary-btn" style="flex:1">Edit Profile</button>
       <button id="closeQuickBtn" class="secondary-btn">Close</button>
     </div>
@@ -324,29 +333,57 @@ function openQuickView(person) {
 
   document.getElementById('quickOverlay').style.display = 'flex';
 
-  document.getElementById('closeQuickBtn').addEventListener('click', closeQuickView);
-  document.getElementById('editFullBtn').addEventListener('click', () => {
-    closeQuickView();
-    openModal(person);
+  // Status chip dropdown
+  const chipBtn  = document.getElementById('statusChipBtn');
+  const dropdown = document.getElementById('statusDropdown');
+
+  chipBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
   });
-  const btw = document.getElementById('backToWorkBtn');
-  if (btw) {
-    btw.addEventListener('click', async () => {
-      btw.disabled = true;
-      btw.textContent = 'Updating…';
+
+  // Hover highlight for dropdown options
+  dropdown.querySelectorAll('.sdrop-opt').forEach(btn => {
+    btn.addEventListener('mouseenter', () => { btn.style.background = 'var(--border)'; });
+    btn.addEventListener('mouseleave', () => { btn.style.background = 'none'; });
+    btn.addEventListener('click', async () => {
+      const choice = btn.dataset.s;
+      dropdown.style.display = 'none';
+      chipBtn.textContent = 'Updating…';
+      chipBtn.disabled = true;
+      const patch = choice === 'Working'
+        ? { status: 'Working', off_work_type: null, active: true }
+        : { status: 'Off Work', off_work_type: choice, active: false };
       try {
-        await sbPatch('dgc_staff', 'id=eq.' + person.id, {
-          status: 'Working', off_work_type: null, active: true,
-        });
+        await sbPatch('dgc_staff', 'id=eq.' + person.id, patch);
         closeQuickView();
         await loadStaff();
       } catch (err) {
         document.getElementById('quickStatus').textContent = 'Error: ' + err.message;
-        btw.disabled = false;
-        btw.textContent = 'Back to Work';
+        chipBtn.disabled = false;
+        chipBtn.textContent = statusLabel;
       }
     });
-  }
+  });
+
+  // Close dropdown on outside click
+  const outsideClose = e => {
+    if (!document.getElementById('statusWrap')?.contains(e.target)) {
+      dropdown.style.display = 'none';
+      document.removeEventListener('click', outsideClose);
+    }
+  };
+  document.addEventListener('click', outsideClose);
+
+  document.getElementById('closeQuickBtn').addEventListener('click', () => {
+    document.removeEventListener('click', outsideClose);
+    closeQuickView();
+  });
+  document.getElementById('editFullBtn').addEventListener('click', () => {
+    document.removeEventListener('click', outsideClose);
+    closeQuickView();
+    openModal(person);
+  });
 }
 
 function closeQuickView() {
