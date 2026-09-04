@@ -45,9 +45,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .section-title:first-child{margin-top:0}
 
 label{display:flex;flex-direction:column;gap:4px;font-size:0.82rem;color:var(--muted);margin-bottom:10px}
-input[type=text],input[type=date],textarea,select{background:var(--surf);border:1px solid var(--bord);border-radius:6px;padding:8px 10px;color:var(--text);font-size:0.9rem;font-family:inherit;outline:none;transition:border-color .15s}
+input[type=text],input[type=date],textarea,select{background:var(--surf);border:1px solid var(--bord);border-radius:6px;padding:10px 12px;color:var(--text);font-size:0.9rem;font-family:inherit;outline:none;transition:border-color .15s;width:100%;display:block}
 input[type=text]:focus,input[type=date]:focus,textarea:focus,select:focus{border-color:var(--accent)}
-textarea{resize:vertical}
+textarea{resize:vertical;line-height:1.5}
 
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media(max-width:500px){.grid2{grid-template-columns:1fr}}
@@ -266,20 +266,20 @@ function showForm(existing = null) {
     </div>
 
     <div class="section-title">Site Activity</div>
-    <label>Workers on site <textarea id="f-workers" rows="2" placeholder="e.g. David Smith, Lee Clinton, Ryan King">${esc(existing?.workers || '')}</textarea></label>
-    <label>Plant &amp; Equipment on site <textarea id="f-plant" rows="2" placeholder="e.g. 13T Excavator, Dumper">${esc(existing?.plant || '')}</textarea></label>
+    <label>Workers on site <textarea id="f-workers" rows="4" placeholder="e.g. David Smith, Lee Clinton, Ryan King">${esc(existing?.workers || '')}</textarea></label>
+    <label>Plant &amp; Equipment on site <textarea id="f-plant" rows="3" placeholder="e.g. 13T Excavator, Dumper">${esc(existing?.plant || '')}</textarea></label>
 
     <div class="section-title">Work Carried Out *</div>
-    <textarea id="f-work" rows="5" placeholder="Describe all work carried out today…" required>${esc(existing?.work_done || '')}</textarea>
+    <textarea id="f-work" rows="8" placeholder="Describe all work carried out today…" required>${esc(existing?.work_done || '')}</textarea>
 
     <div class="section-title">Issues &amp; Incidents</div>
-    <textarea id="f-issues" rows="3" placeholder="Any problems, delays, safety incidents…">${esc(existing?.issues || '')}</textarea>
+    <textarea id="f-issues" rows="5" placeholder="Any problems, delays, safety incidents…">${esc(existing?.issues || '')}</textarea>
 
     <div class="section-title">Inspections &amp; Visitors</div>
-    <textarea id="f-visitors" rows="2" placeholder="Client visits, inspections, deliveries…">${esc(existing?.visitors || '')}</textarea>
+    <textarea id="f-visitors" rows="3" placeholder="Client visits, inspections, deliveries…">${esc(existing?.visitors || '')}</textarea>
 
     <div class="section-title">Notes</div>
-    <textarea id="f-notes" rows="2" placeholder="Anything else worth recording">${esc(existing?.notes || '')}</textarea>
+    <textarea id="f-notes" rows="3" placeholder="Anything else worth recording">${esc(existing?.notes || '')}</textarea>
 
     <div class="form-btns">
       <button class="btn-save" id="saveBtn">Save Entry</button>

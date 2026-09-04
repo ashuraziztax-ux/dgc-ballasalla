@@ -1343,11 +1343,12 @@ async function fetchAllRows(table, query) {
 async function loadStaffData() {
   if (!_sb) return;
   try {
-    const [sR, hR, aR, lR] = await Promise.all([
+    const [sR, hR, aR, lR, tsR] = await Promise.all([
       _sb.from('dgc_staff').select('*').order('name'),
       fetchAllRows('dgc_staff_hours', t => t.select('*').order('work_date')),
       _sb.from('dgc_staff_advances').select('*').order('entry_date', { ascending: false }),
       _sb.from('dgc_staff_leave').select('*').order('from_date', { ascending: false }),
+      fetchAllRows('dgc_timesheets', t => t.select('staff_name,work_date,hours').order('work_date')),
     ]);
     if (sR.error) {
       console.error('Staff error:', sR.error);
@@ -1356,7 +1357,20 @@ async function loadStaffData() {
     }
     _staff = sR.data || [];
     _stHours = {};
-    (hR.data || []).forEach(h => { _stHours[h.staff_id + '|' + h.work_date] = parseFloat(h.hours) || 0; });
+    // Pre-fill from worker timesheet submissions (dgc_timesheets), summing per person per day
+    const staffByName = {};
+    _staff.forEach(s => { staffByName[s.name.trim().toLowerCase()] = s.id; });
+    (tsR.data || []).forEach(t => {
+      const sid = staffByName[t.staff_name.trim().toLowerCase()];
+      if (sid) {
+        const key = sid + '|' + t.work_date;
+        _stHours[key] = (_stHours[key] || 0) + (parseFloat(t.hours) || 0);
+      }
+    });
+    // Manual dgc_staff_hours entries override timesheet data (PM corrections)
+    (hR.data || []).forEach(h => {
+      if (parseFloat(h.hours) > 0) _stHours[h.staff_id + '|' + h.work_date] = parseFloat(h.hours);
+    });
     _stAdv   = aR.data || [];
     _stLeave = lR.data || [];
     _stLoaded = true;
