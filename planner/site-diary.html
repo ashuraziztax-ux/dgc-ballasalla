@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Site Diary</title>
+<script src="../staff/config.js"></script>
+<script src="../staff/auth.js"></script>
+<style>
+:root {
+  --bg:#0f1117;--surf:#1a1d27;--surf2:#222636;--bord:#2e3347;
+  --accent:#f59e0b;--text:#e2e8f0;--muted:#64748b;
+  --green:#22c55e;--red:#ef4444;--blue:#3b82f6;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px}
+
+.topbar{background:var(--surf);border-bottom:1px solid var(--bord);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.topbar h1{font-size:1rem;font-weight:700;color:var(--accent)}
+
+.layout{display:grid;grid-template-columns:340px 1fr;min-height:calc(100vh - 49px)}
+@media(max-width:700px){.layout{grid-template-columns:1fr;grid-template-rows:auto 1fr}}
+
+/* ── Left panel: entry list ── */
+.list-panel{border-right:1px solid var(--bord);display:flex;flex-direction:column}
+.list-header{padding:12px 14px;border-bottom:1px solid var(--bord);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.list-header input,.list-header select{background:var(--surf2);border:1px solid var(--bord);border-radius:6px;padding:6px 10px;color:var(--text);font-size:0.82rem;font-family:inherit}
+.list-header input{flex:1;min-width:120px}
+.list-scroll{overflow-y:auto;flex:1}
+
+.entry-card{padding:12px 14px;border-bottom:1px solid var(--bord);cursor:pointer;transition:background .1s}
+.entry-card:hover,.entry-card.selected{background:var(--surf2)}
+.entry-card .ec-date{font-size:0.78rem;color:var(--muted)}
+.entry-card .ec-site{font-weight:700;font-size:0.95rem;margin:2px 0}
+.entry-card .ec-preview{font-size:0.82rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.entry-card .ec-author{font-size:0.75rem;color:var(--muted);margin-top:4px}
+
+/* ── Right panel: form / view ── */
+.form-panel{padding:20px 24px;overflow-y:auto}
+
+.new-btn{background:var(--accent);color:#1a1d27;border:none;padding:8px 18px;border-radius:6px;font-size:0.85rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap}
+.new-btn:hover{background:#fbbf24}
+
+.section-title{font-size:0.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:10px;margin-top:20px}
+.section-title:first-child{margin-top:0}
+
+label{display:flex;flex-direction:column;gap:4px;font-size:0.82rem;color:var(--muted);margin-bottom:10px}
+input[type=text],input[type=date],textarea,select{background:var(--surf);border:1px solid var(--bord);border-radius:6px;padding:8px 10px;color:var(--text);font-size:0.9rem;font-family:inherit;outline:none;transition:border-color .15s}
+input[type=text]:focus,input[type=date]:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:500px){.grid2{grid-template-columns:1fr}}
+
+/* Weather chips */
+.weather-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.wx-chip{background:var(--surf);border:1px solid var(--bord);border-radius:20px;padding:5px 12px;font-size:0.82rem;cursor:pointer;color:var(--muted);transition:all .15s;font-family:inherit}
+.wx-chip:hover{border-color:var(--accent);color:var(--text)}
+.wx-chip.sel{background:var(--accent);border-color:var(--accent);color:#1a1d27;font-weight:700}
+
+.form-btns{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
+.btn-save{background:var(--green);color:#fff;border:none;padding:9px 24px;border-radius:6px;font-size:0.9rem;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-save:hover{background:#16a34a}
+.btn-save:disabled{opacity:.5;cursor:default}
+.btn-cancel{background:var(--surf2);color:var(--muted);border:1px solid var(--bord);padding:9px 18px;border-radius:6px;font-size:0.9rem;cursor:pointer;font-family:inherit}
+.btn-cancel:hover{color:var(--text)}
+.btn-del{background:none;border:1px solid rgba(239,68,68,.4);color:var(--red);padding:9px 14px;border-radius:6px;font-size:0.85rem;cursor:pointer;font-family:inherit;margin-left:auto}
+.btn-del:hover{background:rgba(239,68,68,.1)}
+
+.form-status{font-size:0.85rem;color:var(--muted);margin-top:8px;min-height:1.2em}
+.form-status.ok{color:var(--green)}
+.form-status.err{color:var(--red)}
+
+/* View mode */
+.view-block{background:var(--surf);border:1px solid var(--bord);border-radius:8px;padding:14px 16px;margin-bottom:12px}
+.view-block h3{font-size:0.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
+.view-block p{font-size:0.92rem;line-height:1.55;white-space:pre-wrap}
+.view-meta{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.view-meta span{font-size:0.82rem;color:var(--muted)}
+.view-meta strong{color:var(--text)}
+
+.empty-state{padding:40px 20px;text-align:center;color:var(--muted);font-size:0.9rem}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <h1>Site Diary</h1>
+  <button class="new-btn" id="newEntryBtn">+ New Entry</button>
+</header>
+
+<div class="layout">
+  <!-- Left: entry list -->
+  <aside class="list-panel">
+    <div class="list-header">
+      <input type="text" id="searchInput" placeholder="Search site or notes…">
+      <select id="siteFilter"><option value="">All sites</option></select>
+    </div>
+    <div class="list-scroll" id="entryList">
+      <p class="empty-state">Loading…</p>
+    </div>
+  </aside>
+
+  <!-- Right: form / view -->
+  <main class="form-panel" id="formPanel">
+    <p class="empty-state" id="defaultMsg">Select an entry to view it, or tap <strong>+ New Entry</strong> to write today's diary.</p>
+  </main>
+</div>
+
+<script>
+const REST = SUPABASE_URL + '/rest/v1';
+let session = null;
+let entries = [];
+let selectedId = null;
+let editMode = false;
+let currentWeather = '';
+
+function ah(extra = {}) {
+  return { ...authedHeaders(session), ...extra };
+}
+
+// ── Data ──────────────────────────────────────────────────────────────────────
+async function loadEntries() {
+  const r = await fetch(REST + '/dgc_site_diary?order=diary_date.desc,created_at.desc&limit=200', { headers: ah() });
+  if (!r.ok) throw new Error(await r.text());
+  entries = await r.json();
+}
+
+async function saveEntry(data, id = null) {
+  if (id) {
+    const r = await fetch(REST + '/dgc_site_diary?id=eq.' + id, {
+      method: 'PATCH',
+      headers: ah({ Prefer: 'return=representation' }),
+      body: JSON.stringify(data),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return (await r.json())[0];
+  } else {
+    const r = await fetch(REST + '/dgc_site_diary', {
+      method: 'POST',
+      headers: ah({ Prefer: 'return=representation' }),
+      body: JSON.stringify(data),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return (await r.json())[0];
+  }
+}
+
+async function deleteEntry(id) {
+  const r = await fetch(REST + '/dgc_site_diary?id=eq.' + id, {
+    method: 'DELETE',
+    headers: ah(),
+  });
+  if (!r.ok) throw new Error(await r.text());
+}
+
+// ── Rendering ─────────────────────────────────────────────────────────────────
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T12:00:00Z');
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderList() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const site   = document.getElementById('siteFilter').value;
+  const list   = document.getElementById('entryList');
+
+  // Populate site filter
+  const sites = [...new Set(entries.map(e => e.site).filter(Boolean))].sort();
+  const filterSel = document.getElementById('siteFilter');
+  const cur = filterSel.value;
+  filterSel.innerHTML = '<option value="">All sites</option>' + sites.map(s => `<option value="${esc(s)}" ${cur===s?'selected':''}>${esc(s)}</option>`).join('');
+
+  const filtered = entries.filter(e => {
+    const matchSite = !site || e.site === site;
+    const matchSearch = !search || [e.site,e.work_done,e.notes,e.author].join(' ').toLowerCase().includes(search);
+    return matchSite && matchSearch;
+  });
+
+  if (!filtered.length) {
+    list.innerHTML = '<p class="empty-state">No entries found.</p>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(e => `
+    <div class="entry-card ${e.id === selectedId ? 'selected' : ''}" data-id="${e.id}">
+      <div class="ec-date">${fmtDate(e.diary_date)}${e.weather ? ' · ' + e.weather : ''}</div>
+      <div class="ec-site">${esc(e.site)}</div>
+      <div class="ec-preview">${esc(e.work_done || '')}</div>
+      <div class="ec-author">${esc(e.author || '')}</div>
+    </div>`).join('');
+
+  list.querySelectorAll('.entry-card').forEach(card => {
+    card.addEventListener('click', () => {
+      selectedId = card.dataset.id;
+      editMode = false;
+      renderList();
+      showView(entries.find(e => e.id === selectedId));
+    });
+  });
+}
+
+function showView(e) {
+  if (!e) return;
+  const panel = document.getElementById('formPanel');
+  panel.innerHTML = `
+    <div class="view-meta">
+      <span><strong>${fmtDate(e.diary_date)}</strong></span>
+      ${e.weather ? `<span>&#9728; ${esc(e.weather)}</span>` : ''}
+      ${e.author  ? `<span>&#128100; ${esc(e.author)}</span>` : ''}
+    </div>
+    <h2 style="font-size:1.2rem;font-weight:800;margin-bottom:16px">${esc(e.site)}</h2>
+    ${block('Work Carried Out', e.work_done)}
+    ${block('Workers on Site', e.workers)}
+    ${block('Plant & Equipment', e.plant)}
+    ${block('Issues / Incidents', e.issues)}
+    ${block('Inspections / Visitors', e.visitors)}
+    ${block('Notes', e.notes)}
+    <div class="form-btns">
+      <button class="btn-save" id="editBtn" style="background:var(--blue)">&#9998; Edit</button>
+      <button class="btn-del" id="delBtn">Delete</button>
+    </div>`;
+
+  document.getElementById('editBtn').addEventListener('click', () => showForm(e));
+  document.getElementById('delBtn').addEventListener('click', async () => {
+    if (!confirm('Delete this diary entry?')) return;
+    await deleteEntry(e.id);
+    selectedId = null;
+    await loadEntries();
+    renderList();
+    document.getElementById('formPanel').innerHTML = '<p class="empty-state" id="defaultMsg">Entry deleted.</p>';
+  });
+}
+
+function block(title, content) {
+  if (!content) return '';
+  return `<div class="view-block"><h3>${title}</h3><p>${esc(content)}</p></div>`;
+}
+
+function showForm(existing = null) {
+  editMode = true;
+  currentWeather = existing?.weather || '';
+  const panel = document.getElementById('formPanel');
+  const today = new Date().toISOString().slice(0, 10);
+
+  const WEATHER = ['Sunny','Partly Cloudy','Overcast','Drizzle','Rain','Heavy Rain','Windy','Foggy','Frost'];
+
+  panel.innerHTML = `
+    <div class="section-title">Date &amp; Site</div>
+    <div class="grid2">
+      <label>Date <input type="date" id="f-date" value="${existing?.diary_date || today}" required></label>
+      <label>Site / Job <input type="text" id="f-site" value="${esc(existing?.site || '')}" placeholder="e.g. Ballasalla Ph4, Glenfaba" required list="site-list">
+        <datalist id="site-list">${[...new Set(entries.map(e=>e.site).filter(Boolean))].map(s=>`<option value="${esc(s)}">`).join('')}</datalist>
+      </label>
+    </div>
+    <label>Written by <input type="text" id="f-author" value="${esc(existing?.author || (session?.user?.email || ''))}" placeholder="Name"></label>
+
+    <div class="section-title">Conditions</div>
+    <div style="font-size:0.82rem;color:var(--muted);margin-bottom:6px">Weather</div>
+    <div class="weather-row" id="weatherRow">
+      ${WEATHER.map(w => `<button type="button" class="wx-chip ${currentWeather===w?'sel':''}" data-w="${w}">${w}</button>`).join('')}
+    </div>
+
+    <div class="section-title">Site Activity</div>
+    <label>Workers on site <textarea id="f-workers" rows="2" placeholder="e.g. David Smith, Lee Clinton, Ryan King">${esc(existing?.workers || '')}</textarea></label>
+    <label>Plant &amp; Equipment on site <textarea id="f-plant" rows="2" placeholder="e.g. 13T Excavator, Dumper">${esc(existing?.plant || '')}</textarea></label>
+
+    <div class="section-title">Work Carried Out *</div>
+    <textarea id="f-work" rows="5" placeholder="Describe all work carried out today…" required>${esc(existing?.work_done || '')}</textarea>
+
+    <div class="section-title">Issues &amp; Incidents</div>
+    <textarea id="f-issues" rows="3" placeholder="Any problems, delays, safety incidents…">${esc(existing?.issues || '')}</textarea>
+
+    <div class="section-title">Inspections &amp; Visitors</div>
+    <textarea id="f-visitors" rows="2" placeholder="Client visits, inspections, deliveries…">${esc(existing?.visitors || '')}</textarea>
+
+    <div class="section-title">Notes</div>
+    <textarea id="f-notes" rows="2" placeholder="Anything else worth recording">${esc(existing?.notes || '')}</textarea>
+
+    <div class="form-btns">
+      <button class="btn-save" id="saveBtn">Save Entry</button>
+      <button class="btn-cancel" id="cancelBtn">Cancel</button>
+      ${existing ? `<button class="btn-del" id="delBtn2">Delete</button>` : ''}
+    </div>
+    <p class="form-status" id="formStatus"></p>`;
+
+  // Weather chips
+  document.querySelectorAll('.wx-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      currentWeather = currentWeather === chip.dataset.w ? '' : chip.dataset.w;
+      document.querySelectorAll('.wx-chip').forEach(c => c.classList.toggle('sel', c.dataset.w === currentWeather));
+    });
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', async () => {
+    const site = document.getElementById('f-site').value.trim();
+    const work = document.getElementById('f-work').value.trim();
+    if (!site) { setStatus('Site is required', true); return; }
+    if (!work)  { setStatus('Work Carried Out is required', true); return; }
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      await saveEntry({
+        diary_date: document.getElementById('f-date').value,
+        site,
+        author:  document.getElementById('f-author').value.trim() || null,
+        weather: currentWeather || null,
+        workers: document.getElementById('f-workers').value.trim() || null,
+        plant:   document.getElementById('f-plant').value.trim() || null,
+        work_done: work,
+        issues:   document.getElementById('f-issues').value.trim() || null,
+        visitors: document.getElementById('f-visitors').value.trim() || null,
+        notes:    document.getElementById('f-notes').value.trim() || null,
+      }, existing?.id || null);
+      await loadEntries();
+      const saved = entries.find(e => existing ? e.id === existing.id : e.site === site);
+      selectedId = saved?.id || null;
+      renderList();
+      if (saved) showView(saved); else document.getElementById('formPanel').innerHTML = '<p class="empty-state">Saved.</p>';
+    } catch (err) {
+      setStatus('Error: ' + err.message, true);
+      btn.disabled = false; btn.textContent = 'Save Entry';
+    }
+  });
+
+  document.getElementById('cancelBtn').addEventListener('click', () => {
+    editMode = false;
+    const entry = entries.find(e => e.id === selectedId);
+    if (entry) showView(entry);
+    else document.getElementById('formPanel').innerHTML = '<p class="empty-state" id="defaultMsg">Select an entry or tap + New Entry.</p>';
+  });
+
+  const del2 = document.getElementById('delBtn2');
+  if (del2) {
+    del2.addEventListener('click', async () => {
+      if (!confirm('Delete this entry?')) return;
+      await deleteEntry(existing.id);
+      selectedId = null;
+      await loadEntries();
+      renderList();
+      document.getElementById('formPanel').innerHTML = '<p class="empty-state">Entry deleted.</p>';
+    });
+  }
+}
+
+function setStatus(msg, err = false) {
+  const el = document.getElementById('formStatus');
+  if (el) { el.textContent = msg; el.className = 'form-status ' + (err ? 'err' : 'ok'); }
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+(async () => {
+  session = await ensureLoggedIn();
+  if (!session) { window.location.replace('../staff/'); return; }
+
+  try {
+    await loadEntries();
+    renderList();
+  } catch (err) {
+    document.getElementById('entryList').innerHTML = `<p class="empty-state" style="color:#ef4444">Error: ${err.message}</p>`;
+  }
+
+  document.getElementById('newEntryBtn').addEventListener('click', () => {
+    selectedId = null;
+    renderList();
+    showForm();
+  });
+
+  document.getElementById('searchInput').addEventListener('input', renderList);
+  document.getElementById('siteFilter').addEventListener('change', renderList);
+})();
+</script>
+</body>
+</html>

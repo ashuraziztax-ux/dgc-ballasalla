@@ -241,6 +241,7 @@ a{color:var(--accent);text-decoration:none}
   <div class="nav">
     <button class="active" onclick="showTab('timeline',this)">Timeline</button>
     <button onclick="showTab('staffhours',this)">Staff</button>
+    <button onclick="showTab('sitediary',this)">Site Diary</button>
   </div>
 
   <!-- Timeline tab -->
@@ -284,6 +285,11 @@ a{color:var(--accent);text-decoration:none}
     <div id="sv-stfuel" class="sv">
       <iframe data-src="../staff/fuel.html" style="width:100%;height:calc(100vh - 150px);border:none;display:block" title="Fuel Usage"></iframe>
     </div>
+  </div>
+
+  <!-- Site Diary tab -->
+  <div id="tab-sitediary" class="panel">
+    <iframe data-src="site-diary.html" style="width:100%;height:calc(100vh - 96px);border:none;display:block" title="Site Diary"></iframe>
   </div>
 
   <!-- Archive tab -->
