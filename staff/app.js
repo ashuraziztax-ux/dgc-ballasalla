@@ -82,7 +82,12 @@ async function loadAll() {
     sbGet('/dgc_staff_leave?select=*&from_date=lte.' + to + '&to_date=gte.' + from),
     sbGet('/dgc_staff_advances?select=*&entry_date=gte.' + from + '&entry_date=lte.' + to + '&order=entry_date.desc'),
     sbGet('/dgc_payroll_approval?select=*&period_start=eq.' + from).catch(() => []),
-    sbGet('/dgc_timesheets?select=staff_name,work_date,hours&work_date=gte.' + from + '&work_date=lte.' + to).catch(() => []),
+    ensureLoggedIn().then(sess => {
+      const token = sess ? sess.access_token : SUPABASE_KEY;
+      return fetch(REST + '/dgc_timesheets?select=staff_name,work_date,hours&work_date=gte.' + from + '&work_date=lte.' + to,
+        { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + token } })
+        .then(r => r.ok ? r.json() : []).catch(() => []);
+    }).catch(() => []),
   ]);
 
   staffById = {};
