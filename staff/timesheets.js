@@ -40,7 +40,7 @@ function getCollapsedState() {
 }
 function setPersonCollapsed(name, isCollapsed) {
   const state = getCollapsedState();
-  if (isCollapsed) state[name] = true; else delete state[name];
+  state[name] = isCollapsed; // true = collapsed, false = explicitly open
   try { localStorage.setItem('dgc_ts_collapsed', JSON.stringify(state)); } catch {}
 }
 
@@ -49,7 +49,7 @@ async function loadData() {
   const { start, end } = getWeekRange(weekOffset);
   const r = await fetch(
     REST + '/dgc_timesheets?select=id,staff_name,work_date,site,description,notes,hours,start_time,finish_time,lunch_mins' +
-    '&work_date=gte.' + start + '&work_date=lte.' + end + '&order=staff_name.asc,work_date.desc',
+    '&work_date=gte.' + start + '&work_date=lte.' + end + '&order=staff_name.asc,work_date.asc',
     { headers: ah() }
   );
   if (!r.ok) throw new Error(await r.text());
@@ -111,7 +111,7 @@ function render() {
   for (const [name, entries] of Object.entries(byPerson)) {
     const inits = initials(name);
     const totalHours = entries.reduce((s, e) => s + parseFloat(e.hours || 0), 0);
-    const isCollapsed = !!collapsed[name];
+    const isCollapsed = collapsed[name] !== false; // collapsed by default; only open if explicitly set to false
 
     let entriesHtml = '';
     for (const e of entries) {
