@@ -361,7 +361,10 @@ function setStatus(msg, err = false) {
     await loadEntries();
     renderList();
   } catch (err) {
-    document.getElementById('entryList').innerHTML = `<p class="empty-state" style="color:#ef4444">Error: ${err.message}</p>`;
+    const msg = err.message.includes('does not exist') || err.message.includes('42P01')
+      ? 'Table not set up yet. Run the SQL in Supabase first — ask your admin.'
+      : 'Error: ' + err.message;
+    document.getElementById('entryList').innerHTML = `<p class="empty-state" style="color:#ef4444;padding:20px">${msg}</p>`;
   }
 
   document.getElementById('newEntryBtn').addEventListener('click', () => {

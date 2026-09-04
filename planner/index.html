@@ -1082,8 +1082,12 @@ async function archiveJob() {
 function showTab(name, btn) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-'+name).classList.add('active');
+  const tab = document.getElementById('tab-'+name);
+  tab.classList.add('active');
   btn.classList.add('active');
+  // Lazy-load any iframe with data-src inside this tab
+  const iframe = tab.querySelector('iframe[data-src]');
+  if (iframe) { iframe.src = iframe.dataset.src; iframe.removeAttribute('data-src'); }
 }
 
 // ── Boot ──────────────────────────────────────────────────
