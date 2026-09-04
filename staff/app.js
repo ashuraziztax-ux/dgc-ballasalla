@@ -76,12 +76,13 @@ async function loadAll() {
   document.getElementById('hoursPeriodLabel').textContent =
     fmtShort(from) + ' — ' + fmtShort(to) + ' ' + String(new Date(valFromIso(to)).getUTCFullYear()).slice(2);
 
-  const [staffRows, hourRows, leaveRows, advRows, approvalRows] = await Promise.all([
+  const [staffRows, hourRows, leaveRows, advRows, approvalRows, tsRows] = await Promise.all([
     sbGet('/dgc_staff?select=id,name,role,rate,active&order=name'),
     sbGet('/dgc_staff_hours?select=id,staff_id,work_date,hours&work_date=gte.' + from + '&work_date=lte.' + to),
     sbGet('/dgc_staff_leave?select=*&from_date=lte.' + to + '&to_date=gte.' + from),
     sbGet('/dgc_staff_advances?select=*&entry_date=gte.' + from + '&entry_date=lte.' + to + '&order=entry_date.desc'),
     sbGet('/dgc_payroll_approval?select=*&period_start=eq.' + from).catch(() => []),
+    sbGet('/dgc_timesheets?select=staff_name,work_date,hours&work_date=gte.' + from + '&work_date=lte.' + to).catch(() => []),
   ]);
 
   staffById = {};
@@ -97,7 +98,19 @@ async function loadAll() {
   staff = staffRows.filter(s => s.active || activeIds.has(s.id));
 
   hoursCache = {};
+  // Load manual entries first
   hourRows.forEach(h => hoursCache[h.staff_id + '_' + h.work_date] = { id: h.id, hours: h.hours });
+  // Worker timesheet submissions override — they carry true decimal hours (e.g. 8.5)
+  const staffByName = {};
+  staffRows.forEach(s => { staffByName[s.name.trim().toLowerCase()] = s.id; });
+  (Array.isArray(tsRows) ? tsRows : []).forEach(t => {
+    const sid = staffByName[(t.staff_name || '').trim().toLowerCase()];
+    if (sid && parseFloat(t.hours) > 0) {
+      const key = sid + '_' + t.work_date;
+      const existing = hoursCache[key];
+      hoursCache[key] = { id: existing ? existing.id : null, hours: parseFloat(t.hours) };
+    }
+  });
 
   leaveCache = leaveRows;
   advancesCache = advRows;
