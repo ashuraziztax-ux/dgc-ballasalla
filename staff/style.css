@@ -352,7 +352,7 @@ label.checkbox input { width: auto; padding: 0; }
 .hours-footer-row td:first-child { text-align: left; }
 
 .hours-cell {
-  width: 26px;
+  width: 40px;
   text-align: center;
   padding: 5px 1px;
   background: var(--panel2);
