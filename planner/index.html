@@ -237,6 +237,7 @@ a{color:var(--accent);text-decoration:none}
   </div>
 
   <div id="sync-notice">Running in local mode — data is saved on this device only.</div>
+  <div style="text-align:right;padding:2px 12px;font-size:10px;color:var(--muted);opacity:0.5">v2.4.9</div>
 
   <div class="nav">
     <button class="active" onclick="showTab('timeline',this)">Timeline</button>
@@ -1357,19 +1358,17 @@ async function loadStaffData() {
     }
     _staff = sR.data || [];
     _stHours = {};
-    // Pre-fill from worker timesheet submissions (dgc_timesheets), summing per person per day
+    // Load manual PM entries first (may be integer-truncated by RPC, will be overridden below)
+    (hR.data || []).forEach(h => { _stHours[h.staff_id + '|' + h.work_date] = parseFloat(h.hours) || 0; });
+    // Worker timesheet submissions take priority — they carry the true decimal hours (e.g. 8.5)
     const staffByName = {};
     _staff.forEach(s => { staffByName[s.name.trim().toLowerCase()] = s.id; });
     (tsR.data || []).forEach(t => {
-      const sid = staffByName[t.staff_name.trim().toLowerCase()];
-      if (sid) {
+      const sid = staffByName[(t.staff_name || '').trim().toLowerCase()];
+      if (sid && parseFloat(t.hours) > 0) {
         const key = sid + '|' + t.work_date;
-        _stHours[key] = (_stHours[key] || 0) + (parseFloat(t.hours) || 0);
+        _stHours[key] = (parseFloat(t.hours) || 0);
       }
-    });
-    // Manual dgc_staff_hours entries override timesheet data (PM corrections)
-    (hR.data || []).forEach(h => {
-      if (parseFloat(h.hours) > 0) _stHours[h.staff_id + '|' + h.work_date] = parseFloat(h.hours);
     });
     _stAdv   = aR.data || [];
     _stLeave = lR.data || [];
