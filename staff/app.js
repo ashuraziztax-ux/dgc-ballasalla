@@ -53,6 +53,7 @@ function fmtShort(iso) {
 }
 
 let periodStartVal = periodStartValFor(todayVal());
+let periodApproved = false;
 let periodDates = [];
 let staff = [];
 let staffById = {};
@@ -75,11 +76,12 @@ async function loadAll() {
   document.getElementById('hoursPeriodLabel').textContent =
     fmtShort(from) + ' — ' + fmtShort(to) + ' ' + String(new Date(valFromIso(to)).getUTCFullYear()).slice(2);
 
-  const [staffRows, hourRows, leaveRows, advRows] = await Promise.all([
+  const [staffRows, hourRows, leaveRows, advRows, approvalRows] = await Promise.all([
     sbGet('/dgc_staff?select=id,name,role,rate,active&order=name'),
     sbGet('/dgc_staff_hours?select=id,staff_id,work_date,hours&work_date=gte.' + from + '&work_date=lte.' + to),
     sbGet('/dgc_staff_leave?select=*&from_date=lte.' + to + '&to_date=gte.' + from),
     sbGet('/dgc_staff_advances?select=*&entry_date=gte.' + from + '&entry_date=lte.' + to + '&order=entry_date.desc'),
+    sbGet('/dgc_payroll_approval?select=*&period_start=eq.' + from).catch(() => []),
   ]);
 
   staffById = {};
@@ -99,6 +101,7 @@ async function loadAll() {
 
   leaveCache = leaveRows;
   advancesCache = advRows;
+  periodApproved = Array.isArray(approvalRows) && approvalRows.length > 0;
 
   fillActive = false;
   fillSnapshot = null;
@@ -108,6 +111,7 @@ async function loadAll() {
   renderHours();
   renderAdvances();
   renderHolidays();
+  renderApprovalState();
 }
 
 function renderStaffSelects() {
@@ -178,17 +182,25 @@ function renderHours() {
       const todayCls = date === todayIso ? 'today-col' : '';
       if (c.kind === 'hours') {
         dayTotals[i] += Number(c.value) || 0;
-        body += `<td class="${todayCls}"><input class="hours-cell" type="number" step="0.5" min="0" data-date="${date}" value="${c.value}"></td>`;
+        if (periodApproved) {
+          body += `<td class="hours-readonly ${todayCls}">${Number(c.value) || ''}</td>`;
+        } else {
+          body += `<td class="${todayCls}"><input class="hours-cell" type="number" step="0.5" min="0" data-date="${date}" value="${c.value}"></td>`;
+        }
       } else if (c.kind === 'weekend') {
         body += `<td class="${todayCls}"></td>`;
       } else if (c.kind === 'blank') {
-        body += `<td class="${todayCls}"><input class="hours-cell" type="number" step="0.5" min="0" data-date="${date}" value=""></td>`;
+        if (periodApproved) {
+          body += `<td class="hours-readonly ${todayCls}"></td>`;
+        } else {
+          body += `<td class="${todayCls}"><input class="hours-cell" type="number" step="0.5" min="0" data-date="${date}" value=""></td>`;
+        }
       } else {
         if (c.kind === 'BH' || c.kind === 'H') dayTotals[i] += 8;
         body += `<td class="hours-readonly ${todayCls}">${c.kind}</td>`;
       }
     });
-    body += `<td><button class="row-fill-btn${s.id in rowFillSnapshots ? ' active' : ''}" data-staff="${s.id}">→8</button></td>`;
+    body += `<td>${periodApproved ? '' : `<button class="row-fill-btn${s.id in rowFillSnapshots ? ' active' : ''}" data-staff="${s.id}">→8</button>`}</td>`;
     body += `<td class="hours-readonly clickable" data-jump="${s.id}" data-jump-type="Overtime">${ot || 0}h</td>`;
     body += `<td class="hours-readonly">${total}</td>`;
     body += '</tr>';
@@ -294,6 +306,48 @@ document.getElementById('saveHoursBtn').addEventListener('click', async () => {
 document.getElementById('prevPeriodBtn').addEventListener('click', () => { periodStartVal -= PERIOD_DAYS * 86400000; loadAll(); });
 document.getElementById('nextPeriodBtn').addEventListener('click', () => { periodStartVal += PERIOD_DAYS * 86400000; loadAll(); });
 document.getElementById('todayBtn').addEventListener('click', () => { periodStartVal = periodStartValFor(todayVal()); loadAll(); });
+
+// ---- Payroll Approval ----
+function renderApprovalState() {
+  const btn    = document.getElementById('approveBtn');
+  const badge  = document.getElementById('approvalBadge');
+  const save   = document.getElementById('saveHoursBtn');
+  if (periodApproved) {
+    btn.style.display   = 'none';
+    badge.style.display = 'inline-block';
+    save.disabled = true;
+    save.title = 'Approved — unlock to edit';
+  } else {
+    btn.style.display   = 'inline-block';
+    badge.style.display = 'none';
+    save.disabled = false;
+    save.title = '';
+  }
+}
+
+document.getElementById('approveBtn').addEventListener('click', async () => {
+  const from = periodDates[0];
+  if (!confirm('Approve ' + document.getElementById('hoursPeriodLabel').textContent + '?\n\nThis will lock the hours grid so the accountants know they can pay these. You can still navigate away — only this fortnight will be locked.')) return;
+  const btn = document.getElementById('approveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Approving…';
+  try {
+    const user = (await fetch(REST + '/auth/v1/user', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json()).catch(() => ({})));
+    const approvedBy = (user.email) || 'PM';
+    await sbPost('dgc_payroll_approval', { period_start: from, approved_by: approvedBy, approved_at: new Date().toISOString() });
+    periodApproved = true;
+    const badge = document.getElementById('approvalBadge');
+    badge.textContent = '✓ Approved ' + new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }) + ' by ' + approvedBy;
+    renderApprovalState();
+    renderHours();
+    document.getElementById('hoursStatus').textContent = 'Hours approved — accountants can pay ✓';
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '✓ Approve Hours';
+    document.getElementById('hoursStatus').textContent = 'Approval failed — run the SQL first (see below)';
+    console.error(e);
+  }
+});
 
 // ---- Advances / Bonuses / Overtime ----
 function updateAmountUnit() {
