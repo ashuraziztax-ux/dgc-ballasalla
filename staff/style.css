@@ -62,6 +62,21 @@ body {
 .secondary-btn:hover { border-color: var(--accent); color: var(--accent); }
 .secondary-btn.active { background: var(--accent); color: #1a1a1a; border-color: var(--accent); }
 
+.week-approve-btn {
+  border: none;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: opacity 0.15s, filter 0.15s;
+  white-space: nowrap;
+}
+.week-approve-btn:hover { filter: brightness(1.12); }
+.week-approve-btn:disabled { opacity: 0.6; cursor: default; }
+.week-approve-btn.unapproved { background: #dc2626; color: #fff; }
+.week-approve-btn.approved   { background: #16a34a; color: #fff; }
+
 main { max-width: 1100px; margin: 0 auto; padding: 20px; }
 
 .tabs { display: flex; gap: 8px; margin-bottom: 18px; }
