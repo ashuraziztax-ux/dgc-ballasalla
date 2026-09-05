@@ -232,6 +232,11 @@ a{color:var(--accent);text-decoration:none}
 .res-filter-btn.active{background:var(--accent);color:#0d1117;border-color:var(--accent)}
 .res-collapse-all-btn{margin-left:auto;background:var(--panel);border:1px solid var(--bord);border-radius:7px;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;padding:5px 12px;transition:background .15s,color .15s}
 .res-collapse-all-btn:hover{color:var(--accent);border-color:var(--accent)}
+.res-col-drag-handle{cursor:grab;color:var(--muted);font-size:15px;padding:0 5px 0 0;user-select:none;flex-shrink:0;line-height:1}
+.res-col-drag-handle:hover{color:var(--accent)}
+.res-col--dragging{opacity:0.35;outline:2px dashed var(--accent)}
+.res-col--drop-left{box-shadow:-4px 0 0 0 var(--accent)}
+.res-col--drop-right{box-shadow:4px 0 0 0 var(--accent)}
 </style>
 </head>
 <body>
@@ -435,7 +440,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.32';
+const VERSION = 'v2.33';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -1152,8 +1157,18 @@ function showTab(name, btn) {
 let _resInitDone = false;
 let _resStaff = [];
 let _resLeave = [];
-let _resFilter = 'all';
+let _resActiveFilters = new Set(); // empty = show all
 let _resCollapsed = new Set();
+let _resColOrder = [];
+let _draggingColId = null;
+
+function resLoadColOrder() {
+  try { _resColOrder = JSON.parse(localStorage.getItem('dgc_resource_col_order') || '[]'); } catch { _resColOrder = []; }
+}
+function resSaveColOrder(ids) {
+  _resColOrder = ids;
+  try { localStorage.setItem('dgc_resource_col_order', JSON.stringify(ids)); } catch {}
+}
 
 function isoWeekNum(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
@@ -1223,10 +1238,20 @@ function renderResourcePlanner() {
   const onLeaveStaff = _resStaff.filter(s => onLeaveIds.has(s.id));
 
   const statusOrder = { running:0, awarded:1, confirmed:2, tendering_likely:3, tendering:4, placeholder:5 };
-  let jobs = (_jobs || []).filter(j => !j.archived).sort((a, b) =>
-    (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9)
-  );
-  if (_resFilter !== 'all') jobs = jobs.filter(j => j.status === _resFilter);
+  let jobs = (_jobs || []).filter(j => !j.archived);
+  if (_resActiveFilters.size > 0) jobs = jobs.filter(j => _resActiveFilters.has(j.status));
+  // Apply saved column order
+  resLoadColOrder();
+  const orderedJobs = [];
+  const remaining = [...jobs];
+  _resColOrder.forEach(id => {
+    const idx = remaining.findIndex(j => j.id === id);
+    if (idx >= 0) orderedJobs.push(...remaining.splice(idx, 1));
+  });
+  // Append new/unknown jobs at the end sorted by status
+  remaining.sort((a, b) => (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9));
+  orderedJobs.push(...remaining);
+  jobs = orderedJobs;
   const alloc = resGetAlloc();
 
   const chipHtml = (s, onLeave) => {
@@ -1252,9 +1277,10 @@ function renderResourcePlanner() {
       </div>`;
     }).join('');
     const statusLabel = STATUS_LBL[j.status] || j.status;
-    return `<div class="res-col${collapsed ? ' res-col--collapsed' : ''}" data-jobid="${esc(j.id)}">
+    return `<div class="res-col${collapsed ? ' res-col--collapsed' : ''}" data-jobid="${esc(j.id)}" draggable="true">
       <div class="res-col-hdr" style="border-top:3px solid ${col}">
         <div class="res-col-hdr-row">
+          <span class="res-col-drag-handle" title="Drag to reorder">⠿</span>
           <div style="flex:1;min-width:0">
             <div class="res-col-name">${esc(j.name)}</div>
             <div class="res-col-meta">${j.base_weeks}w · ${j.people_on_site || 0} on site · <span style="color:${col}">${statusLabel}</span></div>
@@ -1295,11 +1321,15 @@ function bindResDragDrop() {
   });
 
   tab.querySelectorAll('.res-week-zone').forEach(zone => {
-    zone.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; zone.classList.add('res-drag-over'); });
+    zone.addEventListener('dragover', e => {
+      if (_draggingColId) return; // column drag — ignore
+      e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; zone.classList.add('res-drag-over');
+    });
     zone.addEventListener('dragleave', e => { if (!zone.contains(e.relatedTarget)) zone.classList.remove('res-drag-over'); });
     zone.addEventListener('drop', e => {
       e.preventDefault();
       zone.classList.remove('res-drag-over');
+      if (_draggingColId) return; // column drag — ignore
       const name = e.dataTransfer.getData('text/plain');
       if (!name) return;
       const { job: jobId, week: weekStart } = zone.dataset;
@@ -1326,13 +1356,28 @@ function bindResDragDrop() {
     });
   });
 
-  // Filter buttons
+  // Filter buttons — multi-select; "All" clears the set
   tab.querySelectorAll('.res-filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      _resFilter = btn.dataset.filter;
-      tab.querySelectorAll('.res-filter-btn').forEach(b => b.classList.toggle('active', b === btn));
+      const f = btn.dataset.filter;
+      if (f === 'all') {
+        _resActiveFilters.clear();
+      } else {
+        if (_resActiveFilters.has(f)) _resActiveFilters.delete(f);
+        else _resActiveFilters.add(f);
+      }
+      // Update button active states
+      tab.querySelectorAll('.res-filter-btn').forEach(b => {
+        if (b.dataset.filter === 'all') b.classList.toggle('active', _resActiveFilters.size === 0);
+        else b.classList.toggle('active', _resActiveFilters.has(b.dataset.filter));
+      });
       renderResourcePlanner();
     });
+  });
+  // Sync All button active state on first render
+  tab.querySelectorAll('.res-filter-btn').forEach(b => {
+    if (b.dataset.filter === 'all') b.classList.toggle('active', _resActiveFilters.size === 0);
+    else b.classList.toggle('active', _resActiveFilters.has(b.dataset.filter));
   });
 
   // Collapse all toggle
@@ -1358,6 +1403,55 @@ function bindResDragDrop() {
       const jid = btn.dataset.toggleJob;
       if (_resCollapsed.has(jid)) _resCollapsed.delete(jid);
       else _resCollapsed.add(jid);
+      renderResourcePlanner();
+    });
+  });
+
+  // Column drag-to-reorder
+  _draggingColId = null;
+  tab.querySelectorAll('.res-col').forEach(col => {
+    col.addEventListener('dragstart', e => {
+      // Only allow drag when starting from the header (not from chips or week cells)
+      if (!e.target.closest('.res-col-hdr')) { e.preventDefault(); return; }
+      _draggingColId = col.dataset.jobid;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('res/col', _draggingColId);
+      setTimeout(() => col.classList.add('res-col--dragging'), 0);
+    });
+    col.addEventListener('dragend', () => {
+      _draggingColId = null;
+      col.classList.remove('res-col--dragging');
+      tab.querySelectorAll('.res-col').forEach(c => c.classList.remove('res-col--drop-left', 'res-col--drop-right'));
+    });
+    col.addEventListener('dragover', e => {
+      if (!_draggingColId || _draggingColId === col.dataset.jobid) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const rect = col.getBoundingClientRect();
+      const isLeft = e.clientX < rect.left + rect.width / 2;
+      tab.querySelectorAll('.res-col').forEach(c => c.classList.remove('res-col--drop-left', 'res-col--drop-right'));
+      col.classList.add(isLeft ? 'res-col--drop-left' : 'res-col--drop-right');
+    });
+    col.addEventListener('dragleave', e => {
+      if (!col.contains(e.relatedTarget)) col.classList.remove('res-col--drop-left', 'res-col--drop-right');
+    });
+    col.addEventListener('drop', e => {
+      tab.querySelectorAll('.res-col').forEach(c => c.classList.remove('res-col--drop-left', 'res-col--drop-right'));
+      if (!_draggingColId || _draggingColId === col.dataset.jobid) return;
+      if (!e.dataTransfer.types.includes('res/col')) return;
+      e.preventDefault();
+      const rect = col.getBoundingClientRect();
+      const isLeft = e.clientX < rect.left + rect.width / 2;
+      // Get current rendered order from the DOM
+      const currentIds = Array.from(tab.querySelectorAll('.res-col')).map(c => c.dataset.jobid);
+      const fromIdx = currentIds.indexOf(_draggingColId);
+      if (fromIdx < 0) return;
+      currentIds.splice(fromIdx, 1);
+      let toIdx = currentIds.indexOf(col.dataset.jobid);
+      if (toIdx < 0) return;
+      if (!isLeft) toIdx += 1;
+      currentIds.splice(toIdx, 0, _draggingColId);
+      resSaveColOrder(currentIds);
       renderResourcePlanner();
     });
   });
