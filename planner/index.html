@@ -1289,6 +1289,13 @@ function esc(s) {
 async function initPlanner() {
   _sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false } });
   await bootApp();
+  // Hash routing — e.g. planner/#resources opens that tab directly
+  const hash = location.hash.replace('#', '');
+  if (hash) {
+    const tabEl = document.getElementById('tab-' + hash);
+    const fakeBtn = { classList: { add: () => {}, remove: () => {} } };
+    if (tabEl) showTab(hash, fakeBtn);
+  }
 }
 
 // ── Drag tooltip ──────────────────────────────────────────
