@@ -348,7 +348,7 @@ a{color:var(--accent);text-decoration:none}
           <button class="res-filter-btn" data-filter="tendering">Tendering</button>
           <button class="res-collapse-all-btn" id="resCollapseAllBtn">Collapse All</button>
         </div>
-        <div id="res-jobs-body" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start"></div>
+        <div id="res-jobs-body" style="display:flex;flex-wrap:nowrap;gap:12px;align-items:flex-start;flex:1;overflow-x:auto;padding-bottom:8px"></div>
       </div>
     </div>
   </div>
@@ -440,7 +440,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.33';
+const VERSION = 'v2.34';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -1277,15 +1277,15 @@ function renderResourcePlanner() {
       </div>`;
     }).join('');
     const statusLabel = STATUS_LBL[j.status] || j.status;
-    return `<div class="res-col${collapsed ? ' res-col--collapsed' : ''}" data-jobid="${esc(j.id)}" draggable="true">
-      <div class="res-col-hdr" style="border-top:3px solid ${col}">
+    return `<div class="res-col${collapsed ? ' res-col--collapsed' : ''}" data-jobid="${esc(j.id)}">
+      <div class="res-col-hdr" draggable="true" style="border-top:3px solid ${col};cursor:grab">
         <div class="res-col-hdr-row">
           <span class="res-col-drag-handle" title="Drag to reorder">⠿</span>
           <div style="flex:1;min-width:0">
             <div class="res-col-name">${esc(j.name)}</div>
             <div class="res-col-meta">${j.base_weeks}w · ${j.people_on_site || 0} on site · <span style="color:${col}">${statusLabel}</span></div>
           </div>
-          <button class="res-col-toggle" data-toggle-job="${esc(j.id)}">${collapsed ? '▼' : '▲'}</button>
+          <button class="res-col-toggle" data-toggle-job="${esc(j.id)}" ondragstart="event.stopPropagation()">${collapsed ? '▼' : '▲'}</button>
         </div>
       </div>
       ${weeksHtml}
@@ -1407,22 +1407,25 @@ function bindResDragDrop() {
     });
   });
 
-  // Column drag-to-reorder
+  // Column drag-to-reorder — drag starts on the header, drop targets are columns
   _draggingColId = null;
   tab.querySelectorAll('.res-col').forEach(col => {
-    col.addEventListener('dragstart', e => {
-      // Only allow drag when starting from the header (not from chips or week cells)
-      if (!e.target.closest('.res-col-hdr')) { e.preventDefault(); return; }
+    const hdr = col.querySelector('.res-col-hdr');
+    if (!hdr) return;
+
+    hdr.addEventListener('dragstart', e => {
       _draggingColId = col.dataset.jobid;
       e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('res/col', _draggingColId);
+      e.dataTransfer.setData('text/plain', ''); // required for Firefox
       setTimeout(() => col.classList.add('res-col--dragging'), 0);
     });
-    col.addEventListener('dragend', () => {
+
+    hdr.addEventListener('dragend', () => {
       _draggingColId = null;
       col.classList.remove('res-col--dragging');
       tab.querySelectorAll('.res-col').forEach(c => c.classList.remove('res-col--drop-left', 'res-col--drop-right'));
     });
+
     col.addEventListener('dragover', e => {
       if (!_draggingColId || _draggingColId === col.dataset.jobid) return;
       e.preventDefault();
@@ -1432,17 +1435,17 @@ function bindResDragDrop() {
       tab.querySelectorAll('.res-col').forEach(c => c.classList.remove('res-col--drop-left', 'res-col--drop-right'));
       col.classList.add(isLeft ? 'res-col--drop-left' : 'res-col--drop-right');
     });
+
     col.addEventListener('dragleave', e => {
       if (!col.contains(e.relatedTarget)) col.classList.remove('res-col--drop-left', 'res-col--drop-right');
     });
+
     col.addEventListener('drop', e => {
       tab.querySelectorAll('.res-col').forEach(c => c.classList.remove('res-col--drop-left', 'res-col--drop-right'));
       if (!_draggingColId || _draggingColId === col.dataset.jobid) return;
-      if (!e.dataTransfer.types.includes('res/col')) return;
       e.preventDefault();
       const rect = col.getBoundingClientRect();
       const isLeft = e.clientX < rect.left + rect.width / 2;
-      // Get current rendered order from the DOM
       const currentIds = Array.from(tab.querySelectorAll('.res-col')).map(c => c.dataset.jobid);
       const fromIdx = currentIds.indexOf(_draggingColId);
       if (fromIdx < 0) return;
