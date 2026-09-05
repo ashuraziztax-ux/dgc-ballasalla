@@ -221,6 +221,17 @@ a{color:var(--accent);text-decoration:none}
 .res-remove-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0 1px;line-height:1}
 .res-remove-btn:hover{color:#f85149}
 .res-leave-badge{font-size:10px;color:var(--muted);font-weight:400;margin-left:3px}
+.res-week-cell--past{opacity:0.38;pointer-events:none;filter:grayscale(0.3)}
+.res-col--collapsed .res-week-cell{display:none}
+.res-col-toggle{background:none;border:1px solid var(--bord);border-radius:5px;color:var(--muted);font-size:10px;font-weight:700;cursor:pointer;padding:2px 6px;line-height:1.4;margin-left:auto;flex-shrink:0}
+.res-col-toggle:hover{color:var(--accent);border-color:var(--accent)}
+.res-col-hdr-row{display:flex;align-items:flex-start;gap:6px}
+.res-board-toolbar{display:flex;align-items:center;gap:8px;padding:0 0 14px;flex-wrap:wrap;flex-shrink:0;width:100%}
+.res-filter-btn{background:var(--panel);border:1px solid var(--bord);border-radius:7px;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;padding:5px 12px;transition:background .15s,color .15s,border-color .15s}
+.res-filter-btn:hover{border-color:var(--accent);color:var(--accent)}
+.res-filter-btn.active{background:var(--accent);color:#0d1117;border-color:var(--accent)}
+.res-collapse-all-btn{margin-left:auto;background:var(--panel);border:1px solid var(--bord);border-radius:7px;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;padding:5px 12px;transition:background .15s,color .15s}
+.res-collapse-all-btn:hover{color:var(--accent);border-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -323,8 +334,16 @@ a{color:var(--accent);text-decoration:none}
         <div id="res-leave-hdr" class="res-sidebar-hdr" style="margin-top:14px;border-top:1px solid var(--bord);padding-top:10px;display:none">On Leave</div>
         <div id="res-staff-bottom" class="res-staff-list"></div>
       </aside>
-      <div class="res-board">
-        <div id="res-jobs-body" style="display:contents"></div>
+      <div class="res-board" style="flex-direction:column">
+        <div class="res-board-toolbar">
+          <button class="res-filter-btn active" data-filter="all">All</button>
+          <button class="res-filter-btn" data-filter="running">Running</button>
+          <button class="res-filter-btn" data-filter="awarded">Awarded</button>
+          <button class="res-filter-btn" data-filter="tendering_likely">Likely Awarded</button>
+          <button class="res-filter-btn" data-filter="tendering">Tendering</button>
+          <button class="res-collapse-all-btn" id="resCollapseAllBtn">Collapse All</button>
+        </div>
+        <div id="res-jobs-body" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start"></div>
       </div>
     </div>
   </div>
@@ -416,7 +435,7 @@ a{color:var(--accent);text-decoration:none}
 
 <script>
 // ── Constants ──────────────────────────────────────────────
-const VERSION = 'v2.31';
+const VERSION = 'v2.32';
 const BUILD   = 'Aug 2026';
 const SB_URL  = 'https://vigdtpcgeqenznuakdwz.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ2R0cGNnZXFlbnpudWFrZHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0MTI1MzQsImV4cCI6MjEwMjk4ODUzNH0.9hjdS6ATFVaYwwKcZQqTpQxbIuSDrxbO07r4MmXXadQ';
@@ -1133,6 +1152,8 @@ function showTab(name, btn) {
 let _resInitDone = false;
 let _resStaff = [];
 let _resLeave = [];
+let _resFilter = 'all';
+let _resCollapsed = new Set();
 
 function isoWeekNum(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
@@ -1172,17 +1193,20 @@ function resSaveAlloc(data) {
 function resWeeks(job) {
   if (!job.start_date) return [];
   const weeks = [];
+  const today = new Date().toISOString().slice(0, 10);
   const base = new Date(job.start_date + 'T00:00:00');
   const n = Math.max(1, job.base_weeks || 4);
   for (let i = 0; i < n; i++) {
     const s = new Date(base); s.setDate(base.getDate() + i * 7);
     const e = new Date(s);    e.setDate(s.getDate() + 4);
     const fmt = d => d.getDate() + ' ' + d.toLocaleString('en-GB', { month: 'short' });
+    const startIso = s.toISOString().slice(0, 10);
     weeks.push({
       num: i + 1,
-      startIso: s.toISOString().slice(0, 10),
-      wkNum: isoWeekNum(s.toISOString().slice(0, 10)),
+      startIso,
+      wkNum: isoWeekNum(startIso),
       label: 'W' + (i + 1) + ' · ' + fmt(s) + '–' + fmt(e),
+      isPast: startIso < today,
     });
   }
   return weeks;
@@ -1199,9 +1223,10 @@ function renderResourcePlanner() {
   const onLeaveStaff = _resStaff.filter(s => onLeaveIds.has(s.id));
 
   const statusOrder = { running:0, awarded:1, confirmed:2, tendering_likely:3, tendering:4, placeholder:5 };
-  const jobs = (_jobs || []).filter(j => !j.archived).sort((a, b) =>
+  let jobs = (_jobs || []).filter(j => !j.archived).sort((a, b) =>
     (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9)
   );
+  if (_resFilter !== 'all') jobs = jobs.filter(j => j.status === _resFilter);
   const alloc = resGetAlloc();
 
   const chipHtml = (s, onLeave) => {
@@ -1214,21 +1239,28 @@ function renderResourcePlanner() {
     const weeks = resWeeks(j);
     const col = STATUS_COL[j.status] || '#94a3b8';
     if (!weeks.length) return '';
+    const collapsed = _resCollapsed.has(j.id);
     const weeksHtml = weeks.map(w => {
       const placed = ((alloc[j.id] || {})[w.startIso] || []);
       const placedHtml = placed.map(name =>
         `<div class="res-placed-chip">${esc(name)}<button class="res-remove-btn" data-job="${esc(j.id)}" data-week="${w.startIso}" data-name="${esc(name)}" title="Remove">×</button></div>`
       ).join('');
-      return `<div class="res-week-cell">
+      const pastCls = w.isPast ? ' res-week-cell--past' : '';
+      return `<div class="res-week-cell${pastCls}">
         <div class="res-week-cell-hdr">${w.label} <span class="res-wk-num">Wk&nbsp;${w.wkNum}</span></div>
         <div class="res-week-zone" data-job="${esc(j.id)}" data-week="${w.startIso}">${placedHtml}</div>
       </div>`;
     }).join('');
     const statusLabel = STATUS_LBL[j.status] || j.status;
-    return `<div class="res-col">
+    return `<div class="res-col${collapsed ? ' res-col--collapsed' : ''}" data-jobid="${esc(j.id)}">
       <div class="res-col-hdr" style="border-top:3px solid ${col}">
-        <div class="res-col-name">${esc(j.name)}</div>
-        <div class="res-col-meta">${j.base_weeks}w · ${j.people_on_site || 0} on site · <span style="color:${col}">${statusLabel}</span></div>
+        <div class="res-col-hdr-row">
+          <div style="flex:1;min-width:0">
+            <div class="res-col-name">${esc(j.name)}</div>
+            <div class="res-col-meta">${j.base_weeks}w · ${j.people_on_site || 0} on site · <span style="color:${col}">${statusLabel}</span></div>
+          </div>
+          <button class="res-col-toggle" data-toggle-job="${esc(j.id)}">${collapsed ? '▼' : '▲'}</button>
+        </div>
       </div>
       ${weeksHtml}
     </div>`;
@@ -1291,6 +1323,42 @@ function bindResDragDrop() {
         resSaveAlloc(alloc);
         renderResourcePlanner();
       }
+    });
+  });
+
+  // Filter buttons
+  tab.querySelectorAll('.res-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _resFilter = btn.dataset.filter;
+      tab.querySelectorAll('.res-filter-btn').forEach(b => b.classList.toggle('active', b === btn));
+      renderResourcePlanner();
+    });
+  });
+
+  // Collapse all toggle
+  const collapseAllBtn = document.getElementById('resCollapseAllBtn');
+  if (collapseAllBtn) {
+    collapseAllBtn.addEventListener('click', () => {
+      const visibleJobs = (_jobs || []).filter(j => !j.archived);
+      const allCollapsed = visibleJobs.every(j => _resCollapsed.has(j.id));
+      if (allCollapsed) {
+        _resCollapsed.clear();
+        collapseAllBtn.textContent = 'Collapse All';
+      } else {
+        visibleJobs.forEach(j => _resCollapsed.add(j.id));
+        collapseAllBtn.textContent = 'Expand All';
+      }
+      renderResourcePlanner();
+    });
+  }
+
+  // Individual column collapse toggles
+  tab.querySelectorAll('[data-toggle-job]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const jid = btn.dataset.toggleJob;
+      if (_resCollapsed.has(jid)) _resCollapsed.delete(jid);
+      else _resCollapsed.add(jid);
+      renderResourcePlanner();
     });
   });
 }
